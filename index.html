@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8vobit — Diseño Web, SEO y Marketing Digital en Chile</title>
+<meta name="description" content="Creamos sitios web que posicionan y venden. One page, landing, e-commerce, SEO y marketing digital desde Concepción, Chile.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #120136;
+    --purple-mid: #1e0258;
+    --purple-light: #2a0375;
+    --cyan: #4BB8D4;
+    --cyan-light: #7DD4E8;
+    --white: #F4F0FF;
+    --gray: #9B8FB5;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--purple);
+    color: var(--white);
+    overflow-x: hidden;
+  }
+
+  /* Solo mostrar cursor custom en desktop */
+  @media (pointer: fine) {
+    body { cursor: none; }
+    .cursor, .cursor-ring { display: block; }
+  }
+
+  .cursor {
+    display: none;
+    width: 10px; height: 10px;
+    background: var(--cyan); border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: screen;
+    transition: transform 0.15s;
+  }
+  .cursor-ring {
+    display: none;
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(75,184,212,0.5); border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all 0.18s ease;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025; pointer-events: none; z-index: 1;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+    padding: 16px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: all 0.3s;
+  }
+  nav.scrolled {
+    background: rgba(18,1,54,0.97);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(75,184,212,0.12);
+  }
+
+  /* Logo PNG en nav */
+  .nav-logo img {
+    height: 40px;
+    width: auto;
+    display: block;
+    /* El PNG es blanco con cuadrado cyan, se ve perfecto sobre fondo oscuro */
+    filter: drop-shadow(0 0 8px rgba(75,184,212,0.2));
+  }
+
+  nav ul {
+    display: flex; gap: 32px; list-style: none; align-items: center;
+  }
+  nav ul a {
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gray); text-decoration: none; transition: color 0.2s;
+  }
+  nav ul a:hover { color: var(--cyan); }
+  .nav-btn {
+    color: var(--cyan) !important;
+    border: 1.5px solid var(--cyan) !important;
+    padding: 9px 20px !important; border-radius: 4px;
+    font-size: 12px !important; transition: all 0.2s !important;
+    text-transform: none !important; letter-spacing: 0.5px !important;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: var(--cyan) !important; color: var(--purple) !important; }
+
+  /* Hamburger móvil */
+  .hamburger {
+    display: none; flex-direction: column; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 4px;
+  }
+  .hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--white); border-radius: 2px;
+    transition: all 0.3s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* Menú móvil desplegable */
+  .mobile-menu {
+    display: none;
+    position: fixed; top: 72px; left: 0; right: 0;
+    background: rgba(18,1,54,0.98);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(75,184,212,0.12);
+    padding: 24px 24px 32px;
+    z-index: 499;
+    flex-direction: column; gap: 0;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    font-size: 14px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gray); text-decoration: none;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(75,184,212,0.08);
+    transition: color 0.2s;
+  }
+  .mobile-menu a:hover { color: var(--cyan); }
+  .mobile-menu .mob-cta {
+    margin-top: 20px;
+    background: var(--cyan); color: var(--purple) !important;
+    padding: 14px 20px !important; border-radius: 6px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px !important;
+    letter-spacing: 2px; text-align: center; border: none;
+    text-transform: none !important;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 110px 48px 80px;
+    position: relative; overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(75,184,212,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(75,184,212,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 90% 90% at 60% 35%, black 10%, transparent 80%);
+  }
+  .hero-orb {
+    position: absolute; width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(75,184,212,0.18) 0%, transparent 70%);
+    right: -180px; top: -180px;
+    animation: float 8s ease-in-out infinite; pointer-events: none;
+  }
+  .hero-orb2 {
+    position: absolute; width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(75,184,212,0.07) 0%, transparent 70%);
+    left: 0%; bottom: -60px;
+    animation: float 11s 3s ease-in-out infinite; pointer-events: none;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-24px); }
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 24px;
+    opacity: 0; animation: fadeUp 0.7s 0.1s ease forwards;
+  }
+  .hero-badge::before { content: ''; width: 28px; height: 1px; background: var(--cyan); flex-shrink: 0; }
+  .hero-badge::after { content: ''; width: 5px; height: 5px; background: var(--cyan); border-radius: 50%; flex-shrink: 0; }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(58px, 10vw, 144px);
+    line-height: 0.88; letter-spacing: 2px;
+    opacity: 0; animation: fadeUp 0.7s 0.2s ease forwards;
+  }
+  h1 .outline { -webkit-text-stroke: 2px var(--cyan); color: transparent; }
+  h1 .cyan { color: var(--cyan); }
+
+  .hero-sub {
+    font-size: clamp(15px, 2vw, 17px);
+    color: var(--gray); line-height: 1.75;
+    max-width: 500px; margin: 24px 0 32px;
+    opacity: 0; animation: fadeUp 0.7s 0.35s ease forwards;
+  }
+  .hero-sub strong { color: var(--white); }
+
+  .hero-pills {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 36px;
+    opacity: 0; animation: fadeUp 0.7s 0.42s ease forwards;
+  }
+  .pill {
+    font-size: 11px; color: var(--cyan);
+    background: rgba(75,184,212,0.08);
+    border: 1px solid rgba(75,184,212,0.25);
+    padding: 5px 12px; border-radius: 100px;
+    white-space: nowrap;
+  }
+
+  .hero-actions {
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.7s 0.5s ease forwards;
+  }
+  .btn-primary {
+    background: var(--cyan); color: var(--purple);
+    padding: 14px 34px; border-radius: 6px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2px;
+    text-decoration: none; transition: all 0.25s;
+    box-shadow: 0 0 40px rgba(75,184,212,0.28);
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: var(--cyan-light); transform: translateY(-2px);
+    box-shadow: 0 0 60px rgba(75,184,212,0.5);
+  }
+  .btn-ghost {
+    color: var(--gray); text-decoration: none; font-size: 14px;
+    display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover { color: var(--white); }
+  .btn-ghost::after { content: '→'; transition: transform 0.2s; }
+  .btn-ghost:hover::after { transform: translateX(5px); }
+
+  .hero-stats {
+    display: flex; gap: 36px; margin-top: 56px; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.7s 0.65s ease forwards;
+  }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px; color: var(--cyan); line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px; color: var(--gray);
+    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  section { position: relative; z-index: 2; }
+
+  .section-tag {
+    font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-tag::before { content: ''; width: 20px; height: 1px; background: var(--cyan); flex-shrink: 0; }
+
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(38px, 5.5vw, 74px);
+    line-height: 0.9; letter-spacing: 2px;
+  }
+  h2 .cyan { color: var(--cyan); }
+
+  /* ── SERVICIOS ── */
+  .services {
+    padding: 100px 48px;
+    background: linear-gradient(180deg, var(--purple) 0%, var(--purple-mid) 50%, var(--purple) 100%);
+  }
+  .services-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 56px; flex-wrap: wrap; gap: 20px;
+  }
+  .services-desc { font-size: 15px; color: var(--gray); line-height: 1.7; max-width: 320px; }
+
+  .services-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 2px; border: 1px solid rgba(75,184,212,0.1); border-radius: 12px; overflow: hidden;
+  }
+  .service-card {
+    background: rgba(18,1,54,0.65); padding: 40px 32px;
+    position: relative; overflow: hidden; transition: background 0.3s;
+  }
+  .service-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .service-card:hover { background: rgba(30,2,88,0.85); }
+  .service-card:hover::before { opacity: 1; }
+  .service-num {
+    font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 1;
+    color: rgba(75,184,212,0.07); position: absolute; top: 10px; right: 18px;
+    transition: color 0.3s; pointer-events: none;
+  }
+  .service-card:hover .service-num { color: rgba(75,184,212,0.14); }
+  .service-icon { width: 40px; height: 40px; color: var(--cyan); margin-bottom: 20px; }
+  .service-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 1px; margin-bottom: 10px;
+  }
+  .service-desc { font-size: 13px; color: var(--gray); line-height: 1.7; margin-bottom: 24px; }
+  .service-price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .price-from { font-size: 10px; color: var(--gray); letter-spacing: 1.5px; text-transform: uppercase; }
+  .price-amount { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--cyan); }
+  .price-currency { font-size: 11px; color: var(--gray); }
+
+  /* ── CAPACIDADES ── */
+  .capabilities { padding: 100px 48px; }
+  .cap-header { margin-bottom: 60px; }
+  .cap-intro { font-size: 15px; color: var(--gray); max-width: 500px; line-height: 1.7; margin-top: 16px; }
+
+  .cap-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 3px; border: 1px solid rgba(75,184,212,0.1); border-radius: 14px; overflow: hidden;
+  }
+  .cap-block {
+    background: rgba(18,1,54,0.55); padding: 44px 40px;
+    position: relative; transition: background 0.3s;
+  }
+  .cap-block:hover { background: rgba(30,2,88,0.8); }
+  .cap-block.featured {
+    grid-column: span 2;
+    background: rgba(75,184,212,0.06);
+    border-top: 1px solid rgba(75,184,212,0.12);
+  }
+  .cap-block.featured:hover { background: rgba(75,184,212,0.09); }
+
+  .cap-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 12px; }
+  .cap-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; margin-bottom: 14px; line-height: 1; }
+  .cap-desc { font-size: 13px; color: var(--gray); line-height: 1.75; }
+  .cap-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+  .cap-tag {
+    font-size: 11px; color: var(--gray);
+    background: rgba(75,184,212,0.06); border: 1px solid rgba(75,184,212,0.15);
+    padding: 4px 11px; border-radius: 100px; transition: all 0.2s;
+  }
+  .cap-block:hover .cap-tag { border-color: rgba(75,184,212,0.28); color: var(--white); }
+
+  .cap-featured-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .cap-metrics { display: flex; gap: 40px; }
+  .metric-num { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--cyan); line-height: 1; }
+  .metric-label { font-size: 12px; color: var(--gray); margin-top: 4px; line-height: 1.4; max-width: 110px; }
+
+  /* ── PROCESO ── */
+  .process { padding: 100px 48px; }
+  .process-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 32px; margin-top: 56px; }
+  .step-num { font-family: 'Bebas Neue', sans-serif; font-size: 80px; color: var(--cyan); opacity: 0.1; line-height: 1; transition: opacity 0.3s; }
+  .process-step:hover .step-num { opacity: 0.22; }
+  .step-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; margin-bottom: 8px; margin-top: -8px; }
+  .step-desc { font-size: 13px; color: var(--gray); line-height: 1.7; }
+
+  /* ── CTA BAND ── */
+  .cta-band {
+    margin: 0 48px 100px;
+    background: linear-gradient(135deg, var(--purple-light) 0%, var(--purple-mid) 100%);
+    border: 1px solid rgba(75,184,212,0.2); border-radius: 16px;
+    padding: 64px 72px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 32px; flex-wrap: wrap; position: relative; overflow: hidden;
+  }
+  .cta-band::before {
+    content: ''; position: absolute; top: -100px; right: -100px;
+    width: 350px; height: 350px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(75,184,212,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-band h2 { font-size: clamp(32px, 4vw, 60px); }
+  .cta-band p { font-size: 14px; color: var(--gray); margin-top: 10px; max-width: 360px; }
+
+  /* ── CONTACTO ── */
+  .contact { padding: 0 48px 100px; }
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  .contact-info h2 { margin-bottom: 16px; }
+  .contact-info > p { font-size: 14px; color: var(--gray); line-height: 1.75; margin-bottom: 32px; }
+  .contact-item { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .contact-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: rgba(75,184,212,0.08); border: 1px solid rgba(75,184,212,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cyan); flex-shrink: 0; margin-top: 2px;
+  }
+  .contact-item strong { display: block; color: var(--white); font-size: 14px; }
+  .contact-item span { font-size: 12px; color: var(--gray); line-height: 1.5; }
+
+  .contact-form { display: flex; flex-direction: column; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  input, textarea, select {
+    width: 100%; background: rgba(30,2,88,0.45);
+    border: 1px solid rgba(75,184,212,0.15); color: var(--white);
+    padding: 14px 16px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    transition: border-color 0.2s, background 0.2s; outline: none;
+    -webkit-appearance: none;
+  }
+  input::placeholder, textarea::placeholder { color: var(--gray); }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--cyan); background: rgba(30,2,88,0.65);
+  }
+  textarea { resize: vertical; min-height: 110px; }
+  select { cursor: pointer; }
+  select option { background: #1e0258; }
+
+  .form-submit {
+    background: var(--cyan); color: var(--purple);
+    border: none; padding: 16px 36px; border-radius: 8px; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; font-size: 19px; letter-spacing: 2px;
+    transition: all 0.25s; box-shadow: 0 0 28px rgba(75,184,212,0.22);
+    align-self: flex-start; -webkit-appearance: none;
+  }
+  .form-submit:hover {
+    background: var(--cyan-light); transform: translateY(-2px);
+    box-shadow: 0 0 48px rgba(75,184,212,0.4);
+  }
+  .form-success { display: none; color: var(--cyan); font-size: 14px; padding: 10px 0; }
+
+  /* WhatsApp flotante */
+  .wa-float {
+    position: fixed; bottom: 24px; right: 24px; z-index: 400;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #25D366;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 24px rgba(37,211,102,0.4);
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: waPop 0.5s 2s ease both;
+  }
+  .wa-float:hover { transform: scale(1.1); box-shadow: 0 6px 32px rgba(37,211,102,0.6); }
+  .wa-float svg { width: 30px; height: 30px; fill: white; }
+  @keyframes waPop {
+    from { opacity: 0; transform: scale(0); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid rgba(75,184,212,0.1);
+    padding: 28px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .footer-logo img { height: 32px; width: auto; opacity: 0.85; }
+  footer p { font-size: 11px; color: var(--gray); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { font-size: 11px; color: var(--gray); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--cyan); }
+
+  /* REVEAL */
+  .reveal { opacity: 0; transform: translateY(32px); transition: all 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .d1 { transition-delay: 0.1s; } .d2 { transition-delay: 0.2s; }
+  .d3 { transition-delay: 0.3s; } .d4 { transition-delay: 0.4s; }
+
+  /* ════════════════════════════
+     RESPONSIVE — TABLET
+  ════════════════════════════ */
+  @media (max-width: 1024px) {
+    .cap-featured-inner { grid-template-columns: 1fr; gap: 28px; }
+    .process-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ════════════════════════════
+     RESPONSIVE — MÓVIL (≤768px)
+  ════════════════════════════ */
+  @media (max-width: 768px) {
+    /* NAV */
+    nav { padding: 14px 20px; }
+    nav ul { display: none; }
+    .hamburger { display: flex; }
+
+    /* HERO */
+    .hero { padding: 90px 20px 60px; min-height: 100svh; }
+    .hero-orb { width: 300px; height: 300px; right: -100px; top: -100px; }
+    .hero-orb2 { display: none; }
+
+    h1 { font-size: clamp(52px, 14vw, 80px); letter-spacing: 1px; }
+    h1 .outline { -webkit-text-stroke: 1.5px var(--cyan); }
+
+    .hero-badge { font-size: 9px; }
+    .hero-sub { font-size: 15px; max-width: 100%; }
+    .hero-pills { gap: 6px; }
+    .pill { font-size: 10px; padding: 4px 10px; }
+
+    .hero-actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .btn-primary { width: 100%; text-align: center; padding: 16px; font-size: 19px; }
+    .btn-ghost { font-size: 14px; }
+
+    .hero-stats { gap: 24px; margin-top: 40px; }
+    .stat-num { font-size: 34px; }
+
+    /* SERVICIOS */
+    .services { padding: 72px 20px; }
+    .services-header { flex-direction: column; align-items: flex-start; }
+    .services-desc { max-width: 100%; }
+    .services-grid { grid-template-columns: 1fr; }
+    .service-card { padding: 32px 24px; }
+
+    /* CAPACIDADES */
+    .capabilities { padding: 72px 20px; }
+    .cap-grid { grid-template-columns: 1fr; }
+    .cap-block { padding: 32px 24px; }
+    .cap-block.featured { grid-column: span 1; }
+    .cap-title { font-size: 26px; }
+    .cap-metrics { gap: 28px; }
+    .metric-num { font-size: 44px; }
+
+    /* PROCESO */
+    .process { padding: 72px 20px; }
+    .process-grid { grid-template-columns: 1fr; gap: 0; }
+    .process-step {
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(75,184,212,0.08);
+    }
+    .step-num { font-size: 56px; }
+
+    /* CTA */
+    .cta-band {
+      margin: 0 20px 72px;
+      padding: 40px 28px;
+      flex-direction: column; align-items: flex-start;
+    }
+    .cta-band h2 { font-size: 42px; }
+    .cta-band .btn-primary { width: 100%; text-align: center; }
+
+    /* CONTACTO */
+    .contact { padding: 0 20px 80px; }
+    .contact-grid { grid-template-columns: 1fr; gap: 48px; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-submit { width: 100%; text-align: center; align-self: stretch; }
+
+    /* FOOTER */
+    footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .footer-links { flex-wrap: wrap; gap: 16px; }
+
+    /* WhatsApp */
+    .wa-float { bottom: 16px; right: 16px; width: 50px; height: 50px; }
+    .wa-float svg { width: 26px; height: 26px; }
+  }
+
+  /* ════════════════════════════
+     RESPONSIVE — PEQUEÑO (≤390px)
+  ════════════════════════════ */
+  @media (max-width: 390px) {
+    h1 { font-size: 48px; }
+    .hero-pills .pill:nth-child(n+5) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo" aria-label="8vobit inicio">
+    <img src="ISOTIPO.png" alt="8vobit logo">
+  </a>
+  <ul>
+    <li><a href="#servicios">Servicios</a></li>
+    <li><a href="#capacidades">Marketing</a></li>
+    <li><a href="#proceso">Proceso</a></li>
+    <li><a href="#contacto" class="nav-btn">Cotizar</a></li>
+  </ul>
+  <button class="hamburger" id="hamburger" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MENÚ MÓVIL -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#servicios" onclick="closeMenu()">Servicios</a>
+  <a href="#capacidades" onclick="closeMenu()">Marketing Digital</a>
+  <a href="#proceso" onclick="closeMenu()">Proceso</a>
+  <a href="#contacto" class="mob-cta" onclick="closeMenu()">Cotizar proyecto</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-orb"></div>
+  <div class="hero-orb2"></div>
+
+  <div class="hero-badge">Diseño web · SEO · Marketing Digital · Chile</div>
+
+  <h1>
+    WEB QUE<br>
+    <span class="cyan">POSICIONA</span><br>
+    <span class="outline">Y VENDE</span>
+  </h1>
+
+  <p class="hero-sub">
+    No solo hacemos sitios bonitos. Creamos <strong>presencia digital completa</strong>: diseño, desarrollo, SEO y estrategia de contenido para que tu negocio aparezca, atraiga y convierta.
+  </p>
+
+  <div class="hero-pills">
+    <span class="pill">Diseño Web</span>
+    <span class="pill">SEO On-Page</span>
+    <span class="pill">E-Commerce</span>
+    <span class="pill">Conversión CRO</span>
+    <span class="pill">Contenido Mensual</span>
+    <span class="pill">Marketing Digital</span>
+  </div>
+
+  <div class="hero-actions">
+    <a href="#servicios" class="btn-primary">Ver servicios</a>
+    <a href="#contacto" class="btn-ghost">Cotizar proyecto</a>
+  </div>
+
+  <div class="hero-stats">
+    <div>
+      <div class="stat-num">+50</div>
+      <div class="stat-label">Proyectos</div>
+    </div>
+    <div>
+      <div class="stat-num">SEO</div>
+      <div class="stat-label">Incluido</div>
+    </div>
+    <div>
+      <div class="stat-num">48H</div>
+      <div class="stat-label">Inicio</div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICIOS -->
+<section class="services" id="servicios">
+  <div class="services-header reveal">
+    <div>
+      <div class="section-tag">Desarrollo Web</div>
+      <h2>SITIOS WEB<br><span class="cyan">A TU MEDIDA</span></h2>
+    </div>
+    <p class="services-desc">Desde una página simple hasta tienda online. Cada proyecto incluye diseño responsivo y optimización base para Google.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card reveal">
+      <div class="service-num">01</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <div class="service-title">One Page</div>
+      <p class="service-desc">Todo tu negocio en una página. Rápida, clara, con llamadas a la acción estratégicas y optimizada para celular.</p>
+      <div class="service-price">
+        <span class="price-from">Desde</span>
+        <span class="price-amount">$150.000</span>
+        <span class="price-currency">CLP</span>
+      </div>
+    </div>
+    <div class="service-card reveal d1">
+      <div class="service-num">02</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <div class="service-title">Landing Page</div>
+      <p class="service-desc">Diseñada para convertir. Estructura orientada a conseguir leads o ventas. Ideal para campañas de publicidad digital.</p>
+      <div class="service-price">
+        <span class="price-from">Desde</span>
+        <span class="price-amount">$250.000</span>
+        <span class="price-currency">CLP</span>
+      </div>
+    </div>
+    <div class="service-card reveal d2">
+      <div class="service-num">03</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <div class="service-title">E-Commerce</div>
+      <p class="service-desc">Tienda online completa. Carrito, Webpay y Mercado Pago, gestión de productos. Lista para vender desde el primer día.</p>
+      <div class="service-price">
+        <span class="price-from">Desde</span>
+        <span class="price-amount">$250.000</span>
+        <span class="price-currency">CLP</span>
+      </div>
+    </div>
+    <div class="service-card reveal d3">
+      <div class="service-num">04</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <div class="service-title">Contenido Mensual</div>
+      <p class="service-desc">Plan de generación de contenido SEO para tu sitio. Artículos, actualizaciones y gestión continua mes a mes.</p>
+      <div class="service-price">
+        <span class="price-from">Plan</span>
+        <span class="price-amount">Mensual</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPACIDADES -->
+<section class="capabilities" id="capacidades">
+  <div class="cap-header reveal">
+    <div class="section-tag">Marketing Digital</div>
+    <h2>MÁS QUE<br><span class="cyan">UN SITIO WEB</span></h2>
+    <p class="cap-intro">Cada proyecto incluye la estrategia. No entregamos solo código — entregamos una herramienta de crecimiento digital completa.</p>
+  </div>
+  <div class="cap-grid">
+    <div class="cap-block reveal">
+      <div class="cap-label">Posicionamiento</div>
+      <div class="cap-title">SEO On-Page</div>
+      <p class="cap-desc">Optimizamos cada página para que Google la entienda y posicione. Desde la estructura del código hasta textos y metadatos.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">Keyword research</span>
+        <span class="cap-tag">Meta tags</span>
+        <span class="cap-tag">Velocidad de carga</span>
+        <span class="cap-tag">Estructura semántica</span>
+        <span class="cap-tag">Search Console</span>
+      </div>
+    </div>
+    <div class="cap-block reveal d1">
+      <div class="cap-label">Optimización</div>
+      <div class="cap-title">Conversión CRO</div>
+      <p class="cap-desc">Cada botón, sección y texto tiene un propósito: llevar al visitante a contactarte o comprar. UX con intención.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">UX/UI estratégico</span>
+        <span class="cap-tag">CTA optimizados</span>
+        <span class="cap-tag">Flujo de usuario</span>
+        <span class="cap-tag">Formularios activos</span>
+      </div>
+    </div>
+    <div class="cap-block reveal d2">
+      <div class="cap-label">Desarrollo</div>
+      <div class="cap-title">Rendimiento Web</div>
+      <p class="cap-desc">Sitios rápidos, seguros y responsivos. Un segundo menos de carga significa más ventas. Optimizamos cada milisegundo.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">Core Web Vitals</span>
+        <span class="cap-tag">100% Responsivo</span>
+        <span class="cap-tag">SSL incluido</span>
+        <span class="cap-tag">Caché y compresión</span>
+      </div>
+    </div>
+    <div class="cap-block reveal d3">
+      <div class="cap-label">Estrategia</div>
+      <div class="cap-title">Contenido Digital</div>
+      <p class="cap-desc">Generamos contenido que posiciona en Google y conecta con tu audiencia. Artículos de blog, textos de venta y actualizaciones.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">Blog SEO</span>
+        <span class="cap-tag">Copywriting</span>
+        <span class="cap-tag">Actualización mensual</span>
+        <span class="cap-tag">Estrategia editorial</span>
+      </div>
+    </div>
+    <div class="cap-block featured reveal">
+      <div class="cap-featured-inner">
+        <div>
+          <div class="cap-label">Enfoque integral</div>
+          <div class="cap-title" style="font-size:clamp(24px,3.5vw,40px);line-height:1.05;">DISEÑO + SEO + ESTRATEGIA<br><span style="color:var(--cyan)">TODO EN UNO</span></div>
+          <p class="cap-desc" style="margin-top:14px;">No tercerizamos. Diseñamos, desarrollamos, optimizamos y generamos el contenido de tu presencia digital. Un solo equipo, resultados medibles.</p>
+          <div class="cap-tags" style="margin-top:18px;">
+            <span class="cap-tag">Google Analytics</span>
+            <span class="cap-tag">Pixel Meta / Google Ads</span>
+            <span class="cap-tag">WhatsApp integrado</span>
+            <span class="cap-tag">Mapas y ubicación</span>
+            <span class="cap-tag">Redes sociales</span>
+          </div>
+        </div>
+        <div class="cap-metrics">
+          <div>
+            <div class="metric-num">3X</div>
+            <div class="metric-label">más visitas con SEO bien hecho</div>
+          </div>
+          <div>
+            <div class="metric-num">↑67%</div>
+            <div class="metric-label">más conversión con CRO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESO -->
+<section class="process" id="proceso">
+  <div class="reveal">
+    <div class="section-tag">Cómo trabajamos</div>
+    <h2>PROCESO<br><span class="cyan">SIMPLE</span></h2>
+  </div>
+  <div class="process-grid">
+    <div class="process-step reveal">
+      <div class="step-num">01</div>
+      <div class="step-title">Conversamos</div>
+      <p class="step-desc">Entendemos tu negocio, público y metas. Sin tecnicismos, definimos juntos qué presencia digital necesitas.</p>
+    </div>
+    <div class="process-step reveal d1">
+      <div class="step-num">02</div>
+      <div class="step-title">Diseñamos</div>
+      <p class="step-desc">Prototipo visual con tu identidad. Colores, tipografía y estructura pensada para SEO y conversión.</p>
+    </div>
+    <div class="process-step reveal d2">
+      <div class="step-num">03</div>
+      <div class="step-title">Desarrollamos</div>
+      <p class="step-desc">Programamos el sitio, integramos Analytics, Pixel, WhatsApp y lo optimizamos para Google desde el código.</p>
+    </div>
+    <div class="process-step reveal d3">
+      <div class="step-num">04</div>
+      <div class="step-title">Lanzamos</div>
+      <p class="step-desc">Publicamos en tu dominio, configuramos herramientas de medición y te entregamos un sitio listo para atraer clientes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-band reveal">
+  <div>
+    <h2>¿LISTO PARA<br><span class="cyan">CRECER?</span></h2>
+    <p>Cotiza hoy y ten tu presencia digital completa — web + SEO — lista en menos de 2 semanas.</p>
+  </div>
+  <a href="#contacto" class="btn-primary">Quiero mi web</a>
+</div>
+
+<!-- CONTACTO -->
+<section class="contact" id="contacto">
+  <div class="contact-grid">
+    <div class="contact-info reveal">
+      <div class="section-tag">Contacto</div>
+      <h2>HABLEMOS DE<br><span class="cyan">TU PROYECTO</span></h2>
+      <p>Cuéntanos qué necesitas y te respondemos en menos de 24 horas con una propuesta concreta y sin compromiso.</p>
+      <div class="contact-item">
+        <div class="contact-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>
+          <strong>Concepción, Chile</strong>
+          <span>Trabajamos con clientes en todo el país</span>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.18 19.79 19.79 0 01.75 5.36 2 2 0 012.18 3h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 10.09a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        </div>
+        <div>
+          <strong>WhatsApp</strong>
+          <span>La forma más rápida.<br>Respuesta en minutos.</span>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </div>
+        <div>
+          <strong>@8vobit</strong>
+          <span>Instagram — ve nuestros proyectos</span>
+        </div>
+      </div>
+    </div>
+
+    <form class="contact-form reveal d1" onsubmit="handleSubmit(event)">
+      <div class="form-row">
+        <input type="text" placeholder="Tu nombre" required>
+        <input type="text" placeholder="Tu empresa / negocio">
+      </div>
+      <input type="tel" placeholder="WhatsApp (para respuesta rápida)">
+      <select required>
+        <option value="" disabled selected>¿Qué necesitas?</option>
+        <option>One Page — desde $150.000</option>
+        <option>Landing Page — desde $250.000</option>
+        <option>E-Commerce — desde $250.000</option>
+        <option>Contenido mensual + SEO</option>
+        <option>Consultoría de Marketing Digital</option>
+        <option>No sé, quiero asesoría</option>
+      </select>
+      <textarea placeholder="Cuéntanos sobre tu negocio: ¿qué ofreces, a quién le vendes y qué quieres lograr?"></textarea>
+      <button type="submit" class="form-submit">Enviar mensaje</button>
+      <div class="form-success" id="form-success">✓ ¡Mensaje enviado! Te contactamos pronto.</div>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo" aria-label="8vobit">
+    <img src="ISOTIPO.png" alt="8vobit">
+  </a>
+  <p>© 2025 8vobit.cl — Diseño Web, SEO y Marketing Digital en Chile</p>
+  <div class="footer-links">
+    <a href="#servicios">Servicios</a>
+    <a href="#capacidades">Marketing</a>
+    <a href="#contacto">Contacto</a>
+  </div>
+</footer>
+
+<!-- WhatsApp flotante -->
+<a class="wa-float" href="https://wa.me/56XXXXXXXXX" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
+
+<script>
+  // Cursor (solo desktop)
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  if (window.matchMedia('(pointer: fine)').matches) {
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+    });
+    (function animRing() {
+      rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+      ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+      requestAnimationFrame(animRing);
+    })();
+    document.querySelectorAll('a, button, input, select, textarea').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        cursor.style.transform = 'translate(-50%,-50%) scale(2.5)';
+        ring.style.width = '56px'; ring.style.height = '56px';
+        ring.style.borderColor = 'rgba(75,184,212,0.8)';
+      });
+      el.addEventListener('mouseleave', () => {
+        cursor.style.transform = 'translate(-50%,-50%) scale(1)';
+        ring.style.width = '36px'; ring.style.height = '36px';
+        ring.style.borderColor = 'rgba(75,184,212,0.5)';
+      });
+    });
+  }
+
+  // Nav scroll
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // Hamburger
+  const ham = document.getElementById('hamburger');
+  const mob = document.getElementById('mobileMenu');
+  ham.addEventListener('click', () => {
+    ham.classList.toggle('open');
+    mob.classList.toggle('open');
+  });
+  function closeMenu() {
+    ham.classList.remove('open');
+    mob.classList.remove('open');
+  }
+
+  // Scroll reveal
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  // Form
+  function handleSubmit(e) {
+    e.preventDefault();
+    const s = document.getElementById('form-success');
+    s.style.display = 'block'; e.target.reset();
+    setTimeout(() => s.style.display = 'none', 5000);
+  }
+</script>
+</body>
+</html>
