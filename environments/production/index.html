@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8vobit — Sistema Web para Servicios Profesionales</title>
+<meta name="description" content="8vobit estructura proyectos web para servicios profesionales con landing, onboarding, portal cliente, medicion base y entrega ordenada.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-soft: #f0ebe2;
+    --surface: #f7f3ec;
+    --panel: rgba(255, 255, 255, 0.76);
+    --ink: #1a1a1a;
+    --ink-soft: #2d2d2d;
+    --muted: #6b6460;
+    --line: rgba(5, 5, 5, 0.08);
+    --line-strong: rgba(5, 5, 5, 0.14);
+    --dark: #0a0a0a;
+    --dark-soft: #141414;
+    --dark-line: rgba(255, 255, 255, 0.12);
+    --white: #fafaf8;
+    --accent: #6fe5f7;
+    --accent-soft: #b8eef9;
+    --accent-deep: #0d2936;
+    --accent-glow: rgba(111, 229, 247, 0.25);
+    --max: 1320px;
+    --radius-xl: 42px;
+    --radius-lg: 32px;
+    --radius-md: 22px;
+    --shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.12);
+    --fs-label: 11px;
+    --fs-nav: 13px;
+    --fs-body-sm: 15px;
+    --fs-body: 16px;
+    --fs-body-lg: 18px;
+    --fs-body-xl: 19px;
+    --fs-title-card: clamp(28px, 2.6vw, 36px);
+    --fs-title-media: clamp(30px, 3.8vw, 52px);
+    --fs-title-section: clamp(40px, 5.7vw, 72px);
+    --fs-title-stack: clamp(42px, 5.8vw, 78px);
+    --fs-title-display: clamp(48px, 8vw, 92px);
+    --measure-tight: 30ch;
+    --measure-copy: 38ch;
+    --measure-wide: 46ch;
+    --space-hero-y: 72px;
+    --space-section-y: 84px;
+    --space-section-dark-y: 92px;
+    --space-card: 28px;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Space Grotesk", sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  .shell {
+    width: min(calc(100% - 40px), var(--max));
+    margin: 0 auto;
+  }
+
+  .mono {
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(5, 5, 5, 0.52);
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 28px;
+    height: 1px;
+    background: rgba(5, 5, 5, 0.28);
+  }
+
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.54);
+  }
+
+  .section-label::before {
+    content: "";
+    width: 28px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  .cta-btn,
+  .cta-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 54px;
+    padding: 0 28px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent) 0%, #5bd9f0 100%);
+    color: var(--accent-deep);
+    font-size: var(--fs-nav);
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    box-shadow: 0 12px 32px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  .cta-btn::after,
+  .cta-link::after {
+    content: "↗";
+    margin-left: 10px;
+    font-size: 15px;
+    transition: transform 0.3s ease;
+  }
+
+  .cta-btn:hover,
+  .cta-link:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 16px 48px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .cta-btn:hover::after,
+  .cta-link:hover::after {
+    transform: translateX(3px);
+  }
+
+  .announcement {
+    background: linear-gradient(90deg, var(--dark) 0%, var(--dark-soft) 100%);
+    color: var(--white);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .announcement-inner {
+    width: min(calc(100% - 40px), var(--max));
+    margin: 0 auto;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 10px 0;
+    text-align: center;
+  }
+
+  .announcement-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 999px;
+    background: rgba(111, 229, 247, 0.1);
+    border: 1px solid rgba(111, 229, 247, 0.25);
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+  }
+
+  .announcement-pill:hover {
+    background: rgba(111, 229, 247, 0.15);
+    border-color: rgba(111, 229, 247, 0.4);
+  }
+
+  .announcement-copy {
+    font-size: var(--fs-nav);
+    color: rgba(248, 250, 248, 0.92);
+  }
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(243, 239, 231, 0.86);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-shell {
+    width: min(calc(100% - 40px), var(--max));
+    margin: 0 auto;
+    min-height: 78px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .header-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header-nav.right {
+    justify-content: flex-end;
+  }
+
+  .header-nav a {
+    font-size: var(--fs-nav);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(5, 5, 5, 0.6);
+    transition: color 0.3s ease;
+  }
+
+  .header-nav a:hover {
+    color: var(--accent);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+  }
+
+  .brand-word {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .hero {
+    padding: var(--space-hero-y) 0 28px;
+  }
+
+  .hero-copy-wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .hero-title {
+    margin-top: 28px;
+    font-size: var(--fs-title-display);
+    line-height: 0.92;
+    letter-spacing: -0.075em;
+    text-wrap: balance;
+    color: var(--ink);
+    max-width: 14ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-title strong {
+    font-weight: 700;
+  }
+
+  .hero-subtitle {
+    margin: 28px auto 0;
+    max-width: var(--measure-wide);
+    font-size: var(--fs-body-lg);
+    line-height: 1.76;
+    color: #6b6460;
+    text-wrap: balance;
+  }
+
+  .hero-actions {
+    margin-top: 34px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .hero-note {
+    margin-top: 18px;
+    max-width: 56ch;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(5, 5, 5, 0.48);
+  }
+
+  .hero-stage {
+    margin-top: 48px;
+    border-radius: 40px;
+    border: 1px solid var(--line-strong);
+    background:
+      radial-gradient(circle at top center, rgba(111, 229, 247, 0.15), transparent 35%),
+      linear-gradient(180deg, #fcfbf9 0%, #f3ede1 100%);
+    box-shadow: var(--shadow-lg);
+    padding: 18px;
+    max-width: 1040px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .stage-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+    gap: 16px;
+  }
+
+  .stage-tablet {
+    min-height: 460px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    box-shadow: inset 0 1px 8px rgba(111, 229, 247, 0.08);
+  }
+
+  .stage-browser {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stage-browser span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .stage-screen {
+    margin-top: 18px;
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at top right, rgba(143, 231, 249, 0.18), transparent 26%),
+      linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .stage-kicker {
+    font-size: var(--fs-label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .stage-headline {
+    font-size: clamp(26px, 3.2vw, 44px);
+    line-height: 1.02;
+    letter-spacing: -0.07em;
+    color: var(--white);
+    max-width: 8.6ch;
+  }
+
+  .stage-text {
+    max-width: 32ch;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 15px;
+    line-height: 1.62;
+  }
+
+  .stage-rows {
+    display: grid;
+    gap: 8px;
+  }
+
+  .stage-row {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .stage-row:hover {
+    border-color: rgba(111, 229, 247, 0.3);
+    background: linear-gradient(135deg, rgba(111, 229, 247, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
+  }
+
+  .stage-row strong {
+    color: var(--white);
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stage-row span {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: var(--fs-body-sm);
+    line-height: 1.65;
+  }
+
+  .stage-side {
+    display: grid;
+    gap: 12px;
+  }
+
+  .stage-card {
+    border-radius: 28px;
+    border: 1px solid var(--line-strong);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 248, 245, 0.85) 100%);
+    padding: 24px;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+  }
+
+  .stage-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(111, 229, 247, 0.1);
+  }
+
+  .stage-card strong {
+    display: block;
+    font-size: var(--fs-label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(5, 5, 5, 0.48);
+  }
+
+  .stage-card h3 {
+    margin-top: 14px;
+    font-size: clamp(24px, 2.4vw, 32px);
+    line-height: 1.03;
+    letter-spacing: -0.06em;
+    max-width: 9.5ch;
+  }
+
+  .stage-card p {
+    margin-top: 14px;
+    max-width: 30ch;
+    font-size: 158px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .stage-tags span {
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(250, 248, 245, 0.7) 100%);
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+  }
+
+  .stage-tags span:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(111, 229, 247, 0.1)
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.74);
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stage-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .stage-mini {
+    min-height: 128px;
+    border-radius: 24px;
+    border: 1px solid var(--line-strong);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 248, 245, 0.87) 100%);
+    padding: 20px;
+    transition: all 0.3s ease;
+  }
+
+  .stage-mini:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(111, 229, 247, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .stage-mini h4 {
+    margin-top: 14px;
+    font-size: clamp(18px, 1.8vw, 22px);
+    line-height: 1.05;
+    letter-spacing: -0.05em;
+  }
+
+  .stage-mini p {
+    margin-top: 10px;
+    max-width: 22ch;
+    font-size: 14px;
+    line-height: 1.58;
+    color: var(--muted);
+  }
+
+  .value-section {
+    padding: var(--space-section-y) 0;
+  }
+
+  .value-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .value-title {
+    margin-top: 20px;
+    font-size: var(--fs-title-section);
+    line-height: 0.97;
+    letter-spacing: -0.07em;
+    text-wrap: balance;
+    max-width: 14ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .value-copy {
+    margin: 20px auto 0;
+    max-width: var(--measure-wide);
+    font-size: var(--fs-body-lg);
+    line-height: 1.78;
+    color: var(--muted);
+  }
+
+  .segment-grid {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .segment-grid div {
+    min-height: 76px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.74);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    text-align: center;
+    font-size: var(--fs-body-sm);
+    font-weight: 700;
+    color: rgba(5, 5, 5, 0.72);
+  }
+
+  .stack {
+    background: var(--dark);
+    color: var(--white);
+    padding: var(--space-section-dark-y) 0 92px;
+  }
+
+  .stack-shell {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+    gap: 36px;
+    align-items: start;
+  }
+
+  .stack-media {
+    position: sticky;
+    top: 120px;
+  }
+
+  .stack-device {
+    border-radius: 34px;
+    border: 1px solid var(--dark-line);
+    background: linear-gradient(180deg, #131313 0%, #050505 100%);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.32), inset 0 1px 12px rgba(111, 229, 247, 0.06);
+    padding: 18px;
+  }
+
+  .stack-screen {
+    min-height: 640px;
+    border-radius: 28px;
+    padding: 24px;
+    background:
+      radial-gradient(circle at top right, rgba(111, 229, 247, 0.12), transparent 28%),
+      linear-gradient(180deg, #1a1a1a 0%, #0b0b0b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 18px;
+  }
+
+  .stack-browser {
+    display: flex;
+    gap: 8px;
+  }
+
+  .stack-browser span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .stack-screen h3 {
+    font-size: var(--fs-title-media);
+    line-height: 0.98;
+    letter-spacing: -0.07em;
+    max-width: 7.5ch;
+  }
+
+  .stack-screen p {
+    max-width: var(--measure-copy);
+    color: rgba(255, 255, 255, 0.68);
+    font-size: var(--fs-body);
+    line-height: 1.72;
+  }
+
+  .stack-modules {
+    display: grid;
+    gap: 12px;
+  }
+
+  .stack-module {
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .stack-module:hover {
+    border-color: rgba(111, 229, 247, 0.3);
+    background: linear-gradient(135deg, rgba(111, 229, 247, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
+  }
+
+  .stack-module strong {
+    display: block;
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stack-module span {
+    display: block;
+    margin-top: 8px;
+    font-size: var(--fs-body-sm);
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.64);
+  }
+
+  .stack-list {
+    display: grid;
+    gap: 18px;
+  }
+
+  .stack-item {
+    min-height: 46vh;
+    display: flex;
+    align-items: center;
+  }
+
+  .stack-card {
+    width: 100%;
+  }
+
+  .stack-index {
+    font-size: var(--fs-label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.48);
+  }
+
+  .stack-title {
+    margin-top: 18px;
+    font-size: var(--fs-title-stack);
+    line-height: 0.95;
+    letter-spacing: -0.08em;
+    max-width: 11ch;
+    text-wrap: balance;
+  }
+
+  .stack-copy {
+    margin-top: 18px;
+    max-width: 44ch;
+    font-size: var(--fs-body-lg);
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  .stack-points {
+    margin-top: 24px;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+
+  .stack-points li {
+    position: relative;
+    padding-left: 18px;
+    color: rgba(255, 255, 255, 0.64);
+    font-size: var(--fs-body-sm);
+    line-height: 1.68;
+  }
+
+  .stack-points li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.65em;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .stack-actions {
+    margin-top: 20px;
+  }
+
+  .systems {
+    background: #141414;
+    color: var(--white);
+    padding: var(--space-section-dark-y) 0 88px;
+  }
+
+  .systems-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: center;
+  }
+
+  .systems-copy h2 {
+    margin-top: 20px;
+    font-size: var(--fs-title-section);
+    line-height: 0.96;
+    letter-spacing: -0.07em;
+    max-width: 10.5ch;
+  }
+
+  .systems-copy p {
+    margin-top: 18px;
+    max-width: var(--measure-copy);
+    font-size: var(--fs-body-lg);
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  .systems-list {
+    margin-top: 26px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .systems-list div {
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .systems-list div:hover {
+    border-color: rgba(111, 229, 247, 0.3);
+    background: linear-gradient(135deg, rgba(111, 229, 247, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
+  }
+
+  .systems-list strong {
+    display: block;
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .systems-list span {
+    display: block;
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.64);
+    font-size: var(--fs-body-sm);
+    line-height: 1.65;
+  }
+
+  .systems-media {
+    position: relative;
+    min-height: 520px;
+  }
+
+  .panel-tablet,
+  .panel-phone {
+    position: absolute;
+    border-radius: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(180deg, #111111 0%, #050505 100%);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.3);
+    padding: 18px;
+  }
+
+  .panel-tablet {
+    inset: 0 120px 0 0;
+  }
+
+  .panel-phone {
+    right: 0;
+    bottom: 18px;
+    width: 240px;
+    height: 430px;
+  }
+
+  .panel-screen {
+    height: 100%;
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top right, rgba(143, 231, 249, 0.16), transparent 26%),
+      linear-gradient(180deg, #1a1a1a 0%, #0b0b0b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 22px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .panel-screen strong {
+    font-size: var(--fs-label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .panel-screen h3 {
+    font-size: var(--fs-title-card);
+    line-height: 1;
+    letter-spacing: -0.06em;
+    max-width: 8ch;
+  }
+
+  .panel-screen p {
+    color: rgba(255, 255, 255, 0.66);
+    max-width: 25ch;
+    font-size: var(--fs-body-sm);
+    line-height: 1.65;
+  }
+
+  .panel-boxes {
+    display: grid;
+    gap: 10px;
+  }
+
+  .panel-boxes div {
+    min-height: 74px;
+    padding: 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .panel-boxes div:hover {
+    border-color: rgba(111, 229, 247, 0.25);
+    background: linear-gradient(135deg, rgba(111, 229, 247, 0.06) 0%, rgba(255, 255, 255, 0.04) 100%);
+  }
+
+  .panel-boxes strong {
+    display: block;
+  }
+
+  .panel-boxes span {
+    display: block;
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: var(--fs-label);
+    line-height: 1.55;
+  }
+
+  .cases {
+    padding: var(--space-section-y) 0 84px;
+  }
+
+  .cases-head {
+    max-width: 820px;
+  }
+
+  .cases-head h2 {
+    margin-top: 20px;
+    font-size: var(--fs-title-section);
+    line-height: 0.96;
+    letter-spacing: -0.07em;
+    max-width: 12ch;
+  }
+
+  .cases-head p {
+    margin-top: 18px;
+    max-width: var(--measure-wide);
+    font-size: var(--fs-body-lg);
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  .cases-grid {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .case-card {
+    min-height: 420px;
+    padding: var(--space-card);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 248, 245, 0.8) 100%);
+    border: 1px solid var(--line-strong);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.32s ease;
+    backdrop-filter: blur(8px);
+  }
+
+  .case-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 12px 32px rgba(111, 229, 247, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .case-card.dark {
+    background: linear-gradient(135deg, var(--dark-soft) 0%, #0d0d0d 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+  }
+
+  .case-card.dark:hover {
+    border-color: var(--accent);
+    box-shadow: 0 12px 40px var(--accent-glow);
+  }
+
+  .case-kicker {
+    font-size: var(--fs-label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(5, 5, 5, 0.48);
+  }
+
+  .case-card.dark .case-kicker {
+    color: rgba(255, 255, 255, 0.48);
+  }
+
+  .case-card h3 {
+    margin-top: 18px;
+    font-size: var(--fs-title-card);
+    line-height: 1;
+    letter-spacing: -0.06em;
+    max-width: 9ch;
+  }
+
+  .case-card p {
+    margin-top: 16px;
+    max-width: var(--measure-copy);
+    font-size: var(--fs-body);
+    line-height: 1.72;
+    color: var(--muted);
+  }
+
+  .case-card.dark p {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .case-list {
+    margin-top: 20px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .case-list div {
+    padding-top: 14px;
+    border-top: 1px solid rgba(5, 5, 5, 0.1);
+  }
+
+  .case-card.dark .case-list div {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .case-list strong {
+    display: block;
+    font-size: var(--fs-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .case-list span {
+    display: block;
+    margin-top: 8px;
+    font-size: var(--fs-body-sm);
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  .case-card.dark .case-list span {
+    color: rgba(255, 255, 255, 0.64);
+  }
+
+  .cta-section {
+    background: var(--dark);
+    color: var(--white);
+    padding: var(--space-section-dark-y) 0 80px;
+  }
+
+  .cta-shell {
+    max-width: 840px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .cta-shell h2 {
+    margin-top: 20px;
+    font-size: var(--fs-title-section);
+    line-height: 0.96;
+    letter-spacing: -0.08em;
+    text-wrap: balance;
+    max-width: 14ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-shell p {
+    margin: 22px auto 0;
+    max-width: var(--measure-wide);
+    font-size: var(--fs-body-xl);
+    line-height: 1.78;
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  .start-orb {
+    margin: 40px auto 0;
+    width: min(340px, 76vw);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid rgba(111, 229, 247, 0.3);
+    background:
+      radial-gradient(circle at top, rgba(111, 229, 247, 0.2), transparent 42%),
+      linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28), inset 0 1px 24px rgba(111, 229, 247, 0.12);
+    transition: all 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+  }
+
+  .start-orb:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.36), inset 0 1px 32px rgba(111, 229, 247, 0.18);
+    border-color: rgba(111, 229, 247, 0.5);
+  }
+
+  .start-orb span {
+    font-size: clamp(38px, 5vw, 60px);
+    letter-spacing: -0.08em;
+  }
+
+  .footer {
+    background: var(--dark);
+    color: rgba(255, 255, 255, 0.62);
+    padding: 0 0 28px;
+  }
+
+  .footer-shell {
+    width: min(calc(100% - 40px), var(--max));
+    margin: 0 auto;
+    padding-top: 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .footer-brand img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+  }
+
+  .footer-brand span {
+    font-size: var(--fs-nav);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .footer-links a {
+    font-size: var(--fs-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.56);
+  }
+
+  .footer-meta {
+    text-align: right;
+    font-size: var(--fs-label);
+    line-height: 1.6;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(111, 229, 247, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 32px rgba(111, 229, 247, 0.5);
+    }
+  }
+
+  .hero-copy-wrap {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .reveal {
+    animation: fadeInUp 0.7s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-copy-wrap,
+    .reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (max-width: 1120px) {
+    .header-shell {
+      grid-template-columns: 1fr auto;
+    }
+
+    .header-nav.left {
+      display: none;
+    }
+
+    .stage-shell,
+    .stack-shell,
+    .systems-shell,
+    .cases-grid,
+    .footer-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .stack-media {
+      position: static;
+    }
+
+    .stack-item {
+      min-height: auto;
+      padding: 18px 0;
+    }
+
+    .segment-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .systems-media {
+      min-height: 460px;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .announcement-inner,
+    .header-shell {
+      width: min(calc(100% - 28px), var(--max));
+    }
+
+    .announcement-inner {
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 0;
+    }
+
+    .header-shell {
+      min-height: auto;
+      padding: 16px 0;
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+
+    .header-nav.right {
+      justify-content: center;
+    }
+
+    .hero {
+      padding-top: 44px;
+    }
+
+    .hero-title {
+      font-size: clamp(42px, 11vw, 64px);
+    }
+
+    .hero-subtitle,
+    .value-copy,
+    .stack-copy,
+    .systems-copy p,
+    .cases-head p,
+    .cta-shell p {
+      font-size: 16px;
+    }
+
+    .segment-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-stage,
+    .stage-card,
+    .stage-mini,
+    .case-card {
+      border-radius: 24px;
+    }
+
+    .panel-tablet {
+      inset: 0;
+    }
+
+    .panel-phone {
+      position: relative;
+      right: auto;
+      bottom: auto;
+      width: 100%;
+      height: auto;
+      margin-top: 16px;
+    }
+
+    .systems-media {
+      min-height: auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .stage-mini-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .cta-btn,
+    .cta-link {
+      width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="announcement">
+  <div class="announcement-inner">
+    <a href="https://calendly.com/8vobitc/agenda" class="announcement-pill" data-calendly-link>Sistema Web 8vobit</a>
+    <div class="announcement-copy">Contrato, onboarding, portal cliente y landing dentro de una misma estructura.</div>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="header-shell">
+    <nav class="header-nav left">
+      <a href="#servicio">Sistema</a>
+      <a href="#proceso">Proceso</a>
+    </nav>
+    <a href="#" class="brand" aria-label="Inicio 8vobit">
+      <img src="ISOTIPO.png" alt="8vobit" class="brand-mark">
+      <span class="brand-word">8vobit</span>
+    </a>
+    <nav class="header-nav right">
+      <a href="#proyectos">Base</a>
+      <a href="https://calendly.com/8vobitc/agenda" data-calendly-link>Agendar</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="shell">
+      <div class="hero-copy-wrap reveal">
+        <div class="eyebrow">8vobit / Sistema Web Inicial</div>
+        <h1 class="hero-title">No armamos paginas sueltas. <strong>Montamos una landing dentro de un sistema claro.</strong></h1>
+        <p class="hero-subtitle">
+          8vobit organiza el proyecto desde el contrato y el pago inicial hasta el portal cliente, la estrategia, el build, la medicion y la entrega final.
+        </p>
+        <div class="hero-actions">
+          <a href="https://calendly.com/8vobitc/agenda" class="cta-btn" data-calendly-link>Agendar diagnostico</a>
+        </div>
+        <div class="hero-note mono">Una sola oferta clara. Un solo CTA. Un proceso completo detras.</div>
+
+        <div class="hero-stage">
+          <div class="stage-shell">
+            <div class="stage-tablet">
+              <div class="stage-browser"><span></span><span></span><span></span></div>
+              <div class="stage-screen">
+                <div class="stage-kicker mono">Sistema Web Inicial</div>
+                <h2 class="stage-headline">Una landing funciona mejor cuando entra a operacion con proceso, no solo con diseno.</h2>
+                <p class="stage-text">
+                  El proyecto arranca con contrato, onboarding y definicion de CTA. Luego pasa a build, QA, lanzamiento y entrega. Asi la pagina no queda suelta ni el cliente a ciegas.
+                </p>
+                <div class="stage-rows">
+                  <div class="stage-row">
+                    <strong>Entrada</strong>
+                    <span>Contrato, invoice, pago inicial y activacion formal del proyecto.</span>
+                  </div>
+                  <div class="stage-row">
+                    <strong>Estrategia</strong>
+                    <span>Intake, CTA, arquitectura y activos definidos antes de construir.</span>
+                  </div>
+                  <div class="stage-row">
+                    <strong>Operacion</strong>
+                    <span>Build, medicion base, QA y entrega ordenada para continuidad.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stage-side">
+              <article class="stage-card">
+                <strong class="mono">Pensada para</strong>
+                <h3>Servicios profesionales que necesitan vender confianza sin desorden.</h3>
+                <p>
+                  Contadores, abogados, psicologos, consultores y servicios B2B donde la claridad comercial y el seguimiento del proyecto pesan tanto como el diseno.
+                </p>
+                <div class="stage-tags">
+                  <span>Contadores</span>
+                  <span>Abogados</span>
+                  <span>Psicologos</span>
+                  <span>Consultores</span>
+                  <span>Servicios B2B</span>
+                </div>
+              </article>
+
+              <div class="stage-mini-grid">
+                <article class="stage-mini">
+                  <strong class="mono">Resultado</strong>
+                  <h4>Mas control</h4>
+                  <p>El cliente entiende el proceso y la agencia no depende de improvisaciones.</p>
+                </article>
+                <article class="stage-mini">
+                  <strong class="mono">Sistema</strong>
+                  <h4>Mas continuidad</h4>
+                  <p>Portal, documentos y entrega final dejan una base lista para crecer.</p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="servicio" class="value-section">
+    <div class="shell">
+      <div class="value-wrap reveal">
+        <div class="eyebrow">Estructura base</div>
+        <h2 class="value-title">La diferencia no es solo la landing. Es el sistema que la sostiene.</h2>
+        <p class="value-copy">
+          La pagina es la cara visible. Debajo corren contrato, invoice, welcome, portal cliente, intake, arquitectura, build, QA y entrega. Esa estructura ordena mejor el proyecto y mejora la calidad del contacto.
+        </p>
+        <div class="segment-grid">
+          <div>Contrato + pago 1</div>
+          <div>Welcome + portal</div>
+          <div>Intake estrategico</div>
+          <div>Build + QA</div>
+          <div>Entrega + continuidad</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="proceso" class="stack">
+    <div class="shell">
+      <div class="stack-shell">
+        <aside class="stack-media reveal">
+          <div class="stack-device">
+            <div class="stack-screen">
+              <div class="stack-browser"><span></span><span></span><span></span></div>
+              <div>
+                <div class="section-label">Sistema 8vobit</div>
+                <h3>Una estructura reusable para mover cada proyecto con criterio.</h3>
+              </div>
+              <p>
+                El cliente ve un recorrido claro y la agencia trabaja sobre un sistema documentado. Eso baja friccion comercial, ordena la ejecucion y deja mejores entregas.
+              </p>
+              <div class="stack-modules">
+                <div class="stack-module">
+                  <strong>Entrada formal</strong>
+                  <span>Contrato firmado, invoice emitido y pago inicial confirmado.</span>
+                </div>
+                <div class="stack-module">
+                  <strong>Onboarding</strong>
+                  <span>Welcome, portal, intake y solicitud de assets desde el comienzo.</span>
+                </div>
+                <div class="stack-module">
+                  <strong>Decision</strong>
+                  <span>CTA, arquitectura y prioridades definidas antes del build.</span>
+                </div>
+                <div class="stack-module">
+                  <strong>Lanzamiento</strong>
+                  <span>QA, GA4, Search Console y entrega final con accesos.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="stack-list">
+          <article class="stack-item">
+            <div class="stack-card reveal">
+              <div class="stack-index mono">01 · Formaliza</div>
+              <h2 class="stack-title">El proyecto empieza cuando hay cierre claro, no cuando aparece la ansiedad.</h2>
+              <p class="stack-copy">
+                Primero se ordena el arranque: contrato, invoice 1 y pago inicial. Desde ahi el proyecto entra a operacion con reglas claras para ambas partes.
+              </p>
+              <ul class="stack-points">
+                <li>contrato antes de ejecucion</li>
+                <li>pago inicial como puerta de entrada</li>
+                <li>alcance y tiempos mejor encuadrados</li>
+              </ul>
+              <div class="stack-actions">
+                <a href="https://calendly.com/8vobitc/agenda" class="cta-link" data-calendly-link>Agendar diagnostico</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="stack-item">
+            <div class="stack-card reveal">
+              <div class="stack-index mono">02 · Ordena</div>
+              <h2 class="stack-title">Onboarding visible para que el cliente sepa que viene y que falta.</h2>
+              <p class="stack-copy">
+                Welcome document, portal cliente, intake y solicitud de assets dejan el proyecto encarrilado antes de tocar la pagina. Asi reduces preguntas repetidas y bloqueos evitables.
+              </p>
+              <ul class="stack-points">
+                <li>welcome document con proximos pasos</li>
+                <li>portal con avances, entregables y pagos</li>
+                <li>assets y accesos pedidos desde el inicio</li>
+              </ul>
+              <div class="stack-actions">
+                <a href="https://calendly.com/8vobitc/agenda" class="cta-link" data-calendly-link>Agendar diagnostico</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="stack-item">
+            <div class="stack-card reveal">
+              <div class="stack-index mono">03 · Define</div>
+              <h2 class="stack-title">La landing se construye despues de definir CTA, arquitectura y mensaje.</h2>
+              <p class="stack-copy">
+                Antes del build se define que servicio se vende, cual es la accion principal y como se ordena la pagina. Eso protege el proyecto de cambios arbitrarios a mitad de camino.
+              </p>
+              <ul class="stack-points">
+                <li>una sola accion principal</li>
+                <li>arquitectura reusable por tipo de servicio</li>
+                <li>criterio de copy antes de diseno y build</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="stack-item">
+            <div class="stack-card reveal">
+              <div class="stack-index mono">04 · Entrega</div>
+              <h2 class="stack-title">Publicamos con medicion base, QA y cierre ordenado.</h2>
+              <p class="stack-copy">
+                La landing se entrega con GA4, Search Console, contacto activo, accesos y recomendacion de continuidad. El proyecto no termina en una URL; termina documentado.
+              </p>
+              <ul class="stack-points">
+                <li>QA antes de lanzar</li>
+                <li>medicion base instalada</li>
+                <li>entrega final lista para mantencion o SEO</li>
+              </ul>
+              <div class="stack-actions">
+                <a href="https://calendly.com/8vobitc/agenda" class="cta-link" data-calendly-link>Agendar diagnostico</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="systems">
+    <div class="shell">
+      <div class="systems-shell">
+        <div class="systems-copy reveal">
+          <div class="section-label">Visibilidad del proyecto</div>
+          <h2>El cliente ve lo necesario y la agencia conserva control operativo.</h2>
+          <p>
+            El sistema separa lo visible de lo interno. El cliente ve portal, timeline, documentos, pagos y siguientes pasos. La agencia gestiona backlog, SOP y decisiones tecnicas por fuera.
+          </p>
+          <div class="systems-list">
+            <div>
+              <strong>Cliente ve</strong>
+              <span>Portal, timeline, entregables, feedback, pagos y links relevantes.</span>
+            </div>
+            <div>
+              <strong>Agencia controla</strong>
+              <span>Backlog interno, checklist tecnico, SOP y decisiones de implementacion.</span>
+            </div>
+            <div>
+              <strong>El cierre deja continuidad</strong>
+              <span>Entrega final, accesos y recomendacion de mantencion o SEO.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="systems-media reveal">
+          <div class="panel-tablet">
+            <div class="panel-screen">
+              <strong class="mono">Portal cliente</strong>
+              <h3>Seguimiento visible por fase.</h3>
+              <p>Onboarding, estrategia, build, revision y lanzamiento en una sola vista.</p>
+              <div class="panel-boxes">
+                <div><strong>Onboarding</strong><span>Contrato, invoice, welcome, intake y activos solicitados.</span></div>
+                <div><strong>Build</strong><span>CTA definido, arquitectura lista y pagina en implementacion.</span></div>
+                <div><strong>Lanzamiento</strong><span>QA, medicion base y entrega final preparados.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-phone">
+            <div class="panel-screen">
+              <strong class="mono">Documentos</strong>
+              <h3>Cobro, contexto y cierre.</h3>
+              <p>Los documentos clave no quedan sueltos: acompanan el proyecto de punta a punta.</p>
+              <div class="panel-boxes">
+                <div><strong>Invoice</strong><span>Cobro inicial y cobro final dentro del flujo.</span></div>
+                <div><strong>Welcome</strong><span>Contexto, siguientes pasos y canal de coordinacion.</span></div>
+                <div><strong>Entrega</strong><span>Accesos, herramientas y propuesta de continuidad.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="proyectos" class="cases">
+    <div class="shell">
+      <div class="cases-head reveal">
+        <div class="eyebrow">Arquitectura base</div>
+        <h2>La estructura 8vobit ya tiene piezas reutilizables, no solo ideas.</h2>
+        <p>
+          El sistema mezcla una pagina maestra de gobierno, una plantilla base de landing y proyectos reales usados como referencia operativa.
+        </p>
+      </div>
+
+      <div class="cases-grid">
+        <article class="case-card dark reveal">
+          <div>
+            <div class="case-kicker mono">Gobierno</div>
+            <h3>Sistema Maestro Agencia Web</h3>
+            <p>
+              Pagina de control donde conviven clientes, contratos, proyectos, backlog y reglas del sistema.
+            </p>
+          </div>
+          <div class="case-list">
+            <div>
+              <strong>Que ordena</strong>
+              <span>Entrada de proyectos, estados, documentos y criterios de entrega.</span>
+            </div>
+            <div>
+              <strong>Que evita</strong>
+              <span>Que cada proyecto nazca desde cero o se siga por chat.</span>
+            </div>
+            <div>
+              <strong>Rol</strong>
+              <span>Funciona como cockpit operativo para el sistema web.</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="case-card reveal">
+          <div>
+            <div class="case-kicker mono">Plantilla oficial</div>
+            <h3>Plantilla Landing 8vobit</h3>
+            <p>
+              Version reusable nacida desde casos reales. Sirve para acelerar nuevos proyectos sin partir cada vez desde cero.
+            </p>
+          </div>
+          <div class="case-list">
+            <div>
+              <strong>Que resuelve</strong>
+              <span>Estandariza arquitectura, CTA, criterio tecnico minimo y secuencia de ejecucion.</span>
+            </div>
+            <div>
+              <strong>Como se usa</strong>
+              <span>Se duplica, se adapta al servicio y se activa dentro del flujo oficial de la agencia.</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="case-card reveal">
+          <div>
+            <div class="case-kicker mono">Referencia viva</div>
+            <h3>Erika Contadora</h3>
+            <p>
+              Caso real desde donde se depuro la secuencia que hoy alimenta la plantilla y el sistema.
+            </p>
+          </div>
+          <div class="case-list">
+            <div>
+              <strong>Que aporto</strong>
+              <span>Claridad de CTA, arquitectura y secuencia real de ejecucion.</span>
+            </div>
+            <div>
+              <strong>Para que sirve</strong>
+              <span>Convertir experiencia real en estandar reusable para nuevos proyectos.</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="shell">
+      <div class="cta-shell reveal">
+        <div class="section-label">Siguiente paso</div>
+        <h2>Si quieres una landing, tambien necesitas el sistema que la haga operable.</h2>
+        <p>
+          Agenda un diagnostico y revisamos si tu negocio calza con la estructura 8vobit: cierre claro, onboarding ordenado, landing enfocada y entrega con continuidad.
+        </p>
+        <a href="https://calendly.com/8vobitc/agenda" class="start-orb" data-calendly-link>
+          <span>Agendar</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-shell">
+    <div class="footer-brand">
+      <img src="ISOTIPO.png" alt="8vobit">
+      <span class="mono">8vobit</span>
+    </div>
+    <nav class="footer-links">
+      <a href="#servicio">Servicio</a>
+      <a href="#proceso">Proceso</a>
+      <a href="#proyectos">Proyectos</a>
+      <a href="https://calendly.com/8vobitc/agenda" data-calendly-link>Agendar</a>
+    </nav>
+    <div class="footer-meta">
+      <div>Landing de conversion dentro de un sistema operativo para servicios profesionales</div>
+      <div>gabrielquirozcampos@gmail.com</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const calendlyUrl = "https://calendly.com/8vobitc/agenda";
+
+  document.querySelectorAll("[data-calendly-link]").forEach((link) => {
+    link.href = calendlyUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+  });
+</script>
+</body>
+</html>

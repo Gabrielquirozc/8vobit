@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+wget-log*
+backups/snapshots/*
+!backups/snapshots/.gitkeep
