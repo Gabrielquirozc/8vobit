@@ -3,1723 +3,952 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>8vobit — Sistema Web para Servicios Profesionales</title>
-<meta name="description" content="8vobit estructura proyectos web para servicios profesionales con landing, onboarding, portal cliente, medicion base y entrega ordenada.">
+<title>8vobit — Diseño Web, SEO y Marketing Digital en Chile</title>
+<meta name="description" content="Creamos sitios web que posicionan y venden. One page, landing, e-commerce, SEO y marketing digital desde Concepción, Chile.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #faf8f5;
-    --bg-soft: #f0ebe2;
-    --surface: #f7f3ec;
-    --panel: rgba(255, 255, 255, 0.76);
-    --ink: #1a1a1a;
-    --ink-soft: #2d2d2d;
-    --muted: #6b6460;
-    --line: rgba(5, 5, 5, 0.08);
-    --line-strong: rgba(5, 5, 5, 0.14);
-    --dark: #0a0a0a;
-    --dark-soft: #141414;
-    --dark-line: rgba(255, 255, 255, 0.12);
-    --white: #fafaf8;
-    --accent: #6fe5f7;
-    --accent-soft: #b8eef9;
-    --accent-deep: #0d2936;
-    --accent-glow: rgba(111, 229, 247, 0.25);
-    --max: 1320px;
-    --radius-xl: 42px;
-    --radius-lg: 32px;
-    --radius-md: 22px;
-    --shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.12);
-    --fs-label: 11px;
-    --fs-nav: 13px;
-    --fs-body-sm: 15px;
-    --fs-body: 16px;
-    --fs-body-lg: 18px;
-    --fs-body-xl: 19px;
-    --fs-title-card: clamp(28px, 2.6vw, 36px);
-    --fs-title-media: clamp(30px, 3.8vw, 52px);
-    --fs-title-section: clamp(40px, 5.7vw, 72px);
-    --fs-title-stack: clamp(42px, 5.8vw, 78px);
-    --fs-title-display: clamp(48px, 8vw, 92px);
-    --measure-tight: 30ch;
-    --measure-copy: 38ch;
-    --measure-wide: 46ch;
-    --space-hero-y: 72px;
-    --space-section-y: 84px;
-    --space-section-dark-y: 92px;
-    --space-card: 28px;
+    --purple: #120136;
+    --purple-mid: #1e0258;
+    --purple-light: #2a0375;
+    --cyan: #4BB8D4;
+    --cyan-light: #7DD4E8;
+    --white: #F4F0FF;
+    --gray: #9B8FB5;
   }
 
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
 
   body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: "Space Grotesk", sans-serif;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  img {
-    display: block;
-    max-width: 100%;
-  }
-
-  .shell {
-    width: min(calc(100% - 40px), var(--max));
-    margin: 0 auto;
-  }
-
-  .mono {
-    font-family: "IBM Plex Mono", monospace;
-  }
-
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    font-size: var(--fs-label);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(5, 5, 5, 0.52);
-  }
-
-  .eyebrow::before {
-    content: "";
-    width: 28px;
-    height: 1px;
-    background: rgba(5, 5, 5, 0.28);
-  }
-
-  .section-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    font-size: var(--fs-label);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.54);
-  }
-
-  .section-label::before {
-    content: "";
-    width: 28px;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.24);
-  }
-
-  .cta-btn,
-  .cta-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 54px;
-    padding: 0 28px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, var(--accent) 0%, #5bd9f0 100%);
-    color: var(--accent-deep);
-    font-size: var(--fs-nav);
-    font-weight: 700;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    box-shadow: 0 12px 32px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-  }
-
-  .cta-btn::after,
-  .cta-link::after {
-    content: "↗";
-    margin-left: 10px;
-    font-size: 15px;
-    transition: transform 0.3s ease;
-  }
-
-  .cta-btn:hover,
-  .cta-link:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 16px 48px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  }
-
-  .cta-btn:hover::after,
-  .cta-link:hover::after {
-    transform: translateX(3px);
-  }
-
-  .announcement {
-    background: linear-gradient(90deg, var(--dark) 0%, var(--dark-soft) 100%);
+    font-family: 'DM Sans', sans-serif;
+    background: var(--purple);
     color: var(--white);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-x: hidden;
   }
 
-  .announcement-inner {
-    width: min(calc(100% - 40px), var(--max));
-    margin: 0 auto;
-    min-height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 10px 0;
-    text-align: center;
+  /* Solo mostrar cursor custom en desktop */
+  @media (pointer: fine) {
+    body { cursor: none; }
+    .cursor, .cursor-ring { display: block; }
   }
 
-  .announcement-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    border-radius: 999px;
-    background: rgba(111, 229, 247, 0.1);
-    border: 1px solid rgba(111, 229, 247, 0.25);
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
+  .cursor {
+    display: none;
+    width: 10px; height: 10px;
+    background: var(--cyan); border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: screen;
+    transition: transform 0.15s;
+  }
+  .cursor-ring {
+    display: none;
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(75,184,212,0.5); border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all 0.18s ease;
   }
 
-  .announcement-pill:hover {
-    background: rgba(111, 229, 247, 0.15);
-    border-color: rgba(111, 229, 247, 0.4);
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025; pointer-events: none; z-index: 1;
   }
 
-  .announcement-copy {
-    font-size: var(--fs-nav);
-    color: rgba(248, 250, 248, 0.92);
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+    padding: 16px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: all 0.3s;
   }
-  .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    background: rgba(243, 239, 231, 0.86);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--line);
-  }
-
-  .header-shell {
-    width: min(calc(100% - 40px), var(--max));
-    margin: 0 auto;
-    min-height: 78px;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 20px;
+  nav.scrolled {
+    background: rgba(18,1,54,0.97);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(75,184,212,0.12);
   }
 
-  .header-nav {
-    display: inline-flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
+  /* Logo PNG en nav */
+  .nav-logo img {
+    height: 40px;
+    width: auto;
+    display: block;
+    /* El PNG es blanco con cuadrado cyan, se ve perfecto sobre fondo oscuro */
+    filter: drop-shadow(0 0 8px rgba(75,184,212,0.2));
   }
 
-  .header-nav.right {
-    justify-content: flex-end;
+  nav ul {
+    display: flex; gap: 32px; list-style: none; align-items: center;
+  }
+  nav ul a {
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gray); text-decoration: none; transition: color 0.2s;
+  }
+  nav ul a:hover { color: var(--cyan); }
+  .nav-btn {
+    color: var(--cyan) !important;
+    border: 1.5px solid var(--cyan) !important;
+    padding: 9px 20px !important; border-radius: 4px;
+    font-size: 12px !important; transition: all 0.2s !important;
+    text-transform: none !important; letter-spacing: 0.5px !important;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: var(--cyan) !important; color: var(--purple) !important; }
+
+  /* Hamburger móvil */
+  .hamburger {
+    display: none; flex-direction: column; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 4px;
+  }
+  .hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--white); border-radius: 2px;
+    transition: all 0.3s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* Menú móvil desplegable */
+  .mobile-menu {
+    display: none;
+    position: fixed; top: 72px; left: 0; right: 0;
+    background: rgba(18,1,54,0.98);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(75,184,212,0.12);
+    padding: 24px 24px 32px;
+    z-index: 499;
+    flex-direction: column; gap: 0;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    font-size: 14px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gray); text-decoration: none;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(75,184,212,0.08);
+    transition: color 0.2s;
+  }
+  .mobile-menu a:hover { color: var(--cyan); }
+  .mobile-menu .mob-cta {
+    margin-top: 20px;
+    background: var(--cyan); color: var(--purple) !important;
+    padding: 14px 20px !important; border-radius: 6px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px !important;
+    letter-spacing: 2px; text-align: center; border: none;
+    text-transform: none !important;
   }
 
-  .header-nav a {
-    font-size: var(--fs-nav);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(5, 5, 5, 0.6);
-    transition: color 0.3s ease;
-  }
-
-  .header-nav a:hover {
-    color: var(--accent);
-  }
-
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-  }
-
-  .brand-mark {
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
-  }
-
-  .brand-word {
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
+  /* ── HERO ── */
   .hero {
-    padding: var(--space-hero-y) 0 28px;
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 110px 48px 80px;
+    position: relative; overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(75,184,212,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(75,184,212,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 90% 90% at 60% 35%, black 10%, transparent 80%);
+  }
+  .hero-orb {
+    position: absolute; width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(75,184,212,0.18) 0%, transparent 70%);
+    right: -180px; top: -180px;
+    animation: float 8s ease-in-out infinite; pointer-events: none;
+  }
+  .hero-orb2 {
+    position: absolute; width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(75,184,212,0.07) 0%, transparent 70%);
+    left: 0%; bottom: -60px;
+    animation: float 11s 3s ease-in-out infinite; pointer-events: none;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-24px); }
   }
 
-  .hero-copy-wrap {
-    max-width: 980px;
-    margin: 0 auto;
-    text-align: center;
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 24px;
+    opacity: 0; animation: fadeUp 0.7s 0.1s ease forwards;
   }
+  .hero-badge::before { content: ''; width: 28px; height: 1px; background: var(--cyan); flex-shrink: 0; }
+  .hero-badge::after { content: ''; width: 5px; height: 5px; background: var(--cyan); border-radius: 50%; flex-shrink: 0; }
 
-  .hero-title {
-    margin-top: 28px;
-    font-size: var(--fs-title-display);
-    line-height: 0.92;
-    letter-spacing: -0.075em;
-    text-wrap: balance;
-    color: var(--ink);
-    max-width: 14ch;
-    margin-left: auto;
-    margin-right: auto;
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(58px, 10vw, 144px);
+    line-height: 0.88; letter-spacing: 2px;
+    opacity: 0; animation: fadeUp 0.7s 0.2s ease forwards;
   }
+  h1 .outline { -webkit-text-stroke: 2px var(--cyan); color: transparent; }
+  h1 .cyan { color: var(--cyan); }
 
-  .hero-title strong {
-    font-weight: 700;
+  .hero-sub {
+    font-size: clamp(15px, 2vw, 17px);
+    color: var(--gray); line-height: 1.75;
+    max-width: 500px; margin: 24px 0 32px;
+    opacity: 0; animation: fadeUp 0.7s 0.35s ease forwards;
   }
+  .hero-sub strong { color: var(--white); }
 
-  .hero-subtitle {
-    margin: 28px auto 0;
-    max-width: var(--measure-wide);
-    font-size: var(--fs-body-lg);
-    line-height: 1.76;
-    color: #6b6460;
-    text-wrap: balance;
+  .hero-pills {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 36px;
+    opacity: 0; animation: fadeUp 0.7s 0.42s ease forwards;
+  }
+  .pill {
+    font-size: 11px; color: var(--cyan);
+    background: rgba(75,184,212,0.08);
+    border: 1px solid rgba(75,184,212,0.25);
+    padding: 5px 12px; border-radius: 100px;
+    white-space: nowrap;
   }
 
   .hero-actions {
-    margin-top: 34px;
-    display: flex;
-    justify-content: center;
-  }
-
-  .hero-note {
-    margin-top: 18px;
-    max-width: 56ch;
-    margin-left: auto;
-    margin-right: auto;
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(5, 5, 5, 0.48);
-  }
-
-  .hero-stage {
-    margin-top: 48px;
-    border-radius: 40px;
-    border: 1px solid var(--line-strong);
-    background:
-      radial-gradient(circle at top center, rgba(111, 229, 247, 0.15), transparent 35%),
-      linear-gradient(180deg, #fcfbf9 0%, #f3ede1 100%);
-    box-shadow: var(--shadow-lg);
-    padding: 18px;
-    max-width: 1040px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .stage-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
-    gap: 16px;
-  }
-
-  .stage-tablet {
-    min-height: 460px;
-    border-radius: 28px;
-    background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    overflow: hidden;
-    box-shadow: inset 0 1px 8px rgba(111, 229, 247, 0.08);
-  }
-
-  .stage-browser {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .stage-browser span {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  .stage-screen {
-    margin-top: 18px;
-    border-radius: 24px;
-    background:
-      radial-gradient(circle at top right, rgba(143, 231, 249, 0.18), transparent 26%),
-      linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 18px;
-    display: grid;
-    gap: 14px;
-  }
-
-  .stage-kicker {
-    font-size: var(--fs-label);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .stage-headline {
-    font-size: clamp(26px, 3.2vw, 44px);
-    line-height: 1.02;
-    letter-spacing: -0.07em;
-    color: var(--white);
-    max-width: 8.6ch;
-  }
-
-  .stage-text {
-    max-width: 32ch;
-    color: rgba(255, 255, 255, 0.68);
-    font-size: 15px;
-    line-height: 1.62;
-  }
-
-  .stage-rows {
-    display: grid;
-    gap: 8px;
-  }
-
-  .stage-row {
-    display: grid;
-    grid-template-columns: 104px 1fr;
-    gap: 10px;
-    align-items: start;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-  }
-
-  .stage-row:hover {
-    border-color: rgba(111, 229, 247, 0.3);
-    background: linear-gradient(135deg, rgba(111, 229, 247, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
-  }
-
-  .stage-row strong {
-    color: var(--white);
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .stage-row span {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: var(--fs-body-sm);
-    line-height: 1.65;
-  }
-
-  .stage-side {
-    display: grid;
-    gap: 12px;
-  }
-
-  .stage-card {
-    border-radius: 28px;
-    border: 1px solid var(--line-strong);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 248, 245, 0.85) 100%);
-    padding: 24px;
-    backdrop-filter: blur(4px);
-    transition: all 0.3s ease;
-  }
-
-  .stage-card:hover {
-    border-color: var(--accent);
-    box-shadow: 0 8px 24px rgba(111, 229, 247, 0.1);
-  }
-
-  .stage-card strong {
-    display: block;
-    font-size: var(--fs-label);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(5, 5, 5, 0.48);
-  }
-
-  .stage-card h3 {
-    margin-top: 14px;
-    font-size: clamp(24px, 2.4vw, 32px);
-    line-height: 1.03;
-    letter-spacing: -0.06em;
-    max-width: 9.5ch;
-  }
-
-  .stage-card p {
-    margin-top: 14px;
-    max-width: 30ch;
-    font-size: 158px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .stage-tags span {
-    padding: 10px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(250, 248, 245, 0.7) 100%);
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-  }
-
-  .stage-tags span:hover {
-    border-color: var(--accent);
-    box-shadow: 0 4px 12px rgba(111, 229, 247, 0.1)
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.74);
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .stage-mini-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
-
-  .stage-mini {
-    min-height: 128px;
-    border-radius: 24px;
-    border: 1px solid var(--line-strong);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 248, 245, 0.87) 100%);
-    padding: 20px;
-    transition: all 0.3s ease;
-  }
-
-  .stage-mini:hover {
-    border-color: var(--accent);
-    box-shadow: 0 6px 18px rgba(111, 229, 247, 0.08);
-    transform: translateY(-1px);
-  }
-
-  .stage-mini h4 {
-    margin-top: 14px;
-    font-size: clamp(18px, 1.8vw, 22px);
-    line-height: 1.05;
-    letter-spacing: -0.05em;
-  }
-
-  .stage-mini p {
-    margin-top: 10px;
-    max-width: 22ch;
-    font-size: 14px;
-    line-height: 1.58;
-    color: var(--muted);
-  }
-
-  .value-section {
-    padding: var(--space-section-y) 0;
-  }
-
-  .value-wrap {
-    max-width: 860px;
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  .value-title {
-    margin-top: 20px;
-    font-size: var(--fs-title-section);
-    line-height: 0.97;
-    letter-spacing: -0.07em;
-    text-wrap: balance;
-    max-width: 14ch;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .value-copy {
-    margin: 20px auto 0;
-    max-width: var(--measure-wide);
-    font-size: var(--fs-body-lg);
-    line-height: 1.78;
-    color: var(--muted);
-  }
-
-  .segment-grid {
-    margin-top: 28px;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .segment-grid div {
-    min-height: 76px;
-    border-radius: 999px;
-    border: 1px solid var(--line-strong);
-    background: rgba(255, 255, 255, 0.74);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    text-align: center;
-    font-size: var(--fs-body-sm);
-    font-weight: 700;
-    color: rgba(5, 5, 5, 0.72);
-  }
-
-  .stack {
-    background: var(--dark);
-    color: var(--white);
-    padding: var(--space-section-dark-y) 0 92px;
-  }
-
-  .stack-shell {
-    display: grid;
-    grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
-    gap: 36px;
-    align-items: start;
-  }
-
-  .stack-media {
-    position: sticky;
-    top: 120px;
-  }
-
-  .stack-device {
-    border-radius: 34px;
-    border: 1px solid var(--dark-line);
-    background: linear-gradient(180deg, #131313 0%, #050505 100%);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.32), inset 0 1px 12px rgba(111, 229, 247, 0.06);
-    padding: 18px;
-  }
-
-  .stack-screen {
-    min-height: 640px;
-    border-radius: 28px;
-    padding: 24px;
-    background:
-      radial-gradient(circle at top right, rgba(111, 229, 247, 0.12), transparent 28%),
-      linear-gradient(180deg, #1a1a1a 0%, #0b0b0b 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: grid;
-    grid-template-rows: auto auto 1fr auto;
-    gap: 18px;
-  }
-
-  .stack-browser {
-    display: flex;
-    gap: 8px;
-  }
-
-  .stack-browser span {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.14);
-  }
-
-  .stack-screen h3 {
-    font-size: var(--fs-title-media);
-    line-height: 0.98;
-    letter-spacing: -0.07em;
-    max-width: 7.5ch;
-  }
-
-  .stack-screen p {
-    max-width: var(--measure-copy);
-    color: rgba(255, 255, 255, 0.68);
-    font-size: var(--fs-body);
-    line-height: 1.72;
-  }
-
-  .stack-modules {
-    display: grid;
-    gap: 12px;
-  }
-
-  .stack-module {
-    padding: 16px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-  }
-
-  .stack-module:hover {
-    border-color: rgba(111, 229, 247, 0.3);
-    background: linear-gradient(135deg, rgba(111, 229, 247, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
-  }
-
-  .stack-module strong {
-    display: block;
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .stack-module span {
-    display: block;
-    margin-top: 8px;
-    font-size: var(--fs-body-sm);
-    line-height: 1.65;
-    color: rgba(255, 255, 255, 0.64);
-  }
-
-  .stack-list {
-    display: grid;
-    gap: 18px;
-  }
-
-  .stack-item {
-    min-height: 46vh;
-    display: flex;
-    align-items: center;
-  }
-
-  .stack-card {
-    width: 100%;
-  }
-
-  .stack-index {
-    font-size: var(--fs-label);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.48);
-  }
-
-  .stack-title {
-    margin-top: 18px;
-    font-size: var(--fs-title-stack);
-    line-height: 0.95;
-    letter-spacing: -0.08em;
-    max-width: 11ch;
-    text-wrap: balance;
-  }
-
-  .stack-copy {
-    margin-top: 18px;
-    max-width: 44ch;
-    font-size: var(--fs-body-lg);
-    line-height: 1.8;
-    color: rgba(255, 255, 255, 0.68);
-  }
-
-  .stack-points {
-    margin-top: 24px;
-    list-style: none;
-    display: grid;
-    gap: 10px;
-  }
-
-  .stack-points li {
-    position: relative;
-    padding-left: 18px;
-    color: rgba(255, 255, 255, 0.64);
-    font-size: var(--fs-body-sm);
-    line-height: 1.68;
-  }
-
-  .stack-points li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0.65em;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-
-  .stack-actions {
-    margin-top: 20px;
-  }
-
-  .systems {
-    background: #141414;
-    color: var(--white);
-    padding: var(--space-section-dark-y) 0 88px;
-  }
-
-  .systems-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 28px;
-    align-items: center;
-  }
-
-  .systems-copy h2 {
-    margin-top: 20px;
-    font-size: var(--fs-title-section);
-    line-height: 0.96;
-    letter-spacing: -0.07em;
-    max-width: 10.5ch;
-  }
-
-  .systems-copy p {
-    margin-top: 18px;
-    max-width: var(--measure-copy);
-    font-size: var(--fs-body-lg);
-    line-height: 1.8;
-    color: rgba(255, 255, 255, 0.68);
-  }
-
-  .systems-list {
-    margin-top: 26px;
-    display: grid;
-    gap: 12px;
-  }
-
-  .systems-list div {
-    padding: 16px 18px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all 0.3s ease;
-  }
-
-  .systems-list div:hover {
-    border-color: rgba(111, 229, 247, 0.3);
-    background: linear-gradient(135deg, rgba(111, 229, 247, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
-  }
-
-  .systems-list strong {
-    display: block;
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .systems-list span {
-    display: block;
-    margin-top: 8px;
-    color: rgba(255, 255, 255, 0.64);
-    font-size: var(--fs-body-sm);
-    line-height: 1.65;
-  }
-
-  .systems-media {
-    position: relative;
-    min-height: 520px;
-  }
-
-  .panel-tablet,
-  .panel-phone {
-    position: absolute;
-    border-radius: 34px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(180deg, #111111 0%, #050505 100%);
-    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.3);
-    padding: 18px;
-  }
-
-  .panel-tablet {
-    inset: 0 120px 0 0;
-  }
-
-  .panel-phone {
-    right: 0;
-    bottom: 18px;
-    width: 240px;
-    height: 430px;
-  }
-
-  .panel-screen {
-    height: 100%;
-    border-radius: 28px;
-    background:
-      radial-gradient(circle at top right, rgba(143, 231, 249, 0.16), transparent 26%),
-      linear-gradient(180deg, #1a1a1a 0%, #0b0b0b 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 22px;
-    display: grid;
-    gap: 14px;
-  }
-
-  .panel-screen strong {
-    font-size: var(--fs-label);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .panel-screen h3 {
-    font-size: var(--fs-title-card);
-    line-height: 1;
-    letter-spacing: -0.06em;
-    max-width: 8ch;
-  }
-
-  .panel-screen p {
-    color: rgba(255, 255, 255, 0.66);
-    max-width: 25ch;
-    font-size: var(--fs-body-sm);
-    line-height: 1.65;
-  }
-
-  .panel-boxes {
-    display: grid;
-    gap: 10px;
-  }
-
-  .panel-boxes div {
-    min-height: 74px;
-    padding: 14px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all 0.3s ease;
-  }
-
-  .panel-boxes div:hover {
-    border-color: rgba(111, 229, 247, 0.25);
-    background: linear-gradient(135deg, rgba(111, 229, 247, 0.06) 0%, rgba(255, 255, 255, 0.04) 100%);
-  }
-
-  .panel-boxes strong {
-    display: block;
-  }
-
-  .panel-boxes span {
-    display: block;
-    margin-top: 6px;
-    color: rgba(255, 255, 255, 0.62);
-    font-size: var(--fs-label);
-    line-height: 1.55;
-  }
-
-  .cases {
-    padding: var(--space-section-y) 0 84px;
-  }
-
-  .cases-head {
-    max-width: 820px;
-  }
-
-  .cases-head h2 {
-    margin-top: 20px;
-    font-size: var(--fs-title-section);
-    line-height: 0.96;
-    letter-spacing: -0.07em;
-    max-width: 12ch;
-  }
-
-  .cases-head p {
-    margin-top: 18px;
-    max-width: var(--measure-wide);
-    font-size: var(--fs-body-lg);
-    line-height: 1.8;
-    color: var(--muted);
-  }
-
-  .cases-grid {
-    margin-top: 28px;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-  }
-
-  .case-card {
-    min-height: 420px;
-    padding: var(--space-card);
-    border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 248, 245, 0.8) 100%);
-    border: 1px solid var(--line-strong);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: all 0.32s ease;
-    backdrop-filter: blur(8px);
-  }
-
-  .case-card:hover {
-    border-color: var(--accent);
-    box-shadow: 0 12px 32px rgba(111, 229, 247, 0.12);
-    transform: translateY(-2px);
-  }
-
-  .case-card.dark {
-    background: linear-gradient(135deg, var(--dark-soft) 0%, #0d0d0d 100%);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: var(--white);
-  }
-
-  .case-card.dark:hover {
-    border-color: var(--accent);
-    box-shadow: 0 12px 40px var(--accent-glow);
-  }
-
-  .case-kicker {
-    font-size: var(--fs-label);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(5, 5, 5, 0.48);
-  }
-
-  .case-card.dark .case-kicker {
-    color: rgba(255, 255, 255, 0.48);
-  }
-
-  .case-card h3 {
-    margin-top: 18px;
-    font-size: var(--fs-title-card);
-    line-height: 1;
-    letter-spacing: -0.06em;
-    max-width: 9ch;
-  }
-
-  .case-card p {
-    margin-top: 16px;
-    max-width: var(--measure-copy);
-    font-size: var(--fs-body);
-    line-height: 1.72;
-    color: var(--muted);
-  }
-
-  .case-card.dark p {
-    color: rgba(255, 255, 255, 0.7);
-  }
-
-  .case-list {
-    margin-top: 20px;
-    display: grid;
-    gap: 14px;
-  }
-
-  .case-list div {
-    padding-top: 14px;
-    border-top: 1px solid rgba(5, 5, 5, 0.1);
-  }
-
-  .case-card.dark .case-list div {
-    border-top-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .case-list strong {
-    display: block;
-    font-size: var(--fs-label);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .case-list span {
-    display: block;
-    margin-top: 8px;
-    font-size: var(--fs-body-sm);
-    line-height: 1.65;
-    color: var(--muted);
-  }
-
-  .case-card.dark .case-list span {
-    color: rgba(255, 255, 255, 0.64);
-  }
-
-  .cta-section {
-    background: var(--dark);
-    color: var(--white);
-    padding: var(--space-section-dark-y) 0 80px;
-  }
-
-  .cta-shell {
-    max-width: 840px;
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  .cta-shell h2 {
-    margin-top: 20px;
-    font-size: var(--fs-title-section);
-    line-height: 0.96;
-    letter-spacing: -0.08em;
-    text-wrap: balance;
-    max-width: 14ch;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .cta-shell p {
-    margin: 22px auto 0;
-    max-width: var(--measure-wide);
-    font-size: var(--fs-body-xl);
-    line-height: 1.78;
-    color: rgba(255, 255, 255, 0.68);
-  }
-
-  .start-orb {
-    margin: 40px auto 0;
-    width: min(340px, 76vw);
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 2px solid rgba(111, 229, 247, 0.3);
-    background:
-      radial-gradient(circle at top, rgba(111, 229, 247, 0.2), transparent 42%),
-      linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28), inset 0 1px 24px rgba(111, 229, 247, 0.12);
-    transition: all 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-    cursor: pointer;
-  }
-
-  .start-orb:hover {
-    transform: translateY(-6px) scale(1.03);
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.36), inset 0 1px 32px rgba(111, 229, 247, 0.18);
-    border-color: rgba(111, 229, 247, 0.5);
-  }
-
-  .start-orb span {
-    font-size: clamp(38px, 5vw, 60px);
-    letter-spacing: -0.08em;
-  }
-
-  .footer {
-    background: var(--dark);
-    color: rgba(255, 255, 255, 0.62);
-    padding: 0 0 28px;
-  }
-
-  .footer-shell {
-    width: min(calc(100% - 40px), var(--max));
-    margin: 0 auto;
-    padding-top: 22px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .footer-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .footer-brand img {
-    width: 26px;
-    height: 26px;
-    object-fit: contain;
-  }
-
-  .footer-brand span {
-    font-size: var(--fs-nav);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-
-  .footer-links {
-    display: flex;
-    justify-content: center;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
-
-  .footer-links a {
-    font-size: var(--fs-label);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.56);
-  }
-
-  .footer-meta {
-    text-align: right;
-    font-size: var(--fs-label);
-    line-height: 1.6;
-  }
-
-  .reveal {
-    opacity: 1;
-    transform: none;
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.7s 0.5s ease forwards;
+  }
+  .btn-primary {
+    background: var(--cyan); color: var(--purple);
+    padding: 14px 34px; border-radius: 6px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2px;
+    text-decoration: none; transition: all 0.25s;
+    box-shadow: 0 0 40px rgba(75,184,212,0.28);
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: var(--cyan-light); transform: translateY(-2px);
+    box-shadow: 0 0 60px rgba(75,184,212,0.5);
+  }
+  .btn-ghost {
+    color: var(--gray); text-decoration: none; font-size: 14px;
+    display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover { color: var(--white); }
+  .btn-ghost::after { content: '→'; transition: transform 0.2s; }
+  .btn-ghost:hover::after { transform: translateX(5px); }
+
+  .hero-stats {
+    display: flex; gap: 36px; margin-top: 56px; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.7s 0.65s ease forwards;
+  }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px; color: var(--cyan); line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px; color: var(--gray);
+    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  section { position: relative; z-index: 2; }
+
+  .section-tag {
+    font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-tag::before { content: ''; width: 20px; height: 1px; background: var(--cyan); flex-shrink: 0; }
+
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(38px, 5.5vw, 74px);
+    line-height: 0.9; letter-spacing: 2px;
+  }
+  h2 .cyan { color: var(--cyan); }
+
+  /* ── SERVICIOS ── */
+  .services {
+    padding: 100px 48px;
+    background: linear-gradient(180deg, var(--purple) 0%, var(--purple-mid) 50%, var(--purple) 100%);
+  }
+  .services-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 56px; flex-wrap: wrap; gap: 20px;
+  }
+  .services-desc { font-size: 15px; color: var(--gray); line-height: 1.7; max-width: 320px; }
+
+  .services-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 2px; border: 1px solid rgba(75,184,212,0.1); border-radius: 12px; overflow: hidden;
+  }
+  .service-card {
+    background: rgba(18,1,54,0.65); padding: 40px 32px;
+    position: relative; overflow: hidden; transition: background 0.3s;
+  }
+  .service-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .service-card:hover { background: rgba(30,2,88,0.85); }
+  .service-card:hover::before { opacity: 1; }
+  .service-num {
+    font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 1;
+    color: rgba(75,184,212,0.07); position: absolute; top: 10px; right: 18px;
+    transition: color 0.3s; pointer-events: none;
+  }
+  .service-card:hover .service-num { color: rgba(75,184,212,0.14); }
+  .service-icon { width: 40px; height: 40px; color: var(--cyan); margin-bottom: 20px; }
+  .service-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 1px; margin-bottom: 10px;
+  }
+  .service-desc { font-size: 13px; color: var(--gray); line-height: 1.7; margin-bottom: 24px; }
+  .service-price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .price-from { font-size: 10px; color: var(--gray); letter-spacing: 1.5px; text-transform: uppercase; }
+  .price-amount { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--cyan); }
+  .price-currency { font-size: 11px; color: var(--gray); }
+
+  /* ── CAPACIDADES ── */
+  .capabilities { padding: 100px 48px; }
+  .cap-header { margin-bottom: 60px; }
+  .cap-intro { font-size: 15px; color: var(--gray); max-width: 500px; line-height: 1.7; margin-top: 16px; }
+
+  .cap-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 3px; border: 1px solid rgba(75,184,212,0.1); border-radius: 14px; overflow: hidden;
+  }
+  .cap-block {
+    background: rgba(18,1,54,0.55); padding: 44px 40px;
+    position: relative; transition: background 0.3s;
+  }
+  .cap-block:hover { background: rgba(30,2,88,0.8); }
+  .cap-block.featured {
+    grid-column: span 2;
+    background: rgba(75,184,212,0.06);
+    border-top: 1px solid rgba(75,184,212,0.12);
+  }
+  .cap-block.featured:hover { background: rgba(75,184,212,0.09); }
+
+  .cap-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 12px; }
+  .cap-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; margin-bottom: 14px; line-height: 1; }
+  .cap-desc { font-size: 13px; color: var(--gray); line-height: 1.75; }
+  .cap-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+  .cap-tag {
+    font-size: 11px; color: var(--gray);
+    background: rgba(75,184,212,0.06); border: 1px solid rgba(75,184,212,0.15);
+    padding: 4px 11px; border-radius: 100px; transition: all 0.2s;
+  }
+  .cap-block:hover .cap-tag { border-color: rgba(75,184,212,0.28); color: var(--white); }
+
+  .cap-featured-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .cap-metrics { display: flex; gap: 40px; }
+  .metric-num { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--cyan); line-height: 1; }
+  .metric-label { font-size: 12px; color: var(--gray); margin-top: 4px; line-height: 1.4; max-width: 110px; }
+
+  /* ── PROCESO ── */
+  .process { padding: 100px 48px; }
+  .process-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 32px; margin-top: 56px; }
+  .step-num { font-family: 'Bebas Neue', sans-serif; font-size: 80px; color: var(--cyan); opacity: 0.1; line-height: 1; transition: opacity 0.3s; }
+  .process-step:hover .step-num { opacity: 0.22; }
+  .step-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; margin-bottom: 8px; margin-top: -8px; }
+  .step-desc { font-size: 13px; color: var(--gray); line-height: 1.7; }
+
+  /* ── CTA BAND ── */
+  .cta-band {
+    margin: 0 48px 100px;
+    background: linear-gradient(135deg, var(--purple-light) 0%, var(--purple-mid) 100%);
+    border: 1px solid rgba(75,184,212,0.2); border-radius: 16px;
+    padding: 64px 72px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 32px; flex-wrap: wrap; position: relative; overflow: hidden;
+  }
+  .cta-band::before {
+    content: ''; position: absolute; top: -100px; right: -100px;
+    width: 350px; height: 350px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(75,184,212,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-band h2 { font-size: clamp(32px, 4vw, 60px); }
+  .cta-band p { font-size: 14px; color: var(--gray); margin-top: 10px; max-width: 360px; }
+
+  /* ── CONTACTO ── */
+  .contact { padding: 0 48px 100px; }
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  .contact-info h2 { margin-bottom: 16px; }
+  .contact-info > p { font-size: 14px; color: var(--gray); line-height: 1.75; margin-bottom: 32px; }
+  .contact-item { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .contact-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: rgba(75,184,212,0.08); border: 1px solid rgba(75,184,212,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cyan); flex-shrink: 0; margin-top: 2px;
+  }
+  .contact-item strong { display: block; color: var(--white); font-size: 14px; }
+  .contact-item span { font-size: 12px; color: var(--gray); line-height: 1.5; }
+
+  .contact-form { display: flex; flex-direction: column; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  input, textarea, select {
+    width: 100%; background: rgba(30,2,88,0.45);
+    border: 1px solid rgba(75,184,212,0.15); color: var(--white);
+    padding: 14px 16px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    transition: border-color 0.2s, background 0.2s; outline: none;
+    -webkit-appearance: none;
+  }
+  input::placeholder, textarea::placeholder { color: var(--gray); }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--cyan); background: rgba(30,2,88,0.65);
+  }
+  textarea { resize: vertical; min-height: 110px; }
+  select { cursor: pointer; }
+  select option { background: #1e0258; }
+
+  .form-submit {
+    background: var(--cyan); color: var(--purple);
+    border: none; padding: 16px 36px; border-radius: 8px; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; font-size: 19px; letter-spacing: 2px;
+    transition: all 0.25s; box-shadow: 0 0 28px rgba(75,184,212,0.22);
+    align-self: flex-start; -webkit-appearance: none;
+  }
+  .form-submit:hover {
+    background: var(--cyan-light); transform: translateY(-2px);
+    box-shadow: 0 0 48px rgba(75,184,212,0.4);
+  }
+  .form-success { display: none; color: var(--cyan); font-size: 14px; padding: 10px 0; }
+
+  /* WhatsApp flotante */
+  .wa-float {
+    position: fixed; bottom: 24px; right: 24px; z-index: 400;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #25D366;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 24px rgba(37,211,102,0.4);
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: waPop 0.5s 2s ease both;
+  }
+  .wa-float:hover { transform: scale(1.1); box-shadow: 0 6px 32px rgba(37,211,102,0.6); }
+  .wa-float svg { width: 30px; height: 30px; fill: white; }
+  @keyframes waPop {
+    from { opacity: 0; transform: scale(0); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid rgba(75,184,212,0.1);
+    padding: 28px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .footer-logo img { height: 32px; width: auto; opacity: 0.85; }
+  footer p { font-size: 11px; color: var(--gray); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { font-size: 11px; color: var(--gray); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--cyan); }
+
+  /* REVEAL */
+  .reveal { opacity: 0; transform: translateY(32px); transition: all 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .d1 { transition-delay: 0.1s; } .d2 { transition-delay: 0.2s; }
+  .d3 { transition-delay: 0.3s; } .d4 { transition-delay: 0.4s; }
+
+  /* ════════════════════════════
+     RESPONSIVE — TABLET
+  ════════════════════════════ */
+  @media (max-width: 1024px) {
+    .cap-featured-inner { grid-template-columns: 1fr; gap: 28px; }
+    .process-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ════════════════════════════
+     RESPONSIVE — MÓVIL (≤768px)
+  ════════════════════════════ */
+  @media (max-width: 768px) {
+    /* NAV */
+    nav { padding: 14px 20px; }
+    nav ul { display: none; }
+    .hamburger { display: flex; }
+
+    /* HERO */
+    .hero { padding: 90px 20px 60px; min-height: 100svh; }
+    .hero-orb { width: 300px; height: 300px; right: -100px; top: -100px; }
+    .hero-orb2 { display: none; }
+
+    h1 { font-size: clamp(52px, 14vw, 80px); letter-spacing: 1px; }
+    h1 .outline { -webkit-text-stroke: 1.5px var(--cyan); }
+
+    .hero-badge { font-size: 9px; }
+    .hero-sub { font-size: 15px; max-width: 100%; }
+    .hero-pills { gap: 6px; }
+    .pill { font-size: 10px; padding: 4px 10px; }
+
+    .hero-actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .btn-primary { width: 100%; text-align: center; padding: 16px; font-size: 19px; }
+    .btn-ghost { font-size: 14px; }
+
+    .hero-stats { gap: 24px; margin-top: 40px; }
+    .stat-num { font-size: 34px; }
+
+    /* SERVICIOS */
+    .services { padding: 72px 20px; }
+    .services-header { flex-direction: column; align-items: flex-start; }
+    .services-desc { max-width: 100%; }
+    .services-grid { grid-template-columns: 1fr; }
+    .service-card { padding: 32px 24px; }
+
+    /* CAPACIDADES */
+    .capabilities { padding: 72px 20px; }
+    .cap-grid { grid-template-columns: 1fr; }
+    .cap-block { padding: 32px 24px; }
+    .cap-block.featured { grid-column: span 1; }
+    .cap-title { font-size: 26px; }
+    .cap-metrics { gap: 28px; }
+    .metric-num { font-size: 44px; }
+
+    /* PROCESO */
+    .process { padding: 72px 20px; }
+    .process-grid { grid-template-columns: 1fr; gap: 0; }
+    .process-step {
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(75,184,212,0.08);
     }
-    to {
-      opacity: 1;
-      transform: none;
+    .step-num { font-size: 56px; }
+
+    /* CTA */
+    .cta-band {
+      margin: 0 20px 72px;
+      padding: 40px 28px;
+      flex-direction: column; align-items: flex-start;
     }
+    .cta-band h2 { font-size: 42px; }
+    .cta-band .btn-primary { width: 100%; text-align: center; }
+
+    /* CONTACTO */
+    .contact { padding: 0 20px 80px; }
+    .contact-grid { grid-template-columns: 1fr; gap: 48px; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-submit { width: 100%; text-align: center; align-self: stretch; }
+
+    /* FOOTER */
+    footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .footer-links { flex-wrap: wrap; gap: 16px; }
+
+    /* WhatsApp */
+    .wa-float { bottom: 16px; right: 16px; width: 50px; height: 50px; }
+    .wa-float svg { width: 26px; height: 26px; }
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes glow {
-    0%, 100% {
-      box-shadow: 0 0 20px rgba(111, 229, 247, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 32px rgba(111, 229, 247, 0.5);
-    }
-  }
-
-  .hero-copy-wrap {
-    animation: fadeInUp 0.8s ease-out;
-  }
-
-  .reveal {
-    animation: fadeInUp 0.7s ease-out;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-copy-wrap,
-    .reveal {
-      animation: none;
-      opacity: 1;
-      transform: none;
-    }
-  }
-
-  @media (max-width: 1120px) {
-    .header-shell {
-      grid-template-columns: 1fr auto;
-    }
-
-    .header-nav.left {
-      display: none;
-    }
-
-    .stage-shell,
-    .stack-shell,
-    .systems-shell,
-    .cases-grid,
-    .footer-shell {
-      grid-template-columns: 1fr;
-    }
-
-    .stack-media {
-      position: static;
-    }
-
-    .stack-item {
-      min-height: auto;
-      padding: 18px 0;
-    }
-
-    .segment-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .systems-media {
-      min-height: 460px;
-    }
-  }
-
-  @media (max-width: 820px) {
-    .announcement-inner,
-    .header-shell {
-      width: min(calc(100% - 28px), var(--max));
-    }
-
-    .announcement-inner {
-      flex-direction: column;
-      gap: 10px;
-      padding: 14px 0;
-    }
-
-    .header-shell {
-      min-height: auto;
-      padding: 16px 0;
-      grid-template-columns: 1fr;
-      justify-items: center;
-    }
-
-    .header-nav.right {
-      justify-content: center;
-    }
-
-    .hero {
-      padding-top: 44px;
-    }
-
-    .hero-title {
-      font-size: clamp(42px, 11vw, 64px);
-    }
-
-    .hero-subtitle,
-    .value-copy,
-    .stack-copy,
-    .systems-copy p,
-    .cases-head p,
-    .cta-shell p {
-      font-size: 16px;
-    }
-
-    .segment-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .hero-stage,
-    .stage-card,
-    .stage-mini,
-    .case-card {
-      border-radius: 24px;
-    }
-
-    .panel-tablet {
-      inset: 0;
-    }
-
-    .panel-phone {
-      position: relative;
-      right: auto;
-      bottom: auto;
-      width: 100%;
-      height: auto;
-      margin-top: 16px;
-    }
-
-    .systems-media {
-      min-height: auto;
-      display: grid;
-      gap: 16px;
-    }
-
-    .stage-mini-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .cta-btn,
-    .cta-link {
-      width: 100%;
-    }
+  /* ════════════════════════════
+     RESPONSIVE — PEQUEÑO (≤390px)
+  ════════════════════════════ */
+  @media (max-width: 390px) {
+    h1 { font-size: 48px; }
+    .hero-pills .pill:nth-child(n+5) { display: none; }
   }
 </style>
 </head>
 <body>
-<div class="announcement">
-  <div class="announcement-inner">
-    <a href="https://calendly.com/8vobitc/agenda" class="announcement-pill" data-calendly-link>Sistema Web 8vobit</a>
-    <div class="announcement-copy">Contrato, onboarding, portal cliente y landing dentro de una misma estructura.</div>
-  </div>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo" aria-label="8vobit inicio">
+    <img src="ISOTIPO.png" alt="8vobit logo">
+  </a>
+  <ul>
+    <li><a href="#servicios">Servicios</a></li>
+    <li><a href="#capacidades">Marketing</a></li>
+    <li><a href="#proceso">Proceso</a></li>
+    <li><a href="#contacto" class="nav-btn">Cotizar</a></li>
+  </ul>
+  <button class="hamburger" id="hamburger" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MENÚ MÓVIL -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#servicios" onclick="closeMenu()">Servicios</a>
+  <a href="#capacidades" onclick="closeMenu()">Marketing Digital</a>
+  <a href="#proceso" onclick="closeMenu()">Proceso</a>
+  <a href="#contacto" class="mob-cta" onclick="closeMenu()">Cotizar proyecto</a>
 </div>
 
-<header class="site-header">
-  <div class="header-shell">
-    <nav class="header-nav left">
-      <a href="#servicio">Sistema</a>
-      <a href="#proceso">Proceso</a>
-    </nav>
-    <a href="#" class="brand" aria-label="Inicio 8vobit">
-      <img src="ISOTIPO.png" alt="8vobit" class="brand-mark">
-      <span class="brand-word">8vobit</span>
-    </a>
-    <nav class="header-nav right">
-      <a href="#proyectos">Base</a>
-      <a href="https://calendly.com/8vobitc/agenda" data-calendly-link>Agendar</a>
-    </nav>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-orb"></div>
+  <div class="hero-orb2"></div>
+
+  <div class="hero-badge">Diseño web · SEO · Marketing Digital · Chile</div>
+
+  <h1>
+    WEB QUE<br>
+    <span class="cyan">POSICIONA</span><br>
+    <span class="outline">Y VENDE</span>
+  </h1>
+
+  <p class="hero-sub">
+    No solo hacemos sitios bonitos. Creamos <strong>presencia digital completa</strong>: diseño, desarrollo, SEO y estrategia de contenido para que tu negocio aparezca, atraiga y convierta.
+  </p>
+
+  <div class="hero-pills">
+    <span class="pill">Diseño Web</span>
+    <span class="pill">SEO On-Page</span>
+    <span class="pill">E-Commerce</span>
+    <span class="pill">Conversión CRO</span>
+    <span class="pill">Contenido Mensual</span>
+    <span class="pill">Marketing Digital</span>
   </div>
-</header>
 
-<main>
-  <section class="hero">
-    <div class="shell">
-      <div class="hero-copy-wrap reveal">
-        <div class="eyebrow">8vobit / Sistema Web Inicial</div>
-        <h1 class="hero-title">No armamos paginas sueltas. <strong>Montamos una landing dentro de un sistema claro.</strong></h1>
-        <p class="hero-subtitle">
-          8vobit organiza el proyecto desde el contrato y el pago inicial hasta el portal cliente, la estrategia, el build, la medicion y la entrega final.
-        </p>
-        <div class="hero-actions">
-          <a href="https://calendly.com/8vobitc/agenda" class="cta-btn" data-calendly-link>Agendar diagnostico</a>
-        </div>
-        <div class="hero-note mono">Una sola oferta clara. Un solo CTA. Un proceso completo detras.</div>
+  <div class="hero-actions">
+    <a href="#servicios" class="btn-primary">Ver servicios</a>
+    <a href="#contacto" class="btn-ghost">Cotizar proyecto</a>
+  </div>
 
-        <div class="hero-stage">
-          <div class="stage-shell">
-            <div class="stage-tablet">
-              <div class="stage-browser"><span></span><span></span><span></span></div>
-              <div class="stage-screen">
-                <div class="stage-kicker mono">Sistema Web Inicial</div>
-                <h2 class="stage-headline">Una landing funciona mejor cuando entra a operacion con proceso, no solo con diseno.</h2>
-                <p class="stage-text">
-                  El proyecto arranca con contrato, onboarding y definicion de CTA. Luego pasa a build, QA, lanzamiento y entrega. Asi la pagina no queda suelta ni el cliente a ciegas.
-                </p>
-                <div class="stage-rows">
-                  <div class="stage-row">
-                    <strong>Entrada</strong>
-                    <span>Contrato, invoice, pago inicial y activacion formal del proyecto.</span>
-                  </div>
-                  <div class="stage-row">
-                    <strong>Estrategia</strong>
-                    <span>Intake, CTA, arquitectura y activos definidos antes de construir.</span>
-                  </div>
-                  <div class="stage-row">
-                    <strong>Operacion</strong>
-                    <span>Build, medicion base, QA y entrega ordenada para continuidad.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+  <div class="hero-stats">
+    <div>
+      <div class="stat-num">+50</div>
+      <div class="stat-label">Proyectos</div>
+    </div>
+    <div>
+      <div class="stat-num">SEO</div>
+      <div class="stat-label">Incluido</div>
+    </div>
+    <div>
+      <div class="stat-num">48H</div>
+      <div class="stat-label">Inicio</div>
+    </div>
+  </div>
+</section>
 
-            <div class="stage-side">
-              <article class="stage-card">
-                <strong class="mono">Pensada para</strong>
-                <h3>Servicios profesionales que necesitan vender confianza sin desorden.</h3>
-                <p>
-                  Contadores, abogados, psicologos, consultores y servicios B2B donde la claridad comercial y el seguimiento del proyecto pesan tanto como el diseno.
-                </p>
-                <div class="stage-tags">
-                  <span>Contadores</span>
-                  <span>Abogados</span>
-                  <span>Psicologos</span>
-                  <span>Consultores</span>
-                  <span>Servicios B2B</span>
-                </div>
-              </article>
-
-              <div class="stage-mini-grid">
-                <article class="stage-mini">
-                  <strong class="mono">Resultado</strong>
-                  <h4>Mas control</h4>
-                  <p>El cliente entiende el proceso y la agencia no depende de improvisaciones.</p>
-                </article>
-                <article class="stage-mini">
-                  <strong class="mono">Sistema</strong>
-                  <h4>Mas continuidad</h4>
-                  <p>Portal, documentos y entrega final dejan una base lista para crecer.</p>
-                </article>
-              </div>
-            </div>
-          </div>
-        </div>
+<!-- SERVICIOS -->
+<section class="services" id="servicios">
+  <div class="services-header reveal">
+    <div>
+      <div class="section-tag">Desarrollo Web</div>
+      <h2>SITIOS WEB<br><span class="cyan">A TU MEDIDA</span></h2>
+    </div>
+    <p class="services-desc">Desde una página simple hasta tienda online. Cada proyecto incluye diseño responsivo y optimización base para Google.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card reveal">
+      <div class="service-num">01</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <div class="service-title">One Page</div>
+      <p class="service-desc">Todo tu negocio en una página. Rápida, clara, con llamadas a la acción estratégicas y optimizada para celular.</p>
+      <div class="service-price">
+        <span class="price-from">Desde</span>
+        <span class="price-amount">$150.000</span>
+        <span class="price-currency">CLP</span>
       </div>
     </div>
-  </section>
-
-  <section id="servicio" class="value-section">
-    <div class="shell">
-      <div class="value-wrap reveal">
-        <div class="eyebrow">Estructura base</div>
-        <h2 class="value-title">La diferencia no es solo la landing. Es el sistema que la sostiene.</h2>
-        <p class="value-copy">
-          La pagina es la cara visible. Debajo corren contrato, invoice, welcome, portal cliente, intake, arquitectura, build, QA y entrega. Esa estructura ordena mejor el proyecto y mejora la calidad del contacto.
-        </p>
-        <div class="segment-grid">
-          <div>Contrato + pago 1</div>
-          <div>Welcome + portal</div>
-          <div>Intake estrategico</div>
-          <div>Build + QA</div>
-          <div>Entrega + continuidad</div>
-        </div>
+    <div class="service-card reveal d1">
+      <div class="service-num">02</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <div class="service-title">Landing Page</div>
+      <p class="service-desc">Diseñada para convertir. Estructura orientada a conseguir leads o ventas. Ideal para campañas de publicidad digital.</p>
+      <div class="service-price">
+        <span class="price-from">Desde</span>
+        <span class="price-amount">$250.000</span>
+        <span class="price-currency">CLP</span>
       </div>
     </div>
-  </section>
-
-  <section id="proceso" class="stack">
-    <div class="shell">
-      <div class="stack-shell">
-        <aside class="stack-media reveal">
-          <div class="stack-device">
-            <div class="stack-screen">
-              <div class="stack-browser"><span></span><span></span><span></span></div>
-              <div>
-                <div class="section-label">Sistema 8vobit</div>
-                <h3>Una estructura reusable para mover cada proyecto con criterio.</h3>
-              </div>
-              <p>
-                El cliente ve un recorrido claro y la agencia trabaja sobre un sistema documentado. Eso baja friccion comercial, ordena la ejecucion y deja mejores entregas.
-              </p>
-              <div class="stack-modules">
-                <div class="stack-module">
-                  <strong>Entrada formal</strong>
-                  <span>Contrato firmado, invoice emitido y pago inicial confirmado.</span>
-                </div>
-                <div class="stack-module">
-                  <strong>Onboarding</strong>
-                  <span>Welcome, portal, intake y solicitud de assets desde el comienzo.</span>
-                </div>
-                <div class="stack-module">
-                  <strong>Decision</strong>
-                  <span>CTA, arquitectura y prioridades definidas antes del build.</span>
-                </div>
-                <div class="stack-module">
-                  <strong>Lanzamiento</strong>
-                  <span>QA, GA4, Search Console y entrega final con accesos.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div class="stack-list">
-          <article class="stack-item">
-            <div class="stack-card reveal">
-              <div class="stack-index mono">01 · Formaliza</div>
-              <h2 class="stack-title">El proyecto empieza cuando hay cierre claro, no cuando aparece la ansiedad.</h2>
-              <p class="stack-copy">
-                Primero se ordena el arranque: contrato, invoice 1 y pago inicial. Desde ahi el proyecto entra a operacion con reglas claras para ambas partes.
-              </p>
-              <ul class="stack-points">
-                <li>contrato antes de ejecucion</li>
-                <li>pago inicial como puerta de entrada</li>
-                <li>alcance y tiempos mejor encuadrados</li>
-              </ul>
-              <div class="stack-actions">
-                <a href="https://calendly.com/8vobitc/agenda" class="cta-link" data-calendly-link>Agendar diagnostico</a>
-              </div>
-            </div>
-          </article>
-
-          <article class="stack-item">
-            <div class="stack-card reveal">
-              <div class="stack-index mono">02 · Ordena</div>
-              <h2 class="stack-title">Onboarding visible para que el cliente sepa que viene y que falta.</h2>
-              <p class="stack-copy">
-                Welcome document, portal cliente, intake y solicitud de assets dejan el proyecto encarrilado antes de tocar la pagina. Asi reduces preguntas repetidas y bloqueos evitables.
-              </p>
-              <ul class="stack-points">
-                <li>welcome document con proximos pasos</li>
-                <li>portal con avances, entregables y pagos</li>
-                <li>assets y accesos pedidos desde el inicio</li>
-              </ul>
-              <div class="stack-actions">
-                <a href="https://calendly.com/8vobitc/agenda" class="cta-link" data-calendly-link>Agendar diagnostico</a>
-              </div>
-            </div>
-          </article>
-
-          <article class="stack-item">
-            <div class="stack-card reveal">
-              <div class="stack-index mono">03 · Define</div>
-              <h2 class="stack-title">La landing se construye despues de definir CTA, arquitectura y mensaje.</h2>
-              <p class="stack-copy">
-                Antes del build se define que servicio se vende, cual es la accion principal y como se ordena la pagina. Eso protege el proyecto de cambios arbitrarios a mitad de camino.
-              </p>
-              <ul class="stack-points">
-                <li>una sola accion principal</li>
-                <li>arquitectura reusable por tipo de servicio</li>
-                <li>criterio de copy antes de diseno y build</li>
-              </ul>
-            </div>
-          </article>
-
-          <article class="stack-item">
-            <div class="stack-card reveal">
-              <div class="stack-index mono">04 · Entrega</div>
-              <h2 class="stack-title">Publicamos con medicion base, QA y cierre ordenado.</h2>
-              <p class="stack-copy">
-                La landing se entrega con GA4, Search Console, contacto activo, accesos y recomendacion de continuidad. El proyecto no termina en una URL; termina documentado.
-              </p>
-              <ul class="stack-points">
-                <li>QA antes de lanzar</li>
-                <li>medicion base instalada</li>
-                <li>entrega final lista para mantencion o SEO</li>
-              </ul>
-              <div class="stack-actions">
-                <a href="https://calendly.com/8vobitc/agenda" class="cta-link" data-calendly-link>Agendar diagnostico</a>
-              </div>
-            </div>
-          </article>
-        </div>
+    <div class="service-card reveal d2">
+      <div class="service-num">03</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <div class="service-title">E-Commerce</div>
+      <p class="service-desc">Tienda online completa. Carrito, Webpay y Mercado Pago, gestión de productos. Lista para vender desde el primer día.</p>
+      <div class="service-price">
+        <span class="price-from">Desde</span>
+        <span class="price-amount">$250.000</span>
+        <span class="price-currency">CLP</span>
       </div>
     </div>
-  </section>
-
-  <section class="systems">
-    <div class="shell">
-      <div class="systems-shell">
-        <div class="systems-copy reveal">
-          <div class="section-label">Visibilidad del proyecto</div>
-          <h2>El cliente ve lo necesario y la agencia conserva control operativo.</h2>
-          <p>
-            El sistema separa lo visible de lo interno. El cliente ve portal, timeline, documentos, pagos y siguientes pasos. La agencia gestiona backlog, SOP y decisiones tecnicas por fuera.
-          </p>
-          <div class="systems-list">
-            <div>
-              <strong>Cliente ve</strong>
-              <span>Portal, timeline, entregables, feedback, pagos y links relevantes.</span>
-            </div>
-            <div>
-              <strong>Agencia controla</strong>
-              <span>Backlog interno, checklist tecnico, SOP y decisiones de implementacion.</span>
-            </div>
-            <div>
-              <strong>El cierre deja continuidad</strong>
-              <span>Entrega final, accesos y recomendacion de mantencion o SEO.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="systems-media reveal">
-          <div class="panel-tablet">
-            <div class="panel-screen">
-              <strong class="mono">Portal cliente</strong>
-              <h3>Seguimiento visible por fase.</h3>
-              <p>Onboarding, estrategia, build, revision y lanzamiento en una sola vista.</p>
-              <div class="panel-boxes">
-                <div><strong>Onboarding</strong><span>Contrato, invoice, welcome, intake y activos solicitados.</span></div>
-                <div><strong>Build</strong><span>CTA definido, arquitectura lista y pagina en implementacion.</span></div>
-                <div><strong>Lanzamiento</strong><span>QA, medicion base y entrega final preparados.</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel-phone">
-            <div class="panel-screen">
-              <strong class="mono">Documentos</strong>
-              <h3>Cobro, contexto y cierre.</h3>
-              <p>Los documentos clave no quedan sueltos: acompanan el proyecto de punta a punta.</p>
-              <div class="panel-boxes">
-                <div><strong>Invoice</strong><span>Cobro inicial y cobro final dentro del flujo.</span></div>
-                <div><strong>Welcome</strong><span>Contexto, siguientes pasos y canal de coordinacion.</span></div>
-                <div><strong>Entrega</strong><span>Accesos, herramientas y propuesta de continuidad.</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="service-card reveal d3">
+      <div class="service-num">04</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <div class="service-title">Contenido Mensual</div>
+      <p class="service-desc">Plan de generación de contenido SEO para tu sitio. Artículos, actualizaciones y gestión continua mes a mes.</p>
+      <div class="service-price">
+        <span class="price-from">Plan</span>
+        <span class="price-amount">Mensual</span>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="proyectos" class="cases">
-    <div class="shell">
-      <div class="cases-head reveal">
-        <div class="eyebrow">Arquitectura base</div>
-        <h2>La estructura 8vobit ya tiene piezas reutilizables, no solo ideas.</h2>
-        <p>
-          El sistema mezcla una pagina maestra de gobierno, una plantilla base de landing y proyectos reales usados como referencia operativa.
-        </p>
+<!-- CAPACIDADES -->
+<section class="capabilities" id="capacidades">
+  <div class="cap-header reveal">
+    <div class="section-tag">Marketing Digital</div>
+    <h2>MÁS QUE<br><span class="cyan">UN SITIO WEB</span></h2>
+    <p class="cap-intro">Cada proyecto incluye la estrategia. No entregamos solo código — entregamos una herramienta de crecimiento digital completa.</p>
+  </div>
+  <div class="cap-grid">
+    <div class="cap-block reveal">
+      <div class="cap-label">Posicionamiento</div>
+      <div class="cap-title">SEO On-Page</div>
+      <p class="cap-desc">Optimizamos cada página para que Google la entienda y posicione. Desde la estructura del código hasta textos y metadatos.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">Keyword research</span>
+        <span class="cap-tag">Meta tags</span>
+        <span class="cap-tag">Velocidad de carga</span>
+        <span class="cap-tag">Estructura semántica</span>
+        <span class="cap-tag">Search Console</span>
       </div>
-
-      <div class="cases-grid">
-        <article class="case-card dark reveal">
+    </div>
+    <div class="cap-block reveal d1">
+      <div class="cap-label">Optimización</div>
+      <div class="cap-title">Conversión CRO</div>
+      <p class="cap-desc">Cada botón, sección y texto tiene un propósito: llevar al visitante a contactarte o comprar. UX con intención.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">UX/UI estratégico</span>
+        <span class="cap-tag">CTA optimizados</span>
+        <span class="cap-tag">Flujo de usuario</span>
+        <span class="cap-tag">Formularios activos</span>
+      </div>
+    </div>
+    <div class="cap-block reveal d2">
+      <div class="cap-label">Desarrollo</div>
+      <div class="cap-title">Rendimiento Web</div>
+      <p class="cap-desc">Sitios rápidos, seguros y responsivos. Un segundo menos de carga significa más ventas. Optimizamos cada milisegundo.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">Core Web Vitals</span>
+        <span class="cap-tag">100% Responsivo</span>
+        <span class="cap-tag">SSL incluido</span>
+        <span class="cap-tag">Caché y compresión</span>
+      </div>
+    </div>
+    <div class="cap-block reveal d3">
+      <div class="cap-label">Estrategia</div>
+      <div class="cap-title">Contenido Digital</div>
+      <p class="cap-desc">Generamos contenido que posiciona en Google y conecta con tu audiencia. Artículos de blog, textos de venta y actualizaciones.</p>
+      <div class="cap-tags">
+        <span class="cap-tag">Blog SEO</span>
+        <span class="cap-tag">Copywriting</span>
+        <span class="cap-tag">Actualización mensual</span>
+        <span class="cap-tag">Estrategia editorial</span>
+      </div>
+    </div>
+    <div class="cap-block featured reveal">
+      <div class="cap-featured-inner">
+        <div>
+          <div class="cap-label">Enfoque integral</div>
+          <div class="cap-title" style="font-size:clamp(24px,3.5vw,40px);line-height:1.05;">DISEÑO + SEO + ESTRATEGIA<br><span style="color:var(--cyan)">TODO EN UNO</span></div>
+          <p class="cap-desc" style="margin-top:14px;">No tercerizamos. Diseñamos, desarrollamos, optimizamos y generamos el contenido de tu presencia digital. Un solo equipo, resultados medibles.</p>
+          <div class="cap-tags" style="margin-top:18px;">
+            <span class="cap-tag">Google Analytics</span>
+            <span class="cap-tag">Pixel Meta / Google Ads</span>
+            <span class="cap-tag">WhatsApp integrado</span>
+            <span class="cap-tag">Mapas y ubicación</span>
+            <span class="cap-tag">Redes sociales</span>
+          </div>
+        </div>
+        <div class="cap-metrics">
           <div>
-            <div class="case-kicker mono">Gobierno</div>
-            <h3>Sistema Maestro Agencia Web</h3>
-            <p>
-              Pagina de control donde conviven clientes, contratos, proyectos, backlog y reglas del sistema.
-            </p>
+            <div class="metric-num">3X</div>
+            <div class="metric-label">más visitas con SEO bien hecho</div>
           </div>
-          <div class="case-list">
-            <div>
-              <strong>Que ordena</strong>
-              <span>Entrada de proyectos, estados, documentos y criterios de entrega.</span>
-            </div>
-            <div>
-              <strong>Que evita</strong>
-              <span>Que cada proyecto nazca desde cero o se siga por chat.</span>
-            </div>
-            <div>
-              <strong>Rol</strong>
-              <span>Funciona como cockpit operativo para el sistema web.</span>
-            </div>
-          </div>
-        </article>
-
-        <article class="case-card reveal">
           <div>
-            <div class="case-kicker mono">Plantilla oficial</div>
-            <h3>Plantilla Landing 8vobit</h3>
-            <p>
-              Version reusable nacida desde casos reales. Sirve para acelerar nuevos proyectos sin partir cada vez desde cero.
-            </p>
+            <div class="metric-num">↑67%</div>
+            <div class="metric-label">más conversión con CRO</div>
           </div>
-          <div class="case-list">
-            <div>
-              <strong>Que resuelve</strong>
-              <span>Estandariza arquitectura, CTA, criterio tecnico minimo y secuencia de ejecucion.</span>
-            </div>
-            <div>
-              <strong>Como se usa</strong>
-              <span>Se duplica, se adapta al servicio y se activa dentro del flujo oficial de la agencia.</span>
-            </div>
-          </div>
-        </article>
-
-        <article class="case-card reveal">
-          <div>
-            <div class="case-kicker mono">Referencia viva</div>
-            <h3>Erika Contadora</h3>
-            <p>
-              Caso real desde donde se depuro la secuencia que hoy alimenta la plantilla y el sistema.
-            </p>
-          </div>
-          <div class="case-list">
-            <div>
-              <strong>Que aporto</strong>
-              <span>Claridad de CTA, arquitectura y secuencia real de ejecucion.</span>
-            </div>
-            <div>
-              <strong>Para que sirve</strong>
-              <span>Convertir experiencia real en estandar reusable para nuevos proyectos.</span>
-            </div>
-          </div>
-        </article>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="cta-section">
-    <div class="shell">
-      <div class="cta-shell reveal">
-        <div class="section-label">Siguiente paso</div>
-        <h2>Si quieres una landing, tambien necesitas el sistema que la haga operable.</h2>
-        <p>
-          Agenda un diagnostico y revisamos si tu negocio calza con la estructura 8vobit: cierre claro, onboarding ordenado, landing enfocada y entrega con continuidad.
-        </p>
-        <a href="https://calendly.com/8vobitc/agenda" class="start-orb" data-calendly-link>
-          <span>Agendar</span>
-        </a>
+<!-- PROCESO -->
+<section class="process" id="proceso">
+  <div class="reveal">
+    <div class="section-tag">Cómo trabajamos</div>
+    <h2>PROCESO<br><span class="cyan">SIMPLE</span></h2>
+  </div>
+  <div class="process-grid">
+    <div class="process-step reveal">
+      <div class="step-num">01</div>
+      <div class="step-title">Conversamos</div>
+      <p class="step-desc">Entendemos tu negocio, público y metas. Sin tecnicismos, definimos juntos qué presencia digital necesitas.</p>
+    </div>
+    <div class="process-step reveal d1">
+      <div class="step-num">02</div>
+      <div class="step-title">Diseñamos</div>
+      <p class="step-desc">Prototipo visual con tu identidad. Colores, tipografía y estructura pensada para SEO y conversión.</p>
+    </div>
+    <div class="process-step reveal d2">
+      <div class="step-num">03</div>
+      <div class="step-title">Desarrollamos</div>
+      <p class="step-desc">Programamos el sitio, integramos Analytics, Pixel, WhatsApp y lo optimizamos para Google desde el código.</p>
+    </div>
+    <div class="process-step reveal d3">
+      <div class="step-num">04</div>
+      <div class="step-title">Lanzamos</div>
+      <p class="step-desc">Publicamos en tu dominio, configuramos herramientas de medición y te entregamos un sitio listo para atraer clientes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-band reveal">
+  <div>
+    <h2>¿LISTO PARA<br><span class="cyan">CRECER?</span></h2>
+    <p>Cotiza hoy y ten tu presencia digital completa — web + SEO — lista en menos de 2 semanas.</p>
+  </div>
+  <a href="#contacto" class="btn-primary">Quiero mi web</a>
+</div>
+
+<!-- CONTACTO -->
+<section class="contact" id="contacto">
+  <div class="contact-grid">
+    <div class="contact-info reveal">
+      <div class="section-tag">Contacto</div>
+      <h2>HABLEMOS DE<br><span class="cyan">TU PROYECTO</span></h2>
+      <p>Cuéntanos qué necesitas y te respondemos en menos de 24 horas con una propuesta concreta y sin compromiso.</p>
+      <div class="contact-item">
+        <div class="contact-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>
+          <strong>Concepción, Chile</strong>
+          <span>Trabajamos con clientes en todo el país</span>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.18 19.79 19.79 0 01.75 5.36 2 2 0 012.18 3h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 10.09a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        </div>
+        <div>
+          <strong>WhatsApp</strong>
+          <span>La forma más rápida.<br>Respuesta en minutos.</span>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </div>
+        <div>
+          <strong>@8vobit</strong>
+          <span>Instagram — ve nuestros proyectos</span>
+        </div>
       </div>
     </div>
-  </section>
-</main>
 
-<footer class="footer">
-  <div class="footer-shell">
-    <div class="footer-brand">
-      <img src="ISOTIPO.png" alt="8vobit">
-      <span class="mono">8vobit</span>
-    </div>
-    <nav class="footer-links">
-      <a href="#servicio">Servicio</a>
-      <a href="#proceso">Proceso</a>
-      <a href="#proyectos">Proyectos</a>
-      <a href="https://calendly.com/8vobitc/agenda" data-calendly-link>Agendar</a>
-    </nav>
-    <div class="footer-meta">
-      <div>Landing de conversion dentro de un sistema operativo para servicios profesionales</div>
-      <div>gabrielquirozcampos@gmail.com</div>
-    </div>
+    <form class="contact-form reveal d1" onsubmit="handleSubmit(event)">
+      <div class="form-row">
+        <input type="text" placeholder="Tu nombre" required>
+        <input type="text" placeholder="Tu empresa / negocio">
+      </div>
+      <input type="tel" placeholder="WhatsApp (para respuesta rápida)">
+      <select required>
+        <option value="" disabled selected>¿Qué necesitas?</option>
+        <option>One Page — desde $150.000</option>
+        <option>Landing Page — desde $250.000</option>
+        <option>E-Commerce — desde $250.000</option>
+        <option>Contenido mensual + SEO</option>
+        <option>Consultoría de Marketing Digital</option>
+        <option>No sé, quiero asesoría</option>
+      </select>
+      <textarea placeholder="Cuéntanos sobre tu negocio: ¿qué ofreces, a quién le vendes y qué quieres lograr?"></textarea>
+      <button type="submit" class="form-submit">Enviar mensaje</button>
+      <div class="form-success" id="form-success">✓ ¡Mensaje enviado! Te contactamos pronto.</div>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo" aria-label="8vobit">
+    <img src="ISOTIPO.png" alt="8vobit">
+  </a>
+  <p>© 2025 8vobit.cl — Diseño Web, SEO y Marketing Digital en Chile</p>
+  <div class="footer-links">
+    <a href="#servicios">Servicios</a>
+    <a href="#capacidades">Marketing</a>
+    <a href="#contacto">Contacto</a>
   </div>
 </footer>
 
-<script>
-  const calendlyUrl = "https://calendly.com/8vobitc/agenda";
+<!-- WhatsApp flotante -->
+<a class="wa-float" href="https://wa.me/56XXXXXXXXX" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
 
-  document.querySelectorAll("[data-calendly-link]").forEach((link) => {
-    link.href = calendlyUrl;
-    link.target = "_blank";
-    link.rel = "noopener";
+<script>
+  // Cursor (solo desktop)
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  if (window.matchMedia('(pointer: fine)').matches) {
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+    });
+    (function animRing() {
+      rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+      ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+      requestAnimationFrame(animRing);
+    })();
+    document.querySelectorAll('a, button, input, select, textarea').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        cursor.style.transform = 'translate(-50%,-50%) scale(2.5)';
+        ring.style.width = '56px'; ring.style.height = '56px';
+        ring.style.borderColor = 'rgba(75,184,212,0.8)';
+      });
+      el.addEventListener('mouseleave', () => {
+        cursor.style.transform = 'translate(-50%,-50%) scale(1)';
+        ring.style.width = '36px'; ring.style.height = '36px';
+        ring.style.borderColor = 'rgba(75,184,212,0.5)';
+      });
+    });
+  }
+
+  // Nav scroll
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 40);
   });
+
+  // Hamburger
+  const ham = document.getElementById('hamburger');
+  const mob = document.getElementById('mobileMenu');
+  ham.addEventListener('click', () => {
+    ham.classList.toggle('open');
+    mob.classList.toggle('open');
+  });
+  function closeMenu() {
+    ham.classList.remove('open');
+    mob.classList.remove('open');
+  }
+
+  // Scroll reveal
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  // Form
+  function handleSubmit(e) {
+    e.preventDefault();
+    const s = document.getElementById('form-success');
+    s.style.display = 'block'; e.target.reset();
+    setTimeout(() => s.style.display = 'none', 5000);
+  }
 </script>
 </body>
 </html>
