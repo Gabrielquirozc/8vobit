@@ -240,19 +240,6 @@
   .btn-ghost::after { content: '→'; transition: transform 0.2s; }
   .btn-ghost:hover::after { transform: translateX(5px); }
 
-  .hero-stats {
-    display: flex; gap: 36px; margin-top: 56px; flex-wrap: wrap;
-    opacity: 0; animation: fadeUp 0.7s 0.65s ease forwards;
-  }
-  .stat-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 40px; color: var(--cyan); line-height: 1;
-  }
-  .stat-label {
-    font-size: 10px; color: var(--gray);
-    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px;
-  }
-
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(28px); }
     to { opacity: 1; transform: translateY(0); }
@@ -497,9 +484,6 @@
     .btn-primary { width: 100%; text-align: center; padding: 16px; font-size: 19px; }
     .btn-ghost { font-size: 14px; }
 
-    .hero-stats { gap: 24px; margin-top: 40px; }
-    .stat-num { font-size: 34px; }
-
     /* SERVICIOS */
     .services { padding: 72px 20px; }
     .services-header { flex-direction: column; align-items: flex-start; }
@@ -619,20 +603,6 @@
     <a href="#contacto" class="btn-ghost">Cotizar proyecto</a>
   </div>
 
-  <div class="hero-stats">
-    <div>
-      <div class="stat-num">+50</div>
-      <div class="stat-label">Proyectos</div>
-    </div>
-    <div>
-      <div class="stat-num">SEO</div>
-      <div class="stat-label">Incluido</div>
-    </div>
-    <div>
-      <div class="stat-num">48H</div>
-      <div class="stat-label">Inicio</div>
-    </div>
-  </div>
 </section>
 
 <!-- SERVICIOS -->
