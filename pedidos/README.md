@@ -64,7 +64,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 20 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 25 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.
@@ -80,28 +80,39 @@ Los datos quedan en `./data/pedidos.db`. Para recargar la carta desde
 
 ## Desplegar en lenovo-edge
 
-Puerto 8099 (libre: 8096 Jellyfin, 8097 Boldus, 8098 chatbot). Sin comillas
-anidadas ni heredoc en SSH.
+Desde Windows, en la carpeta del repo (PowerShell):
+
+```powershell
+.\pedidos\deploy\desplegar.ps1
+```
+
+Empaqueta `pedidos/` (sin `data/` ni `.env`), lo copia a `/tmp` del servidor y corre
+[`deploy/remoto.sh`](deploy/remoto.sh), que:
+
+1. Verifica que el puerto 8099 esté libre (o sea del propio `pedidos`).
+2. **Corre las 25 pruebas en el servidor**, en un contenedor desechable; si alguna
+   falla, se detiene sin tocar nada.
+3. Respalda la versión anterior en `/srv/docker/compose/pedidos.prev-FECHA`.
+4. Copia los archivos conservando `.env`; la primera vez crea `.env` con una clave
+   del panel aleatoria y **la muestra una sola vez**.
+5. `docker compose up -d --build` (solo este stack).
+6. Verifica: `/salud`, carta HTTP 200, fotos en el volumen, **hora de Chile en el
+   contenedor**, escritura en `/data`, respaldo inicial, memoria, que escuche solo en
+   `127.0.0.1` y errores en logs.
+
+La **primera vez**, agregar el hostname al túnel (una sola vez, a mano):
 
 ```bash
-# 1. Copiar y crear .env (chmod 600)
-scp -r pedidos gabriel@lenovo-edge:/tmp/
-ssh gabriel@lenovo-edge 'sudo mkdir -p /srv/docker/compose/pedidos && sudo cp -r /tmp/pedidos/. /srv/docker/compose/pedidos/'
-ssh gabriel@lenovo-edge 'sudo cp /srv/docker/compose/pedidos/.env.example /srv/docker/compose/pedidos/.env && sudo chmod 600 /srv/docker/compose/pedidos/.env'
-#    editar .env: PANEL_PASSWORD y SESSION_SECRET (openssl rand -hex 32)
+ssh gabriel@lenovo-edge 'sudo bash /srv/docker/compose/pedidos/deploy/tunel.sh'
+```
 
-# 2. Levantar
-ssh gabriel@lenovo-edge 'cd /srv/docker/compose/pedidos && sudo docker compose up -d --build'
+Respalda `/etc/cloudflared/config.yml`, inserta `pedidos.8vobit.xyz → 127.0.0.1:8099`
+antes de la regla final 404, **valida con `cloudflared` antes de reemplazar** y reinicia
+`cloudflared.service`. Luego indica el comando de DNS si el registro aún no existe.
 
-# 3. Túnel: en /etc/cloudflared/config.yml, ANTES de la regla final 404:
-#      - hostname: pedidos.8vobit.xyz
-#        service: http://127.0.0.1:8099
-#    + registro DNS del hostname hacia el túnel
-ssh gabriel@lenovo-edge 'sudo systemctl restart cloudflared.service'
+Verificación externa:
 
-# 4. Verificar
-ssh gabriel@lenovo-edge 'curl -s http://127.0.0.1:8099/salud'
-ssh gabriel@lenovo-edge 'sudo docker stats --no-stream pedidos'
+```bash
 curl -sS -o /dev/null -w "HTTP %{http_code}\n" https://pedidos.8vobit.xyz/gassuso
 ```
 
