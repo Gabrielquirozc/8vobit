@@ -32,7 +32,8 @@ async function req(method, p, body, headers = {}) {
   const raw = body instanceof Uint8Array;
   const r = await fetch(B + p, {
     method, redirect: 'manual',
-    headers: { ...(body && !raw ? { 'Content-Type': 'application/json' } : {}), ...(cookie ? { Cookie: cookie } : {}), ...headers },
+    // IP distinta por solicitud para no gatillar los límites de uso, salvo en sus propias pruebas.
+    headers: { 'cf-connecting-ip': `10.0.${Math.random() * 255 | 0}.${Math.random() * 255 | 0}`, ...(body && !raw ? { 'Content-Type': 'application/json' } : {}), ...(cookie ? { Cookie: cookie } : {}), ...headers },
     body: body === undefined ? undefined : raw ? body : JSON.stringify(body),
   });
   const sc = r.headers.get('set-cookie'); if (sc) cookie = sc.split(';')[0];
@@ -202,4 +203,43 @@ test('la caja del día suma solo lo cobrado y separa por medio de pago', async (
   const cobrados = d.pedidos.filter((p) => p.pagado && p.estado !== 'anulado');
   assert.ok(cobrados.length >= 1);
   assert.ok(cobrados.every((p) => ['efectivo', 'transferencia', 'tarjeta', 'otro'].includes(p.medio_pago)));
+});
+
+// ---------- endurecimiento ----------
+test('cabeceras de seguridad y CSP con hash del script de la página', async () => {
+  const r = await fetch(B + '/gassuso');
+  assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(r.headers.get('x-frame-options'), 'DENY');
+  const c = r.headers.get('content-security-policy');
+  assert.match(c, /script-src 'self' 'sha256-[A-Za-z0-9+/=]+'/);
+  assert.doesNotMatch(c, /script-src[^;]*unsafe-inline/);
+  assert.match(c, /frame-ancestors 'none'/);
+  assert.equal((await fetch(B + '/api/locales/gassuso')).headers.get('x-content-type-options'), 'nosniff');
+});
+
+test('frena fuerza bruta sobre la clave del panel', async () => {
+  const ip = { 'cf-connecting-ip': '203.0.113.7' };
+  const codigos = [];
+  for (let i = 0; i < 10; i++) codigos.push((await req('POST', '/api/panel/login', { password: 'mala' }, ip)).status);
+  assert.deepEqual(codigos.slice(0, 8), Array(8).fill(401));
+  assert.equal(codigos[9], 429);
+  // incluso la clave correcta espera: si no, el límite no protege nada
+  assert.equal((await req('POST', '/api/panel/login', { password: 'clave-de-prueba' }, ip)).status, 429);
+  assert.equal((await login()).status, 200); // otra IP no se ve afectada
+});
+
+test('frena pedidos en masa desde una misma IP', async () => {
+  const id = (await prod('Italiano')).id, ip = { 'cf-connecting-ip': '203.0.113.9' };
+  const codigos = [];
+  for (let i = 0; i < 17; i++) codigos.push((await req('POST', '/api/locales/gassuso/pedidos', { cliente: 'Bot', telefono: '+56911112222', franja: 'Lo antes posible', items: [{ producto_id: id }] }, ip)).status);
+  assert.equal(codigos.filter((c) => c === 201).length, 15);
+  assert.equal(codigos.at(-1), 429);
+});
+
+test('hace un respaldo de la base al iniciar', () => {
+  const dirB = path.join(dir, 'data', 'backups');
+  const files = fs.readdirSync(dirB);
+  assert.equal(files.length, 1);
+  assert.match(files[0], /^pedidos-\d{4}-\d{2}-\d{2}\.db$/);
+  assert.ok(fs.statSync(path.join(dirB, files[0])).size > 10e3);
 });

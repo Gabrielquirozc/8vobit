@@ -38,6 +38,28 @@ anulados, boletas por emitir (con registro de folio) y detalle imprimible.
 | `/carta-imprimible` | Carta A4 para imprimir o guardar como PDF |
 | `/salud` | Healthcheck |
 
+## Seguridad y respaldos
+
+- **Límites de uso**: 8 intentos de clave y 15 pedidos por IP cada 15 minutos
+  (responde 429). La IP real viene en `cf-connecting-ip`, que pone Cloudflare; por
+  eso el contenedor **solo** debe escuchar en `127.0.0.1` (si se expusiera directo,
+  esa cabecera se podría falsificar; `TRUST_PROXY=0` la ignora).
+- **Cabeceras**: CSP con el hash de cada script de cada página (sin
+  `unsafe-inline` para scripts), `frame-ancestors 'none'`, `nosniff`.
+- **Respaldos**: una copia diaria consistente de la base (`VACUUM INTO`) en
+  `/data/backups`, se conservan `BACKUP_DIAS` (14). **Están en el mismo disco**:
+  para sobrevivir a una falla de disco hay que copiar `/data` fuera del servidor,
+  por ejemplo con un `rsync` nocturno a otra máquina por Tailscale.
+- `docker stop` cierra limpio (termina respuestas en curso y cierra la base).
+
+## Pruebas
+
+```bash
+npm test   # 20 pruebas de punta a punta, sin dependencias, ~1 s
+```
+
+Corren contra el servidor real con una base temporal y horario de 24 h.
+
 ## Local
 
 ```bash

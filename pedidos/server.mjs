@@ -15,6 +15,8 @@ const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
 const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const PUBLIC = path.resolve(import.meta.dirname, 'public');
 const SEED_FILE = process.env.SEED_FILE || path.resolve(import.meta.dirname, 'seed/gassuso.json');
+const TRUST_PROXY = process.env.TRUST_PROXY !== '0'; // detrás de cloudflared: la IP real viene en cf-connecting-ip
+const BACKUP_DIAS = Number(process.env.BACKUP_DIAS || 14);
 const SLOT_MIN = 30;
 const LEAD_MIN = 20; // margen mínimo antes de la primera franja
 
@@ -146,10 +148,58 @@ function session(req) {
   return Number(lid);
 }
 
+// ---------- límites de uso ----------
+// Ventana deslizante en memoria: basta para un solo contenedor. Frena fuerza bruta
+// sobre la clave del panel y pedidos falsos en masa, sin molestar a un cliente real.
+const hits = new Map();
+function limitar(clave, max, ventanaMs) {
+  const ahora = Date.now();
+  const arr = (hits.get(clave) || []).filter((t) => ahora - t < ventanaMs);
+  arr.push(ahora); hits.set(clave, arr);
+  return arr.length > max;
+}
+setInterval(() => { const a = Date.now(); for (const [k, v] of hits) if (!v.some((t) => a - t < 3600e3)) hits.delete(k); }, 600e3).unref();
+const ipDe = (req) => (TRUST_PROXY && req.headers['cf-connecting-ip']) || req.socket.remoteAddress || '?';
+
+// ---------- respaldos ----------
+// Copia consistente de la base con VACUUM INTO, una por día, conservando BACKUP_DIAS.
+// Las fotos ya están en el mismo volumen; copiar /data completo fuera del servidor
+// sigue siendo necesario para sobrevivir a una falla de disco.
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+function respaldar() {
+  try {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    const f = path.join(BACKUP_DIR, `pedidos-${today()}.db`);
+    if (!fs.existsSync(f)) db.exec(`VACUUM INTO '${f.replace(/'/g, "''")}'`);
+    const viejos = fs.readdirSync(BACKUP_DIR).filter((n) => /^pedidos-\d{4}-\d{2}-\d{2}\.db$/.test(n)).sort().slice(0, -BACKUP_DIAS);
+    for (const n of viejos) fs.rmSync(path.join(BACKUP_DIR, n), { force: true });
+  } catch (e) { console.error('respaldo falló:', e.message); }
+}
+respaldar();
+setInterval(respaldar, 3600e3).unref();
+
+// ---------- cabeceras de seguridad ----------
+// CSP con el hash de cada <script> en línea de cada página: un script inyectado no corre.
+const cspPagina = new Map();
+function csp(file) {
+  if (!cspPagina.has(file)) {
+    const html = fs.readFileSync(path.join(PUBLIC, file), 'utf8');
+    const hashes = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].filter((m) => m[1].trim())
+      .map((m) => `'sha256-${crypto.createHash('sha256').update(m[1]).digest('base64')}'`);
+    cspPagina.set(file, [
+      "default-src 'self'", `script-src 'self' ${hashes.join(' ')}`, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "connect-src 'self'", "frame-ancestors 'none'",
+      "base-uri 'none'", "form-action 'self'", "object-src 'none'",
+    ].join('; '));
+  }
+  return cspPagina.get(file);
+}
+const SEGURIDAD = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
+
 // ---------- utilidades HTTP ----------
 function send(res, code, body, headers = {}) {
   const json = typeof body !== 'string';
-  res.writeHead(code, { 'Content-Type': json ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
+  res.writeHead(code, { ...SEGURIDAD, 'Content-Type': json ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
   res.end(json ? JSON.stringify(body) : body);
 }
 // Fotos de productos: el navegador ya las entrega achicadas en WebP, así que el
@@ -172,7 +222,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 function serveFile(res, file) {
   const p = path.join(PUBLIC, file);
   if (!p.startsWith(PUBLIC) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) return send(res, 404, 'No encontrado');
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+  const extra = path.extname(p) === '.html' ? { 'Content-Security-Policy': csp(path.relative(PUBLIC, p)) } : {};
+  res.writeHead(200, { ...SEGURIDAD, ...extra, 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
   fs.createReadStream(p).pipe(res);
 }
 
@@ -261,6 +312,7 @@ async function api(req, res, url) {
     if (m === 'GET' && parts.length === 2) return send(res, 200, menu(local));
     if (m === 'GET' && parts[2] === 'franjas') return send(res, 200, franjas(local));
     if (m === 'POST' && parts[2] === 'pedidos') {
+      if (limitar(`pedido:${ipDe(req)}`, 15, 15 * 60e3)) return send(res, 429, { error: 'Demasiados pedidos seguidos. Espera unos minutos o llama al local.' });
       const r = crearPedido(local, await readJson(req));
       return send(res, r.error ? 400 : 201, r);
     }
@@ -269,6 +321,7 @@ async function api(req, res, url) {
   // --- panel ---
   if (parts[0] === 'panel') {
     if (m === 'POST' && parts[1] === 'login') {
+      if (limitar(`login:${ipDe(req)}`, 8, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
       const b = await readJson(req);
       const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(String(b.slug || 'gassuso'));
       // Se comparan los hashes: mismo largo siempre, así timingSafeEqual no falla con tildes o largos distintos.
@@ -376,7 +429,7 @@ const server = http.createServer(async (req, res) => {
       const f = path.join(IMG_DIR, path.basename(p));
       if (!/^\/img\/[\w-]+\.webp$/.test(p) || !fs.existsSync(f)) return send(res, 404, 'No encontrado');
       // El nombre lleva el hash del contenido: se puede cachear para siempre.
-      res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=31536000, immutable' });
+      res.writeHead(200, { ...SEGURIDAD, 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=31536000, immutable' });
       return fs.createReadStream(f).pipe(res);
     }
     if (p.startsWith('/api/')) return await api(req, res, url);
@@ -396,3 +449,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 server.listen(PORT, HOST, () => console.log(`pedidos escuchando en http://${HOST}:${server.address().port}${BASE}/`));
+// docker stop manda SIGTERM: terminar las respuestas en curso y cerrar la base limpio.
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
+  server.close(() => { db.close(); process.exit(0); });
+  setTimeout(() => process.exit(0), 5000).unref();
+});

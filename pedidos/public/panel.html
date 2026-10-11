@@ -245,7 +245,7 @@ function pintarCierre() {
   });
   const sinFolio = cobrados.filter((p) => !p.folio_boleta);
   $('v-cierre').innerHTML = `
-    <div class="between noprint"><h2>Caja del ${esc(D.dia)}</h2><button class="sec" onclick="print()">Imprimir cierre</button></div>
+    <div class="between noprint"><h2>Caja del ${esc(D.dia)}</h2><button class="sec" data-print>Imprimir cierre</button></div>
     <div class="kpis">
       <div>Cobrado<b>${clp(total)}</b></div>
       <div>Pedidos cobrados<b>${cobrados.length}</b></div>

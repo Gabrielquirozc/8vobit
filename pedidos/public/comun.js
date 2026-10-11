@@ -14,3 +14,5 @@ export async function api(path, opts = {}) {
   return data;
 }
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Botones de imprimir sin onclick en línea (la CSP no permite manejadores en línea).
+document.addEventListener('click', (e) => { if (e.target.closest('[data-print]')) print(); });
