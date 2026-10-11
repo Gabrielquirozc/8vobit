@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
+  if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
 }
 
 function seed() {
@@ -139,6 +140,19 @@ function send(res, code, body, headers = {}) {
   res.writeHead(code, { 'Content-Type': json ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
   res.end(json ? JSON.stringify(body) : body);
 }
+// Fotos de productos: el navegador ya las entrega achicadas en WebP, así que el
+// servidor solo valida la firma del archivo y las guarda en el volumen de datos.
+const IMG_DIR = path.join(DATA_DIR, 'img');
+fs.mkdirSync(IMG_DIR, { recursive: true });
+const IMG_MAX = 600e3;
+async function readBytes(req, max) {
+  const chunks = []; let n = 0;
+  for await (const c of req) { n += c.length; if (n > max) throw Object.assign(new Error('too big'), { tooBig: true }); chunks.push(c); }
+  return Buffer.concat(chunks);
+}
+const esWebp = (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
+function borrarImagen(nombre) { if (nombre) fs.rm(path.join(IMG_DIR, path.basename(nombre)), () => {}); }
+
 async function readJson(req) {
   let raw = '';
   for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw new Error('too big'); }
@@ -154,7 +168,8 @@ function serveFile(res, file) {
 
 function menu(local) {
   const cats = db.prepare('SELECT id, nombre FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
-  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado FROM productos WHERE local_id=? ORDER BY orden').all(local.id);
+  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen FROM productos WHERE local_id=? ORDER BY orden').all(local.id)
+    .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null }));
   // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
   // suficientes, se completa con los destacados elegidos a mano.
   const vendidos = db.prepare(`SELECT i.producto_id id, SUM(i.cantidad) n FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id
@@ -306,6 +321,21 @@ async function api(req, res, url) {
       db.exec('COMMIT');
       return send(res, 200, { ok: true });
     }
+    if (parts[1] === 'productos' && parts[2] && parts[3] === 'imagen' && (m === 'PUT' || m === 'DELETE')) {
+      const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      let nombre = null;
+      if (m === 'PUT') {
+        let buf;
+        try { buf = await readBytes(req, IMG_MAX); } catch (e) { if (e.tooBig) return send(res, 413, { error: 'La foto pesa demasiado' }); throw e; }
+        if (!esWebp(buf)) return send(res, 415, { error: 'Formato no válido' });
+        nombre = `${lid}-${p.id}-${crypto.createHash('sha1').update(buf).digest('hex').slice(0, 10)}.webp`;
+        fs.writeFileSync(path.join(IMG_DIR, nombre), buf);
+      }
+      db.prepare('UPDATE productos SET imagen=? WHERE id=?').run(nombre, p.id);
+      if (p.imagen !== nombre) borrarImagen(p.imagen);
+      return send(res, 200, { imagen: nombre ? `${BASE}/img/${nombre}` : null });
+    }
     if (m === 'PATCH' && parts[1] === 'agregados' && parts[2]) {
       const b = await readJson(req);
       db.prepare('UPDATE agregados SET disponible=? WHERE id=? AND local_id=?').run(b.disponible ? 1 : 0, Number(parts[2]), lid);
@@ -330,6 +360,13 @@ const server = http.createServer(async (req, res) => {
     }
     url.pathname = p;
     if (p === '/salud') return send(res, 200, 'ok');
+    if (p.startsWith('/img/')) {
+      const f = path.join(IMG_DIR, path.basename(p));
+      if (!/^\/img\/[\w-]+\.webp$/.test(p) || !fs.existsSync(f)) return send(res, 404, 'No encontrado');
+      // El nombre lleva el hash del contenido: se puede cachear para siempre.
+      res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=31536000, immutable' });
+      return fs.createReadStream(f).pipe(res);
+    }
     if (p.startsWith('/api/')) return await api(req, res, url);
     if (p === '/' ) { res.writeHead(302, { Location: `${BASE}/gassuso` }); return res.end(); }
     if (p === '/panel') return serveFile(res, 'panel.html');

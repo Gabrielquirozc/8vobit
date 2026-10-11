@@ -60,9 +60,13 @@ Resultado: CSS propio de ~10 KB, cero JS de terceros.
 ## Siguiente paso de mayor impacto: fotos
 
 Las ilustraciones por categoría son un reemplazo digno, pero **la foto real de cada
-plato es lo que más vende**. El código ya acepta imágenes (`.art img`). Fuentes:
-fotos propias en la visita (luz natural, fondo neutro, misma toma para todos) o las
-de @gassuso con permiso del dueño. Formato WebP, 800 px, `loading="lazy"`.
+plato es lo que más vende**. Panel → *Carta y precios* → *Subir foto* en cada
+producto: el navegador la recorta a 4:3, la achica a 1000 × 750 y la convierte a
+WebP (<600 KB) antes de subirla; queda en el volumen `/data/img` con caché larga.
+
+Fuentes válidas: fotos que el dueño tenga (si las tomó él, son suyas) o una sesión
+en la visita (luz natural, fondo neutro, misma toma para todos). **No** se extraen
+de Uber Eats: bloquea el acceso automatizado y parte de esas fotos son de Uber.
 
 Pendiente también: aplicar la misma línea visual al panel del local (hoy usa emojis
 como íconos).

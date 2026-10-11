@@ -52,6 +52,10 @@
   td, th { padding: 9px; border-bottom: 1px solid var(--line); text-align: left; font-size: .93rem; }
   td.r, th.r { text-align: right; }
   td input[type=number] { width: 110px; }
+  .foto { width: 120px; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: #f1e8da; display: grid; place-items: center; color: var(--muted); font-size: .8rem; }
+  .foto img { width: 100%; height: 100%; object-fit: cover; }
+  .ghostbtn { display: inline-block; margin: 6px 0 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: .85rem; color: var(--fg); background: #fff; }
+  .linkbtn { background: none; color: var(--muted); padding: 6px; font-weight: 500; font-size: .85rem; }
   #login { max-width: 360px; margin: 15vh auto; padding: 16px; }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } }
 </style>
@@ -105,7 +109,7 @@
 </div></dialog>
 
 <script type="module">
-import { api, clp, esc } from './comun.js';
+import { api, clp, esc, BASE } from './comun.js';
 const $ = (id) => document.getElementById(id);
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
 let D = null, conocidos = null, audio = null, vista = 'pedidos';
@@ -273,6 +277,9 @@ async function pintarCarta() {
   const [M, h] = await Promise.all([api('panel/carta'), api('panel/historial')]);
   $('v-carta').innerHTML = `<p class="muted">Los cambios se guardan solos y se ven al instante en la carta pública.</p>` +
     M.categorias.map((c) => `<h3>${esc(c.nombre)}</h3><table>${c.productos.map((p) => `<tr>
+      <td style="width:136px"><div class="foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : '<span>Sin foto</span>'}</div>
+        <label class="ghostbtn">${p.imagen ? 'Cambiar' : 'Subir foto'}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
+        ${p.imagen ? `<button class="linkbtn" data-quitar="${p.id}">Quitar</button>` : ''}</td>
       <td>${esc(p.nombre)}</td>
       <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio"></td>
       <td><label class="row"><input type="checkbox" style="width:auto" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
@@ -285,8 +292,36 @@ async function pintarCarta() {
     (h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th class="r">Antes</th><th class="r">Ahora</th></tr>${h.map((r) =>
       `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p class="muted">Aún no hay cambios de precio.</p>');
 }
+// Achica la foto en el navegador (4:3, 1000 px, WebP) antes de subirla: el
+// celular del dueño saca fotos de 4 MB y el servidor tiene poca memoria.
+async function aWebp(file) {
+  const bmp = await createImageBitmap(file);
+  const W = 1000, H = 750, r = Math.max(W / bmp.width, H / bmp.height);
+  const w = bmp.width * r, h = bmp.height * r;
+  const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  cv.getContext('2d').drawImage(bmp, (W - w) / 2, (H - h) / 2, w, h);
+  for (const q of [0.82, 0.7, 0.55]) {
+    const b = await new Promise((ok) => cv.toBlob(ok, 'image/webp', q));
+    if (b && b.type === 'image/webp' && b.size < 580e3) return b;
+  }
+  throw new Error('Este navegador no pudo convertir la foto. Prueba con Chrome.');
+}
+$('v-carta').onclick = async (e) => {
+  const q = e.target.closest('[data-quitar]'); if (!q) return;
+  if (!confirm('¿Quitar la foto de este producto?')) return;
+  await fetch(`${BASE}/api/panel/productos/${q.dataset.quitar}/imagen`, { method: 'DELETE' }); pintarCarta();
+};
 $('v-carta').onchange = async (e) => {
   const t = e.target;
+  if (t.dataset.foto) {
+    const lbl = t.closest('label'); lbl.firstChild.textContent = 'Subiendo…';
+    try {
+      const r = await fetch(`${BASE}/api/panel/productos/${t.dataset.foto}/imagen`, { method: 'PUT', headers: { 'Content-Type': 'image/webp' }, body: await aWebp(t.files[0]) });
+      if (!r.ok) throw new Error((await r.json()).error);
+      pintarCarta();
+    } catch (err) { alert(err.message); lbl.firstChild.textContent = 'Subir foto'; }
+    return;
+  }
   try {
     if (t.dataset.a) { await api(`panel/agregados/${t.dataset.a}`, { method: 'PATCH', body: { disponible: t.checked } }); t.parentElement.classList.toggle('on', t.checked); return; }
     const v = t.type === 'checkbox' ? t.checked : Number(t.value);
