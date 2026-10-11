@@ -15,6 +15,19 @@ pedido muestra "boleta por emitir" y el local registra el folio de la e-Boleta.
 - Multi-local desde el inicio: toda tabla lleva `local_id`; el panel solo ve
   su local (sesión firmada, cookie httpOnly + SameSite=Strict).
 
+## Cómo trabaja el local (panel en tablet)
+
+Cada pedido avanza con **un solo botón grande por paso**:
+
+1. **Nuevo** → *Aceptar e imprimir comanda* (suena al llegar; la comanda se imprime).
+2. **En cocina** → *Listo para entregar* (botón WhatsApp con aviso "tu pedido está listo").
+3. **Listo** → *Cobrar*: efectivo (con montos rápidos y vuelto), transferencia,
+   tarjeta (POS propio del local) u otro; folio de boleta opcional. Cobrar = entregar.
+   Si ya pagó antes (transferencia), *Ya pagó* registra el pago sin entregar.
+
+**Caja del día**: cobrado total, por medio de pago, ticket promedio, por cobrar,
+anulados, boletas por emitir (con registro de folio) y detalle imprimible.
+
 ## Rutas
 
 | Ruta | Qué es |

@@ -1,3 +1,4 @@
+[hidden] { display: none !important; }
 :root {
   --bg: #fffaf3; --fg: #1d1a16; --muted: #6b6258; --card: #fff; --line: #eadfce;
   --accent: #d9480f; --accent-fg: #fff; --ok: #2b8a3e; --warn: #e67700;
@@ -36,3 +37,11 @@ label { display: block; margin: 12px 0 4px; font-size: .9rem; color: var(--muted
 .err { color: #c92a2a; margin: 8px 0; min-height: 1.2em; }
 .muted { color: var(--muted); }
 .qty button { padding: 4px 10px; }
+
+.tabs a.on { background: var(--fg); color: #fff; border-color: var(--fg); }
+h2 { scroll-margin-top: 110px; }
+.prod .add { min-width: 92px; }
+.prod .add.has { background: var(--fg); }
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--fg); color: #fff; padding: 10px 16px; border-radius: 999px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+.toast.on { opacity: 1; }
+.pago { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 12px 0; font-size: .92rem; }

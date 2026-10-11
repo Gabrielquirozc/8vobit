@@ -9,6 +9,7 @@
 <body>
 <header class="top"><h1 id="titulo">Cargando…</h1><nav class="tabs" id="tabs"></nav></header>
 <main class="wrap" id="carta"></main>
+<div class="toast" id="toast"></div>
 <div class="cartbar"><button id="vercarro" disabled>Carro vacío</button></div>
 
 <dialog id="dlgAg"><div class="in">
@@ -28,7 +29,7 @@
   <label>Nombre</label><input id="cliente" autocomplete="name">
   <label>Teléfono</label><input id="telefono" inputmode="tel" autocomplete="tel" placeholder="+56 9 …">
   <label>Notas (opcional)</label><textarea id="notas" rows="2" placeholder="Sin cebolla, etc."></textarea>
-  <p class="muted">El pago se coordina con el local al confirmar el pedido.</p>
+  <div class="pago"><b>¿Cómo pagas?</b> Al retirar o recibir: efectivo, transferencia o tarjeta. El local te confirma el pedido por WhatsApp.</div>
   <div class="err" id="err"></div>
   <button id="enviar" style="width:100%">Enviar pedido</button>
 </div></dialog>
@@ -55,10 +56,19 @@ async function cargar() {
   $('carta').innerHTML = cats.map((c) => `<h2 id="c${c.id}">${esc(c.nombre)}</h2>` + c.productos.filter((p) => p.activo).map((p) => {
     const pend = p.precio_pendiente || !p.precio;
     return `<div class="prod ${pend ? 'off' : ''}"><div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}</div>
-      <div class="row"><span class="p">${pend ? 'Consultar' : clp(p.precio)}</span>${pend ? '' : `<button data-add="${p.id}" aria-label="Agregar ${esc(p.nombre)}">+</button>`}</div></div>`;
+      <div class="row"><span class="p">${pend ? 'Consultar' : clp(p.precio)}</span>${pend ? '' : `<button class="add" data-add="${p.id}" aria-label="Agregar ${esc(p.nombre)}">Agregar</button>`}</div></div>`;
   }).join('')).join('');
   document.querySelectorAll('[data-add]').forEach((b) => b.onclick = () => agregar(Number(b.dataset.add)));
+  // Resalta la categoría visible para que el cliente sepa dónde está.
+  const tabs = [...document.querySelectorAll('#tabs a')];
+  const obs = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    tabs.forEach((t) => t.classList.toggle('on', t.hash === '#' + e.target.id));
+    document.querySelector('#tabs a.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }), { rootMargin: '-120px 0px -70% 0px' });
+  document.querySelectorAll('main h2').forEach((h) => obs.observe(h));
 }
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1400); }
 const producto = (id) => M.categorias.flatMap((c) => c.productos).find((p) => p.id === id);
 
 function agregar(id) {
@@ -85,6 +95,7 @@ function meter(p, ags) {
   const key = p.id + ':' + [...ags].sort().join(',');
   const ex = carro.find((i) => i.key === key);
   if (ex) ex.cantidad++; else carro.push({ key, producto_id: p.id, agregados: ags, cantidad: 1 });
+  toast(`✓ ${p.nombre} agregado`);
   barra();
 }
 const total = () => carro.reduce((s, i) => s + producto(i.producto_id).precio * i.cantidad, 0);
@@ -92,6 +103,10 @@ function barra() {
   const n = carro.reduce((s, i) => s + i.cantidad, 0);
   $('vercarro').disabled = !n;
   $('vercarro').textContent = n ? `Ver pedido (${n}) · ${clp(total())}` : 'Carro vacío';
+  document.querySelectorAll('[data-add]').forEach((b) => {
+    const q = carro.filter((i) => i.producto_id === Number(b.dataset.add)).reduce((s, i) => s + i.cantidad, 0);
+    b.textContent = q ? `Agregar (${q})` : 'Agregar'; b.classList.toggle('has', q > 0);
+  });
 }
 function pintarCarro() {
   $('items').innerHTML = carro.map((i, idx) => {
@@ -130,7 +145,7 @@ $('enviar').onclick = async () => {
     } });
     $('dlgCarro').close();
     $('okTitulo').textContent = `Pedido #${r.numero} recibido`;
-    $('okTexto').textContent = `Total ${clp(r.total)} · ${r.franja}. El local te contactará para confirmar el pago.`;
+    $('okTexto').textContent = `Total ${clp(r.total)} · ${r.franja}. Pagas al retirar o recibir. Guarda tu número de pedido.`;
     const msg = encodeURIComponent(`Hola, hice el pedido #${r.numero} por ${clp(r.total)} (${r.franja}) a nombre de ${$('cliente').value}.`);
     $('okWa').hidden = !M.local.whatsapp;
     $('okWa').href = `https://wa.me/${M.local.whatsapp.replace(/\D/g, '')}?text=${msg}`;

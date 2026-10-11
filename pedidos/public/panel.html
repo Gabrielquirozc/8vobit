@@ -6,22 +6,54 @@
 <title>Panel · Pedidos</title>
 <link rel="stylesheet" href="estilo.css">
 <style>
-  .wrapP { padding: 12px 16px 40px; }
-  .cols { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 12px; overflow-x: auto; }
-  .col { background: #f6efe4; border-radius: 12px; padding: 10px; min-height: 200px; }
-  .col h3 { margin: 4px 4px 10px; font-size: 1rem; }
-  .ped { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 8px; font-size: .92rem; }
-  .ped.nuevo { border-color: var(--accent); box-shadow: 0 0 0 2px #ffd8a8; }
-  .ped ul { margin: 6px 0; padding-left: 18px; }
-  .ped .acc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .ped .acc button { padding: 6px 10px; font-size: .85rem; }
-  .tag { display: inline-block; font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: #fff3bf; }
+  /* Pensado para una tablet en el ventanal: botones grandes, un paso por botón. */
+  body { background: #f4efe7; }
+  .bar { position: sticky; top: 0; z-index: 4; background: var(--fg); color: #fff; display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-wrap: wrap; }
+  .bar h1 { font-size: 1.1rem; margin: 0 8px 0 0; }
+  .bar .tab { background: transparent; color: #fff; border: 1px solid #fff4; padding: 8px 12px; }
+  .bar .tab.on { background: #fff; color: var(--fg); }
+  .bar .sp { flex: 1; }
+  .bar .kpi { font-size: .9rem; opacity: .85; }
+  .badge { background: var(--accent); color: #fff; border-radius: 999px; padding: 0 7px; margin-left: 4px; font-size: .8rem; }
+  main { padding: 12px; }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .col h2 { margin: 4px 4px 10px; font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .ped { background: #fff; border-radius: 14px; padding: 12px; margin-bottom: 10px; border: 2px solid transparent; box-shadow: 0 1px 2px #0001; }
+  .ped.nuevo { border-color: var(--accent); animation: pulso 1.6s ease-in-out 3; }
+  @keyframes pulso { 50% { box-shadow: 0 0 0 6px #ffd8a8; } }
+  .ped .num { font-size: 1.6rem; font-weight: 800; }
+  .ped .hora { font-weight: 700; }
+  .ped ul { margin: 8px 0; padding-left: 0; list-style: none; font-size: 1.02rem; }
+  .ped li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+  .ped li .ag { display: block; color: var(--muted); font-size: .88rem; padding-left: 2.2ch; }
+  .ped .nota { background: #fff3bf; padding: 6px 8px; border-radius: 8px; margin: 6px 0; }
+  .ped .main { width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 6px; }
+  .ped .main.verde { background: var(--ok); }
+  .ped .mini { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .ped .mini a { flex: 1; display: flex; } .ped .mini a button { flex: 1; }
+  .ped .mini button, .ped .mini a { flex: 1; padding: 8px; font-size: .85rem; text-align: center; }
+  .tag { display: inline-block; font-size: .78rem; padding: 2px 8px; border-radius: 999px; background: #fff3bf; margin-right: 4px; }
   .tag.ok { background: #d3f9d8; }
-  nav.vistas { display: flex; gap: 6px; margin: 10px 0; }
-  table { width: 100%; border-collapse: collapse; background: #fff; }
-  td, th { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; font-size: .92rem; }
+  .vacio { color: var(--muted); text-align: center; padding: 30px 0; border: 2px dashed #0001; border-radius: 14px; }
+  /* Cobro */
+  .total-big { font-size: 2.4rem; font-weight: 800; text-align: center; margin: 4px 0 10px; }
+  .medios { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .medios button { padding: 16px; font-size: 1rem; background: #fff; color: var(--fg); border: 2px solid var(--line); }
+  .medios button.on { border-color: var(--fg); background: var(--fg); color: #fff; }
+  .rapidos { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .rapidos button { flex: 1; }
+  .vuelto { font-size: 1.4rem; font-weight: 700; text-align: center; margin: 10px 0; }
+  /* Cierre */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpis div { background: #fff; border-radius: 12px; padding: 12px; }
+  .kpis b { display: block; font-size: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; }
+  td, th { padding: 9px; border-bottom: 1px solid var(--line); text-align: left; font-size: .93rem; }
+  td.r, th.r { text-align: right; }
   td input[type=number] { width: 110px; }
   #login { max-width: 360px; margin: 15vh auto; padding: 16px; }
+  @media print { .bar, .noprint { display: none !important; } body { background: #fff; } }
 </style>
 </head>
 <body>
@@ -32,94 +64,226 @@
   <button id="entrar" style="width:100%">Entrar</button>
 </section>
 
-<section id="app" class="wrapP" hidden>
-  <div class="between"><h1 style="margin:0">Pedidos de hoy</h1><span id="resumen" class="muted"></span></div>
-  <nav class="vistas">
-    <button class="sec" data-v="pedidos">Pedidos</button>
-    <button class="sec" data-v="carta">Editar carta</button>
-    <button class="sec" data-v="historial">Historial de precios</button>
-    <a href="carta-imprimible" target="_blank"><button class="sec">Carta imprimible</button></a>
-    <button class="sec" id="sonido">🔔 Activar sonido</button>
-    <button class="sec" id="salir">Salir</button>
-  </nav>
-  <div id="v-pedidos" class="cols"></div>
-  <div id="v-carta" hidden></div>
-  <div id="v-historial" hidden></div>
-</section>
+<div id="app" hidden>
+  <div class="bar">
+    <h1 id="nomLocal">Pedidos</h1>
+    <button class="tab on" data-v="pedidos">Pedidos<span class="badge" id="bNuevos" hidden></span></button>
+    <button class="tab" data-v="cierre">Caja del día</button>
+    <button class="tab" data-v="carta">Carta y precios</button>
+    <span class="sp"></span>
+    <span class="kpi" id="kpi"></span>
+    <button class="tab" id="sonido">🔕 Sonido</button>
+    <button class="tab" id="salir">Salir</button>
+  </div>
+  <main>
+    <div id="v-pedidos" class="cols"></div>
+    <div id="v-cierre" hidden></div>
+    <div id="v-carta" hidden></div>
+  </main>
+</div>
+
+<dialog id="dlgCobro"><div class="in">
+  <div class="between"><h3 id="cobTitulo"></h3><button class="sec" data-close>Cerrar</button></div>
+  <div class="total-big" id="cobTotal"></div>
+  <div class="medios">
+    <button data-medio="efectivo">💵 Efectivo</button>
+    <button data-medio="transferencia">🏦 Transferencia</button>
+    <button data-medio="tarjeta">💳 Tarjeta (POS)</button>
+    <button data-medio="otro">Otro</button>
+  </div>
+  <div id="efBox" hidden>
+    <label>Recibido</label><input id="recibido" type="number" inputmode="numeric" min="0" step="100">
+    <div class="rapidos" id="rapidos"></div>
+    <div class="vuelto" id="vuelto"></div>
+  </div>
+  <div id="folioBox" hidden>
+    <label>Folio de boleta (e-Boleta SII) — puedes registrarlo después</label>
+    <input id="folio" inputmode="numeric" placeholder="Ej. 1234">
+  </div>
+  <div class="err" id="cobErr"></div>
+  <button id="cobOk" class="main" style="width:100%;padding:16px;font-size:1.1rem" disabled>Cobrar y entregar</button>
+</div></dialog>
 
 <script type="module">
 import { api, clp, esc } from './comun.js';
 const $ = (id) => document.getElementById(id);
-const COLS = [['nuevo', 'Nuevo'], ['preparacion', 'En preparación'], ['listo', 'Listo'], ['entregado', 'Entregado']];
-const SIG = { nuevo: 'preparacion', preparacion: 'listo', listo: 'entregado' };
-let conocidos = null, audio = null, vista = 'pedidos', modoBoleta = 2;
+document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
+let D = null, conocidos = null, audio = null, vista = 'pedidos';
+const MEDIO = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
 
+// ---------- sonido ----------
 function beep() {
   if (!audio) return;
-  const o = audio.createOscillator(), g = audio.createGain();
-  o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
-  g.gain.setValueAtTime(.3, audio.currentTime); g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .6);
-  o.start(); o.stop(audio.currentTime + .6);
+  for (const [t, f] of [[0, 880], [.25, 1175]]) {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = f; o.connect(g); g.connect(audio.destination);
+    g.gain.setValueAtTime(.35, audio.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + t + .4);
+    o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .4);
+  }
 }
-$('sonido').onclick = () => { audio = audio || new AudioContext(); audio.resume(); beep(); $('sonido').textContent = '🔔 Sonido activo'; };
+$('sonido').onclick = () => { audio = audio || new AudioContext(); audio.resume(); beep(); $('sonido').textContent = '🔔 Sonido'; };
 
+// ---------- pedidos ----------
+const wa = (p, txt) => `https://wa.me/${p.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(txt)}`;
 function tarjeta(p) {
-  const boleta = modoBoleta === 2 && p.estado !== 'anulado'
-    ? (p.folio_boleta ? `<span class="tag ok">Boleta ${esc(p.folio_boleta)}</span>` : `<span class="tag">Boleta por emitir: ${clp(p.total)}</span>`) : '';
+  const pasos = {
+    nuevo: `<button class="main" data-acc="aceptar" data-id="${p.id}">Aceptar e imprimir comanda</button>`,
+    preparacion: `<button class="main" data-acc="listo" data-id="${p.id}">Listo para entregar</button>`,
+    listo: p.pagado
+      ? `<button class="main verde" data-acc="entregar" data-id="${p.id}">Entregar (ya pagado)</button>`
+      : `<button class="main verde" data-acc="cobrar" data-id="${p.id}">Cobrar ${clp(p.total)}</button>`,
+  };
+  const avisoListo = `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} está listo para retirar. Total ${clp(p.total)}.`;
   return `<div class="ped ${p.estado === 'nuevo' ? 'nuevo' : ''}">
-    <div class="between"><strong>#${p.numero} · ${esc(p.franja)}</strong><span>${clp(p.total)}</span></div>
-    <div>${esc(p.cliente)} · <a href="tel:${esc(p.telefono)}">${esc(p.telefono)}</a></div>
-    <div class="muted">${p.modalidad === 'despacho' ? 'Despacho: ' + esc(p.direccion) : 'Retiro'} · ${p.creado.slice(11, 16)}</div>
-    <ul>${p.items.map((i) => `<li>${i.cantidad} × ${esc(i.nombre)}${i.agregados.length ? ` <span class="muted">(${esc(i.agregados.join(', '))})</span>` : ''}</li>`).join('')}</ul>
-    ${p.notas ? `<div><b>Nota:</b> ${esc(p.notas)}</div>` : ''}
-    <div>${p.pagado ? '<span class="tag ok">Pagado</span>' : '<span class="tag">Por confirmar pago</span>'} ${boleta}</div>
-    <div class="acc">
-      ${SIG[p.estado] ? `<button data-id="${p.id}" data-estado="${SIG[p.estado]}">→ ${COLS.find((c) => c[0] === SIG[p.estado])[1]}</button>` : ''}
-      ${p.pagado ? '' : `<button class="sec" data-id="${p.id}" data-pagado="1">Marcar pagado</button>`}
-      ${modoBoleta === 2 && !p.folio_boleta ? `<button class="sec" data-id="${p.id}" data-folio="1">Registrar folio</button>` : ''}
-      <a href="comanda?id=${p.id}" target="_blank"><button class="sec">Comanda</button></a>
-      ${p.estado !== 'entregado' ? `<button class="sec" data-id="${p.id}" data-estado="anulado">Anular</button>` : ''}
+    <div class="between"><span class="num">#${p.numero}</span><span class="hora">${p.franja === 'Lo antes posible' ? 'Lo antes posible' : '🕒 ' + esc(p.franja)}</span></div>
+    <div class="between"><span>${esc(p.cliente)}</span><span>${p.modalidad === 'despacho' ? '🛵 Despacho' : '🏪 Retiro'}</span></div>
+    ${p.direccion ? `<div class="muted">${esc(p.direccion)}</div>` : ''}
+    <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}</li>`).join('')}</ul>
+    ${p.notas ? `<div class="nota">📝 ${esc(p.notas)}</div>` : ''}
+    <div class="between"><span>${p.pagado ? '<span class="tag ok">Pagado</span>' : '<span class="tag">Por cobrar</span>'}</span><b>${clp(p.total)}</b></div>
+    ${pasos[p.estado] || ''}
+    <div class="mini">
+      <a class="sec" href="${wa(p, p.estado === 'listo' ? avisoListo : `Hola ${p.cliente}, recibimos tu pedido #${p.numero} en ${D.local}.`)}" target="_blank" rel="noopener"><button class="sec" style="width:100%">WhatsApp</button></a>
+      <button class="sec" data-acc="comanda" data-id="${p.id}">Comanda</button>
+      ${!p.pagado ? `<button class="sec" data-acc="pagado" data-id="${p.id}">Ya pagó</button>` : ''}
+      <button class="sec" data-acc="anular" data-id="${p.id}">Anular</button>
     </div></div>`;
 }
-
-async function refrescar() {
-  const d = await api('panel/pedidos');
-  modoBoleta = d.modo_boleta;
-  const activos = d.pedidos.filter((p) => p.estado !== 'anulado');
-  const sinBoleta = activos.filter((p) => !p.folio_boleta).length;
-  $('resumen').textContent = `${activos.length} pedidos · ${clp(d.vendido)}` + (modoBoleta === 2 ? ` · ${sinBoleta} boletas por emitir` : '');
-  const ids = new Set(d.pedidos.map((p) => p.id));
-  if (conocidos && [...ids].some((id) => !conocidos.has(id))) beep();
-  conocidos = ids;
-  $('v-pedidos').innerHTML = COLS.map(([k, t]) => {
-    const ps = d.pedidos.filter((p) => p.estado === k);
-    return `<div class="col"><h3>${t} (${ps.length})</h3>${ps.map(tarjeta).join('')}</div>`;
+function pintarPedidos() {
+  const cols = [['nuevo', 'Nuevos'], ['preparacion', 'En cocina'], ['listo', 'Listos para entregar']];
+  $('v-pedidos').innerHTML = cols.map(([k, t]) => {
+    const ps = D.pedidos.filter((p) => p.estado === k);
+    return `<section class="col"><h2>${t} (${ps.length})</h2>${ps.map(tarjeta).join('') || '<div class="vacio">Nada por aquí</div>'}</section>`;
   }).join('');
 }
+async function refrescar() {
+  D = await api('panel/pedidos');
+  $('nomLocal').textContent = D.local;
+  const nuevos = D.pedidos.filter((p) => p.estado === 'nuevo').length;
+  $('bNuevos').hidden = !nuevos; $('bNuevos').textContent = nuevos;
+  const cobrados = D.pedidos.filter((p) => p.estado === 'entregado');
+  $('kpi').textContent = `Hoy: ${cobrados.length} entregados · ${clp(cobrados.reduce((s, p) => s + p.total, 0))}`;
+  const ids = new Set(D.pedidos.map((p) => p.id));
+  if (conocidos && [...ids].some((id) => !conocidos.has(id))) beep();
+  conocidos = ids;
+  if (vista === 'pedidos' && !$('dlgCobro').open) pintarPedidos();
+  if (vista === 'cierre') pintarCierre();
+}
+const patch = (id, body) => api(`panel/pedidos/${id}`, { method: 'PATCH', body });
+const comanda = (id) => window.open(`comanda?id=${id}&auto`, '_blank', 'width=420,height=640');
 $('v-pedidos').onclick = async (e) => {
-  const b = e.target.closest('button[data-id]'); if (!b) return;
-  const body = {};
-  if (b.dataset.estado) {
-    if (b.dataset.estado === 'anulado' && !confirm('¿Anular este pedido?')) return;
-    body.estado = b.dataset.estado;
-  }
-  if (b.dataset.pagado) body.pagado = true;
-  if (b.dataset.folio) { const f = prompt('Folio de la boleta emitida en el SII:'); if (!f) return; body.folio_boleta = f; }
-  await api(`panel/pedidos/${b.dataset.id}`, { method: 'PATCH', body });
-  refrescar();
+  const b = e.target.closest('button[data-acc]'); if (!b) return;
+  const id = Number(b.dataset.id), p = D.pedidos.find((x) => x.id === id);
+  b.disabled = true;
+  try {
+    switch (b.dataset.acc) {
+      case 'aceptar': comanda(id); await patch(id, { estado: 'preparacion' }); break;
+      case 'listo': await patch(id, { estado: 'listo' }); break;
+      case 'entregar': await patch(id, { estado: 'entregado' }); break;
+      case 'cobrar': return abrirCobro(p);
+      case 'comanda': comanda(id); break;
+      case 'pagado': return abrirCobro(p, true);
+      case 'anular': if (confirm(`¿Anular el pedido #${p.numero}?`)) await patch(id, { estado: 'anulado' }); break;
+    }
+    await refrescar();
+  } catch (err) { alert(err.message); } finally { b.disabled = false; }
 };
 
+// ---------- cobro ----------
+let cobro = null;
+function abrirCobro(p, soloPago = false) {
+  cobro = { p, medio: null, soloPago };
+  $('cobTitulo').textContent = `Pedido #${p.numero} · ${p.cliente}`;
+  $('cobTotal').textContent = clp(p.total);
+  $('cobOk').textContent = soloPago ? 'Registrar pago' : 'Cobrar y entregar';
+  document.querySelectorAll('[data-medio]').forEach((x) => x.classList.remove('on'));
+  $('efBox').hidden = true; $('folioBox').hidden = D.modo_boleta !== 2;
+  $('folio').value = p.folio_boleta || ''; $('recibido').value = ''; $('cobErr').textContent = '';
+  const billetes = [p.total, ...[1000, 2000, 5000, 10000, 20000].map((b) => Math.ceil(p.total / b) * b)];
+  $('rapidos').innerHTML = [...new Set(billetes)].slice(0, 4).map((v) => `<button class="sec" data-r="${v}">${v === p.total ? 'Justo' : clp(v)}</button>`).join('');
+  $('cobOk').disabled = true;
+  $('dlgCobro').showModal();
+}
+document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
+  cobro.medio = b.dataset.medio;
+  document.querySelectorAll('[data-medio]').forEach((x) => x.classList.toggle('on', x === b));
+  $('efBox').hidden = cobro.medio !== 'efectivo';
+  calcVuelto();
+});
+$('rapidos').onclick = (e) => { const r = e.target.closest('[data-r]'); if (r) { $('recibido').value = r.dataset.r; calcVuelto(); } };
+$('recibido').oninput = calcVuelto;
+function calcVuelto() {
+  const ef = cobro.medio === 'efectivo', rec = Number($('recibido').value);
+  const falta = ef && rec < cobro.p.total;
+  $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(cobro.p.total - rec)}` : `Vuelto: ${clp(rec - cobro.p.total)}`;
+  $('cobOk').disabled = !cobro.medio || falta;
+}
+$('cobOk').onclick = async () => {
+  $('cobOk').disabled = true;
+  try {
+    const body = { medio_pago: cobro.medio, recibido: Number($('recibido').value) || undefined };
+    if (!cobro.soloPago) body.estado = 'entregado';
+    if (D.modo_boleta === 2 && $('folio').value.trim()) body.folio_boleta = $('folio').value;
+    await patch(cobro.p.id, body);
+    $('dlgCobro').close(); await refrescar();
+  } catch (err) { $('cobErr').textContent = err.message; $('cobOk').disabled = false; }
+};
+
+// ---------- caja del día ----------
+function pintarCierre() {
+  const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
+  const cobrados = ok.filter((p) => p.pagado);
+  const porCobrar = ok.filter((p) => !p.pagado);
+  const total = cobrados.reduce((s, p) => s + p.total, 0);
+  const porMedio = Object.keys(MEDIO).map((m) => {
+    const ps = cobrados.filter((p) => p.medio_pago === m);
+    return [m, ps.length, ps.reduce((s, p) => s + p.total, 0)];
+  });
+  const sinFolio = cobrados.filter((p) => !p.folio_boleta);
+  $('v-cierre').innerHTML = `
+    <div class="between noprint"><h2>Caja del ${esc(D.dia)}</h2><button class="sec" onclick="print()">Imprimir cierre</button></div>
+    <div class="kpis">
+      <div>Cobrado<b>${clp(total)}</b></div>
+      <div>Pedidos cobrados<b>${cobrados.length}</b></div>
+      <div>Ticket promedio<b>${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
+      <div>Por cobrar<b>${clp(porCobrar.reduce((s, p) => s + p.total, 0))}</b></div>
+      <div>Anulados<b>${D.pedidos.length - ok.length}</b></div>
+    </div>
+    <h3>Por medio de pago</h3>
+    <table><tr><th>Medio</th><th class="r">Pedidos</th><th class="r">Monto</th></tr>
+    ${porMedio.map(([m, n, s]) => `<tr><td>${MEDIO[m]}</td><td class="r">${n}</td><td class="r">${clp(s)}</td></tr>`).join('')}
+    <tr><th>Total</th><th class="r">${cobrados.length}</th><th class="r">${clp(total)}</th></tr></table>
+    ${D.modo_boleta === 2 ? `<h3>Boletas por emitir (${sinFolio.length})</h3>
+      ${sinFolio.length ? `<table><tr><th>#</th><th>Cliente</th><th class="r">Monto</th><th class="noprint"></th></tr>${sinFolio.map((p) =>
+        `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td class="r">${clp(p.total)}</td><td class="r noprint"><button class="sec" data-folio="${p.id}">Registrar folio</button></td></tr>`).join('')}</table>`
+        : '<p class="muted">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
+    <h3>Detalle</h3>
+    <table><tr><th>#</th><th>Hora</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
+    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:#999"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
+    </table>`;
+}
+$('v-cierre').onclick = async (e) => {
+  const b = e.target.closest('[data-folio]'); if (!b) return;
+  const f = prompt('Folio de la boleta emitida en el SII:'); if (!f) return;
+  await patch(b.dataset.folio, { folio_boleta: f }); refrescar();
+};
+
+// ---------- carta y precios ----------
 async function pintarCarta() {
-  const M = await api('panel/carta');
-  $('v-carta').innerHTML = `<p class="muted">El precio se guarda al salir del campo. Cada cambio queda en el historial.</p>` +
-    M.categorias.map((c) => `<h2>${esc(c.nombre)}</h2><table>${c.productos.map((p) => `<tr>
+  const [M, h] = await Promise.all([api('panel/carta'), api('panel/historial')]);
+  $('v-carta').innerHTML = `<p class="muted">Los cambios se guardan solos y se ven al instante en la carta pública.</p>` +
+    M.categorias.map((c) => `<h3>${esc(c.nombre)}</h3><table>${c.productos.map((p) => `<tr>
       <td>${esc(p.nombre)}</td>
       <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio"></td>
       <td><label class="row"><input type="checkbox" style="width:auto" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
       <td><label class="row"><input type="checkbox" style="width:auto" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
     </tr>`).join('')}</table>`).join('') +
-    `<h2>Ingredientes</h2><p class="muted">Desmarca un ingrediente agotado y deja de ofrecerse en los productos con agregados.</p><div class="chips">${M.agregados.map((a) =>
-      `<label class="chip ${a.disponible ? 'on' : ''}"><input type="checkbox" hidden ${a.disponible ? 'checked' : ''} data-a="${a.id}">${esc(a.nombre)}</label>`).join('')}</div>`;
+    `<h3>Ingredientes</h3><p class="muted">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="chips">${M.agregados.map((a) =>
+      `<label class="chip ${a.disponible ? 'on' : ''}"><input type="checkbox" hidden ${a.disponible ? 'checked' : ''} data-a="${a.id}">${esc(a.nombre)}</label>`).join('')}</div>
+    <p><a href="carta-imprimible" target="_blank"><button class="sec">Carta imprimible</button></a></p>
+    <h3>Historial de precios</h3>` +
+    (h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th class="r">Antes</th><th class="r">Ahora</th></tr>${h.map((r) =>
+      `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p class="muted">Aún no hay cambios de precio.</p>');
 }
 $('v-carta').onchange = async (e) => {
   const t = e.target;
@@ -128,25 +292,22 @@ $('v-carta').onchange = async (e) => {
     const v = t.type === 'checkbox' ? t.checked : Number(t.value);
     await api(`panel/productos/${t.dataset.p}`, { method: 'PATCH', body: { [t.dataset.f]: v } });
     t.style.outline = '2px solid var(--ok)'; setTimeout(() => t.style.outline = '', 800);
+    if (t.dataset.f === 'precio') pintarCarta();
   } catch (err) { alert(err.message); }
 };
-async function pintarHistorial() {
-  const h = await api('panel/historial');
-  $('v-historial').innerHTML = h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th>Antes</th><th>Ahora</th></tr>${h.map((r) =>
-    `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td>${clp(r.anterior)}</td><td>${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p class="muted">Aún no hay cambios de precio.</p>';
-}
+
 document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => {
   vista = b.dataset.v;
-  for (const v of ['pedidos', 'carta', 'historial']) $('v-' + v).hidden = v !== vista;
-  if (vista === 'carta') pintarCarta();
-  if (vista === 'historial') pintarHistorial();
+  document.querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('on', x === b));
+  for (const v of ['pedidos', 'cierre', 'carta']) $('v-' + v).hidden = v !== vista;
+  if (vista === 'carta') pintarCarta(); else refrescar();
 });
 $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
 
 async function iniciar() {
   try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; return; } throw e; }
   $('app').hidden = false;
-  setInterval(() => vista === 'pedidos' && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  setInterval(() => vista !== 'carta' && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
 $('entrar').onclick = async () => {
   try { await api('panel/login', { method: 'POST', body: { password: $('clave').value } }); $('login').hidden = true; iniciar(); }

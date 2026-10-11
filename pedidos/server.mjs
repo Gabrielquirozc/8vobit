@@ -53,6 +53,14 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   cantidad INTEGER NOT NULL, precio_unitario INTEGER NOT NULL);
 `);
 
+// Columnas de cobro agregadas después de la primera versión: migración idempotente.
+{
+  const cols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
+  if (!cols.has('medio_pago')) db.exec('ALTER TABLE pedidos ADD COLUMN medio_pago TEXT');
+  if (!cols.has('recibido')) db.exec('ALTER TABLE pedidos ADD COLUMN recibido INTEGER');
+  if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
+}
+
 function seed() {
   if (db.prepare('SELECT COUNT(*) n FROM locales').get().n) return;
   const s = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'seed/gassuso.json'), 'utf8'));
@@ -204,6 +212,7 @@ function crearPedido(local, body) {
 }
 
 const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
+const MEDIOS = ['efectivo', 'transferencia', 'tarjeta', 'otro'];
 
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1); // sin "api"
@@ -243,7 +252,7 @@ async function api(req, res, url) {
       const ids = db.prepare('SELECT id FROM pedidos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia);
       const pedidos = ids.map((r) => pedidoCompleto(r.id, lid));
       const vendido = pedidos.filter((p) => p.estado !== 'anulado').reduce((s, p) => s + p.total, 0);
-      return send(res, 200, { dia, modo_boleta: local.modo_boleta, vendido, pedidos });
+      return send(res, 200, { dia, local: local.nombre, modo_boleta: local.modo_boleta, vendido, pedidos });
     }
     if (m === 'GET' && parts[1] === 'pedidos' && parts[2]) {
       const p = pedidoCompleto(Number(parts[2]), lid);
@@ -256,7 +265,17 @@ async function api(req, res, url) {
       const estado = ESTADOS.includes(b.estado) ? b.estado : p.estado;
       const pagado = b.pagado === undefined ? p.pagado : (b.pagado ? 1 : 0);
       const folio = b.folio_boleta === undefined ? p.folio_boleta : (String(b.folio_boleta).replace(/\D/g, '').slice(0, 12) || null);
-      db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, actualizado=? WHERE id=?').run(estado, pagado, folio, Date.now(), p.id);
+      let { medio_pago, recibido, cobrado_en } = p;
+      if (b.medio_pago !== undefined) {
+        if (!MEDIOS.includes(b.medio_pago)) return send(res, 400, { error: 'Medio de pago inválido' });
+        medio_pago = b.medio_pago;
+        recibido = medio_pago === 'efectivo' ? Math.round(Number(b.recibido) || p.total) : p.total;
+        if (recibido < p.total) return send(res, 400, { error: 'El monto recibido es menor al total' });
+        cobrado_en = cobrado_en || new Date().toTimeString().slice(0, 5);
+      }
+      const pagadoFinal = medio_pago ? 1 : pagado;
+      db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, actualizado=? WHERE id=?')
+        .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, Date.now(), p.id);
       return send(res, 200, pedidoCompleto(p.id, lid));
     }
     if (m === 'PATCH' && parts[1] === 'productos' && parts[2]) {
