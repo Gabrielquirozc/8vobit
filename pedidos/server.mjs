@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
+  // Token de seguimiento: el cliente ve el estado de su pedido sin cuenta ni clave.
+  if (!cols.has('token')) db.exec('ALTER TABLE pedidos ADD COLUMN token TEXT');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS pedidos_token ON pedidos(token)');
+  for (const { id } of db.prepare('SELECT id FROM pedidos WHERE token IS NULL').all())
+    db.prepare('UPDATE pedidos SET token=? WHERE id=?').run(crypto.randomBytes(16).toString('base64url'), id);
 }
 
 // Las fotos del seed (entregadas por el local) se copian al volumen de datos para
@@ -292,14 +297,15 @@ function crearPedido(local, body) {
   db.exec('BEGIN IMMEDIATE');
   try {
     const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, f.dia).n;
+    const token = crypto.randomBytes(16).toString('base64url');
     const { lastInsertRowid: pid } = db.prepare(
-      'INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
-    ).run(local.id, numero, nombre, tel, franja, modalidad, direccion, String(body.notas || '').slice(0, 300) || null, total, f.dia, Date.now());
+      'INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado,token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).run(local.id, numero, nombre, tel, franja, modalidad, direccion, String(body.notas || '').slice(0, 300) || null, total, f.dia, Date.now(), token);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), i.cant, i.p.precio);
     db.exec('COMMIT');
-    return { id: Number(pid), numero, total, franja };
+    return { id: Number(pid), numero, total, franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
 }
 
@@ -321,6 +327,18 @@ async function api(req, res, url) {
       const r = crearPedido(local, await readJson(req));
       return send(res, r.error ? 400 : 201, r);
     }
+  }
+
+  // --- seguimiento (público, por token) ---
+  if (m === 'GET' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '')) {
+    const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
+    if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
+    const local = db.prepare('SELECT slug, nombre, whatsapp FROM locales WHERE id=?').get(p.local_id);
+    const items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario FROM pedido_items WHERE pedido_id=?').all(p.id)
+      .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
+    // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
+    return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
+      modalidad: p.modalidad, total: p.total, pagado: !!p.pagado, creado: p.creado, items });
   }
 
   // --- panel ---
@@ -442,6 +460,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/panel') return serveFile(res, 'panel.html');
     if (p === '/comanda') return serveFile(res, 'comanda.html');
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
+    if (p === '/seguimiento') return serveFile(res, 'seguimiento.html');
     if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
     return serveFile(res, p.slice(1));
   } catch (e) {

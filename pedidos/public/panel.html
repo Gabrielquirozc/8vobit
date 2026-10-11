@@ -137,7 +137,9 @@ function tarjeta(p) {
       ? `<button class="main verde" data-acc="entregar" data-id="${p.id}">Entregar (ya pagado)</button>`
       : `<button class="main verde" data-acc="cobrar" data-id="${p.id}">Cobrar ${clp(p.total)}</button>`,
   };
-  const avisoListo = `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} está listo para retirar. Total ${clp(p.total)}.`;
+  const avisoListo = p.modalidad === 'despacho'
+    ? `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} va en camino. Total ${clp(p.total)}.`
+    : `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} está listo para retirar. Total ${clp(p.total)}.`;
   return `<div class="ped ${p.estado === 'nuevo' ? 'nuevo' : ''}">
     <div class="between"><span class="num">#${p.numero}</span><span class="hora">${p.franja === 'Lo antes posible' ? 'Lo antes posible' : '🕒 ' + esc(p.franja)}</span></div>
     <div class="between"><span>${esc(p.cliente)}</span><span>${p.modalidad === 'despacho' ? '🛵 Despacho' : '🏪 Retiro'}</span></div>
@@ -147,7 +149,7 @@ function tarjeta(p) {
     <div class="between"><span>${p.pagado ? '<span class="tag ok">Pagado</span>' : '<span class="tag">Por cobrar</span>'}</span><b>${clp(p.total)}</b></div>
     ${pasos[p.estado] || ''}
     <div class="mini">
-      <a class="sec" href="${wa(p, p.estado === 'listo' ? avisoListo : `Hola ${p.cliente}, recibimos tu pedido #${p.numero} en ${D.local}.`)}" target="_blank" rel="noopener"><button class="sec" style="width:100%">WhatsApp</button></a>
+      <a class="sec" href="${wa(p, p.estado === 'listo' ? avisoListo : `Hola ${p.cliente}, recibimos tu pedido #${p.numero} en ${D.local}. Puedes ver cómo va aquí: ${location.origin}${BASE}/seguimiento?p=${p.token}`)}" target="_blank" rel="noopener"><button class="sec" style="width:100%">WhatsApp</button></a>
       <button class="sec" data-acc="comanda" data-id="${p.id}">Comanda</button>
       ${!p.pagado ? `<button class="sec" data-acc="pagado" data-id="${p.id}">Ya pagó</button>` : ''}
       <button class="sec" data-acc="anular" data-id="${p.id}">Anular</button>

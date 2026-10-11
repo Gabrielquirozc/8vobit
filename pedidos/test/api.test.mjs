@@ -243,3 +243,26 @@ test('hace un respaldo de la base al iniciar', () => {
   assert.match(files[0], /^pedidos-\d{4}-\d{2}-\d{2}\.db$/);
   assert.ok(fs.statSync(path.join(dirB, files[0])).size > 10e3);
 });
+
+// ---------- seguimiento ----------
+test('seguimiento: el cliente ve el estado con su token, sin datos privados', async () => {
+  const p = await prod('Chacarero');
+  const r = await pedir([{ producto_id: p.id, cantidad: 2 }], { cliente: 'Ana María Pérez', modalidad: 'despacho', direccion: 'Freire 145' });
+  assert.match(r.body.token, /^[\w-]{22}$/);
+  const s1 = await req('GET', `/api/seguimiento/${r.body.token}`);
+  assert.equal(s1.status, 200);
+  assert.equal(s1.body.estado, 'nuevo');
+  assert.equal(s1.body.cliente, 'Ana');
+  assert.equal(s1.body.total, p.precio * 2);
+  for (const k of ['telefono', 'direccion', 'id', 'token', 'medio_pago', 'notas']) assert.ok(!(k in s1.body), k);
+  await login();
+  await req('PATCH', `/api/panel/pedidos/${r.body.id}`, { estado: 'listo' });
+  assert.equal((await req('GET', `/api/seguimiento/${r.body.token}`)).body.estado, 'listo');
+  assert.equal((await req('GET', '/seguimiento')).status, 200);
+});
+
+test('seguimiento: tokens inválidos o inventados no revelan nada', async () => {
+  assert.equal((await req('GET', '/api/seguimiento/abc')).status, 404);
+  assert.equal((await req('GET', `/api/seguimiento/${'A'.repeat(22)}`)).status, 404);
+  assert.equal((await req('GET', "/api/seguimiento/x' OR 1=1 --")).status, 404);
+});

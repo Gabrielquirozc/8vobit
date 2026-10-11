@@ -1,6 +1,6 @@
 // Utilidades compartidas por las páginas. BASE se deduce de la URL para que
 // funcione igual en la raíz o bajo un prefijo (BASE_PATH).
-export const BASE = location.pathname.replace(/\/(panel|comanda|carta-imprimible|[a-z0-9-]+)$/, '').replace(/\/$/, '');
+export const BASE = location.pathname.replace(/\/(panel|comanda|carta-imprimible|seguimiento|[a-z0-9-]+)$/, '').replace(/\/$/, '');
 export const clp = (n) => '$' + Math.round(n).toLocaleString('es-CL');
 export async function api(path, opts = {}) {
   const r = await fetch(`${BASE}/api/${path}`, {
