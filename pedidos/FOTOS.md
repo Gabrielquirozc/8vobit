@@ -8,7 +8,7 @@ Instagram, la ficha de Google y también para Uber Eats.
 
 Por qué le conviene, con sus propios datos:
 
-- Hoy **21 de los 44 productos no tienen foto**, y en las apps de delivery un
+- Hoy **21 de los 45 productos no tienen foto**, y en las apps de delivery un
   plato sin foto se pide bastante menos que uno con foto.
 - Las fotos que tiene no son parejas: algunas sobre madera y otras con fondo de
   estudio oscuro. Juntas en una carta se ven como de locales distintos.
