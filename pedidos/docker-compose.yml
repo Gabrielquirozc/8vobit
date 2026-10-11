@@ -1,0 +1,19 @@
+# Copia de referencia para infra/docker-compose.pedidos.yml en D:\VPS.
+# En el servidor vive en /srv/docker/compose/pedidos/.
+services:
+  pedidos:
+    build: .
+    container_name: pedidos
+    restart: unless-stopped
+    # Solo 127.0.0.1: la entrada es el túnel. Nunca 0.0.0.0 (Docker se salta UFW).
+    ports:
+      - "127.0.0.1:8099:8099"
+    env_file: .env
+    volumes:
+      - pedidos-data:/data
+    # lenovo-edge tiene 7,5 GB y Immich ya reserva ~5 GB: este servicio queda acotado.
+    mem_limit: 128m
+    memswap_limit: 192m
+    cpus: 0.5
+volumes:
+  pedidos-data:

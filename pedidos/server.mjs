@@ -1,0 +1,315 @@
+// Demo de pedidos propios para locales delivery (piloto Gassuso).
+// Sin dependencias: http nativo + node:sqlite. Pensado para correr con muy poca
+// RAM en lenovo-edge, que ya tiene a Immich ocupando la mayor parte.
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
+
+const PORT = Number(process.env.PORT || 8099);
+const HOST = process.env.HOST || '127.0.0.1';
+const BASE = (process.env.BASE_PATH || '').replace(/\/$/, '');
+const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
+const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
+const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const PUBLIC = path.resolve(import.meta.dirname, 'public');
+const SLOT_MIN = 30;
+const LEAD_MIN = 20; // margen mínimo antes de la primera franja
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const db = new DatabaseSync(path.join(DATA_DIR, 'pedidos.db'));
+db.exec(`
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS locales (
+  id INTEGER PRIMARY KEY, slug TEXT UNIQUE NOT NULL, nombre TEXT NOT NULL,
+  instagram TEXT, whatsapp TEXT, horario TEXT NOT NULL, cupo_franja INTEGER NOT NULL DEFAULT 10,
+  modo_boleta INTEGER NOT NULL DEFAULT 2);
+CREATE TABLE IF NOT EXISTS categorias (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id),
+  nombre TEXT NOT NULL, orden INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS productos (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id),
+  categoria_id INTEGER NOT NULL REFERENCES categorias(id), nombre TEXT NOT NULL,
+  descripcion TEXT, precio INTEGER NOT NULL DEFAULT 0, activo INTEGER NOT NULL DEFAULT 1,
+  precio_pendiente INTEGER NOT NULL DEFAULT 0, incluye INTEGER NOT NULL DEFAULT 0, orden INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS agregados (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id),
+  nombre TEXT NOT NULL, disponible INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS historial_precio (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL, producto_id INTEGER NOT NULL,
+  anterior INTEGER, nuevo INTEGER, fecha TEXT NOT NULL DEFAULT (datetime('now','localtime')));
+CREATE TABLE IF NOT EXISTS pedidos (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL, numero INTEGER NOT NULL,
+  cliente TEXT NOT NULL, telefono TEXT NOT NULL, franja TEXT NOT NULL,
+  modalidad TEXT NOT NULL, direccion TEXT, notas TEXT,
+  estado TEXT NOT NULL DEFAULT 'nuevo', pagado INTEGER NOT NULL DEFAULT 0,
+  folio_boleta TEXT, total INTEGER NOT NULL, dia TEXT NOT NULL,
+  creado TEXT NOT NULL DEFAULT (datetime('now','localtime')), actualizado INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS pedido_items (
+  id INTEGER PRIMARY KEY, pedido_id INTEGER NOT NULL REFERENCES pedidos(id),
+  producto_id INTEGER NOT NULL, nombre TEXT NOT NULL, agregados TEXT NOT NULL DEFAULT '[]',
+  cantidad INTEGER NOT NULL, precio_unitario INTEGER NOT NULL);
+`);
+
+function seed() {
+  if (db.prepare('SELECT COUNT(*) n FROM locales').get().n) return;
+  const s = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'seed/gassuso.json'), 'utf8'));
+  const L = s.local;
+  const { lastInsertRowid: lid } = db.prepare(
+    'INSERT INTO locales (slug,nombre,instagram,whatsapp,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?)'
+  ).run(L.slug, L.nombre, L.instagram, L.whatsapp, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
+  for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
+  s.categorias.forEach((c, ci) => {
+    const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, c.nombre, ci);
+    c.productos.forEach((p, pi) => db.prepare(
+      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden) VALUES (?,?,?,?,?,?,?,?)'
+    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi));
+  });
+}
+seed();
+
+// ---------- franjas horarias ----------
+const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+const fmt = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+// Día "operativo": si es antes del cierre de madrugada del día anterior, sigue contando como ese día.
+function franjas(local) {
+  const horario = JSON.parse(local.horario);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const candidates = [];
+  for (const offset of [-1, 0]) {
+    const d = new Date(now); d.setDate(d.getDate() + offset);
+    const h = horario[d.getDay()];
+    if (!h) continue;
+    const open = toMin(h[0]);
+    let close = toMin(h[1]); if (close <= open) close += 24 * 60;
+    const nowRel = nowMin + (offset === -1 ? 24 * 60 : 0);
+    if (nowRel >= close) continue;
+    const dia = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let start = Math.max(open, nowRel + LEAD_MIN);
+    start = Math.ceil(start / SLOT_MIN) * SLOT_MIN;
+    const usados = Object.fromEntries(db.prepare(
+      "SELECT franja, COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' GROUP BY franja"
+    ).all(local.id, dia).map((r) => [r.franja, r.n]));
+    const slots = [];
+    for (let m = start; m + SLOT_MIN <= close + 1; m += SLOT_MIN) {
+      const label = `${fmt(m)}–${fmt(m + SLOT_MIN)}`;
+      slots.push({ franja: label, disponible: (usados[label] || 0) < local.cupo_franja });
+    }
+    candidates.push({ dia, abierto: nowRel >= open, slots });
+  }
+  const c = candidates.find((x) => x.abierto) || candidates[candidates.length - 1];
+  return c || { dia: today(), abierto: false, slots: [] };
+}
+
+// ---------- sesión del panel ----------
+const sign = (v) => crypto.createHmac('sha256', SECRET).update(v).digest('base64url');
+function makeSession(localId) {
+  const v = `${localId}.${Date.now() + 12 * 3600e3}`;
+  return `${v}.${sign(v)}`;
+}
+function session(req) {
+  const m = /(?:^|;\s*)panel=([^;]+)/.exec(req.headers.cookie || '');
+  if (!m) return null;
+  const [lid, exp, sig] = m[1].split('.');
+  const v = `${lid}.${exp}`;
+  const good = sign(v);
+  if (!sig || sig.length !== good.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
+  if (Number(exp) < Date.now()) return null;
+  return Number(lid);
+}
+
+// ---------- utilidades HTTP ----------
+function send(res, code, body, headers = {}) {
+  const json = typeof body !== 'string';
+  res.writeHead(code, { 'Content-Type': json ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
+  res.end(json ? JSON.stringify(body) : body);
+}
+async function readJson(req) {
+  let raw = '';
+  for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw new Error('too big'); }
+  return raw ? JSON.parse(raw) : {};
+}
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
+function serveFile(res, file) {
+  const p = path.join(PUBLIC, file);
+  if (!p.startsWith(PUBLIC) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) return send(res, 404, 'No encontrado');
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+  fs.createReadStream(p).pipe(res);
+}
+
+function menu(local) {
+  const cats = db.prepare('SELECT id, nombre FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
+  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye FROM productos WHERE local_id=? ORDER BY orden').all(local.id);
+  return {
+    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta },
+    categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
+    agregados: db.prepare('SELECT id, nombre, disponible FROM agregados WHERE local_id=? ORDER BY id').all(local.id),
+  };
+}
+
+function pedidoCompleto(id, localId) {
+  const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(id, localId);
+  if (!p) return null;
+  p.items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario FROM pedido_items WHERE pedido_id=?').all(id)
+    .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
+  return p;
+}
+
+function crearPedido(local, body) {
+  const nombre = String(body.cliente || '').trim().slice(0, 80);
+  const tel = String(body.telefono || '').replace(/[^\d+]/g, '').slice(0, 16);
+  const modalidad = body.modalidad === 'despacho' ? 'despacho' : 'retiro';
+  const direccion = modalidad === 'despacho' ? String(body.direccion || '').trim().slice(0, 200) : null;
+  if (!nombre || tel.length < 8) return { error: 'Falta nombre o teléfono válido.' };
+  if (modalidad === 'despacho' && !direccion) return { error: 'Falta la dirección de despacho.' };
+  if (!Array.isArray(body.items) || !body.items.length || body.items.length > 50) return { error: 'El carro está vacío.' };
+
+  const f = franjas(local);
+  const franja = body.franja === 'Lo antes posible' ? 'Lo antes posible' : String(body.franja || '');
+  if (!f.abierto && franja === 'Lo antes posible') return { error: 'El local está cerrado; elige una franja.' };
+  if (franja !== 'Lo antes posible' && !f.slots.some((s) => s.franja === franja && s.disponible)) return { error: 'Esa franja ya no está disponible.' };
+
+  const agregadosOk = new Map(db.prepare('SELECT id, nombre FROM agregados WHERE local_id=? AND disponible=1').all(local.id).map((a) => [a.id, a.nombre]));
+  const items = [];
+  let total = 0;
+  for (const it of body.items) {
+    const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(it.producto_id), local.id);
+    if (!p || !p.activo) return { error: 'Un producto ya no está disponible. Recarga la carta.' };
+    if (p.precio_pendiente || p.precio <= 0) return { error: `${p.nombre} no tiene precio; consúltalo en el local.` };
+    const cant = Math.max(1, Math.min(20, Number(it.cantidad) || 1));
+    const ags = Array.isArray(it.agregados) ? it.agregados.map(Number) : [];
+    if (ags.length !== p.incluye) return { error: `${p.nombre} lleva exactamente ${p.incluye} agregado(s).` };
+    if (!ags.every((a) => agregadosOk.has(a))) return { error: 'Un agregado ya no está disponible.' };
+    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)) });
+    total += p.precio * cant;
+  }
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, f.dia).n;
+    const { lastInsertRowid: pid } = db.prepare(
+      'INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+    ).run(local.id, numero, nombre, tel, franja, modalidad, direccion, String(body.notas || '').slice(0, 300) || null, total, f.dia, Date.now());
+    for (const i of items) db.prepare(
+      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)'
+    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), i.cant, i.p.precio);
+    db.exec('COMMIT');
+    return { id: Number(pid), numero, total, franja };
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+}
+
+const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
+
+async function api(req, res, url) {
+  const parts = url.pathname.split('/').filter(Boolean).slice(1); // sin "api"
+  const m = req.method;
+
+  // --- público ---
+  if (parts[0] === 'locales' && parts[1]) {
+    const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(parts[1]);
+    if (!local) return send(res, 404, { error: 'Local no encontrado' });
+    if (m === 'GET' && parts.length === 2) return send(res, 200, menu(local));
+    if (m === 'GET' && parts[2] === 'franjas') return send(res, 200, franjas(local));
+    if (m === 'POST' && parts[2] === 'pedidos') {
+      const r = crearPedido(local, await readJson(req));
+      return send(res, r.error ? 400 : 201, r);
+    }
+  }
+
+  // --- panel ---
+  if (parts[0] === 'panel') {
+    if (m === 'POST' && parts[1] === 'login') {
+      const b = await readJson(req);
+      const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(String(b.slug || 'gassuso'));
+      const ok = PANEL_PASSWORD && local && String(b.password || '').length === PANEL_PASSWORD.length &&
+        crypto.timingSafeEqual(Buffer.from(String(b.password)), Buffer.from(PANEL_PASSWORD));
+      if (!ok) return send(res, 401, { error: 'Clave incorrecta' });
+      const secure = (req.headers['x-forwarded-proto'] || '') === 'https' ? '; Secure' : '';
+      return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=${makeSession(local.id)}; HttpOnly; SameSite=Strict; Path=${BASE || '/'}; Max-Age=43200${secure}` });
+    }
+    const lid = session(req);
+    if (!lid) return send(res, 401, { error: 'Sesión expirada' });
+    const local = db.prepare('SELECT * FROM locales WHERE id=?').get(lid);
+
+    if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=; Path=${BASE || '/'}; Max-Age=0` });
+    if (m === 'GET' && parts[1] === 'carta') return send(res, 200, menu(local));
+    if (m === 'GET' && parts[1] === 'pedidos' && !parts[2]) {
+      const dia = url.searchParams.get('dia') || franjas(local).dia;
+      const ids = db.prepare('SELECT id FROM pedidos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia);
+      const pedidos = ids.map((r) => pedidoCompleto(r.id, lid));
+      const vendido = pedidos.filter((p) => p.estado !== 'anulado').reduce((s, p) => s + p.total, 0);
+      return send(res, 200, { dia, modo_boleta: local.modo_boleta, vendido, pedidos });
+    }
+    if (m === 'GET' && parts[1] === 'pedidos' && parts[2]) {
+      const p = pedidoCompleto(Number(parts[2]), lid);
+      return p ? send(res, 200, { ...p, local: local.nombre }) : send(res, 404, { error: 'No existe' });
+    }
+    if (m === 'PATCH' && parts[1] === 'pedidos' && parts[2]) {
+      const b = await readJson(req);
+      const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      const estado = ESTADOS.includes(b.estado) ? b.estado : p.estado;
+      const pagado = b.pagado === undefined ? p.pagado : (b.pagado ? 1 : 0);
+      const folio = b.folio_boleta === undefined ? p.folio_boleta : (String(b.folio_boleta).replace(/\D/g, '').slice(0, 12) || null);
+      db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, actualizado=? WHERE id=?').run(estado, pagado, folio, Date.now(), p.id);
+      return send(res, 200, pedidoCompleto(p.id, lid));
+    }
+    if (m === 'PATCH' && parts[1] === 'productos' && parts[2]) {
+      const b = await readJson(req);
+      const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      let precio = p.precio;
+      if (b.precio !== undefined) {
+        precio = Math.round(Number(b.precio));
+        if (!Number.isFinite(precio) || precio < 0 || precio > 1e6) return send(res, 400, { error: 'Precio inválido' });
+      }
+      const activo = b.activo === undefined ? p.activo : (b.activo ? 1 : 0);
+      const pend = b.precio_pendiente === undefined ? p.precio_pendiente : (b.precio_pendiente ? 1 : 0);
+      db.exec('BEGIN');
+      db.prepare('UPDATE productos SET precio=?, activo=?, precio_pendiente=? WHERE id=?').run(precio, activo, pend, p.id);
+      if (precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, p.id, p.precio, precio);
+      db.exec('COMMIT');
+      return send(res, 200, { ok: true });
+    }
+    if (m === 'PATCH' && parts[1] === 'agregados' && parts[2]) {
+      const b = await readJson(req);
+      db.prepare('UPDATE agregados SET disponible=? WHERE id=? AND local_id=?').run(b.disponible ? 1 : 0, Number(parts[2]), lid);
+      return send(res, 200, { ok: true });
+    }
+    if (m === 'GET' && parts[1] === 'historial') {
+      return send(res, 200, db.prepare(
+        'SELECT h.fecha, p.nombre, h.anterior, h.nuevo FROM historial_precio h JOIN productos p ON p.id=h.producto_id WHERE h.local_id=? ORDER BY h.id DESC LIMIT 100'
+      ).all(lid));
+    }
+  }
+  return send(res, 404, { error: 'Ruta no encontrada' });
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, 'http://x');
+    let p = url.pathname;
+    if (BASE) {
+      if (p !== BASE && !p.startsWith(BASE + '/')) return send(res, 404, 'No encontrado');
+      p = p.slice(BASE.length) || '/';
+    }
+    url.pathname = p;
+    if (p === '/salud') return send(res, 200, 'ok');
+    if (p.startsWith('/api/')) return await api(req, res, url);
+    if (p === '/' ) { res.writeHead(302, { Location: `${BASE}/gassuso` }); return res.end(); }
+    if (p === '/panel') return serveFile(res, 'panel.html');
+    if (p === '/comanda') return serveFile(res, 'comanda.html');
+    if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
+    if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
+    return serveFile(res, p.slice(1));
+  } catch (e) {
+    console.error(e);
+    if (!res.headersSent) send(res, e instanceof SyntaxError ? 400 : 500, { error: 'Error del servidor' });
+  }
+});
+server.listen(PORT, HOST, () => console.log(`pedidos escuchando en http://${HOST}:${PORT}${BASE}/`));

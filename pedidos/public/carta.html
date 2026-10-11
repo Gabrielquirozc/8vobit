@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedidos</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="top"><h1 id="titulo">Cargando…</h1><nav class="tabs" id="tabs"></nav></header>
+<main class="wrap" id="carta"></main>
+<div class="cartbar"><button id="vercarro" disabled>Carro vacío</button></div>
+
+<dialog id="dlgAg"><div class="in">
+  <h3 id="agTitulo"></h3><div class="muted" id="agAyuda"></div>
+  <div class="chips" id="agChips"></div>
+  <div class="between"><button class="sec" data-close>Cancelar</button><button id="agOk" disabled>Agregar</button></div>
+</div></dialog>
+
+<dialog id="dlgCarro"><div class="in">
+  <div class="between"><h3>Tu pedido</h3><button class="sec" data-close>Seguir pidiendo</button></div>
+  <div id="items"></div>
+  <p class="between"><strong>Total</strong><strong id="total"></strong></p>
+  <label>¿Cuándo?</label><select id="franja"></select>
+  <label>Modalidad</label>
+  <div class="chips"><button class="chip on" data-mod="retiro">Retiro en local</button><button class="chip" data-mod="despacho">Despacho</button></div>
+  <div id="dirBox" hidden><label>Dirección</label><input id="direccion" autocomplete="street-address"></div>
+  <label>Nombre</label><input id="cliente" autocomplete="name">
+  <label>Teléfono</label><input id="telefono" inputmode="tel" autocomplete="tel" placeholder="+56 9 …">
+  <label>Notas (opcional)</label><textarea id="notas" rows="2" placeholder="Sin cebolla, etc."></textarea>
+  <p class="muted">El pago se coordina con el local al confirmar el pedido.</p>
+  <div class="err" id="err"></div>
+  <button id="enviar" style="width:100%">Enviar pedido</button>
+</div></dialog>
+
+<dialog id="dlgOk"><div class="in">
+  <h3 id="okTitulo"></h3><p id="okTexto"></p>
+  <a id="okWa" target="_blank" rel="noopener"><button style="width:100%">Avisar por WhatsApp</button></a>
+  <p><button class="sec" style="width:100%" data-close>Listo</button></p>
+</div></dialog>
+
+<script type="module">
+import { api, clp, esc } from './comun.js';
+const slug = location.pathname.split('/').filter(Boolean).pop();
+let M, carro = [], modalidad = 'retiro';
+const $ = (id) => document.getElementById(id);
+document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
+
+async function cargar() {
+  M = await api(`locales/${slug}`);
+  document.title = `${M.local.nombre} · Pedidos`;
+  $('titulo').textContent = M.local.nombre;
+  const cats = M.categorias.filter((c) => c.productos.some((p) => p.activo));
+  $('tabs').innerHTML = cats.map((c) => `<a href="#c${c.id}">${esc(c.nombre)}</a>`).join('');
+  $('carta').innerHTML = cats.map((c) => `<h2 id="c${c.id}">${esc(c.nombre)}</h2>` + c.productos.filter((p) => p.activo).map((p) => {
+    const pend = p.precio_pendiente || !p.precio;
+    return `<div class="prod ${pend ? 'off' : ''}"><div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}</div>
+      <div class="row"><span class="p">${pend ? 'Consultar' : clp(p.precio)}</span>${pend ? '' : `<button data-add="${p.id}" aria-label="Agregar ${esc(p.nombre)}">+</button>`}</div></div>`;
+  }).join('')).join('');
+  document.querySelectorAll('[data-add]').forEach((b) => b.onclick = () => agregar(Number(b.dataset.add)));
+}
+const producto = (id) => M.categorias.flatMap((c) => c.productos).find((p) => p.id === id);
+
+function agregar(id) {
+  const p = producto(id);
+  if (!p.incluye) return meter(p, []);
+  let sel = [];
+  $('agTitulo').textContent = p.nombre;
+  $('agAyuda').textContent = `Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}.`;
+  const pintar = () => {
+    $('agChips').innerHTML = M.agregados.filter((a) => a.disponible).map((a) => `<button class="chip ${sel.includes(a.id) ? 'on' : ''}" data-ag="${a.id}">${esc(a.nombre)}</button>`).join('');
+    $('agChips').querySelectorAll('[data-ag]').forEach((b) => b.onclick = () => {
+      const a = Number(b.dataset.ag);
+      if (sel.includes(a)) sel = sel.filter((x) => x !== a); else if (sel.length < p.incluye) sel.push(a);
+      pintar();
+    });
+    $('agOk').disabled = sel.length !== p.incluye;
+    $('agOk').textContent = `Agregar (${sel.length}/${p.incluye})`;
+  };
+  pintar();
+  $('agOk').onclick = () => { meter(p, sel); $('dlgAg').close(); };
+  $('dlgAg').showModal();
+}
+function meter(p, ags) {
+  const key = p.id + ':' + [...ags].sort().join(',');
+  const ex = carro.find((i) => i.key === key);
+  if (ex) ex.cantidad++; else carro.push({ key, producto_id: p.id, agregados: ags, cantidad: 1 });
+  barra();
+}
+const total = () => carro.reduce((s, i) => s + producto(i.producto_id).precio * i.cantidad, 0);
+function barra() {
+  const n = carro.reduce((s, i) => s + i.cantidad, 0);
+  $('vercarro').disabled = !n;
+  $('vercarro').textContent = n ? `Ver pedido (${n}) · ${clp(total())}` : 'Carro vacío';
+}
+function pintarCarro() {
+  $('items').innerHTML = carro.map((i, idx) => {
+    const p = producto(i.producto_id);
+    const ags = i.agregados.map((a) => M.agregados.find((x) => x.id === a)?.nombre).join(', ');
+    return `<div class="prod"><div><div class="n">${esc(p.nombre)}</div>${ags ? `<div class="d">${esc(ags)}</div>` : ''}<div class="d">${clp(p.precio)} c/u</div></div>
+      <div class="row qty"><button class="sec" data-q="${idx}" data-d="-1">−</button><b>${i.cantidad}</b><button class="sec" data-q="${idx}" data-d="1">+</button></div></div>`;
+  }).join('');
+  $('items').querySelectorAll('[data-q]').forEach((b) => b.onclick = () => {
+    const i = carro[b.dataset.q]; i.cantidad += Number(b.dataset.d);
+    if (i.cantidad < 1) carro.splice(b.dataset.q, 1);
+    barra(); carro.length ? pintarCarro() : $('dlgCarro').close();
+  });
+  $('total').textContent = clp(total());
+}
+$('vercarro').onclick = async () => {
+  pintarCarro(); $('err').textContent = '';
+  $('dlgCarro').showModal();
+  const f = await api(`locales/${slug}/franjas`);
+  const ops = [];
+  if (f.abierto) ops.push('<option>Lo antes posible</option>');
+  for (const s of f.slots) ops.push(`<option ${s.disponible ? '' : 'disabled'}>${s.franja}${s.disponible ? '' : ' (llena)'}</option>`);
+  $('franja').innerHTML = ops.join('') || '<option disabled selected>Sin franjas disponibles hoy</option>';
+};
+document.querySelectorAll('[data-mod]').forEach((b) => b.onclick = () => {
+  modalidad = b.dataset.mod;
+  document.querySelectorAll('[data-mod]').forEach((x) => x.classList.toggle('on', x === b));
+  $('dirBox').hidden = modalidad !== 'despacho';
+});
+$('enviar').onclick = async () => {
+  $('enviar').disabled = true; $('err').textContent = '';
+  try {
+    const r = await api(`locales/${slug}/pedidos`, { method: 'POST', body: {
+      items: carro, franja: $('franja').value, modalidad, direccion: $('direccion').value,
+      cliente: $('cliente').value, telefono: $('telefono').value, notas: $('notas').value,
+    } });
+    $('dlgCarro').close();
+    $('okTitulo').textContent = `Pedido #${r.numero} recibido`;
+    $('okTexto').textContent = `Total ${clp(r.total)} · ${r.franja}. El local te contactará para confirmar el pago.`;
+    const msg = encodeURIComponent(`Hola, hice el pedido #${r.numero} por ${clp(r.total)} (${r.franja}) a nombre de ${$('cliente').value}.`);
+    $('okWa').hidden = !M.local.whatsapp;
+    $('okWa').href = `https://wa.me/${M.local.whatsapp.replace(/\D/g, '')}?text=${msg}`;
+    $('dlgOk').showModal();
+    carro = []; barra();
+  } catch (e) { $('err').textContent = e.message; }
+  $('enviar').disabled = false;
+};
+cargar().catch((e) => { $('titulo').textContent = 'No se pudo cargar la carta'; console.error(e); });
+</script>
+</body>
+</html>

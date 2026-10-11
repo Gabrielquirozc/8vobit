@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<title>Comanda</title>
+<style>
+  /* Térmica 80 mm: ancho útil ~72 mm, 42–48 caracteres monoespaciados por línea. */
+  @page { size: 80mm auto; margin: 0; }
+  body { margin: 0; background: #ddd; }
+  .ticket { width: 72mm; margin: 0 auto; padding: 4mm 0 8mm; background: #fff; color: #000;
+    font: 12px/1.35 "Courier New", ui-monospace, monospace; }
+  .c { text-align: center; } .big { font-size: 20px; font-weight: 700; }
+  hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+  .it { display: flex; gap: 4px; } .it .q { min-width: 3ch; font-weight: 700; }
+  .it .n { flex: 1; overflow-wrap: anywhere; } .ag { padding-left: 4ch; }
+  .tot { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; }
+  .noprint { text-align: center; padding: 10px; }
+  @media print { body { background: #fff; } .noprint { display: none; } }
+</style>
+</head>
+<body>
+<div class="noprint"><button onclick="print()">Imprimir</button></div>
+<div class="ticket" id="t">Cargando…</div>
+<script type="module">
+import { api, clp, esc } from './comun.js';
+const id = new URLSearchParams(location.search).get('id');
+try {
+  const p = await api(`panel/pedidos/${id}`);
+  document.getElementById('t').innerHTML = `
+    <div class="c big">${esc(p.local)}</div>
+    <div class="c">COMANDA</div><hr>
+    <div class="c big">#${p.numero}</div>
+    <div>Hora:   ${p.creado.slice(0, 16)}</div>
+    <div>Franja: ${esc(p.franja)}</div>
+    <div>${p.modalidad === 'despacho' ? 'DESPACHO' : 'RETIRO'}</div>
+    ${p.direccion ? `<div>${esc(p.direccion)}</div>` : ''}
+    <div>${esc(p.cliente)} ${esc(p.telefono)}</div><hr>
+    ${p.items.map((i) => `<div class="it"><span class="q">${i.cantidad}x</span><span class="n">${esc(i.nombre)}</span></div>
+      ${i.agregados.map((a) => `<div class="ag">+ ${esc(a)}</div>`).join('')}`).join('')}
+    ${p.notas ? `<hr><div><b>NOTA:</b> ${esc(p.notas)}</div>` : ''}<hr>
+    <div class="tot"><span>TOTAL</span><span>${clp(p.total)}</span></div>
+    <div>${p.pagado ? 'PAGADO' : 'PAGO POR CONFIRMAR'}</div>
+    ${p.estado === 'anulado' ? '<hr><div class="c big">ANULADO</div>' : ''}`;
+  if (new URLSearchParams(location.search).has('auto')) print();
+} catch (e) { document.getElementById('t').textContent = e.message; }
+</script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel · Pedidos</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .wrapP { padding: 12px 16px 40px; }
+  .cols { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 12px; overflow-x: auto; }
+  .col { background: #f6efe4; border-radius: 12px; padding: 10px; min-height: 200px; }
+  .col h3 { margin: 4px 4px 10px; font-size: 1rem; }
+  .ped { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 8px; font-size: .92rem; }
+  .ped.nuevo { border-color: var(--accent); box-shadow: 0 0 0 2px #ffd8a8; }
+  .ped ul { margin: 6px 0; padding-left: 18px; }
+  .ped .acc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ped .acc button { padding: 6px 10px; font-size: .85rem; }
+  .tag { display: inline-block; font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: #fff3bf; }
+  .tag.ok { background: #d3f9d8; }
+  nav.vistas { display: flex; gap: 6px; margin: 10px 0; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  td, th { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; font-size: .92rem; }
+  td input[type=number] { width: 110px; }
+  #login { max-width: 360px; margin: 15vh auto; padding: 16px; }
+</style>
+</head>
+<body>
+<section id="login" hidden>
+  <h1>Panel del local</h1>
+  <label>Clave</label><input id="clave" type="password" autocomplete="current-password">
+  <div class="err" id="loginErr"></div>
+  <button id="entrar" style="width:100%">Entrar</button>
+</section>
+
+<section id="app" class="wrapP" hidden>
+  <div class="between"><h1 style="margin:0">Pedidos de hoy</h1><span id="resumen" class="muted"></span></div>
+  <nav class="vistas">
+    <button class="sec" data-v="pedidos">Pedidos</button>
+    <button class="sec" data-v="carta">Editar carta</button>
+    <button class="sec" data-v="historial">Historial de precios</button>
+    <a href="carta-imprimible" target="_blank"><button class="sec">Carta imprimible</button></a>
+    <button class="sec" id="sonido">🔔 Activar sonido</button>
+    <button class="sec" id="salir">Salir</button>
+  </nav>
+  <div id="v-pedidos" class="cols"></div>
+  <div id="v-carta" hidden></div>
+  <div id="v-historial" hidden></div>
+</section>
+
+<script type="module">
+import { api, clp, esc } from './comun.js';
+const $ = (id) => document.getElementById(id);
+const COLS = [['nuevo', 'Nuevo'], ['preparacion', 'En preparación'], ['listo', 'Listo'], ['entregado', 'Entregado']];
+const SIG = { nuevo: 'preparacion', preparacion: 'listo', listo: 'entregado' };
+let conocidos = null, audio = null, vista = 'pedidos', modoBoleta = 2;
+
+function beep() {
+  if (!audio) return;
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(.3, audio.currentTime); g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .6);
+  o.start(); o.stop(audio.currentTime + .6);
+}
+$('sonido').onclick = () => { audio = audio || new AudioContext(); audio.resume(); beep(); $('sonido').textContent = '🔔 Sonido activo'; };
+
+function tarjeta(p) {
+  const boleta = modoBoleta === 2 && p.estado !== 'anulado'
+    ? (p.folio_boleta ? `<span class="tag ok">Boleta ${esc(p.folio_boleta)}</span>` : `<span class="tag">Boleta por emitir: ${clp(p.total)}</span>`) : '';
+  return `<div class="ped ${p.estado === 'nuevo' ? 'nuevo' : ''}">
+    <div class="between"><strong>#${p.numero} · ${esc(p.franja)}</strong><span>${clp(p.total)}</span></div>
+    <div>${esc(p.cliente)} · <a href="tel:${esc(p.telefono)}">${esc(p.telefono)}</a></div>
+    <div class="muted">${p.modalidad === 'despacho' ? 'Despacho: ' + esc(p.direccion) : 'Retiro'} · ${p.creado.slice(11, 16)}</div>
+    <ul>${p.items.map((i) => `<li>${i.cantidad} × ${esc(i.nombre)}${i.agregados.length ? ` <span class="muted">(${esc(i.agregados.join(', '))})</span>` : ''}</li>`).join('')}</ul>
+    ${p.notas ? `<div><b>Nota:</b> ${esc(p.notas)}</div>` : ''}
+    <div>${p.pagado ? '<span class="tag ok">Pagado</span>' : '<span class="tag">Por confirmar pago</span>'} ${boleta}</div>
+    <div class="acc">
+      ${SIG[p.estado] ? `<button data-id="${p.id}" data-estado="${SIG[p.estado]}">→ ${COLS.find((c) => c[0] === SIG[p.estado])[1]}</button>` : ''}
+      ${p.pagado ? '' : `<button class="sec" data-id="${p.id}" data-pagado="1">Marcar pagado</button>`}
+      ${modoBoleta === 2 && !p.folio_boleta ? `<button class="sec" data-id="${p.id}" data-folio="1">Registrar folio</button>` : ''}
+      <a href="comanda?id=${p.id}" target="_blank"><button class="sec">Comanda</button></a>
+      ${p.estado !== 'entregado' ? `<button class="sec" data-id="${p.id}" data-estado="anulado">Anular</button>` : ''}
+    </div></div>`;
+}
+
+async function refrescar() {
+  const d = await api('panel/pedidos');
+  modoBoleta = d.modo_boleta;
+  const activos = d.pedidos.filter((p) => p.estado !== 'anulado');
+  const sinBoleta = activos.filter((p) => !p.folio_boleta).length;
+  $('resumen').textContent = `${activos.length} pedidos · ${clp(d.vendido)}` + (modoBoleta === 2 ? ` · ${sinBoleta} boletas por emitir` : '');
+  const ids = new Set(d.pedidos.map((p) => p.id));
+  if (conocidos && [...ids].some((id) => !conocidos.has(id))) beep();
+  conocidos = ids;
+  $('v-pedidos').innerHTML = COLS.map(([k, t]) => {
+    const ps = d.pedidos.filter((p) => p.estado === k);
+    return `<div class="col"><h3>${t} (${ps.length})</h3>${ps.map(tarjeta).join('')}</div>`;
+  }).join('');
+}
+$('v-pedidos').onclick = async (e) => {
+  const b = e.target.closest('button[data-id]'); if (!b) return;
+  const body = {};
+  if (b.dataset.estado) {
+    if (b.dataset.estado === 'anulado' && !confirm('¿Anular este pedido?')) return;
+    body.estado = b.dataset.estado;
+  }
+  if (b.dataset.pagado) body.pagado = true;
+  if (b.dataset.folio) { const f = prompt('Folio de la boleta emitida en el SII:'); if (!f) return; body.folio_boleta = f; }
+  await api(`panel/pedidos/${b.dataset.id}`, { method: 'PATCH', body });
+  refrescar();
+};
+
+async function pintarCarta() {
+  const M = await api('panel/carta');
+  $('v-carta').innerHTML = `<p class="muted">El precio se guarda al salir del campo. Cada cambio queda en el historial.</p>` +
+    M.categorias.map((c) => `<h2>${esc(c.nombre)}</h2><table>${c.productos.map((p) => `<tr>
+      <td>${esc(p.nombre)}</td>
+      <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio"></td>
+      <td><label class="row"><input type="checkbox" style="width:auto" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
+      <td><label class="row"><input type="checkbox" style="width:auto" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
+    </tr>`).join('')}</table>`).join('') +
+    `<h2>Ingredientes</h2><p class="muted">Desmarca un ingrediente agotado y deja de ofrecerse en los productos con agregados.</p><div class="chips">${M.agregados.map((a) =>
+      `<label class="chip ${a.disponible ? 'on' : ''}"><input type="checkbox" hidden ${a.disponible ? 'checked' : ''} data-a="${a.id}">${esc(a.nombre)}</label>`).join('')}</div>`;
+}
+$('v-carta').onchange = async (e) => {
+  const t = e.target;
+  try {
+    if (t.dataset.a) { await api(`panel/agregados/${t.dataset.a}`, { method: 'PATCH', body: { disponible: t.checked } }); t.parentElement.classList.toggle('on', t.checked); return; }
+    const v = t.type === 'checkbox' ? t.checked : Number(t.value);
+    await api(`panel/productos/${t.dataset.p}`, { method: 'PATCH', body: { [t.dataset.f]: v } });
+    t.style.outline = '2px solid var(--ok)'; setTimeout(() => t.style.outline = '', 800);
+  } catch (err) { alert(err.message); }
+};
+async function pintarHistorial() {
+  const h = await api('panel/historial');
+  $('v-historial').innerHTML = h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th>Antes</th><th>Ahora</th></tr>${h.map((r) =>
+    `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td>${clp(r.anterior)}</td><td>${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p class="muted">Aún no hay cambios de precio.</p>';
+}
+document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => {
+  vista = b.dataset.v;
+  for (const v of ['pedidos', 'carta', 'historial']) $('v-' + v).hidden = v !== vista;
+  if (vista === 'carta') pintarCarta();
+  if (vista === 'historial') pintarHistorial();
+});
+$('salir').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
+
+async function iniciar() {
+  try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; return; } throw e; }
+  $('app').hidden = false;
+  setInterval(() => vista === 'pedidos' && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+}
+$('entrar').onclick = async () => {
+  try { await api('panel/login', { method: 'POST', body: { password: $('clave').value } }); $('login').hidden = true; iniciar(); }
+  catch (e) { $('loginErr').textContent = e.message; }
+};
+$('clave').onkeydown = (e) => e.key === 'Enter' && $('entrar').click();
+iniciar();
+</script>
+</body>
+</html>
