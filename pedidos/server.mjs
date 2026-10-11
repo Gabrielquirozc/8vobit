@@ -205,17 +205,22 @@ function send(res, code, body, headers = {}) {
 // Fotos de productos: el navegador ya las entrega achicadas en WebP, así que el
 // servidor solo valida la firma del archivo y las guarda en el volumen de datos.
 const IMG_MAX = 600e3;
+// Si el cuerpo excede el límite se descarta el resto (resume) antes de responder:
+// cortar la lectura a la mitad hace que el cliente vea un error de red en vez del 413.
+const demasiado = (req) => { req.resume(); return Object.assign(new Error('too big'), { tooBig: true }); };
 async function readBytes(req, max) {
+  if (Number(req.headers['content-length']) > max) throw demasiado(req);
   const chunks = []; let n = 0;
-  for await (const c of req) { n += c.length; if (n > max) throw Object.assign(new Error('too big'), { tooBig: true }); chunks.push(c); }
+  for await (const c of req) { n += c.length; if (n > max) throw demasiado(req); chunks.push(c); }
   return Buffer.concat(chunks);
 }
 const esWebp = (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
 function borrarImagen(nombre) { if (nombre) fs.rmSync(path.join(IMG_DIR, path.basename(nombre)), { force: true }); }
 
 async function readJson(req) {
+  if (Number(req.headers['content-length']) > 64e3) throw demasiado(req);
   let raw = '';
-  for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw Object.assign(new Error('too big'), { tooBig: true }); }
+  for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw demasiado(req); }
   return raw ? JSON.parse(raw) : {};
 }
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
