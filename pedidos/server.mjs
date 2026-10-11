@@ -14,6 +14,7 @@ const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
 const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
 const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const PUBLIC = path.resolve(import.meta.dirname, 'public');
+const SEED_FILE = process.env.SEED_FILE || path.resolve(import.meta.dirname, 'seed/gassuso.json');
 const SLOT_MIN = 30;
 const LEAD_MIN = 20; // margen mínimo antes de la primera franja
 
@@ -77,7 +78,7 @@ function seedImg(lid, file) {
 
 function seed() {
   if (db.prepare('SELECT COUNT(*) n FROM locales').get().n) return;
-  const s = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'seed/gassuso.json'), 'utf8'));
+  const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
   const L = s.local;
   const { lastInsertRowid: lid } = db.prepare(
     'INSERT INTO locales (slug,nombre,instagram,whatsapp,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?)'
@@ -160,11 +161,11 @@ async function readBytes(req, max) {
   return Buffer.concat(chunks);
 }
 const esWebp = (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
-function borrarImagen(nombre) { if (nombre) fs.rm(path.join(IMG_DIR, path.basename(nombre)), () => {}); }
+function borrarImagen(nombre) { if (nombre) fs.rmSync(path.join(IMG_DIR, path.basename(nombre)), { force: true }); }
 
 async function readJson(req) {
   let raw = '';
-  for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw new Error('too big'); }
+  for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw Object.assign(new Error('too big'), { tooBig: true }); }
   return raw ? JSON.parse(raw) : {};
 }
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
@@ -270,8 +271,9 @@ async function api(req, res, url) {
     if (m === 'POST' && parts[1] === 'login') {
       const b = await readJson(req);
       const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(String(b.slug || 'gassuso'));
-      const ok = PANEL_PASSWORD && local && String(b.password || '').length === PANEL_PASSWORD.length &&
-        crypto.timingSafeEqual(Buffer.from(String(b.password)), Buffer.from(PANEL_PASSWORD));
+      // Se comparan los hashes: mismo largo siempre, así timingSafeEqual no falla con tildes o largos distintos.
+      const h = (v) => crypto.createHash('sha256').update(String(v)).digest();
+      const ok = PANEL_PASSWORD && local && crypto.timingSafeEqual(h(b.password ?? ''), h(PANEL_PASSWORD));
       if (!ok) return send(res, 401, { error: 'Clave incorrecta' });
       const secure = (req.headers['x-forwarded-proto'] || '') === 'https' ? '; Secure' : '';
       return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=${makeSession(local.id)}; HttpOnly; SameSite=Strict; Path=${BASE || '/'}; Max-Age=43200${secure}` });
@@ -302,6 +304,7 @@ async function api(req, res, url) {
       const folio = b.folio_boleta === undefined ? p.folio_boleta : (String(b.folio_boleta).replace(/\D/g, '').slice(0, 12) || null);
       let { medio_pago, recibido, cobrado_en } = p;
       if (b.medio_pago !== undefined) {
+        if (p.estado === 'anulado' || estado === 'anulado') return send(res, 409, { error: 'Un pedido anulado no se puede cobrar' });
         if (!MEDIOS.includes(b.medio_pago)) return send(res, 400, { error: 'Medio de pago inválido' });
         medio_pago = b.medio_pago;
         recibido = medio_pago === 'efectivo' ? Math.round(Number(b.recibido) || p.total) : p.total;
@@ -384,8 +387,12 @@ const server = http.createServer(async (req, res) => {
     if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
     return serveFile(res, p.slice(1));
   } catch (e) {
-    console.error(e);
-    if (!res.headersSent) send(res, e instanceof SyntaxError ? 400 : 500, { error: 'Error del servidor' });
+    if (!e.tooBig && !(e instanceof SyntaxError)) console.error(e);
+    if (!res.headersSent) {
+      if (e.tooBig) send(res, 413, { error: 'Solicitud demasiado grande' });
+      else if (e instanceof SyntaxError) send(res, 400, { error: 'JSON inválido' });
+      else send(res, 500, { error: 'Error del servidor' });
+    }
   }
 });
-server.listen(PORT, HOST, () => console.log(`pedidos escuchando en http://${HOST}:${PORT}${BASE}/`));
+server.listen(PORT, HOST, () => console.log(`pedidos escuchando en http://${HOST}:${server.address().port}${BASE}/`));
