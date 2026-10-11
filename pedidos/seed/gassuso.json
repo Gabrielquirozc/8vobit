@@ -6,66 +6,234 @@
     "whatsapp": "",
     "modo_boleta": 2,
     "horario": {
-      "1": ["10:30", "00:15"], "2": ["10:30", "00:15"], "3": ["10:30", "00:15"],
-      "4": ["10:30", "00:15"], "5": ["10:30", "00:15"],
-      "6": ["16:45", "02:00"], "0": ["16:45", "02:00"]
+      "1": [
+        "10:30",
+        "00:15"
+      ],
+      "2": [
+        "10:30",
+        "00:15"
+      ],
+      "3": [
+        "10:30",
+        "00:15"
+      ],
+      "4": [
+        "10:30",
+        "00:15"
+      ],
+      "5": [
+        "10:30",
+        "00:15"
+      ],
+      "6": [
+        "16:45",
+        "02:00"
+      ],
+      "0": [
+        "16:45",
+        "02:00"
+      ]
     },
     "cupo_franja": 10
   },
   "agregados": [
-    "Lechuga", "Morrón", "Tomate", "Queso", "Champiñón", "Ají verde", "Cebolla frita",
-    "Cebolla morada", "Pepinillo", "Chucrut", "Poroto verde", "Palta", "Aceituna", "Huevo", "Tocino"
+    "Lechuga",
+    "Morrón",
+    "Tomate",
+    "Queso",
+    "Champiñón",
+    "Ají verde",
+    "Cebolla frita",
+    "Cebolla morada",
+    "Pepinillo",
+    "Chucrut",
+    "Poroto verde",
+    "Palta",
+    "Aceituna",
+    "Huevo",
+    "Tocino"
   ],
   "categorias": [
     {
       "nombre": "Sanguchería",
       "productos": [
-        { "nombre": "Pollo a la plancha", "precio": 4990 },
-        { "nombre": "Cerdo a la plancha", "precio": 5490 },
-        { "nombre": "Vacuno a la plancha", "precio": 5990 },
-        { "nombre": "Carne mechada + 2 ingr.", "precio": 6990, "incluye": 2 },
-        { "nombre": "Burger casera + 2 ingr.", "precio": 5590, "incluye": 2 },
-        { "nombre": "Burger Gassuso", "desc": "Tocino, queso, pepinillo, cebolla frita", "precio": 7590 },
-        { "nombre": "Burger Vegeta + 2 ingr.", "precio": 4990, "incluye": 2 },
-        { "nombre": "Barros Luco", "desc": "Vacuno, queso fundido", "precio": 5790 },
-        { "nombre": "Chacarero", "desc": "Vacuno, poroto verde, ají verde, tomate", "precio": 6590 },
-        { "nombre": "Luco Patrón", "desc": "Vacuno, tomate, choclo, queso", "precio": 6790 },
-        { "nombre": "Diplomático", "desc": "Huevo frito y más (a confirmar)", "precio": 5990 },
-        { "nombre": "Pollo + 1 ingr.", "precio": 0, "incluye": 1, "pendiente": true },
-        { "nombre": "Vegetariano", "desc": "Champiñón, lechuga, choclo", "precio": 0, "pendiente": true }
+        {
+          "nombre": "Pollo a la plancha",
+          "precio": 4990
+        },
+        {
+          "nombre": "Cerdo a la plancha",
+          "precio": 5490
+        },
+        {
+          "nombre": "Vacuno a la plancha",
+          "precio": 5990
+        },
+        {
+          "nombre": "Carne mechada + 2 ingr.",
+          "precio": 6990,
+          "incluye": 2
+        },
+        {
+          "nombre": "Burger casera + 2 ingr.",
+          "precio": 5590,
+          "incluye": 2
+        },
+        {
+          "nombre": "Burger Gassuso",
+          "desc": "Tocino, queso, pepinillo, cebolla frita",
+          "precio": 7590,
+          "destacado": true
+        },
+        {
+          "nombre": "Burger Vegeta + 2 ingr.",
+          "precio": 4990,
+          "incluye": 2
+        },
+        {
+          "nombre": "Barros Luco",
+          "desc": "Vacuno, queso fundido",
+          "precio": 5790,
+          "destacado": true
+        },
+        {
+          "nombre": "Chacarero",
+          "desc": "Vacuno, poroto verde, ají verde, tomate",
+          "precio": 6590,
+          "destacado": true
+        },
+        {
+          "nombre": "Luco Patrón",
+          "desc": "Vacuno, tomate, choclo, queso",
+          "precio": 6790
+        },
+        {
+          "nombre": "Diplomático",
+          "desc": "Huevo frito y más (a confirmar)",
+          "precio": 5990
+        },
+        {
+          "nombre": "Pollo + 1 ingr.",
+          "precio": 0,
+          "incluye": 1,
+          "pendiente": true
+        },
+        {
+          "nombre": "Vegetariano",
+          "desc": "Champiñón, lechuga, choclo",
+          "precio": 0,
+          "pendiente": true
+        }
       ]
     },
     {
       "nombre": "Hot dogs",
       "productos": [
-        { "nombre": "Italiano", "desc": "Palta, tomate, mayonesa casera", "precio": 2890 },
-        { "nombre": "Alemán", "desc": "Choucrut, tomate, mayonesa casera", "precio": 2690 },
-        { "nombre": "Campesino", "desc": "Salsa verde, tomate, mayonesa casera", "precio": 2790 },
-        { "nombre": "Dinámico", "desc": "Palta, choucrut, tomate, mayonesa casera", "precio": 2990 },
-        { "nombre": "As mechada", "desc": "Carne mechada, palta, tomate, mayonesa casera", "precio": 3890 },
-        { "nombre": "Gassuso", "desc": "Tocino, queso fundido, cebolla frita, champiñones", "precio": 3890 },
-        { "nombre": "As Gassuso", "desc": "Carne mechada, tocino, queso fundido, cebolla frita, champiñones", "precio": 4590 },
-        { "nombre": "Coleslow/Dog", "desc": "Coleslaw casero", "precio": 2990 },
-        { "nombre": "Coleslowpalta", "desc": "Coleslaw casero, palta Hass natural", "precio": 3490 },
-        { "nombre": "Champipleto", "desc": "Champiñones salteados, palta Hass natural, tomate, mayonesa Gassuso", "precio": 3590 },
-        { "nombre": "Champiluco", "desc": "Champiñones salteados, queso fundido, mayonesa casera", "precio": 3790 }
+        {
+          "nombre": "Italiano",
+          "desc": "Palta, tomate, mayonesa casera",
+          "precio": 2890,
+          "destacado": true
+        },
+        {
+          "nombre": "Alemán",
+          "desc": "Choucrut, tomate, mayonesa casera",
+          "precio": 2690
+        },
+        {
+          "nombre": "Campesino",
+          "desc": "Salsa verde, tomate, mayonesa casera",
+          "precio": 2790
+        },
+        {
+          "nombre": "Dinámico",
+          "desc": "Palta, choucrut, tomate, mayonesa casera",
+          "precio": 2990,
+          "destacado": true
+        },
+        {
+          "nombre": "As mechada",
+          "desc": "Carne mechada, palta, tomate, mayonesa casera",
+          "precio": 3890
+        },
+        {
+          "nombre": "Gassuso",
+          "desc": "Tocino, queso fundido, cebolla frita, champiñones",
+          "precio": 3890
+        },
+        {
+          "nombre": "As Gassuso",
+          "desc": "Carne mechada, tocino, queso fundido, cebolla frita, champiñones",
+          "precio": 4590,
+          "destacado": true
+        },
+        {
+          "nombre": "Coleslow/Dog",
+          "desc": "Coleslaw casero",
+          "precio": 2990
+        },
+        {
+          "nombre": "Coleslowpalta",
+          "desc": "Coleslaw casero, palta Hass natural",
+          "precio": 3490
+        },
+        {
+          "nombre": "Champipleto",
+          "desc": "Champiñones salteados, palta Hass natural, tomate, mayonesa Gassuso",
+          "precio": 3590
+        },
+        {
+          "nombre": "Champiluco",
+          "desc": "Champiñones salteados, queso fundido, mayonesa casera",
+          "precio": 3790
+        }
       ]
     },
     {
       "nombre": "Vegapletos",
       "productos": [
-        { "nombre": "Vegapleto Italiano", "desc": "Salchicha sureña vegana", "precio": 3290 },
-        { "nombre": "Vegapleto Alemán", "desc": "Salchicha sureña vegana", "precio": 2990 },
-        { "nombre": "Vegapleto Campesino", "desc": "Salchicha sureña vegana", "precio": 3190 },
-        { "nombre": "Vegapleto Dinámico", "desc": "Salchicha sureña vegana", "precio": 3390 },
-        { "nombre": "Vegapleto Coleslow", "desc": "Salchicha sureña vegana", "precio": 3390 },
-        { "nombre": "Vegapleto Coleslow palta", "desc": "Salchicha sureña vegana", "precio": 3790 }
+        {
+          "nombre": "Vegapleto Italiano",
+          "desc": "Salchicha sureña vegana",
+          "precio": 3290
+        },
+        {
+          "nombre": "Vegapleto Alemán",
+          "desc": "Salchicha sureña vegana",
+          "precio": 2990
+        },
+        {
+          "nombre": "Vegapleto Campesino",
+          "desc": "Salchicha sureña vegana",
+          "precio": 3190
+        },
+        {
+          "nombre": "Vegapleto Dinámico",
+          "desc": "Salchicha sureña vegana",
+          "precio": 3390
+        },
+        {
+          "nombre": "Vegapleto Coleslow",
+          "desc": "Salchicha sureña vegana",
+          "precio": 3390
+        },
+        {
+          "nombre": "Vegapleto Coleslow palta",
+          "desc": "Salchicha sureña vegana",
+          "precio": 3790
+        }
       ]
     },
     {
       "nombre": "Agregados",
       "productos": [
-        { "nombre": "Papas", "desc": "Pídelo con papas", "precio": 0, "pendiente": true }
+        {
+          "nombre": "Papas",
+          "desc": "Pídelo con papas",
+          "precio": 0,
+          "pendiente": true
+        }
       ]
     }
   ]

@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!cols.has('medio_pago')) db.exec('ALTER TABLE pedidos ADD COLUMN medio_pago TEXT');
   if (!cols.has('recibido')) db.exec('ALTER TABLE pedidos ADD COLUMN recibido INTEGER');
   if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
+  const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
+  if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
 }
 
 function seed() {
@@ -72,8 +74,8 @@ function seed() {
   s.categorias.forEach((c, ci) => {
     const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, c.nombre, ci);
     c.productos.forEach((p, pi) => db.prepare(
-      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden) VALUES (?,?,?,?,?,?,?,?)'
-    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi));
+      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado) VALUES (?,?,?,?,?,?,?,?,?)'
+    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0));
   });
 }
 seed();
@@ -152,9 +154,18 @@ function serveFile(res, file) {
 
 function menu(local) {
   const cats = db.prepare('SELECT id, nombre FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
-  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye FROM productos WHERE local_id=? ORDER BY orden').all(local.id);
+  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado FROM productos WHERE local_id=? ORDER BY orden').all(local.id);
+  // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
+  // suficientes, se completa con los destacados elegidos a mano.
+  const vendidos = db.prepare(`SELECT i.producto_id id, SUM(i.cantidad) n FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id
+    WHERE p.local_id=? AND p.estado!='anulado' AND p.creado >= datetime('now','localtime','-30 days')
+    GROUP BY i.producto_id ORDER BY n DESC LIMIT 6`).all(local.id).map((r) => r.id);
+  const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
+  const ok = new Set(prods.filter(vendible).map((p) => p.id));
+  const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
   return {
-    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta },
+    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta, horario: JSON.parse(local.horario) },
+    mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
     agregados: db.prepare('SELECT id, nombre, disponible FROM agregados WHERE local_id=? ORDER BY id').all(local.id),
   };

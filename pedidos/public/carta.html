@@ -2,159 +2,317 @@
 <html lang="es-CL">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#241c17">
 <title>Pedidos</title>
-<link rel="stylesheet" href="estilo.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="carta.css">
 </head>
 <body>
-<header class="top"><h1 id="titulo">Cargando…</h1><nav class="tabs" id="tabs"></nav></header>
-<main class="wrap" id="carta"></main>
-<div class="toast" id="toast"></div>
-<div class="cartbar"><button id="vercarro" disabled>Carro vacío</button></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Íconos estilo Lucide (trazo 2px), en línea para no depender de un CDN. -->
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9 4.5 4h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z"/><path d="M5 12v8h14v-8M10 20v-5h4v5"/></symbol>
+  <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h2l3 11.5M5.5 17.5 9 10h7l-4.5 7.5"/></symbol>
+  <symbol id="i-insta" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M17 14h.01"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.7 7.1L3 21l1.9-6.3A8 8 0 1 1 21 12Z"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.9-5.4 5.1-6"/></symbol>
+</svg>
 
-<dialog id="dlgAg"><div class="in">
-  <h3 id="agTitulo"></h3><div class="muted" id="agAyuda"></div>
-  <div class="chips" id="agChips"></div>
-  <div class="between"><button class="sec" data-close>Cancelar</button><button id="agOk" disabled>Agregar</button></div>
-</div></dialog>
+<header class="hero">
+  <div class="cover" role="img" aria-label=""></div>
+  <div class="logo" id="logo" aria-hidden="true"></div>
+  <h1 id="nombre">Cargando…</h1>
+  <p class="tipo">Sanguchería · Completería · Concepción</p>
+  <div class="facts" id="facts"></div>
+</header>
 
-<dialog id="dlgCarro"><div class="in">
-  <div class="between"><h3>Tu pedido</h3><button class="sec" data-close>Seguir pidiendo</button></div>
-  <div id="items"></div>
-  <p class="between"><strong>Total</strong><strong id="total"></strong></p>
-  <label>¿Cuándo?</label><select id="franja"></select>
-  <label>Modalidad</label>
-  <div class="chips"><button class="chip on" data-mod="retiro">Retiro en local</button><button class="chip" data-mod="despacho">Despacho</button></div>
-  <div id="dirBox" hidden><label>Dirección</label><input id="direccion" autocomplete="street-address"></div>
-  <label>Nombre</label><input id="cliente" autocomplete="name">
-  <label>Teléfono</label><input id="telefono" inputmode="tel" autocomplete="tel" placeholder="+56 9 …">
-  <label>Notas (opcional)</label><textarea id="notas" rows="2" placeholder="Sin cebolla, etc."></textarea>
-  <div class="pago"><b>¿Cómo pagas?</b> Al retirar o recibir: efectivo, transferencia o tarjeta. El local te confirma el pedido por WhatsApp.</div>
-  <div class="err" id="err"></div>
-  <button id="enviar" style="width:100%">Enviar pedido</button>
-</div></dialog>
+<div class="stick">
+  <div class="stick-in">
+    <label class="search"><svg class="ico"><use href="#i-search"/></svg><span class="sr">Buscar en la carta</span>
+      <input id="q" type="search" placeholder="Buscar: italiano, palta, mechada…" autocomplete="off" enterkeyhint="search"></label>
+    <nav class="cats" id="cats" aria-label="Categorías"></nav>
+  </div>
+</div>
 
-<dialog id="dlgOk"><div class="in">
-  <h3 id="okTitulo"></h3><p id="okTexto"></p>
-  <a id="okWa" target="_blank" rel="noopener"><button style="width:100%">Avisar por WhatsApp</button></a>
-  <p><button class="sec" style="width:100%" data-close>Listo</button></p>
-</div></dialog>
+<main id="main"></main>
+
+<div class="cartbar"><button class="cartbtn" id="cartbtn" hidden><span class="count num" id="cartCount"></span><span>Ver pedido</span><span class="num" id="cartTotal" style="padding-right:12px"></span></button></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Producto -->
+<dialog class="sheet" id="dlgProd" aria-labelledby="pdName">
+  <div class="sh-body" id="pdBody"></div>
+  <div class="sh-foot">
+    <div class="stepper" role="group" aria-label="Cantidad">
+      <button type="button" id="pdMenos" aria-label="Quitar uno"><svg class="ico"><use href="#i-minus"/></svg></button>
+      <span id="pdQty" class="num" aria-live="polite">1</span>
+      <button type="button" id="pdMas" aria-label="Agregar uno"><svg class="ico"><use href="#i-plus"/></svg></button>
+    </div>
+    <button class="primary" id="pdAdd"></button>
+  </div>
+</dialog>
+
+<!-- Carro + datos -->
+<dialog class="sheet" id="dlgCarro" aria-labelledby="ckTitle">
+  <div class="sh-head"><h2 id="ckTitle">Tu pedido</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body">
+    <div id="lines"></div>
+    <div class="tot"><span>Total</span><span class="num" id="ckTotal"></span></div>
+
+    <fieldset class="fs"><legend>¿Cómo lo recibes?</legend>
+      <div class="seg">
+        <button type="button" data-mod="retiro" aria-pressed="true"><svg class="ico"><use href="#i-store"/></svg>Retiro</button>
+        <button type="button" data-mod="despacho" aria-pressed="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
+      </div>
+      <div class="field" id="dirBox" hidden><label for="direccion">Dirección de despacho</label><input id="direccion" autocomplete="street-address" placeholder="Calle, número, depto"><div class="err" id="e-direccion"></div></div>
+      <div class="field"><label for="franja">¿Para cuándo?</label><select id="franja"></select></div>
+    </fieldset>
+
+    <fieldset class="fs"><legend>Tus datos</legend>
+      <div class="field"><label for="cliente">Nombre</label><input id="cliente" autocomplete="name"><div class="err" id="e-cliente"></div></div>
+      <div class="field"><label for="telefono">Celular</label><input id="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678"><div class="err" id="e-telefono"></div></div>
+      <div class="field"><label for="notas">Comentario para la cocina <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><textarea id="notas" rows="2" placeholder="Sin cebolla, bien tostado…"></textarea></div>
+    </fieldset>
+
+    <div class="note"><svg class="ico"><use href="#i-wallet"/></svg><div><b>Pagas al retirar o recibir</b><br>Efectivo, transferencia o tarjeta. Sin cargos extra.</div></div>
+    <div class="formerr" id="formErr" role="alert"></div>
+  </div>
+  <div class="sh-foot"><button class="primary" id="enviar"><span>Enviar pedido</span><span class="num" id="enviarTotal"></span></button></div>
+</dialog>
+
+<!-- Confirmación -->
+<dialog class="sheet" id="dlgOk" aria-labelledby="okTitle">
+  <div class="sh-body">
+    <div class="done">
+      <div class="check"><svg class="ico"><use href="#i-check"/></svg></div>
+      <h2 id="okTitle" style="margin:0;font:800 1.3rem var(--font-display)">¡Pedido recibido!</h2>
+      <div class="big num" id="okNum"></div>
+      <p id="okTexto" style="color:var(--ink-2)"></p>
+    </div>
+  </div>
+  <div class="sh-foot" style="flex-direction:column;align-items:stretch">
+    <a id="okWa" class="primary" target="_blank" rel="noopener" style="text-decoration:none"><svg class="ico"><use href="#i-msg"/></svg>Avisar al local por WhatsApp</a>
+    <button class="ghost" data-close>Volver a la carta</button>
+  </div>
+</dialog>
 
 <script type="module">
 import { api, clp, esc } from './comun.js';
-const slug = location.pathname.split('/').filter(Boolean).pop();
-let M, carro = [], modalidad = 'retiro';
 const $ = (id) => document.getElementById(id);
-document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
+const slug = location.pathname.split('/').filter(Boolean).pop();
+const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+let M, carro = [], modalidad = 'retiro', prods = new Map();
 
-async function cargar() {
-  M = await api(`locales/${slug}`);
-  document.title = `${M.local.nombre} · Pedidos`;
-  $('titulo').textContent = M.local.nombre;
-  const cats = M.categorias.filter((c) => c.productos.some((p) => p.activo));
-  $('tabs').innerHTML = cats.map((c) => `<a href="#c${c.id}">${esc(c.nombre)}</a>`).join('');
-  $('carta').innerHTML = cats.map((c) => `<h2 id="c${c.id}">${esc(c.nombre)}</h2>` + c.productos.filter((p) => p.activo).map((p) => {
-    const pend = p.precio_pendiente || !p.precio;
-    return `<div class="prod ${pend ? 'off' : ''}"><div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}</div>
-      <div class="row"><span class="p">${pend ? 'Consultar' : clp(p.precio)}</span>${pend ? '' : `<button class="add" data-add="${p.id}" aria-label="Agregar ${esc(p.nombre)}">Agregar</button>`}</div></div>`;
-  }).join('')).join('');
-  document.querySelectorAll('[data-add]').forEach((b) => b.onclick = () => agregar(Number(b.dataset.add)));
-  // Resalta la categoría visible para que el cliente sepa dónde está.
-  const tabs = [...document.querySelectorAll('#tabs a')];
-  const obs = new IntersectionObserver((es) => es.forEach((e) => {
-    if (!e.isIntersecting) return;
-    tabs.forEach((t) => t.classList.toggle('on', t.hash === '#' + e.target.id));
-    document.querySelector('#tabs a.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
-  }), { rootMargin: '-120px 0px -70% 0px' });
-  document.querySelectorAll('main h2').forEach((h) => obs.observe(h));
+// Ilustraciones por categoría (se reemplazan por fotos cuando existan).
+const ART = [
+  `<svg viewBox="0 0 64 64"><path d="M8 30c0-10 11-16 24-16s24 6 24 16Z" fill="#e9a54a"/><path d="M14 22h2M24 19h2M36 19h2M46 22h2" stroke="#fff6" stroke-width="2" stroke-linecap="round"/><path d="M7 33h50" stroke="#6aa84f" stroke-width="5" stroke-linecap="round"/><rect x="8" y="35" width="48" height="6" rx="3" fill="#8b3a1e"/><path d="M9 43h46" stroke="#f2c14e" stroke-width="4" stroke-linecap="round"/><path d="M8 46h48v3a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6Z" fill="#e9a54a"/></svg>`,
+  `<svg viewBox="0 0 64 64"><path d="M6 34c0-6 6-10 26-10s26 4 26 10c0 8-12 14-26 14S6 42 6 34Z" fill="#e9a54a"/><rect x="5" y="27" width="54" height="10" rx="5" fill="#c2452d"/><path d="M12 30c4 3 6-3 10 0s6-3 10 0 6-3 10 0 6-3 10 0" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M14 25c3-3 6 0 9-3s6 0 9-3 6 0 9-3" stroke="#6aa84f" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+  `<svg viewBox="0 0 64 64"><path d="M6 34c0-6 6-10 26-10s26 4 26 10c0 8-12 14-26 14S6 42 6 34Z" fill="#e9a54a"/><rect x="5" y="27" width="54" height="10" rx="5" fill="#9a6b3f"/><path d="M12 30c4 3 6-3 10 0s6-3 10 0 6-3 10 0 6-3 10 0" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M44 8c-8 0-13 5-13 12 6 0 13-4 13-12Z" fill="#4f9a45"/></svg>`,
+  `<svg viewBox="0 0 64 64"><path d="M20 22 18 10M27 22l-1-14M34 22l1-14M41 22l2-12M46 24l4-10" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M14 24h36l-4 30H18Z" fill="#c2452d"/><path d="M14 24h36" stroke="#a83a26" stroke-width="3"/><circle cx="32" cy="38" r="5" fill="#fff8"/></svg>`,
+];
+const art = (cIdx, cls = '') => `<div class="art c${cIdx % ART.length} ${cls}" aria-hidden="true">${ART[cIdx % ART.length]}</div>`;
+const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
+
+// ---------- horario ----------
+function estadoLocal(h) {
+  const now = new Date(), min = now.getHours() * 60 + now.getMinutes();
+  const m = (s) => { const [a, b] = s.split(':').map(Number); return a * 60 + b; };
+  const ayer = h[(now.getDay() + 6) % 7], hoy = h[now.getDay()];
+  if (ayer && m(ayer[1]) < m(ayer[0]) && min < m(ayer[1])) return { abierto: true, txt: `Abierto · cierra ${ayer[1]}` };
+  if (hoy) {
+    let o = m(hoy[0]), c = m(hoy[1]); if (c <= o) c += 1440;
+    if (min >= o && min < c) return { abierto: true, txt: `Abierto · cierra ${hoy[1]}` };
+    if (min < o) return { abierto: false, txt: `Cerrado · abre hoy ${hoy[0]}` };
+  }
+  const man = h[(now.getDay() + 1) % 7];
+  return { abierto: false, txt: man ? `Cerrado · abre mañana ${man[0]}` : 'Cerrado' };
 }
-function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1400); }
-const producto = (id) => M.categorias.flatMap((c) => c.productos).find((p) => p.id === id);
 
-function agregar(id) {
-  const p = producto(id);
-  if (!p.incluye) return meter(p, []);
-  let sel = [];
-  $('agTitulo').textContent = p.nombre;
-  $('agAyuda').textContent = `Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}.`;
+// ---------- render ----------
+function itemHtml(p, cIdx) {
+  if (!vendible(p)) return `<div class="item off"><div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}
+    <div class="meta"><span class="tag">Precio por confirmar · pregunta en el local</span></div></div></div>`;
+  const veg = M.categorias[cIdx]?.nombre === 'Vegapletos';
+  return `<button class="item" data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
+    <div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}
+      <div class="meta"><span class="p num">${clp(p.precio)}</span>${p.incluye ? `<span class="tag pick">Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</span>` : ''}${veg ? `<span class="tag veg">Vegano</span>` : ''}</div></div>
+    <div class="thumb">${art(cIdx)}<span class="qtyb num" data-qb="${p.id}" hidden></span><span class="plus">${ico('plus')}</span></div>
+  </button>`;
+}
+function render() {
+  const q = norm($('q').value.trim());
+  const match = (p) => !q || norm(p.nombre + ' ' + (p.descripcion || '')).includes(q);
+  const cats = M.categorias.map((c, i) => ({ ...c, i, ps: c.productos.filter((p) => p.activo && match(p)).sort((a, b) => vendible(b) - vendible(a)) })).filter((c) => c.ps.length);
+  let html = '';
+  if (!q && M.mas_pedidos.length) {
+    html += `<section aria-labelledby="t-fav"><h2 class="sec-t" id="t-fav">Los más pedidos</h2><p class="sec-s">Lo que más sale en ${esc(M.local.nombre)}</p><div class="rail">` +
+      M.mas_pedidos.map((id) => { const { p, i } = prods.get(id); return `<button class="fav" data-p="${p.id}">${art(i)}<span class="t"><span class="n">${esc(p.nombre)}</span><span class="p num">${clp(p.precio)}</span></span></button>`; }).join('') + `</div></section>`;
+  }
+  html += cats.map((c) => `<section aria-labelledby="c${c.id}"><h2 class="sec-t" id="c${c.id}">${esc(c.nombre)}</h2><p class="sec-s">${c.ps.filter(vendible).length} opciones</p><div class="list">${c.ps.map((p) => itemHtml(p, c.i)).join('')}</div></section>`).join('');
+  if (!cats.length) html = `<p class="empty">No encontramos “${esc($('q').value)}”.<br><button class="ghost" id="limpiar" style="margin-top:12px">Ver toda la carta</button></p>`;
+  $('main').innerHTML = html;
+  $('cats').innerHTML = cats.map((c) => `<a href="#c${c.id}">${esc(c.nombre)}</a>`).join('');
+  $('limpiar')?.addEventListener('click', () => { $('q').value = ''; render(); });
+  espiar(); barra();
+}
+let obs;
+function espiar() {
+  obs?.disconnect();
+  const links = [...$('cats').querySelectorAll('a')];
+  obs = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    links.forEach((a) => a.setAttribute('aria-current', a.hash === '#' + e.target.id));
+    $('cats').querySelector('[aria-current="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }), { rootMargin: '-130px 0px -65% 0px' });
+  document.querySelectorAll('main h2[id^="c"]').forEach((h) => obs.observe(h));
+}
+$('q').addEventListener('input', () => { render(); window.scrollTo({ top: $('main').offsetTop - 130 }); });
+$('main').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) abrirProducto(Number(b.dataset.p)); });
+
+// ---------- hoja de producto ----------
+let pd = null;
+function abrirProducto(id) {
+  const { p, i } = prods.get(id);
+  pd = { p, qty: 1, sel: [] };
   const pintar = () => {
-    $('agChips').innerHTML = M.agregados.filter((a) => a.disponible).map((a) => `<button class="chip ${sel.includes(a.id) ? 'on' : ''}" data-ag="${a.id}">${esc(a.nombre)}</button>`).join('');
-    $('agChips').querySelectorAll('[data-ag]').forEach((b) => b.onclick = () => {
+    const falta = p.incluye - pd.sel.length;
+    $('pdBody').innerHTML = `
+      <div class="sh-head" style="padding:14px 0 0;position:sticky;top:0;z-index:1;justify-content:flex-end;height:0"><button class="close" data-close aria-label="Cerrar" style="margin-top:44px">${ico('x')}</button></div>
+      ${art(i, 'sh-art')}
+      <h2 id="pdName" style="font:800 1.5rem/1.15 var(--font-display);margin:0">${esc(p.nombre)}</h2>
+      ${p.descripcion ? `<p class="pd-d">${esc(p.descripcion)}</p>` : ''}
+      <p class="num" style="font-weight:700;font-size:1.15rem;margin:8px 0 0">${clp(p.precio)}</p>
+      ${p.incluye ? `<div class="group"><div class="group-h"><h3>Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</h3>
+        <span class="req ${falta ? '' : 'done'}">${falta ? `Obligatorio · ${pd.sel.length}/${p.incluye}` : 'Listo'}</span></div>
+        <div class="opts">${M.agregados.filter((a) => a.disponible).map((a) => { const on = pd.sel.includes(a.id);
+          return `<button type="button" class="opt" data-ag="${a.id}" aria-pressed="${on}" ${!on && !falta ? 'disabled' : ''}>${on ? ico('check') : ''}${esc(a.nombre)}</button>`; }).join('')}</div></div>` : ''}`;
+    $('pdBody').querySelector('[data-close]').onclick = () => $('dlgProd').close();
+    $('pdBody').querySelectorAll('[data-ag]').forEach((b) => b.onclick = () => {
       const a = Number(b.dataset.ag);
-      if (sel.includes(a)) sel = sel.filter((x) => x !== a); else if (sel.length < p.incluye) sel.push(a);
+      pd.sel = pd.sel.includes(a) ? pd.sel.filter((x) => x !== a) : [...pd.sel, a];
       pintar();
     });
-    $('agOk').disabled = sel.length !== p.incluye;
-    $('agOk').textContent = `Agregar (${sel.length}/${p.incluye})`;
+    $('pdQty').textContent = pd.qty;
+    $('pdAdd').disabled = !!falta;
+    $('pdAdd').innerHTML = falta ? `Elige ${falta} más` : `Agregar <span class="num">${clp(p.precio * pd.qty)}</span>`;
   };
+  $('pdMenos').onclick = () => { pd.qty = Math.max(1, pd.qty - 1); pintar(); };
+  $('pdMas').onclick = () => { pd.qty = Math.min(20, pd.qty + 1); pintar(); };
+  $('pdAdd').onclick = () => { meter(p, pd.sel, pd.qty); $('dlgProd').close(); };
   pintar();
-  $('agOk').onclick = () => { meter(p, sel); $('dlgAg').close(); };
-  $('dlgAg').showModal();
+  $('dlgProd').showModal(); $('pdBody').scrollTop = 0;
 }
-function meter(p, ags) {
+function meter(p, ags, n) {
   const key = p.id + ':' + [...ags].sort().join(',');
   const ex = carro.find((i) => i.key === key);
-  if (ex) ex.cantidad++; else carro.push({ key, producto_id: p.id, agregados: ags, cantidad: 1 });
-  toast(`✓ ${p.nombre} agregado`);
+  if (ex) ex.cantidad += n; else carro.push({ key, producto_id: p.id, agregados: ags, cantidad: n });
+  toast(`${n > 1 ? n + ' × ' : ''}${p.nombre} agregado`);
+  navigator.vibrate?.(15);
   barra();
 }
-const total = () => carro.reduce((s, i) => s + producto(i.producto_id).precio * i.cantidad, 0);
+const total = () => carro.reduce((s, i) => s + prods.get(i.producto_id).p.precio * i.cantidad, 0);
 function barra() {
   const n = carro.reduce((s, i) => s + i.cantidad, 0);
-  $('vercarro').disabled = !n;
-  $('vercarro').textContent = n ? `Ver pedido (${n}) · ${clp(total())}` : 'Carro vacío';
-  document.querySelectorAll('[data-add]').forEach((b) => {
-    const q = carro.filter((i) => i.producto_id === Number(b.dataset.add)).reduce((s, i) => s + i.cantidad, 0);
-    b.textContent = q ? `Agregar (${q})` : 'Agregar'; b.classList.toggle('has', q > 0);
+  $('cartbtn').hidden = !n;
+  $('cartCount').textContent = n; $('cartTotal').textContent = clp(total());
+  document.querySelectorAll('[data-qb]').forEach((b) => {
+    const q = carro.filter((i) => i.producto_id === Number(b.dataset.qb)).reduce((s, i) => s + i.cantidad, 0);
+    b.hidden = !q; b.textContent = q;
   });
 }
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800); }
+
+// ---------- carro y envío ----------
 function pintarCarro() {
-  $('items').innerHTML = carro.map((i, idx) => {
-    const p = producto(i.producto_id);
+  $('lines').innerHTML = carro.map((i, idx) => {
+    const { p } = prods.get(i.producto_id);
     const ags = i.agregados.map((a) => M.agregados.find((x) => x.id === a)?.nombre).join(', ');
-    return `<div class="prod"><div><div class="n">${esc(p.nombre)}</div>${ags ? `<div class="d">${esc(ags)}</div>` : ''}<div class="d">${clp(p.precio)} c/u</div></div>
-      <div class="row qty"><button class="sec" data-q="${idx}" data-d="-1">−</button><b>${i.cantidad}</b><button class="sec" data-q="${idx}" data-d="1">+</button></div></div>`;
+    return `<div class="line"><div><div class="n">${esc(p.nombre)}</div>${ags ? `<div class="d">${esc(ags)}</div>` : ''}<div class="d num">${clp(p.precio * i.cantidad)}</div></div>
+      <div class="stepper"><button type="button" data-q="${idx}" data-d="-1" aria-label="Quitar uno de ${esc(p.nombre)}">${ico(i.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${i.cantidad}</span><button type="button" data-q="${idx}" data-d="1" aria-label="Agregar uno de ${esc(p.nombre)}">${ico('plus')}</button></div></div>`;
   }).join('');
-  $('items').querySelectorAll('[data-q]').forEach((b) => b.onclick = () => {
-    const i = carro[b.dataset.q]; i.cantidad += Number(b.dataset.d);
-    if (i.cantidad < 1) carro.splice(b.dataset.q, 1);
-    barra(); carro.length ? pintarCarro() : $('dlgCarro').close();
-  });
-  $('total').textContent = clp(total());
+  $('ckTotal').textContent = clp(total()); $('enviarTotal').textContent = clp(total());
 }
-$('vercarro').onclick = async () => {
-  pintarCarro(); $('err').textContent = '';
+$('lines').onclick = (e) => {
+  const b = e.target.closest('[data-q]'); if (!b) return;
+  const i = carro[b.dataset.q]; i.cantidad += Number(b.dataset.d);
+  if (i.cantidad < 1) carro.splice(b.dataset.q, 1);
+  barra(); carro.length ? pintarCarro() : $('dlgCarro').close();
+};
+$('cartbtn').onclick = async () => {
+  pintarCarro(); $('formErr').textContent = '';
   $('dlgCarro').showModal();
-  const f = await api(`locales/${slug}/franjas`);
-  const ops = [];
-  if (f.abierto) ops.push('<option>Lo antes posible</option>');
-  for (const s of f.slots) ops.push(`<option ${s.disponible ? '' : 'disabled'}>${s.franja}${s.disponible ? '' : ' (llena)'}</option>`);
-  $('franja').innerHTML = ops.join('') || '<option disabled selected>Sin franjas disponibles hoy</option>';
+  try {
+    const f = await api(`locales/${slug}/franjas`);
+    const ops = [];
+    if (f.abierto) ops.push('<option>Lo antes posible</option>');
+    for (const s of f.slots) ops.push(`<option ${s.disponible ? '' : 'disabled'} value="${s.franja}">${s.franja}${s.disponible ? '' : ' · completo'}</option>`);
+    $('franja').innerHTML = ops.join('') || '<option disabled selected value="">Sin horarios disponibles hoy</option>';
+  } catch { $('franja').innerHTML = '<option>Lo antes posible</option>'; }
 };
 document.querySelectorAll('[data-mod]').forEach((b) => b.onclick = () => {
   modalidad = b.dataset.mod;
-  document.querySelectorAll('[data-mod]').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-mod]').forEach((x) => x.setAttribute('aria-pressed', x === b));
   $('dirBox').hidden = modalidad !== 'despacho';
 });
+function validar() {
+  const errs = {
+    cliente: $('cliente').value.trim() ? '' : 'Escribe tu nombre para llamarte al entregar.',
+    telefono: $('telefono').value.replace(/\D/g, '').length >= 8 ? '' : 'Escribe un celular válido, ej. +56 9 1234 5678.',
+    direccion: modalidad === 'despacho' && !$('direccion').value.trim() ? 'Indica dónde despachamos.' : '',
+  };
+  for (const [k, v] of Object.entries(errs)) { $('e-' + k).textContent = v; $(k).setAttribute('aria-invalid', !!v); }
+  const first = Object.keys(errs).find((k) => errs[k]);
+  if (first) $(first).focus();
+  return !first;
+}
+for (const k of ['cliente', 'telefono', 'direccion']) $(k).addEventListener('blur', () => $(k).getAttribute('aria-invalid') === 'true' && validar());
 $('enviar').onclick = async () => {
-  $('enviar').disabled = true; $('err').textContent = '';
+  $('formErr').textContent = '';
+  if (!validar()) return;
+  $('enviar').disabled = true; $('enviar').firstElementChild.textContent = 'Enviando…';
   try {
     const r = await api(`locales/${slug}/pedidos`, { method: 'POST', body: {
       items: carro, franja: $('franja').value, modalidad, direccion: $('direccion').value,
       cliente: $('cliente').value, telefono: $('telefono').value, notas: $('notas').value,
     } });
     $('dlgCarro').close();
-    $('okTitulo').textContent = `Pedido #${r.numero} recibido`;
-    $('okTexto').textContent = `Total ${clp(r.total)} · ${r.franja}. Pagas al retirar o recibir. Guarda tu número de pedido.`;
+    $('okNum').textContent = `#${r.numero}`;
+    $('okTexto').textContent = `${r.franja === 'Lo antes posible' ? 'Lo preparamos lo antes posible' : 'Para ' + r.franja}. Total ${clp(r.total)}, pagas al ${modalidad === 'despacho' ? 'recibir' : 'retirar'}.`;
     const msg = encodeURIComponent(`Hola, hice el pedido #${r.numero} por ${clp(r.total)} (${r.franja}) a nombre de ${$('cliente').value}.`);
     $('okWa').hidden = !M.local.whatsapp;
-    $('okWa').href = `https://wa.me/${M.local.whatsapp.replace(/\D/g, '')}?text=${msg}`;
+    $('okWa').href = `https://wa.me/${(M.local.whatsapp || '').replace(/\D/g, '')}?text=${msg}`;
     $('dlgOk').showModal();
     carro = []; barra();
-  } catch (e) { $('err').textContent = e.message; }
-  $('enviar').disabled = false;
+  } catch (e) { $('formErr').textContent = e.message; }
+  $('enviar').disabled = false; $('enviar').firstElementChild.textContent = 'Enviar pedido';
 };
-cargar().catch((e) => { $('titulo').textContent = 'No se pudo cargar la carta'; console.error(e); });
+document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
+// Tocar fuera de la hoja la cierra.
+document.querySelectorAll('dialog.sheet').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+
+// ---------- inicio ----------
+try {
+  M = await api(`locales/${slug}`);
+  M.categorias.forEach((c, i) => c.productos.forEach((p) => prods.set(p.id, { p, i })));
+  document.title = `${M.local.nombre} · Pide en línea`;
+  $('nombre').textContent = M.local.nombre;
+  $('logo').textContent = M.local.nombre[0];
+  const st = estadoLocal(M.local.horario);
+  $('facts').innerHTML = `<span class="fact ${st.abierto ? 'abierto' : 'cerrado'}">${ico('clock')}${st.txt}</span>
+    <span class="fact">${ico('store')}Retiro sin fila</span>
+    ${M.local.instagram ? `<a class="fact" href="https://instagram.com/${esc(M.local.instagram)}" target="_blank" rel="noopener">${ico('insta')}@${esc(M.local.instagram)}</a>` : ''}`;
+  render();
+} catch (e) { $('nombre').textContent = 'No pudimos cargar la carta'; console.error(e); }
 </script>
 </body>
 </html>
