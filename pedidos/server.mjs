@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
   // Token de seguimiento: el cliente ve el estado de su pedido sin cuenta ni clave.
   if (!cols.has('token')) db.exec('ALTER TABLE pedidos ADD COLUMN token TEXT');
+  // Canal de venta: 'web' (carta pública) o 'mostrador' (venta rápida en el panel).
+  if (!cols.has('canal')) db.exec("ALTER TABLE pedidos ADD COLUMN canal TEXT NOT NULL DEFAULT 'web'");
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS pedidos_token ON pedidos(token)');
   for (const { id } of db.prepare('SELECT id FROM pedidos WHERE token IS NULL').all())
     db.prepare('UPDATE pedidos SET token=? WHERE id=?').run(crypto.randomBytes(16).toString('base64url'), id);
@@ -272,17 +274,24 @@ function crearPedido(local, body) {
   const direccion = modalidad === 'despacho' ? String(body.direccion || '').trim().slice(0, 200) : null;
   if (!nombre || tel.length < 8) return { error: 'Falta nombre o teléfono válido.' };
   if (modalidad === 'despacho' && !direccion) return { error: 'Falta la dirección de despacho.' };
-  if (!Array.isArray(body.items) || !body.items.length || body.items.length > 50) return { error: 'El carro está vacío.' };
-
   const f = franjas(local);
   const franja = body.franja === 'Lo antes posible' ? 'Lo antes posible' : String(body.franja || '');
   if (!f.abierto && franja === 'Lo antes posible') return { error: 'El local está cerrado; elige una franja.' };
   if (franja !== 'Lo antes posible' && !f.slots.some((s) => s.franja === franja && s.disponible)) return { error: 'Esa franja ya no está disponible.' };
 
+  const v = validarItems(local, body.items);
+  if (v.error) return v;
+  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: String(body.notas || '').slice(0, 300) || null, dia: f.dia }, v);
+}
+
+// Valida productos, cantidades y agregados contra la base y calcula el total.
+// El precio siempre sale de la base: lo que mande el cliente se ignora.
+function validarItems(local, lista) {
+  if (!Array.isArray(lista) || !lista.length || lista.length > 50) return { error: 'El carro está vacío.' };
   const agregadosOk = new Map(db.prepare('SELECT id, nombre FROM agregados WHERE local_id=? AND disponible=1').all(local.id).map((a) => [a.id, a.nombre]));
   const items = [];
   let total = 0;
-  for (const it of body.items) {
+  for (const it of lista) {
     const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(it.producto_id), local.id);
     if (!p || !p.activo) return { error: 'Un producto ya no está disponible. Recarga la carta.' };
     if (p.precio_pendiente || p.precio <= 0) return { error: `${p.nombre} no tiene precio; consúltalo en el local.` };
@@ -293,19 +302,24 @@ function crearPedido(local, body) {
     items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)) });
     total += p.precio * cant;
   }
+  return { items, total };
+}
 
+function guardarPedido(local, d, { items, total }) {
   db.exec('BEGIN IMMEDIATE');
   try {
-    const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, f.dia).n;
+    const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, d.dia).n;
     const token = crypto.randomBytes(16).toString('base64url');
     const { lastInsertRowid: pid } = db.prepare(
-      'INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado,token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
-    ).run(local.id, numero, nombre, tel, franja, modalidad, direccion, String(body.notas || '').slice(0, 300) || null, total, f.dia, Date.now(), token);
+      `INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado,token,canal,estado,pagado,medio_pago,recibido,cobrado_en,folio_boleta)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
+      d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), i.cant, i.p.precio);
     db.exec('COMMIT');
-    return { id: Number(pid), numero, total, franja, token };
+    return { id: Number(pid), numero, total, franja: d.franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
 }
 
@@ -391,6 +405,22 @@ async function api(req, res, url) {
       db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, actualizado=? WHERE id=?')
         .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, Date.now(), p.id);
       return send(res, 200, pedidoCompleto(p.id, lid));
+    }
+    // Venta de mostrador: se cobra al momento; opcionalmente pasa a cocina con comanda.
+    if (m === 'POST' && parts[1] === 'venta') {
+      const b = await readJson(req);
+      if (!MEDIOS.includes(b.medio_pago)) return send(res, 400, { error: 'Elige el medio de pago' });
+      const v = validarItems(local, b.items);
+      if (v.error) return send(res, 400, v);
+      const recibido = b.medio_pago === 'efectivo' ? Math.round(Number(b.recibido) || v.total) : v.total;
+      if (recibido < v.total) return send(res, 400, { error: 'El monto recibido es menor al total' });
+      const r = guardarPedido(local, {
+        cliente: String(b.cliente || '').trim().slice(0, 80) || 'Mostrador', telefono: '', franja: 'Mostrador', modalidad: 'retiro',
+        notas: String(b.notas || '').slice(0, 300) || null, dia: franjas(local).dia, canal: 'mostrador',
+        estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: b.medio_pago, recibido,
+        cobrado_en: new Date().toTimeString().slice(0, 5), folio: String(b.folio_boleta || '').replace(/\D/g, '').slice(0, 12) || null,
+      }, v);
+      return send(res, 201, { ...r, vuelto: recibido - v.total });
     }
     if (m === 'PATCH' && parts[1] === 'productos' && parts[2]) {
       const b = await readJson(req);

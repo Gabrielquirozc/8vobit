@@ -266,3 +266,38 @@ test('seguimiento: tokens inválidos o inventados no revelan nada', async () => 
   assert.equal((await req('GET', `/api/seguimiento/${'A'.repeat(22)}`)).status, 404);
   assert.equal((await req('GET', "/api/seguimiento/x' OR 1=1 --")).status, 404);
 });
+
+// ---------- venta de mostrador ----------
+test('mostrador: venta cobrada al momento, con vuelto, entra a la caja como canal mostrador', async () => {
+  await login();
+  const a = await prod('Italiano'), b = await prod('Barros Luco');
+  const total = a.precio * 2 + b.precio;
+  const r = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id, cantidad: 2 }, { producto_id: b.id }], medio_pago: 'efectivo', recibido: 20000 });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.total, total);
+  assert.equal(r.body.vuelto, 20000 - total);
+  const d = (await req('GET', '/api/panel/pedidos')).body;
+  const v = d.pedidos.find((p) => p.id === r.body.id);
+  assert.deepEqual([v.canal, v.estado, v.pagado, v.medio_pago, v.cliente], ['mostrador', 'entregado', 1, 'efectivo', 'Mostrador']);
+});
+
+test('mostrador: puede pasar a cocina, valida medio de pago, monto e ingredientes', async () => {
+  await login();
+  const a = await prod('Italiano'), m = await prod('Carne mechada + 2 ingr.');
+  const r = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'tarjeta', cocina: true, cliente: 'Juan' });
+  assert.equal(r.status, 201);
+  const v = (await req('GET', '/api/panel/pedidos')).body.pedidos.find((p) => p.id === r.body.id);
+  assert.deepEqual([v.estado, v.pagado, v.cliente], ['preparacion', 1, 'Juan']);
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }] })).status, 400);
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'efectivo', recibido: 100 })).status, 400);
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: m.id }], medio_pago: 'tarjeta' })).status, 400);
+  assert.equal((await req('POST', '/api/panel/venta', { items: [], medio_pago: 'tarjeta' })).status, 400);
+  cookie = '';
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'tarjeta' })).status, 401);
+});
+
+test('mostrador: ventas seguidas no chocan con el límite de pedidos web', async () => {
+  await login();
+  const a = await prod('Italiano');
+  for (let i = 0; i < 3; i++) assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'transferencia' })).status, 201);
+});

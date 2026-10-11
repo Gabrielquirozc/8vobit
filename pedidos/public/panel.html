@@ -3,117 +3,221 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
 <title>Panel · Pedidos</title>
-<link rel="stylesheet" href="estilo.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="carta.css">
 <style>
-  /* Pensado para una tablet en el ventanal: botones grandes, un paso por botón. */
-  body { background: #f4efe7; }
-  .bar { position: sticky; top: 0; z-index: 4; background: var(--fg); color: #fff; display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-wrap: wrap; }
-  .bar h1 { font-size: 1.1rem; margin: 0 8px 0 0; }
-  .bar .tab { background: transparent; color: #fff; border: 1px solid #fff4; padding: 8px 12px; }
-  .bar .tab.on { background: #fff; color: var(--fg); }
+  /* Panel para una tablet en el ventanal: mismos tokens que la carta, botones
+     grandes y un solo paso principal por pedido. */
+  body { background: var(--surface-2); }
+  .ico { width: 20px; height: 20px; }
+  .bar { position: sticky; top: 0; z-index: 10; background: #1f1a17; color: #fff; display: flex; align-items: center; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
+  .bar .marca { font: 800 1.15rem var(--font-display); margin-right: 8px; }
+  .tab { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; color: #f6efe6cc; font-weight: 600; }
+  .tab[aria-selected="true"] { background: #fff; color: #1f1a17; }
+  .tab .badge { background: var(--brand); color: #fff; border-radius: 999px; min-width: 22px; padding: 1px 7px; font-size: .78rem; }
   .bar .sp { flex: 1; }
-  .bar .kpi { font-size: .9rem; opacity: .85; }
-  .badge { background: var(--accent); color: #fff; border-radius: 999px; padding: 0 7px; margin-left: 4px; font-size: .8rem; }
-  main { padding: 12px; }
-  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: start; }
+  .bar .kpi { font-size: .9rem; color: #f6efe6cc; margin-right: 6px; }
+  .icobtn { width: 44px; height: 44px; border-radius: 999px; border: 0; background: #ffffff1a; color: #fff; display: grid; place-items: center; }
+  .icobtn[aria-pressed="true"] { background: var(--mustard); color: #1f1a17; }
+  main { padding: 14px; max-width: none; }
+  h2.t { font: 800 1.1rem var(--font-display); margin: 4px 4px 10px; display: flex; align-items: center; gap: 8px; }
+  h2.t .n { background: var(--surface); border-radius: 999px; padding: 0 9px; font: 600 .85rem var(--font-body); color: var(--ink-2); }
+
+  /* pedidos */
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
   @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
-  .col h2 { margin: 4px 4px 10px; font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-  .ped { background: #fff; border-radius: 14px; padding: 12px; margin-bottom: 10px; border: 2px solid transparent; box-shadow: 0 1px 2px #0001; }
-  .ped.nuevo { border-color: var(--accent); animation: pulso 1.6s ease-in-out 3; }
-  @keyframes pulso { 50% { box-shadow: 0 0 0 6px #ffd8a8; } }
-  .ped .num { font-size: 1.6rem; font-weight: 800; }
-  .ped .hora { font-weight: 700; }
-  .ped ul { margin: 8px 0; padding-left: 0; list-style: none; font-size: 1.02rem; }
-  .ped li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
-  .ped li .ag { display: block; color: var(--muted); font-size: .88rem; padding-left: 2.2ch; }
-  .ped .nota { background: #fff3bf; padding: 6px 8px; border-radius: 8px; margin: 6px 0; }
-  .ped .main { width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 6px; }
-  .ped .main.verde { background: var(--ok); }
-  .ped .mini { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .ped .mini a { flex: 1; display: flex; } .ped .mini a button { flex: 1; }
-  .ped .mini button, .ped .mini a { flex: 1; padding: 8px; font-size: .85rem; text-align: center; }
-  .tag { display: inline-block; font-size: .78rem; padding: 2px 8px; border-radius: 999px; background: #fff3bf; margin-right: 4px; }
-  .tag.ok { background: #d3f9d8; }
-  .vacio { color: var(--muted); text-align: center; padding: 30px 0; border: 2px dashed #0001; border-radius: 14px; }
-  /* Cobro */
-  .total-big { font-size: 2.4rem; font-weight: 800; text-align: center; margin: 4px 0 10px; }
+  .ped { background: var(--surface); border-radius: var(--r); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); border: 2px solid transparent; }
+  .ped.nuevo { border-color: var(--brand); animation: pulso 1.6s ease-in-out 3; }
+  @keyframes pulso { 50% { box-shadow: 0 0 0 6px var(--brand-soft); } }
+  .ped .cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .ped .numero { font: 800 1.9rem/1 var(--font-display); }
+  .ped .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip2 { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
+  .chip2 .ico { width: 14px; height: 14px; }
+  .chip2.ok { background: #e6f4e7; color: #1d5e21; } .chip2.warn { background: #fff3cd; color: #7a5200; } .chip2.mos { background: var(--brand-soft); color: var(--brand); }
+  .ped ul { list-style: none; padding: 0; margin: 10px 0; font-size: 1.02rem; }
+  .ped li { padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .ped li:last-child { border-bottom: 0; }
+  .ped li .ag { display: block; color: var(--ink-2); font-size: .88rem; padding-left: 2.4ch; }
+  .nota { display: flex; gap: 6px; background: #fff3cd; color: #5c4300; padding: 8px 10px; border-radius: var(--r-sm); margin: 6px 0; font-size: .92rem; }
+  .ped .pie { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  .ped .total { font-weight: 800; font-size: 1.1rem; }
+  .paso { width: 100%; min-height: 54px; margin-top: 10px; border: 0; border-radius: var(--r-sm); background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .paso.verde { background: var(--ok); color: #fff; }
+  .acc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .acc > * { min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: .8rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; }
+  .acc .ico { width: 18px; height: 18px; }
+  .acc .peligro { color: var(--danger); }
+  .vacio { color: var(--ink-2); text-align: center; padding: 28px 0; border: 2px dashed var(--line); border-radius: var(--r); }
+
+  /* venta rápida */
+  .venta { display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }
+  @media (max-width: 900px) {
+    .venta { grid-template-columns: 1fr; }
+    /* En tablet vertical la venta en curso queda fija abajo, siempre a la vista. */
+    .ticket { position: sticky; top: auto; bottom: 0; max-height: 45dvh; box-shadow: 0 -6px 24px rgb(31 26 23 / .12); }
+  }
+  .tile .ini { font: 800 2.2rem var(--font-display); color: var(--ink-2); opacity: .5; }
+  .cat-chips { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 10px; }
+  .cat-chips button { flex: none; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+  .cat-chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .tile { border: 0; padding: 0; background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); text-align: left; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .tile:active { transform: scale(.98); }
+  .tile .art { aspect-ratio: 4 / 3; border-radius: 0; }
+  .tile .t { padding: 8px 10px 10px; } .tile .n { font-weight: 700; font-size: .92rem; line-height: 1.25; } .tile .p { color: var(--ink-2); font-size: .88rem; }
+  .tile .q { position: absolute; top: 6px; right: 6px; background: var(--brand); color: #fff; border-radius: 999px; min-width: 26px; height: 26px; display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+  .ticket { position: sticky; top: 76px; background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); display: flex; flex-direction: column; max-height: calc(100dvh - 100px); }
+  .ticket h2 { margin: 0; padding: 14px 16px 6px; font: 800 1.1rem var(--font-display); }
+  .ticket .lines { overflow-y: auto; padding: 0 16px; flex: 1; min-height: 80px; }
+  .ticket .line { grid-template-columns: 1fr auto; }
+  .ticket .foot { padding: 12px 16px 16px; border-top: 1px solid var(--line); }
+  .ticket .tot { padding: 0 0 10px; }
+
+  /* cobro */
+  .total-big { font: 800 2.6rem var(--font-display); text-align: center; margin: 4px 0 12px; }
   .medios { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .medios button { padding: 16px; font-size: 1rem; background: #fff; color: var(--fg); border: 2px solid var(--line); }
-  .medios button.on { border-color: var(--fg); background: var(--fg); color: #fff; }
-  .rapidos { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-  .rapidos button { flex: 1; }
-  .vuelto { font-size: 1.4rem; font-weight: 700; text-align: center; margin: 10px 0; }
-  /* Cierre */
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
-  .kpis div { background: #fff; border-radius: 12px; padding: 12px; }
-  .kpis b { display: block; font-size: 1.5rem; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; }
-  td, th { padding: 9px; border-bottom: 1px solid var(--line); text-align: left; font-size: .93rem; }
-  td.r, th.r { text-align: right; }
-  td input[type=number] { width: 110px; }
-  .foto { width: 120px; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: #f1e8da; display: grid; place-items: center; color: var(--muted); font-size: .8rem; }
+  .medios button { min-height: 64px; border-radius: var(--r-sm); border: 2px solid var(--line); background: var(--surface); font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .medios button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+  .rapidos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .rapidos button { min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+  .vuelto { font: 800 1.5rem var(--font-display); text-align: center; margin: 12px 0 0; min-height: 1.5em; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); font-weight: 600; }
+  .switch input { width: 22px; height: 22px; accent-color: var(--brand); }
+
+  /* caja y carta */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpis div { background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); color: var(--ink-2); font-size: .9rem; }
+  .kpis b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+  td, th { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: .93rem; }
+  td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  h3 { font: 800 1.05rem var(--font-display); margin: 22px 0 8px; }
+  .foto { width: 112px; aspect-ratio: 4 / 3; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--ink-2); font-size: .8rem; }
   .foto img { width: 100%; height: 100%; object-fit: cover; }
-  .ghostbtn { display: inline-block; margin: 6px 0 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: .85rem; color: var(--fg); background: #fff; }
-  .linkbtn { background: none; color: var(--muted); padding: 6px; font-weight: 500; font-size: .85rem; }
-  #login { max-width: 360px; margin: 15vh auto; padding: 16px; }
-  @media print { .bar, .noprint { display: none !important; } body { background: #fff; } }
+  .mini-btn { display: inline-flex; align-items: center; min-height: 36px; margin-top: 6px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: .85rem; font-weight: 600; background: var(--surface); color: var(--ink); }
+  .link { background: none; border: 0; color: var(--ink-2); font-size: .85rem; padding: 6px; text-decoration: underline; }
+  td input[type=number] { width: 110px; min-height: 44px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
+  td label.ck { display: flex; align-items: center; gap: 8px; min-height: 44px; } td label.ck input { width: 20px; height: 20px; accent-color: var(--brand); }
+  #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+  #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
+  @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M8.7 3A6 6 0 0 1 18 8a21 21 0 0 0 .6 5M17 17H3s3-2 3-9a4.7 4.7 0 0 1 .3-2M10.3 21a1.9 1.9 0 0 0 3.4 0M2 2l20 20"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h3l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l9 5H3Z"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 16v-5M12 16V8M17 16v-8"/></symbol>
+  <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.7 7.1L3 21l1.9-6.3A8 8 0 1 1 21 12Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9 4.5 4h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z"/><path d="M5 12v8h14v-8M10 20v-5h4v5"/></symbol>
+  <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h2l3 11.5M5.5 17.5 9 10h7l-4.5 7.5"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+</svg>
+
 <section id="login" hidden>
   <h1>Panel del local</h1>
-  <label>Clave</label><input id="clave" type="password" autocomplete="current-password">
-  <div class="err" id="loginErr"></div>
-  <button id="entrar" style="width:100%">Entrar</button>
+  <div class="field"><label for="clave">Clave</label><input id="clave" type="password" autocomplete="current-password"></div>
+  <div class="formerr" id="loginErr" role="alert"></div>
+  <button class="primary" id="entrar" style="width:100%;margin-top:12px">Entrar</button>
 </section>
 
 <div id="app" hidden>
-  <div class="bar">
-    <h1 id="nomLocal">Pedidos</h1>
-    <button class="tab on" data-v="pedidos">Pedidos<span class="badge" id="bNuevos" hidden></span></button>
-    <button class="tab" data-v="cierre">Caja del día</button>
-    <button class="tab" data-v="carta">Carta y precios</button>
+  <header class="bar">
+    <span class="marca" id="nomLocal">Pedidos</span>
+    <nav role="tablist" aria-label="Secciones" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="tab" role="tab" data-v="pedidos" aria-selected="true"><svg class="ico"><use href="#i-list"/></svg>Pedidos<span class="badge" id="bNuevos" hidden></span></button>
+      <button class="tab" role="tab" data-v="venta" aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
+      <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
+      <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
+    </nav>
     <span class="sp"></span>
-    <span class="kpi" id="kpi"></span>
-    <button class="tab" id="sonido">🔕 Sonido</button>
-    <button class="tab" id="salir">Salir</button>
-  </div>
+    <span class="kpi num" id="kpi"></span>
+    <button class="icobtn" id="sonido" aria-pressed="false" aria-label="Activar sonido de pedidos nuevos" title="Sonido"><svg class="ico"><use href="#i-bell-off"/></svg></button>
+    <button class="icobtn" id="salir" aria-label="Salir" title="Salir"><svg class="ico"><use href="#i-out"/></svg></button>
+  </header>
   <main>
     <div id="v-pedidos" class="cols"></div>
+    <div id="v-venta" class="venta" hidden>
+      <section>
+        <label class="search" style="margin-bottom:10px"><svg class="ico"><use href="#i-search"/></svg><span class="sr">Buscar producto</span><input id="vq" type="search" placeholder="Buscar producto…" autocomplete="off"></label>
+        <div class="cat-chips" id="vcats"></div>
+        <div class="tiles" id="vtiles"></div>
+      </section>
+      <aside class="ticket" aria-label="Venta en curso">
+        <h2>Venta en curso</h2>
+        <div class="lines" id="vlines"></div>
+        <div class="foot">
+          <div class="tot"><span>Total</span><span class="num" id="vtotal">$0</span></div>
+          <div style="display:flex;gap:8px"><button class="ghost" id="vlimpiar" disabled>Limpiar</button><button class="primary" id="vcobrar" disabled>Cobrar</button></div>
+        </div>
+      </aside>
+    </div>
     <div id="v-cierre" hidden></div>
     <div id="v-carta" hidden></div>
   </main>
 </div>
 
-<dialog id="dlgCobro"><div class="in">
-  <div class="between"><h3 id="cobTitulo"></h3><button class="sec" data-close>Cerrar</button></div>
-  <div class="total-big" id="cobTotal"></div>
-  <div class="medios">
-    <button data-medio="efectivo">💵 Efectivo</button>
-    <button data-medio="transferencia">🏦 Transferencia</button>
-    <button data-medio="tarjeta">💳 Tarjeta (POS)</button>
-    <button data-medio="otro">Otro</button>
+<dialog class="sheet" id="dlgCobro" aria-labelledby="cobTitulo">
+  <div class="sh-head"><h2 id="cobTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body">
+    <div class="total-big num" id="cobTotal"></div>
+    <div class="medios" role="group" aria-label="Medio de pago">
+      <button type="button" data-medio="efectivo" aria-pressed="false"><svg class="ico"><use href="#i-cash"/></svg>Efectivo</button>
+      <button type="button" data-medio="tarjeta" aria-pressed="false"><svg class="ico"><use href="#i-card"/></svg>Tarjeta (POS)</button>
+      <button type="button" data-medio="transferencia" aria-pressed="false"><svg class="ico"><use href="#i-bank"/></svg>Transferencia</button>
+      <button type="button" data-medio="otro" aria-pressed="false"><svg class="ico"><use href="#i-dots"/></svg>Otro</button>
+    </div>
+    <div id="efBox" hidden>
+      <div class="field"><label for="recibido">Recibido</label><input id="recibido" type="number" inputmode="numeric" min="0" step="100"></div>
+      <div class="rapidos" id="rapidos"></div>
+      <div class="vuelto num" id="vuelto" aria-live="polite"></div>
+    </div>
+    <div id="ventaBox" hidden>
+      <label class="switch"><span>Enviar a cocina con comanda</span><input type="checkbox" id="cocina" checked></label>
+      <div class="field"><label for="vcliente">Nombre para llamar <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><input id="vcliente" autocomplete="off"></div>
+    </div>
+    <div class="field" id="folioBox" hidden><label for="folio">Folio de boleta (e-Boleta SII) <span style="font-weight:400;color:var(--ink-2)">· se puede registrar después</span></label><input id="folio" inputmode="numeric" placeholder="Ej. 1234"></div>
+    <div class="formerr" id="cobErr" role="alert"></div>
   </div>
-  <div id="efBox" hidden>
-    <label>Recibido</label><input id="recibido" type="number" inputmode="numeric" min="0" step="100">
-    <div class="rapidos" id="rapidos"></div>
-    <div class="vuelto" id="vuelto"></div>
-  </div>
-  <div id="folioBox" hidden>
-    <label>Folio de boleta (e-Boleta SII) — puedes registrarlo después</label>
-    <input id="folio" inputmode="numeric" placeholder="Ej. 1234">
-  </div>
-  <div class="err" id="cobErr"></div>
-  <button id="cobOk" class="main" style="width:100%;padding:16px;font-size:1.1rem" disabled>Cobrar y entregar</button>
-</div></dialog>
+  <div class="sh-foot"><button class="primary" id="cobOk" disabled></button></div>
+</dialog>
+
+<dialog class="sheet" id="dlgAg" aria-labelledby="agTitulo">
+  <div class="sh-head"><h2 id="agTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body"><div class="group-h"><h3 style="margin:0" id="agAyuda"></h3><span class="req" id="agReq"></span></div><div class="opts" id="agOpts"></div></div>
+  <div class="sh-foot"><button class="primary" id="agOk" disabled>Agregar</button></div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
 import { api, clp, esc, BASE } from './comun.js';
 const $ = (id) => document.getElementById(id);
+const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
-let D = null, conocidos = null, audio = null, vista = 'pedidos';
-const MEDIO = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
+let D = null, M = null, conocidos = null, audio = null, vista = 'pedidos';
+const MEDIO = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', otro: 'Otro' };
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
 
 // ---------- sonido ----------
 function beep() {
@@ -125,41 +229,50 @@ function beep() {
     o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .4);
   }
 }
-$('sonido').onclick = () => { audio = audio || new AudioContext(); audio.resume(); beep(); $('sonido').textContent = '🔔 Sonido'; };
+$('sonido').onclick = () => {
+  audio = audio || new AudioContext(); audio.resume(); beep();
+  $('sonido').setAttribute('aria-pressed', 'true'); $('sonido').innerHTML = ico('bell'); $('sonido').setAttribute('aria-label', 'Sonido activo');
+};
 
 // ---------- pedidos ----------
 const wa = (p, txt) => `https://wa.me/${p.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(txt)}`;
 function tarjeta(p) {
   const pasos = {
-    nuevo: `<button class="main" data-acc="aceptar" data-id="${p.id}">Aceptar e imprimir comanda</button>`,
-    preparacion: `<button class="main" data-acc="listo" data-id="${p.id}">Listo para entregar</button>`,
+    nuevo: `<button class="paso" data-acc="aceptar" data-id="${p.id}">${ico('printer')}Aceptar e imprimir comanda</button>`,
+    preparacion: `<button class="paso" data-acc="listo" data-id="${p.id}">${ico('check')}Listo para entregar</button>`,
     listo: p.pagado
-      ? `<button class="main verde" data-acc="entregar" data-id="${p.id}">Entregar (ya pagado)</button>`
-      : `<button class="main verde" data-acc="cobrar" data-id="${p.id}">Cobrar ${clp(p.total)}</button>`,
+      ? `<button class="paso verde" data-acc="entregar" data-id="${p.id}">${ico('check')}Entregar (ya pagado)</button>`
+      : `<button class="paso verde" data-acc="cobrar" data-id="${p.id}">${ico('cash')}Cobrar ${clp(p.total)}</button>`,
   };
-  const avisoListo = p.modalidad === 'despacho'
-    ? `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} va en camino. Total ${clp(p.total)}.`
-    : `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} está listo para retirar. Total ${clp(p.total)}.`;
-  return `<div class="ped ${p.estado === 'nuevo' ? 'nuevo' : ''}">
-    <div class="between"><span class="num">#${p.numero}</span><span class="hora">${p.franja === 'Lo antes posible' ? 'Lo antes posible' : '🕒 ' + esc(p.franja)}</span></div>
-    <div class="between"><span>${esc(p.cliente)}</span><span>${p.modalidad === 'despacho' ? '🛵 Despacho' : '🏪 Retiro'}</span></div>
-    ${p.direccion ? `<div class="muted">${esc(p.direccion)}</div>` : ''}
+  const seg = `${location.origin}${BASE}/seguimiento?p=${p.token}`;
+  const msg = p.estado === 'listo'
+    ? (p.modalidad === 'despacho' ? `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} va en camino. Total ${clp(p.total)}.` : `Hola ${p.cliente}, tu pedido #${p.numero} de ${D.local} está listo para retirar. Total ${clp(p.total)}.`)
+    : `Hola ${p.cliente}, recibimos tu pedido #${p.numero} en ${D.local}. Puedes ver cómo va aquí: ${seg}`;
+  const mostrador = p.canal === 'mostrador';
+  return `<article class="ped ${p.estado === 'nuevo' ? 'nuevo' : ''}" aria-label="Pedido ${p.numero}">
+    <div class="cab"><span class="numero">#${p.numero}</span><span style="text-align:right"><b>${esc(p.cliente)}</b><br><span style="color:var(--ink-2);font-size:.85rem">${p.creado.slice(11, 16)}</span></span></div>
+    <div class="meta">
+      ${mostrador ? `<span class="chip2 mos">${ico('store')}Mostrador</span>` : `<span class="chip2">${ico(p.modalidad === 'despacho' ? 'bike' : 'store')}${p.modalidad === 'despacho' ? 'Despacho' : 'Retiro'}</span>`}
+      ${mostrador ? '' : `<span class="chip2">${ico('clock')}${p.franja === 'Lo antes posible' ? 'Lo antes posible' : esc(p.franja)}</span>`}
+      ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : `<span class="chip2 warn">Por cobrar</span>`}
+    </div>
+    ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}</div>` : ''}
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}</li>`).join('')}</ul>
-    ${p.notas ? `<div class="nota">📝 ${esc(p.notas)}</div>` : ''}
-    <div class="between"><span>${p.pagado ? '<span class="tag ok">Pagado</span>' : '<span class="tag">Por cobrar</span>'}</span><b>${clp(p.total)}</b></div>
+    ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
+    <div class="pie"><span></span><span class="total num">${clp(p.total)}</span></div>
     ${pasos[p.estado] || ''}
-    <div class="mini">
-      <a class="sec" href="${wa(p, p.estado === 'listo' ? avisoListo : `Hola ${p.cliente}, recibimos tu pedido #${p.numero} en ${D.local}. Puedes ver cómo va aquí: ${location.origin}${BASE}/seguimiento?p=${p.token}`)}" target="_blank" rel="noopener"><button class="sec" style="width:100%">WhatsApp</button></a>
-      <button class="sec" data-acc="comanda" data-id="${p.id}">Comanda</button>
-      ${!p.pagado ? `<button class="sec" data-acc="pagado" data-id="${p.id}">Ya pagó</button>` : ''}
-      <button class="sec" data-acc="anular" data-id="${p.id}">Anular</button>
-    </div></div>`;
+    <div class="acc">
+      ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
+      <button data-acc="comanda" data-id="${p.id}">${ico('printer')}Comanda</button>
+      ${!p.pagado ? `<button data-acc="pagado" data-id="${p.id}">${ico('cash')}Ya pagó</button>` : '<span aria-hidden="true" style="border:0"></span>'}
+      <button class="peligro" data-acc="anular" data-id="${p.id}">${ico('ban')}Anular</button>
+    </div></article>`;
 }
 function pintarPedidos() {
   const cols = [['nuevo', 'Nuevos'], ['preparacion', 'En cocina'], ['listo', 'Listos para entregar']];
   $('v-pedidos').innerHTML = cols.map(([k, t]) => {
     const ps = D.pedidos.filter((p) => p.estado === k);
-    return `<section class="col"><h2>${t} (${ps.length})</h2>${ps.map(tarjeta).join('') || '<div class="vacio">Nada por aquí</div>'}</section>`;
+    return `<section><h2 class="t">${t}<span class="n num">${ps.length}</span></h2>${ps.map(tarjeta).join('') || '<div class="vacio">Nada por aquí</div>'}</section>`;
   }).join('');
 }
 async function refrescar() {
@@ -167,12 +280,13 @@ async function refrescar() {
   $('nomLocal').textContent = D.local;
   const nuevos = D.pedidos.filter((p) => p.estado === 'nuevo').length;
   $('bNuevos').hidden = !nuevos; $('bNuevos').textContent = nuevos;
-  const cobrados = D.pedidos.filter((p) => p.estado === 'entregado');
-  $('kpi').textContent = `Hoy: ${cobrados.length} entregados · ${clp(cobrados.reduce((s, p) => s + p.total, 0))}`;
+  const cobrado = D.pedidos.filter((p) => p.pagado && p.estado !== 'anulado');
+  $('kpi').textContent = `Hoy ${clp(cobrado.reduce((s, p) => s + p.total, 0))} · ${cobrado.length} ${cobrado.length === 1 ? 'venta' : 'ventas'}`;
   const ids = new Set(D.pedidos.map((p) => p.id));
-  if (conocidos && [...ids].some((id) => !conocidos.has(id))) beep();
+  // Solo suenan los pedidos web nuevos, no las ventas que hace el propio local.
+  if (conocidos && D.pedidos.some((p) => !conocidos.has(p.id) && p.canal !== 'mostrador')) beep();
   conocidos = ids;
-  if (vista === 'pedidos' && !$('dlgCobro').open) pintarPedidos();
+  if (vista === 'pedidos' && !document.querySelector('dialog[open]')) pintarPedidos();
   if (vista === 'cierre') pintarCierre();
 }
 const patch = (id, body) => api(`panel/pedidos/${id}`, { method: 'PATCH', body });
@@ -185,87 +299,159 @@ $('v-pedidos').onclick = async (e) => {
     switch (b.dataset.acc) {
       case 'aceptar': comanda(id); await patch(id, { estado: 'preparacion' }); break;
       case 'listo': await patch(id, { estado: 'listo' }); break;
-      case 'entregar': await patch(id, { estado: 'entregado' }); break;
-      case 'cobrar': return abrirCobro(p);
+      case 'entregar': await patch(id, { estado: 'entregado' }); toast(`Pedido #${p.numero} entregado`); break;
+      case 'cobrar': return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Cobrar y entregar', enviar: (b) => patch(id, { ...b, estado: 'entregado' }) });
       case 'comanda': comanda(id); break;
-      case 'pagado': return abrirCobro(p, true);
+      case 'pagado': return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Registrar pago', enviar: (b) => patch(id, b) });
       case 'anular': if (confirm(`¿Anular el pedido #${p.numero}?`)) await patch(id, { estado: 'anulado' }); break;
     }
     await refrescar();
   } catch (err) { alert(err.message); } finally { b.disabled = false; }
 };
 
-// ---------- cobro ----------
+// ---------- cobro (pedidos y venta rápida) ----------
 let cobro = null;
-function abrirCobro(p, soloPago = false) {
-  cobro = { p, medio: null, soloPago };
-  $('cobTitulo').textContent = `Pedido #${p.numero} · ${p.cliente}`;
-  $('cobTotal').textContent = clp(p.total);
-  $('cobOk').textContent = soloPago ? 'Registrar pago' : 'Cobrar y entregar';
-  document.querySelectorAll('[data-medio]').forEach((x) => x.classList.remove('on'));
-  $('efBox').hidden = true; $('folioBox').hidden = D.modo_boleta !== 2;
-  $('folio').value = p.folio_boleta || ''; $('recibido').value = ''; $('cobErr').textContent = '';
-  const billetes = [p.total, ...[1000, 2000, 5000, 10000, 20000].map((b) => Math.ceil(p.total / b) * b)];
-  $('rapidos').innerHTML = [...new Set(billetes)].slice(0, 4).map((v) => `<button class="sec" data-r="${v}">${v === p.total ? 'Justo' : clp(v)}</button>`).join('');
+function abrirCobro(c) {
+  cobro = { ...c, medio: null };
+  $('cobTitulo').textContent = c.titulo;
+  $('cobTotal').textContent = clp(c.total);
+  $('cobOk').textContent = c.boton;
+  document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+  $('efBox').hidden = true; $('folioBox').hidden = D.modo_boleta !== 2; $('ventaBox').hidden = !c.venta;
+  $('folio').value = c.folio || ''; $('recibido').value = ''; $('cobErr').textContent = ''; $('vuelto').textContent = '';
+  const billetes = [c.total, ...[1000, 2000, 5000, 10000, 20000].map((b) => Math.ceil(c.total / b) * b)];
+  $('rapidos').innerHTML = [...new Set(billetes)].slice(0, 4).map((v) => `<button type="button" data-r="${v}">${v === c.total ? 'Justo' : clp(v)}</button>`).join('');
   $('cobOk').disabled = true;
   $('dlgCobro').showModal();
 }
 document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
   cobro.medio = b.dataset.medio;
-  document.querySelectorAll('[data-medio]').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', x === b));
   $('efBox').hidden = cobro.medio !== 'efectivo';
+  if (cobro.medio === 'efectivo') $('recibido').focus();
   calcVuelto();
 });
 $('rapidos').onclick = (e) => { const r = e.target.closest('[data-r]'); if (r) { $('recibido').value = r.dataset.r; calcVuelto(); } };
 $('recibido').oninput = calcVuelto;
 function calcVuelto() {
   const ef = cobro.medio === 'efectivo', rec = Number($('recibido').value);
-  const falta = ef && rec < cobro.p.total;
-  $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(cobro.p.total - rec)}` : `Vuelto: ${clp(rec - cobro.p.total)}`;
-  $('cobOk').disabled = !cobro.medio || falta;
+  const falta = ef && rec < cobro.total;
+  $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(cobro.total - rec)}` : `Vuelto ${clp(rec - cobro.total)}`;
+  $('cobOk').disabled = !cobro.medio || (ef && (!rec || falta));
 }
 $('cobOk').onclick = async () => {
   $('cobOk').disabled = true;
   try {
     const body = { medio_pago: cobro.medio, recibido: Number($('recibido').value) || undefined };
-    if (!cobro.soloPago) body.estado = 'entregado';
     if (D.modo_boleta === 2 && $('folio').value.trim()) body.folio_boleta = $('folio').value;
-    await patch(cobro.p.id, body);
-    $('dlgCobro').close(); await refrescar();
+    const r = await cobro.enviar(body);
+    $('dlgCobro').close();
+    const vuelto = cobro.medio === 'efectivo' ? Number($('recibido').value) - cobro.total : 0;
+    toast(vuelto > 0 ? `Cobrado ${clp(cobro.total)} · vuelto ${clp(vuelto)}` : `Cobrado ${clp(cobro.total)}`);
+    await refrescar();
   } catch (err) { $('cobErr').textContent = err.message; $('cobOk').disabled = false; }
+};
+
+// ---------- venta rápida ----------
+let ticket = [], vcat = null;
+const prods = () => M.categorias.flatMap((c, i) => c.productos.map((p) => ({ ...p, cat: c, ci: i })));
+const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
+const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+async function cargarCarta() { M = await api('panel/carta'); }
+function pintarVenta() {
+  const cats = M.categorias.filter((c) => c.productos.some(vendible));
+  if (!vcat || !cats.some((c) => c.id === vcat)) vcat = cats[0]?.id;
+  const q = norm($('vq').value.trim());
+  $('vcats').innerHTML = cats.map((c) => `<button type="button" data-cat="${c.id}" aria-pressed="${!q && c.id === vcat}">${esc(c.nombre)}</button>`).join('');
+  const lista = prods().filter((p) => vendible(p) && (q ? norm(p.nombre).includes(q) : p.cat.id === vcat));
+  $('vtiles').innerHTML = lista.map((p) => {
+    const n = ticket.filter((t) => t.p.id === p.id).reduce((s, t) => s + t.cantidad, 0);
+    return `<button class="tile" data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
+      ${p.imagen ? `<div class="art"><img src="${esc(p.imagen)}" alt="" loading="lazy"></div>` : `<div class="art c${p.ci % 4}"><span class="ini" aria-hidden="true">${esc(p.nombre[0])}</span></div>`}
+      ${n ? `<span class="q num">${n}</span>` : ''}
+      <span class="t"><span class="n">${esc(p.nombre)}</span><br><span class="p num">${clp(p.precio)}</span>${p.incluye ? ` · <span class="p">+${p.incluye} ingr.</span>` : ''}</span></button>`;
+  }).join('') || '<p class="vacio">No hay productos con ese nombre.</p>';
+  const total = ticket.reduce((s, t) => s + t.p.precio * t.cantidad, 0);
+  $('vlines').innerHTML = ticket.length ? ticket.map((t, i) => `<div class="line"><div><div class="n">${esc(t.p.nombre)}</div>${t.ags.length ? `<div class="d">${esc(t.ags.map((a) => a.nombre).join(', '))}</div>` : ''}<div class="d num">${clp(t.p.precio * t.cantidad)}</div></div>
+    <div class="stepper"><button type="button" data-l="${i}" data-d="-1" aria-label="Quitar uno">${ico(t.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${t.cantidad}</span><button type="button" data-l="${i}" data-d="1" aria-label="Agregar uno">${ico('plus')}</button></div></div>`).join('')
+    : '<p style="color:var(--ink-2);text-align:center;padding:24px 0">Toca un producto para agregarlo.</p>';
+  $('vtotal').textContent = clp(total);
+  $('vcobrar').disabled = $('vlimpiar').disabled = !ticket.length;
+  $('vcobrar').textContent = ticket.length ? `Cobrar ${clp(total)}` : 'Cobrar';
+}
+function sumar(p, ags) {
+  const key = p.id + ':' + ags.map((a) => a.id).sort().join(',');
+  const ex = ticket.find((t) => t.key === key);
+  if (ex) ex.cantidad++; else ticket.push({ key, p, ags, cantidad: 1 });
+  pintarVenta();
+}
+$('vtiles').onclick = (e) => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  const p = prods().find((x) => x.id === Number(b.dataset.p));
+  if (!p.incluye) return sumar(p, []);
+  let sel = [];
+  $('agTitulo').textContent = p.nombre;
+  $('agAyuda').textContent = `Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}`;
+  const pintar = () => {
+    const falta = p.incluye - sel.length;
+    $('agReq').textContent = falta ? `${sel.length}/${p.incluye}` : 'Listo'; $('agReq').classList.toggle('done', !falta);
+    $('agOpts').innerHTML = M.agregados.filter((a) => a.disponible).map((a) => { const on = sel.some((s) => s.id === a.id);
+      return `<button type="button" class="opt" data-ag="${a.id}" aria-pressed="${on}" ${!on && !falta ? 'disabled' : ''}>${on ? ico('check') : ''}${esc(a.nombre)}</button>`; }).join('');
+    $('agOk').disabled = !!falta;
+  };
+  $('agOpts').onclick = (ev) => { const o = ev.target.closest('[data-ag]'); if (!o) return; const a = M.agregados.find((x) => x.id === Number(o.dataset.ag));
+    sel = sel.some((s) => s.id === a.id) ? sel.filter((s) => s.id !== a.id) : [...sel, a]; pintar(); };
+  $('agOk').onclick = () => { sumar(p, sel); $('dlgAg').close(); };
+  pintar(); $('dlgAg').showModal();
+};
+$('vlines').onclick = (e) => { const b = e.target.closest('[data-l]'); if (!b) return; const t = ticket[b.dataset.l]; t.cantidad += Number(b.dataset.d); if (t.cantidad < 1) ticket.splice(b.dataset.l, 1); pintarVenta(); };
+$('vcats').onclick = (e) => { const b = e.target.closest('[data-cat]'); if (b) { vcat = Number(b.dataset.cat); $('vq').value = ''; pintarVenta(); } };
+$('vq').oninput = pintarVenta;
+$('vlimpiar').onclick = () => { if (confirm('¿Vaciar la venta en curso?')) { ticket = []; pintarVenta(); } };
+$('vcobrar').onclick = () => {
+  const total = ticket.reduce((s, t) => s + t.p.precio * t.cantidad, 0);
+  $('vcliente').value = ''; $('cocina').checked = true;
+  abrirCobro({ titulo: 'Venta de mostrador', total, venta: true, boton: 'Cobrar', enviar: async (b) => {
+    const r = await api('panel/venta', { method: 'POST', body: { ...b, cocina: $('cocina').checked, cliente: $('vcliente').value,
+      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id) })) } });
+    conocidos?.add(r.id);
+    if ($('cocina').checked) comanda(r.id);
+    ticket = []; pintarVenta();
+    return r;
+  } });
 };
 
 // ---------- caja del día ----------
 function pintarCierre() {
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
-  const cobrados = ok.filter((p) => p.pagado);
-  const porCobrar = ok.filter((p) => !p.pagado);
-  const total = cobrados.reduce((s, p) => s + p.total, 0);
-  const porMedio = Object.keys(MEDIO).map((m) => {
-    const ps = cobrados.filter((p) => p.medio_pago === m);
-    return [m, ps.length, ps.reduce((s, p) => s + p.total, 0)];
-  });
+  const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado);
+  const suma = (l) => l.reduce((s, p) => s + p.total, 0), total = suma(cobrados);
+  const porMedio = Object.keys(MEDIO).map((m) => { const ps = cobrados.filter((p) => p.medio_pago === m); return [MEDIO[m], ps.length, suma(ps)]; });
+  const porCanal = [['Pedidos web', 'web'], ['Mostrador', 'mostrador']].map(([n, k]) => { const ps = cobrados.filter((p) => (p.canal || 'web') === k); return [n, ps.length, suma(ps)]; });
+  const efectivo = cobrados.filter((p) => p.medio_pago === 'efectivo');
   const sinFolio = cobrados.filter((p) => !p.folio_boleta);
+  const tabla = (filas) => `<table><tr><th></th><th class="r">Ventas</th><th class="r">Monto</th></tr>${filas.map(([n, c, s]) => `<tr><td>${n}</td><td class="r">${c}</td><td class="r">${clp(s)}</td></tr>`).join('')}<tr><th>Total</th><th class="r">${cobrados.length}</th><th class="r">${clp(total)}</th></tr></table>`;
   $('v-cierre').innerHTML = `
-    <div class="between noprint"><h2>Caja del ${esc(D.dia)}</h2><button class="sec" data-print>Imprimir cierre</button></div>
+    <div class="between noprint" style="display:flex;justify-content:space-between;align-items:center"><h2 class="t">Caja del ${esc(D.dia)}</h2><button class="ghost" data-print style="display:inline-flex;align-items:center;gap:6px">${ico('printer')}Imprimir cierre</button></div>
     <div class="kpis">
-      <div>Cobrado<b>${clp(total)}</b></div>
-      <div>Pedidos cobrados<b>${cobrados.length}</b></div>
-      <div>Ticket promedio<b>${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
-      <div>Por cobrar<b>${clp(porCobrar.reduce((s, p) => s + p.total, 0))}</b></div>
-      <div>Anulados<b>${D.pedidos.length - ok.length}</b></div>
+      <div>Cobrado<b class="num">${clp(total)}</b></div>
+      <div>Efectivo en caja<b class="num">${clp(suma(efectivo))}</b></div>
+      <div>Ventas<b class="num">${cobrados.length}</b></div>
+      <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
+      <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b></div>
+      <div>Anulados<b class="num">${D.pedidos.length - ok.length}</b></div>
     </div>
-    <h3>Por medio de pago</h3>
-    <table><tr><th>Medio</th><th class="r">Pedidos</th><th class="r">Monto</th></tr>
-    ${porMedio.map(([m, n, s]) => `<tr><td>${MEDIO[m]}</td><td class="r">${n}</td><td class="r">${clp(s)}</td></tr>`).join('')}
-    <tr><th>Total</th><th class="r">${cobrados.length}</th><th class="r">${clp(total)}</th></tr></table>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+      <div><h3>Por medio de pago</h3>${tabla(porMedio)}</div>
+      <div><h3>Por canal</h3>${tabla(porCanal)}</div>
+    </div>
     ${D.modo_boleta === 2 ? `<h3>Boletas por emitir (${sinFolio.length})</h3>
       ${sinFolio.length ? `<table><tr><th>#</th><th>Cliente</th><th class="r">Monto</th><th class="noprint"></th></tr>${sinFolio.map((p) =>
-        `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td class="r">${clp(p.total)}</td><td class="r noprint"><button class="sec" data-folio="${p.id}">Registrar folio</button></td></tr>`).join('')}</table>`
-        : '<p class="muted">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
+        `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td class="r">${clp(p.total)}</td><td class="r noprint"><button class="mini-btn" data-folio="${p.id}">Registrar folio</button></td></tr>`).join('')}</table>`
+        : '<p style="color:var(--ink-2)">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
     <h3>Detalle</h3>
-    <table><tr><th>#</th><th>Hora</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
-    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:#999"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
+    <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
+    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
 }
 $('v-cierre').onclick = async (e) => {
@@ -276,23 +462,22 @@ $('v-cierre').onclick = async (e) => {
 
 // ---------- carta y precios ----------
 async function pintarCarta() {
-  const [M, h] = await Promise.all([api('panel/carta'), api('panel/historial')]);
-  $('v-carta').innerHTML = `<p class="muted">Los cambios se guardan solos y se ven al instante en la carta pública.</p>` +
+  const [, h] = await Promise.all([cargarCarta(), api('panel/historial')]);
+  $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a></p>` +
     M.categorias.map((c) => `<h3>${esc(c.nombre)}</h3><table>${c.productos.map((p) => `<tr>
-      <td style="width:136px"><div class="foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : '<span>Sin foto</span>'}</div>
-        <label class="ghostbtn">${p.imagen ? 'Cambiar' : 'Subir foto'}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
-        ${p.imagen ? `<button class="linkbtn" data-quitar="${p.id}">Quitar</button>` : ''}</td>
-      <td>${esc(p.nombre)}</td>
-      <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio"></td>
-      <td><label class="row"><input type="checkbox" style="width:auto" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
-      <td><label class="row"><input type="checkbox" style="width:auto" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
+      <td style="width:140px"><div class="foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : '<span>Sin foto</span>'}</div>
+        <label class="mini-btn">${p.imagen ? 'Cambiar' : 'Subir foto'}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
+        ${p.imagen ? `<button class="link" data-quitar="${p.id}">Quitar</button>` : ''}</td>
+      <td><b>${esc(p.nombre)}</b>${p.descripcion ? `<div style="color:var(--ink-2);font-size:.85rem">${esc(p.descripcion)}</div>` : ''}</td>
+      <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio" aria-label="Precio de ${esc(p.nombre)}"></td>
+      <td><label class="ck"><input type="checkbox" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
+      <td><label class="ck"><input type="checkbox" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
     </tr>`).join('')}</table>`).join('') +
-    `<h3>Ingredientes</h3><p class="muted">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="chips">${M.agregados.map((a) =>
-      `<label class="chip ${a.disponible ? 'on' : ''}"><input type="checkbox" hidden ${a.disponible ? 'checked' : ''} data-a="${a.id}">${esc(a.nombre)}</label>`).join('')}</div>
-    <p><a href="carta-imprimible" target="_blank"><button class="sec">Carta imprimible</button></a></p>
+    `<h3>Ingredientes</h3><p style="color:var(--ink-2)">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="opts">${M.agregados.map((a) =>
+      `<button type="button" class="opt" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ''}${esc(a.nombre)}</button>`).join('')}</div>
     <h3>Historial de precios</h3>` +
     (h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th class="r">Antes</th><th class="r">Ahora</th></tr>${h.map((r) =>
-      `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p class="muted">Aún no hay cambios de precio.</p>');
+      `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p style="color:var(--ink-2)">Aún no hay cambios de precio.</p>');
 }
 // Achica la foto en el navegador (4:3, 1000 px, WebP) antes de subirla: el
 // celular del dueño saca fotos de 4 MB y el servidor tiene poca memoria.
@@ -309,6 +494,13 @@ async function aWebp(file) {
   throw new Error('Este navegador no pudo convertir la foto. Prueba con Chrome.');
 }
 $('v-carta').onclick = async (e) => {
+  const a = e.target.closest('[data-a]');
+  if (a) {
+    const on = a.getAttribute('aria-pressed') !== 'true';
+    await api(`panel/agregados/${a.dataset.a}`, { method: 'PATCH', body: { disponible: on } });
+    a.setAttribute('aria-pressed', on); a.innerHTML = (on ? ico('check') : '') + esc(a.textContent);
+    return;
+  }
   const q = e.target.closest('[data-quitar]'); if (!q) return;
   if (!confirm('¿Quitar la foto de este producto?')) return;
   await fetch(`${BASE}/api/panel/productos/${q.dataset.quitar}/imagen`, { method: 'DELETE' }); pintarCarta();
@@ -324,8 +516,8 @@ $('v-carta').onchange = async (e) => {
     } catch (err) { alert(err.message); lbl.firstChild.textContent = 'Subir foto'; }
     return;
   }
+  if (!t.dataset.p) return;
   try {
-    if (t.dataset.a) { await api(`panel/agregados/${t.dataset.a}`, { method: 'PATCH', body: { disponible: t.checked } }); t.parentElement.classList.toggle('on', t.checked); return; }
     const v = t.type === 'checkbox' ? t.checked : Number(t.value);
     await api(`panel/productos/${t.dataset.p}`, { method: 'PATCH', body: { [t.dataset.f]: v } });
     t.style.outline = '2px solid var(--ok)'; setTimeout(() => t.style.outline = '', 800);
@@ -333,16 +525,19 @@ $('v-carta').onchange = async (e) => {
   } catch (err) { alert(err.message); }
 };
 
-document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => {
+// ---------- navegación ----------
+document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
-  document.querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('on', x === b));
-  for (const v of ['pedidos', 'cierre', 'carta']) $('v-' + v).hidden = v !== vista;
-  if (vista === 'carta') pintarCarta(); else refrescar();
+  document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
+  for (const v of ['pedidos', 'venta', 'cierre', 'carta']) $('v-' + v).hidden = v !== vista;
+  if (vista === 'carta') pintarCarta();
+  else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
+  else refrescar();
 });
 $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
 
 async function iniciar() {
-  try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; return; } throw e; }
+  try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
   $('app').hidden = false;
   setInterval(() => vista !== 'carta' && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }

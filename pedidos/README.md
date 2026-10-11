@@ -25,8 +25,17 @@ Cada pedido avanza con **un solo botón grande por paso**:
    tarjeta (POS propio del local) u otro; folio de boleta opcional. Cobrar = entregar.
    Si ya pagó antes (transferencia), *Ya pagó* registra el pago sin entregar.
 
-**Caja del día**: cobrado total, por medio de pago, ticket promedio, por cobrar,
-anulados, boletas por emitir (con registro de folio) y detalle imprimible.
+**Venta rápida** (mostrador): la carta en fichas con foto, ticket a la derecha
+(abajo en tablet vertical), cobro con vuelto y opción de mandarla a cocina con
+comanda y nombre para llamar. Así la caja cuadra con todo el negocio, no solo
+con los pedidos web.
+
+**Caja del día**: cobrado total, efectivo en caja, por medio de pago, por canal
+(web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
+(con registro de folio) y detalle imprimible.
+
+**Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
+recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 
 ## Rutas
 
