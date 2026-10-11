@@ -18,6 +18,8 @@ const SLOT_MIN = 30;
 const LEAD_MIN = 20; // margen mínimo antes de la primera franja
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
+const IMG_DIR = path.join(DATA_DIR, 'img');
+fs.mkdirSync(IMG_DIR, { recursive: true });
 const db = new DatabaseSync(path.join(DATA_DIR, 'pedidos.db'));
 db.exec(`
 PRAGMA journal_mode = WAL;
@@ -64,6 +66,15 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
 }
 
+// Las fotos del seed (entregadas por el local) se copian al volumen de datos para
+// que se sirvan y reemplacen igual que las que se suben desde el panel.
+function seedImg(lid, file) {
+  if (!file) return null;
+  const nombre = `${lid}-seed-${path.basename(file)}`;
+  fs.copyFileSync(path.resolve(import.meta.dirname, 'seed/img', path.basename(file)), path.join(IMG_DIR, nombre));
+  return nombre;
+}
+
 function seed() {
   if (db.prepare('SELECT COUNT(*) n FROM locales').get().n) return;
   const s = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'seed/gassuso.json'), 'utf8'));
@@ -75,8 +86,8 @@ function seed() {
   s.categorias.forEach((c, ci) => {
     const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, c.nombre, ci);
     c.productos.forEach((p, pi) => db.prepare(
-      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado) VALUES (?,?,?,?,?,?,?,?,?)'
-    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0));
+      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado,imagen) VALUES (?,?,?,?,?,?,?,?,?,?)'
+    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0, seedImg(lid, p.imagen)));
   });
 }
 seed();
@@ -142,8 +153,6 @@ function send(res, code, body, headers = {}) {
 }
 // Fotos de productos: el navegador ya las entrega achicadas en WebP, así que el
 // servidor solo valida la firma del archivo y las guarda en el volumen de datos.
-const IMG_DIR = path.join(DATA_DIR, 'img');
-fs.mkdirSync(IMG_DIR, { recursive: true });
 const IMG_MAX = 600e3;
 async function readBytes(req, max) {
   const chunks = []; let n = 0;

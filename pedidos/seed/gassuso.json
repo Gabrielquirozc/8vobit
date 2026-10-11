@@ -60,7 +60,9 @@
       "productos": [
         {
           "nombre": "Pollo a la plancha",
-          "precio": 4990
+          "precio": 4990,
+          "desc": "Filetes de pechuga salteados al momento, en pan de fabricación propia",
+          "imagen": "pollo-a-la-plancha.webp"
         },
         {
           "nombre": "Cerdo a la plancha",
@@ -68,50 +70,70 @@
         },
         {
           "nombre": "Vacuno a la plancha",
-          "precio": 5990
+          "precio": 5990,
+          "desc": "Filetes de posta a la plancha, mayonesa de la casa",
+          "imagen": "vacuno-a-la-plancha.webp"
         },
         {
           "nombre": "Carne mechada + 2 ingr.",
           "precio": 6990,
-          "incluye": 2
+          "incluye": 2,
+          "desc": "Carne mechada de vacuno, mayonesa de la casa",
+          "imagen": "carne-mechada-2-ingr.webp"
         },
         {
           "nombre": "Burger casera + 2 ingr.",
           "precio": 5590,
-          "incluye": 2
+          "incluye": 2,
+          "desc": "Hamburguesa artesanal de vacuno de 150 g",
+          "imagen": "burger-casera-2-ingr.webp"
         },
         {
           "nombre": "Burger Gassuso",
-          "desc": "Tocino, queso, pepinillo, cebolla frita",
+          "desc": "Hamburguesa artesanal, tocino, queso fundido, cebolla frita y pepinillo",
           "precio": 7590,
-          "destacado": true
+          "destacado": true,
+          "imagen": "burger-gassuso.webp"
         },
         {
           "nombre": "Burger Vegeta + 2 ingr.",
           "precio": 4990,
-          "incluye": 2
+          "incluye": 2,
+          "desc": "Hamburguesa vegetariana artesanal de 200 g, mayonesa de la casa",
+          "imagen": "burger-vegeta-2-ingr.webp"
         },
         {
           "nombre": "Barros Luco",
-          "desc": "Vacuno, queso fundido",
+          "desc": "Filetes de posta a la plancha, queso fundido",
           "precio": 5790,
-          "destacado": true
+          "destacado": true,
+          "imagen": "barros-luco.webp"
         },
         {
           "nombre": "Chacarero",
-          "desc": "Vacuno, poroto verde, ají verde, tomate",
+          "desc": "Filetes de posta a la plancha, porotos verdes, ají verde, tomate",
           "precio": 6590,
-          "destacado": true
+          "destacado": true,
+          "imagen": "chacarero.webp"
         },
         {
           "nombre": "Luco Patrón",
-          "desc": "Vacuno, tomate, choclo, queso",
-          "precio": 6790
+          "desc": "Churrascos de posta, queso fundido, tomate, choclo",
+          "precio": 6790,
+          "imagen": "luco-patron.webp"
         },
         {
           "nombre": "Diplomático",
-          "desc": "Huevo frito y más (a confirmar)",
-          "precio": 5990
+          "desc": "Filetes de posta a la plancha, huevo frito, cebolla frita",
+          "precio": 5990,
+          "imagen": "diplomatico.webp"
+        },
+        {
+          "nombre": "Churrasco a lo pobre",
+          "desc": "Churrascos de vacuno, huevo frito, cebolla caramelizada y papas medianas",
+          "precio": 0,
+          "pendiente": true,
+          "imagen": "churrasco-a-lo-pobre.webp"
         },
         {
           "nombre": "Pollo + 1 ingr.",
@@ -132,41 +154,48 @@
       "productos": [
         {
           "nombre": "Italiano",
-          "desc": "Palta, tomate, mayonesa casera",
+          "desc": "Salchicha sureña ahumada, palta, tomate, mayonesa casera",
           "precio": 2890,
-          "destacado": true
+          "destacado": true,
+          "imagen": "italiano.webp"
         },
         {
           "nombre": "Alemán",
-          "desc": "Choucrut, tomate, mayonesa casera",
-          "precio": 2690
+          "desc": "Salchicha sureña ahumada, chucrut, tomate, mayonesa casera",
+          "precio": 2690,
+          "imagen": "aleman.webp"
         },
         {
           "nombre": "Campesino",
-          "desc": "Salsa verde, tomate, mayonesa casera",
-          "precio": 2790
+          "desc": "Salchicha sureña ahumada, salsa verde, tomate, mayonesa casera",
+          "precio": 2790,
+          "imagen": "campesino.webp"
         },
         {
           "nombre": "Dinámico",
-          "desc": "Palta, choucrut, tomate, mayonesa casera",
+          "desc": "Salchicha sureña ahumada, palta, chucrut, tomate, mayonesa casera",
           "precio": 2990,
-          "destacado": true
+          "destacado": true,
+          "imagen": "dinamico.webp"
         },
         {
           "nombre": "As mechada",
           "desc": "Carne mechada, palta, tomate, mayonesa casera",
-          "precio": 3890
+          "precio": 3890,
+          "imagen": "as-mechada.webp"
         },
         {
           "nombre": "Gassuso",
-          "desc": "Tocino, queso fundido, cebolla frita, champiñones",
-          "precio": 3890
+          "desc": "Salchicha ahumada, tocino, cebolla frita, queso fundido, champiñón",
+          "precio": 3890,
+          "imagen": "gassuso.webp"
         },
         {
           "nombre": "As Gassuso",
-          "desc": "Carne mechada, tocino, queso fundido, cebolla frita, champiñones",
+          "desc": "Carne mechada, cebolla caramelizada, champiñones salteados, queso fundido y tocino crispy",
           "precio": 4590,
-          "destacado": true
+          "destacado": true,
+          "imagen": "gassuso.webp"
         },
         {
           "nombre": "Coleslow/Dog",
@@ -187,6 +216,36 @@
           "nombre": "Champiluco",
           "desc": "Champiñones salteados, queso fundido, mayonesa casera",
           "precio": 3790
+        },
+        {
+          "nombre": "As mechada queso champiñón",
+          "desc": "Carne mechada, queso fundido, champiñones salteados",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "As mechada luco",
+          "desc": "Carne mechada, queso fundido",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Palta queso",
+          "desc": "Salchicha sureña ahumada, palta, queso fundido",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Queso champiñón",
+          "desc": "Salchicha sureña ahumada, queso fundido, champiñones salteados",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Luco",
+          "desc": "Salchicha sureña ahumada, queso fundido",
+          "precio": 0,
+          "pendiente": true
         }
       ]
     },
@@ -195,23 +254,27 @@
       "productos": [
         {
           "nombre": "Vegapleto Italiano",
-          "desc": "Salchicha sureña vegana",
-          "precio": 3290
+          "desc": "Vienesa vegetariana artesanal, palta, tomate, mayonesa",
+          "precio": 3290,
+          "imagen": "vegapleto-italiano.webp"
         },
         {
           "nombre": "Vegapleto Alemán",
-          "desc": "Salchicha sureña vegana",
-          "precio": 2990
+          "desc": "Vienesa vegetariana artesanal, chucrut, tomate, mayonesa",
+          "precio": 2990,
+          "imagen": "vegapleto-aleman.webp"
         },
         {
           "nombre": "Vegapleto Campesino",
-          "desc": "Salchicha sureña vegana",
-          "precio": 3190
+          "desc": "Vienesa vegetariana artesanal, salsa verde, tomate, mayonesa",
+          "precio": 3190,
+          "imagen": "vegapleto-campesino.webp"
         },
         {
           "nombre": "Vegapleto Dinámico",
-          "desc": "Salchicha sureña vegana",
-          "precio": 3390
+          "desc": "Vienesa vegetariana artesanal, chucrut, palta, tomate, mayonesa",
+          "precio": 3390,
+          "imagen": "vegapleto-dinamico.webp"
         },
         {
           "nombre": "Vegapleto Coleslow",
@@ -226,11 +289,71 @@
       ]
     },
     {
-      "nombre": "Agregados",
+      "nombre": "Papas",
       "productos": [
         {
           "nombre": "Papas",
-          "desc": "Pídelo con papas",
+          "desc": "Papas fritas caseras y naturales, no congeladas (250 g)",
+          "precio": 0,
+          "pendiente": true,
+          "imagen": "papas.webp"
+        },
+        {
+          "nombre": "Salchipapa grande",
+          "desc": "Para una o dos personas, papas naturales y salchichas sureñas",
+          "precio": 0,
+          "pendiente": true
+        }
+      ]
+    },
+    {
+      "nombre": "Bowls",
+      "productos": [
+        {
+          "nombre": "Bowl de pollo a la plancha",
+          "desc": "Arroz blanco, lechuga, repollo morado, zanahoria, pollo a la plancha y tu salsa preferida",
+          "precio": 0,
+          "pendiente": true,
+          "imagen": "bowl-pollo.webp"
+        }
+      ]
+    },
+    {
+      "nombre": "Bebidas y jugos",
+      "productos": [
+        {
+          "nombre": "Bebida en lata 350 cc",
+          "desc": "Bien helada",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Jugo natural 500 ml",
+          "desc": "Pregunta por los sabores del día",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Leche con plátano 500 ml",
+          "desc": "",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Batido de frutilla 500 ml",
+          "desc": "Leche con frutilla natural",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Batido de piña 500 ml",
+          "desc": "Leche batida con piña natural",
+          "precio": 0,
+          "pendiente": true
+        },
+        {
+          "nombre": "Batido de arándano 500 ml",
+          "desc": "Leche batida con arándano natural",
           "precio": 0,
           "pendiente": true
         }

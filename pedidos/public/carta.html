@@ -120,9 +120,13 @@ const ART = [
   `<svg viewBox="0 0 64 64"><path d="M6 34c0-6 6-10 26-10s26 4 26 10c0 8-12 14-26 14S6 42 6 34Z" fill="#e9a54a"/><rect x="5" y="27" width="54" height="10" rx="5" fill="#9a6b3f"/><path d="M12 30c4 3 6-3 10 0s6-3 10 0 6-3 10 0 6-3 10 0" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M44 8c-8 0-13 5-13 12 6 0 13-4 13-12Z" fill="#4f9a45"/></svg>`,
   `<svg viewBox="0 0 64 64"><path d="M20 22 18 10M27 22l-1-14M34 22l1-14M41 22l2-12M46 24l4-10" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M14 24h36l-4 30H18Z" fill="#c2452d"/><path d="M14 24h36" stroke="#a83a26" stroke-width="3"/><circle cx="32" cy="38" r="5" fill="#fff8"/></svg>`,
 ];
-const art = (cIdx, cls = '', p = null) => p?.imagen
+ART.push(`<svg viewBox="0 0 64 64"><path d="M20 14h24l-3 42H23Z" fill="#c2452d"/><path d="M21 24h22" stroke="#fff8" stroke-width="3"/><path d="M34 14 38 4h6" stroke="#1f1a17" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M22 34h20l-1 12H23Z" fill="#f2c14e" opacity=".85"/></svg>`);
+// Dibujo según el tipo de categoría (no su posición), para que una categoría nueva no herede uno equivocado.
+const tipoArt = (cIdx) => { const n = norm(M.categorias[cIdx]?.nombre || '');
+  return /vega/.test(n) ? 2 : /hot|complet/.test(n) ? 1 : /papa|agreg/.test(n) ? 3 : /bebid|jugo|batid/.test(n) ? 4 : 0; };
+const art = (cIdx, cls = '', p = null) => { const t = tipoArt(cIdx); return p?.imagen
   ? `<div class="art ${cls}"><img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" decoding="async" width="800" height="600"></div>`
-  : `<div class="art c${cIdx % ART.length} ${cls}" aria-hidden="true">${ART[cIdx % ART.length]}</div>`;
+  : `<div class="art c${t % 4} ${cls}" aria-hidden="true">${ART[t]}</div>`; };
 const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
 
 // ---------- horario ----------
@@ -160,24 +164,30 @@ function render() {
     html += `<section aria-labelledby="t-fav"><h2 class="sec-t" id="t-fav">Los más pedidos</h2><p class="sec-s">Lo que más sale en ${esc(M.local.nombre)}</p><div class="rail">` +
       M.mas_pedidos.map((id) => { const { p, i } = prods.get(id); return `<button class="fav" data-p="${p.id}">${art(i, '', p)}<span class="t"><span class="n">${esc(p.nombre)}</span><span class="p num">${clp(p.precio)}</span></span></button>`; }).join('') + `</div></section>`;
   }
-  html += cats.map((c) => `<section aria-labelledby="c${c.id}"><h2 class="sec-t" id="c${c.id}">${esc(c.nombre)}</h2><p class="sec-s">${c.ps.filter(vendible).length} opciones</p><div class="list">${c.ps.map((p) => itemHtml(p, c.i)).join('')}</div></section>`).join('');
+  html += cats.map((c) => `<section aria-labelledby="c${c.id}"><h2 class="sec-t" id="c${c.id}">${esc(c.nombre)}</h2><p class="sec-s">${c.ps.filter(vendible).length ? c.ps.filter(vendible).length + ' opciones' : 'Precios por confirmar con el local'}</p><div class="list">${c.ps.map((p) => itemHtml(p, c.i)).join('')}</div></section>`).join('');
   if (!cats.length) html = `<p class="empty">No encontramos “${esc($('q').value)}”.<br><button class="ghost" id="limpiar" style="margin-top:12px">Ver toda la carta</button></p>`;
   $('main').innerHTML = html;
   $('cats').innerHTML = cats.map((c) => `<a href="#c${c.id}">${esc(c.nombre)}</a>`).join('');
   $('limpiar')?.addEventListener('click', () => { $('q').value = ''; render(); });
   espiar(); barra();
 }
-let obs;
-function espiar() {
-  obs?.disconnect();
-  const links = [...$('cats').querySelectorAll('a')];
-  obs = new IntersectionObserver((es) => es.forEach((e) => {
-    if (!e.isIntersecting) return;
-    links.forEach((a) => a.setAttribute('aria-current', a.hash === '#' + e.target.id));
-    $('cats').querySelector('[aria-current="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  }), { rootMargin: '-130px 0px -65% 0px' });
-  document.querySelectorAll('main h2[id^="c"]').forEach((h) => obs.observe(h));
+// Pestaña activa según la posición del scroll: la última categoría cuyo título
+// ya pasó bajo la barra fija. Arriba de todo no se marca ninguna.
+let heads = [], activa = null;
+function espiar() { heads = [...document.querySelectorAll('main h2[id^="c"]')]; marcar(); }
+function marcar() {
+  const lim = document.querySelector('.stick').getBoundingClientRect().bottom + 24;
+  const h = heads.filter((x) => x.getBoundingClientRect().top <= lim).pop();
+  const id = h?.id || null;
+  if (id === activa) return;
+  activa = id;
+  $('cats').querySelectorAll('a').forEach((a) => a.setAttribute('aria-current', a.hash === '#' + id));
+  const on = $('cats').querySelector('[aria-current="true"]');
+  if (on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); else $('cats').scrollTo({ left: 0, behavior: 'smooth' });
 }
+let tick = false;
+addEventListener('scroll', () => { if (!tick) { tick = true; requestAnimationFrame(() => { tick = false; marcar(); }); } }, { passive: true });
+setInterval(marcar, 400); // respaldo: en algunas webviews requestAnimationFrame se congela
 $('q').addEventListener('input', () => { render(); window.scrollTo({ top: $('main').offsetTop - 130 }); });
 $('main').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) abrirProducto(Number(b.dataset.p)); });
 

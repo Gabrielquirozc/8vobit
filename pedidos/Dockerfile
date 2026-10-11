@@ -6,6 +6,8 @@ WORKDIR /app
 COPY server.mjs ./
 COPY public ./public
 COPY seed ./seed
+# El volumen nombrado hereda este dueño: sin esto, node no puede escribir en /data.
+RUN mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 8099
 HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://127.0.0.1:8099/salud || exit 1
