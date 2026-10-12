@@ -303,3 +303,19 @@ test('mostrador: ventas seguidas no chocan con el límite de pedidos web', async
   const a = await prod('Italiano');
   for (let i = 0; i < 3; i++) assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'transferencia' })).status, 201);
 });
+
+test('CSP: el hash de cada script coincide con lo que calcula el navegador (aunque el HTML tenga CRLF)', async () => {
+  const crypto = await import('node:crypto');
+  for (const pagina of ['/gassuso', '/panel', '/seguimiento', '/comanda', '/carta-imprimible']) {
+    const r = await fetch(B + pagina);
+    const csp = r.headers.get('content-security-policy');
+    // El navegador normaliza CRLF a LF antes de hashear el contenido del <script>.
+    const html = (await r.text()).replace(/\r\n?/g, '\n');
+    const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).filter((x) => x.trim());
+    assert.ok(scripts.length, pagina);
+    for (const sc of scripts) {
+      const h = `'sha256-${crypto.createHash('sha256').update(sc).digest('base64')}'`;
+      assert.ok(csp.includes(h), `${pagina}: falta ${h} en la CSP`);
+    }
+  }
+});

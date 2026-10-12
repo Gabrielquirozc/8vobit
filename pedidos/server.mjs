@@ -190,12 +190,15 @@ setInterval(respaldar, 3600e3).unref();
 const cspPagina = new Map();
 function csp(file) {
   if (!cspPagina.has(file)) {
-    const html = fs.readFileSync(path.join(PUBLIC, file), 'utf8');
+    // El navegador normaliza los saltos de línea (CRLF → LF) antes de calcular el hash
+    // del script; si el archivo llegó con CRLF (checkout en Windows) hay que hacer lo mismo.
+    const html = fs.readFileSync(path.join(PUBLIC, file), 'utf8').replace(/\r\n?/g, '\n');
     const hashes = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].filter((m) => m[1].trim())
       .map((m) => `'sha256-${crypto.createHash('sha256').update(m[1]).digest('base64')}'`);
     cspPagina.set(file, [
-      "default-src 'self'", `script-src 'self' ${hashes.join(' ')}`, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "connect-src 'self'", "frame-ancestors 'none'",
+      // static.cloudflareinsights.com: Cloudflare Web Analytics, que la zona inyecta sola.
+      "default-src 'self'", `script-src 'self' ${hashes.join(' ')} https://static.cloudflareinsights.com`, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "connect-src 'self' https://cloudflareinsights.com", "frame-ancestors 'none'",
       "base-uri 'none'", "form-action 'self'", "object-src 'none'",
     ].join('; '));
   }

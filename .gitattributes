@@ -1,4 +1,14 @@
 # Scripts que corren en Linux (lenovo-edge) siempre con LF, aunque se clonen en Windows.
 *.sh text eol=lf
+# Archivos web también con LF: la CSP del servidor usa el hash de los <script> en
+# línea, y un checkout con CRLF en Windows lo desalineaba (carta en "Cargando…").
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf
 # Scripts de PowerShell con CRLF.
 *.ps1 text eol=crlf
