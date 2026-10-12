@@ -61,5 +61,5 @@ echo "escritura en /data: $(docker exec pedidos sh -c 'touch /data/.w && rm /dat
 echo "respaldo inicial: $(docker exec pedidos sh -c 'ls /data/backups')"
 docker stats --no-stream --format 'memoria: {{.MemUsage}}  cpu: {{.CPUPerc}}' pedidos
 echo "escucha solo en 127.0.0.1: $(ss -ltn "sport = :$PORT" | awk 'NR>1{print $4}')"
-docker logs --since 2m pedidos 2>&1 | grep -ci error | xargs -I{} echo "errores en logs: {}"
+echo "errores en logs: $(docker logs --since 2m pedidos 2>&1 | grep -ci error || true)"
 echo; echo "Listo. Falta la regla del túnel si es la primera vez: sudo bash $DEST/deploy/tunel.sh"
