@@ -79,12 +79,16 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
   `/data/backups`, se conservan `BACKUP_DIAS` (14). **Están en el mismo disco**:
   para sobrevivir a una falla de disco hay que copiar `/data` fuera del servidor,
   por ejemplo con un `rsync` nocturno a otra máquina por Tailscale.
+- **Caché**: Cloudflare impone 4 h de caché de navegador a `.js` y `.css`. Por eso las
+  páginas referencian `comun.js?v=<hash>` y `carta.css?v=<hash>` (el servidor los agrega
+  al servir): cada despliegue cambia la URL y nadie queda con una versión vieja. Esas
+  URLs versionadas se sirven con caché de un año (`immutable`).
 - `docker stop` cierra limpio (termina respuestas en curso y cierra la base).
 
 ## Pruebas
 
 ```bash
-npm test   # 33 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 34 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

@@ -440,3 +440,18 @@ test('resumen semanal: semana anterior vacía, fecha inválida y comisión confi
   cookie = '';
   assert.equal((await req('GET', '/api/panel/resumen')).status, 401);
 });
+
+test('caché: las páginas referencian .js/.css versionados y esos se cachean un año', async () => {
+  const html = await (await fetch(B + '/gassuso')).text();
+  const css = /href="carta\.css\?v=([0-9a-f]{10})"/.exec(html);
+  const js = /from '\.\/comun\.js\?v=([0-9a-f]{10})'/.exec(html);
+  assert.ok(css && js, 'carta.css y comun.js deben ir con ?v=');
+  const r1 = await fetch(`${B}/comun.js?v=${js[1]}`);
+  assert.equal(r1.status, 200);
+  assert.match(r1.headers.get('cache-control'), /immutable/);
+  // una versión que no corresponde (página vieja en caché) no se cachea como inmutable
+  assert.equal((await fetch(`${B}/comun.js?v=0000000000`)).headers.get('cache-control'), 'no-cache');
+  assert.equal((await fetch(`${B}/comun.js`)).headers.get('cache-control'), 'no-cache');
+  // el panel también
+  assert.match(await (await fetch(B + '/panel')).text(), /from '\.\/comun\.js\?v=[0-9a-f]{10}'/);
+});

@@ -199,22 +199,37 @@ setInterval(respaldar, 3600e3).unref();
 
 // ---------- cabeceras de seguridad ----------
 // CSP con el hash de cada <script> en línea de cada página: un script inyectado no corre.
-const cspPagina = new Map();
-function csp(file) {
-  if (!cspPagina.has(file)) {
-    // El navegador normaliza los saltos de línea (CRLF → LF) antes de calcular el hash
-    // del script; si el archivo llegó con CRLF (checkout en Windows) hay que hacer lo mismo.
-    const html = fs.readFileSync(path.join(PUBLIC, file), 'utf8').replace(/\r\n?/g, '\n');
+// Versiones de los .js/.css: hash del contenido. Cloudflare impone su propio caché de
+// navegador (4 h) a estos archivos, así que tras un despliegue una página nueva podía
+// cargar un comun.js viejo y quedarse en "Cargando…". Con ?v=<hash> en cada referencia,
+// cada cambio es una URL nueva y lo que no cambió puede cachearse un año.
+const version = new Map();
+function ver(file) {
+  if (!version.has(file)) {
+    const p = path.join(PUBLIC, file);
+    version.set(file, fs.existsSync(p) ? crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex').slice(0, 10) : '0');
+  }
+  return version.get(file);
+}
+// Página lista para servir: saltos de línea normalizados (el navegador hashea con LF;
+// un checkout en Windows trae CRLF), referencias versionadas y la CSP calculada sobre
+// el HTML final, con el hash de cada <script> en línea.
+const paginas = new Map();
+function pagina(file) {
+  if (!paginas.has(file)) {
+    const html = fs.readFileSync(path.join(PUBLIC, file), 'utf8').replace(/\r\n?/g, '\n')
+      .replace(/(href|src)="(\.\/)?([\w-]+\.(?:css|js))"/g, (m, attr, pre, f) => `${attr}="${pre || ''}${f}?v=${ver(f)}"`)
+      .replace(/from '\.\/([\w-]+\.js)'/g, (m, f) => `from './${f}?v=${ver(f)}'`);
     const hashes = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].filter((m) => m[1].trim())
       .map((m) => `'sha256-${crypto.createHash('sha256').update(m[1]).digest('base64')}'`);
-    cspPagina.set(file, [
+    paginas.set(file, { html, csp: [
       // static.cloudflareinsights.com: Cloudflare Web Analytics, que la zona inyecta sola.
       "default-src 'self'", `script-src 'self' ${hashes.join(' ')} https://static.cloudflareinsights.com`, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "connect-src 'self' https://cloudflareinsights.com", "frame-ancestors 'none'",
       "base-uri 'none'", "form-action 'self'", "object-src 'none'",
-    ].join('; '));
+    ].join('; ') });
   }
-  return cspPagina.get(file);
+  return paginas.get(file);
 }
 const SEGURIDAD = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
 
@@ -246,11 +261,17 @@ async function readJson(req) {
   return raw ? JSON.parse(raw) : {};
 }
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
-function serveFile(res, file) {
+function serveFile(res, file, versionado = false) {
   const p = path.join(PUBLIC, file);
   if (!p.startsWith(PUBLIC) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) return send(res, 404, 'No encontrado');
-  const extra = path.extname(p) === '.html' ? { 'Content-Security-Policy': csp(path.relative(PUBLIC, p)) } : {};
-  res.writeHead(200, { ...SEGURIDAD, ...extra, 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+  if (path.extname(p) === '.html') {
+    const { html, csp } = pagina(path.relative(PUBLIC, p));
+    res.writeHead(200, { ...SEGURIDAD, 'Content-Security-Policy': csp, 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
+    return res.end(html);
+  }
+  // Con ?v=<hash> correcto el contenido nunca cambia bajo esa URL: caché de un año.
+  const cache = versionado ? 'public, max-age=31536000, immutable' : 'no-cache';
+  res.writeHead(200, { ...SEGURIDAD, 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream', 'Cache-Control': cache });
   fs.createReadStream(p).pipe(res);
 }
 
@@ -635,7 +656,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
     if (p === '/seguimiento') return serveFile(res, 'seguimiento.html');
     if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
-    return serveFile(res, p.slice(1));
+    const f = p.slice(1);
+    return serveFile(res, f, url.searchParams.get('v') === ver(path.basename(f)));
   } catch (e) {
     if (!e.tooBig && !(e instanceof SyntaxError)) console.error(e);
     if (!res.headersSent) {
