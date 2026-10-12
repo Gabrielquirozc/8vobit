@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   cantidad INTEGER NOT NULL, precio_unitario INTEGER NOT NULL);
 `);
 
+let contactoSeed = false;
 // Columnas de cobro agregadas después de la primera versión: migración idempotente.
 {
   const cols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
@@ -71,6 +72,9 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!lcols.has('pausa')) db.exec('ALTER TABLE locales ADD COLUMN pausa INTEGER NOT NULL DEFAULT 0');
   // Comisión que cobraría la app de delivery (%): base del "comisión ahorrada" del resumen.
   if (!lcols.has('logo')) db.exec('ALTER TABLE locales ADD COLUMN logo TEXT');
+  // Teléfono para llamadas, aparte del WhatsApp. Al crear la columna se completan una sola vez los
+  // datos de contacto vacíos con los del seed; después mandan los que se editen en el panel.
+  if (!lcols.has('telefono')) { db.exec('ALTER TABLE locales ADD COLUMN telefono TEXT'); contactoSeed = true; }
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
@@ -101,8 +105,8 @@ function seed() {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
   const L = s.local;
   const { lastInsertRowid: lid } = db.prepare(
-    'INSERT INTO locales (slug,nombre,instagram,whatsapp,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?)'
-  ).run(L.slug, L.nombre, L.instagram, L.whatsapp, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
+    'INSERT INTO locales (slug,nombre,instagram,whatsapp,telefono,direccion,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?,?,?)'
+  ).run(L.slug, L.nombre, L.instagram, L.whatsapp, L.telefono || null, L.direccion || null, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
   if (L.logo) db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(lid, L.logo), lid);
   for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
   s.categorias.forEach((c, ci) => {
@@ -121,6 +125,8 @@ seed();
   const l = s.local.logo && db.prepare('SELECT id, logo FROM locales WHERE slug=?').get(s.local.slug);
   if (l && !l.logo && fs.existsSync(path.resolve(import.meta.dirname, 'seed/img', path.basename(s.local.logo))))
     db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(l.id, s.local.logo), l.id);
+  if (contactoSeed) for (const k of ['whatsapp', 'telefono', 'direccion'])
+    if (s.local[k]) db.prepare(`UPDATE locales SET ${k}=? WHERE slug=? AND COALESCE(${k},'')=''`).run(s.local[k], s.local.slug);
 }
 
 // ---------- franjas horarias ----------
@@ -299,7 +305,7 @@ function menu(local) {
   const ok = new Set(prods.filter(vendible).map((p) => p.id));
   const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
   return {
-    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta,
+    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
       logo: local.logo ? `${BASE}/img/${local.logo}` : null,
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
@@ -386,10 +392,11 @@ function actualizarLocal(local, b) {
   const txt = (v, max) => String(v ?? '').trim().slice(0, max);
   const c = {};
   if (b.nombre !== undefined) { c.nombre = txt(b.nombre, 60); if (!c.nombre) return { error: 'El nombre no puede quedar vacío.' }; }
-  if (b.whatsapp !== undefined) {
-    c.whatsapp = String(b.whatsapp).replace(/\D/g, '');
-    if (c.whatsapp.length === 9 && c.whatsapp.startsWith('9')) c.whatsapp = '56' + c.whatsapp; // celular chileno sin código
-    if (c.whatsapp && (c.whatsapp.length < 10 || c.whatsapp.length > 15)) return { error: 'WhatsApp inválido. Ej: +56 9 1234 5678' };
+  for (const [k, nom] of [['whatsapp', 'WhatsApp'], ['telefono', 'Teléfono']]) {
+    if (b[k] === undefined) continue;
+    c[k] = String(b[k]).replace(/\D/g, '');
+    if (c[k].length === 9 && c[k].startsWith('9')) c[k] = '56' + c[k]; // celular chileno sin código
+    if (c[k] && (c[k].length < 10 || c[k].length > 15)) return { error: `${nom} inválido. Ej: +56 9 1234 5678` };
   }
   if (b.instagram !== undefined) c.instagram = txt(b.instagram, 40).replace(/^@/, '').replace(/[^\w.]/g, '');
   if (b.direccion !== undefined) c.direccion = txt(b.direccion, 120) || null;
@@ -513,8 +520,8 @@ async function api(req, res, url) {
   if (m === 'GET' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '')) {
     const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
     if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
-    const l = db.prepare('SELECT slug, nombre, whatsapp, transferencia, logo FROM locales WHERE id=?').get(p.local_id);
-    const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null, logo: l.logo ? `${BASE}/img/${l.logo}` : null };
+    const l = db.prepare('SELECT slug, nombre, whatsapp, telefono, transferencia, logo FROM locales WHERE id=?').get(p.local_id);
+    const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, telefono: l.telefono, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null, logo: l.logo ? `${BASE}/img/${l.logo}` : null };
     const items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(p.id)
       .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.

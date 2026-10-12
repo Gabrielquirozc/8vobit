@@ -331,8 +331,13 @@ test('datos del local: se editan desde el panel, se validan y se ven en la carta
   });
   assert.equal(r.status, 200);
   assert.equal(r.body.whatsapp, '56987654321'); // celular chileno sin código → con 56
+  const t = await req('PATCH', '/api/panel/local', { telefono: '+56 9 8450 6842' });
+  assert.equal(t.status, 200);
+  assert.equal(t.body.telefono, '56984506842');
+  assert.equal((await req('PATCH', '/api/panel/local', { telefono: '12' })).status, 400);
   const m = await menu();
   assert.equal(m.local.instagram, 'gassuso');
+  assert.equal(m.local.telefono, '56984506842');
   assert.equal(m.local.direccion, 'Freire 145, Concepción');
   assert.equal(m.local.transferencia.numero, '123-456-78');
   assert.equal((await req('PATCH', '/api/panel/local', { whatsapp: '123' })).status, 400);

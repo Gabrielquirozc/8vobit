@@ -34,7 +34,8 @@ con los pedidos web.
 (web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
 (con registro de folio) y detalle imprimible.
 
-**Datos del local**: nombre, WhatsApp, Instagram, dirección, horario por día (días
+**Datos del local**: nombre, WhatsApp, teléfono para llamadas (botón "Llamar" en la carta
+y el seguimiento), Instagram, dirección, horario por día (días
 cerrados; misma hora de apertura y cierre = 24 h), cupo de pedidos por franja y datos
 para transferencia, que el cliente ve al pagar y en el seguimiento.
 
@@ -155,6 +156,5 @@ igual que wp-admin. **Nunca** `/gassuso` ni `/api/locales/*`: son públicos.
 ## Pendiente (ver plan maestro)
 
 - Datos que faltan: precios de *Pollo + 1 ingr.*, *Vegetariano*, papas y
-  recargos de agregados; ingrediente del Diplomático; bebidas; WhatsApp del
-  local (`whatsapp` en el seed, activa el botón "Avisar por WhatsApp").
+  recargos de agregados; ingrediente del Diplomático; bebidas.
 - Modo 3 (boleta integrada con SimpleAPI), promociones, métricas semanales.

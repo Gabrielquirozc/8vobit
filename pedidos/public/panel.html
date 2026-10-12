@@ -627,6 +627,8 @@ async function pintarLocal() {
       ${campo('l-nombre', 'Nombre', L.nombre, 'maxlength="60" required')}
       ${campo('l-whatsapp', 'WhatsApp para pedidos', L.whatsapp ? '+' + L.whatsapp : '', 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"')}
       <p class="ayuda">Aparece en la carta como "Avisar al local por WhatsApp" y en el seguimiento.</p>
+      ${campo('l-telefono', 'Teléfono para llamadas', L.telefono ? '+' + L.telefono : '', 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"')}
+      <p class="ayuda">El cliente lo ve en la carta y en el seguimiento con un botón "Llamar". Déjalo vacío si no atienden llamadas.</p>
       ${campo('l-instagram', 'Instagram', L.instagram ? '@' + L.instagram : '', 'placeholder="@tulocal"')}
       ${campo('l-direccion', 'Dirección', L.direccion, 'maxlength="120" placeholder="Calle 123, Concepción"')}
       ${campo('l-cupo', 'Pedidos web por franja de 30 minutos', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"')}
@@ -680,7 +682,7 @@ async function pintarLocal() {
     $('l-guardar').disabled = true; $('l-err').textContent = '';
     try {
       await api('panel/local', { method: 'PATCH', body: {
-        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), comision_app: v('l-comision'), horario,
+        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), telefono: v('l-telefono'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), comision_app: v('l-comision'), horario,
         transferencia: { titular: v('t-titular'), rut: v('t-rut'), banco: v('t-banco'), tipo: v('t-tipo'), numero: v('t-numero'), email: v('t-email') },
       } });
       toast('Datos del local guardados'); pintarLocal(); refrescar();
