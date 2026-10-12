@@ -319,3 +319,83 @@ test('CSP: el hash de cada script coincide con lo que calcula el navegador (aunq
     }
   }
 });
+
+// ---------- datos del local ----------
+test('datos del local: se editan desde el panel, se validan y se ven en la carta', async () => {
+  cookie = '';
+  assert.equal((await req('PATCH', '/api/panel/local', { nombre: 'X' })).status, 401);
+  await login();
+  const r = await req('PATCH', '/api/panel/local', {
+    whatsapp: '9 8765 4321', instagram: '@gassuso', direccion: 'Freire 145, Concepción', cupo_franja: 12,
+    transferencia: { titular: 'Gassuso SpA', rut: '76.123.456-7', banco: 'Banco Estado', tipo: 'Cuenta vista', numero: '123-456-78', email: 'pagos@gassuso.cl' },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.whatsapp, '56987654321'); // celular chileno sin código → con 56
+  const m = await menu();
+  assert.equal(m.local.instagram, 'gassuso');
+  assert.equal(m.local.direccion, 'Freire 145, Concepción');
+  assert.equal(m.local.transferencia.numero, '123-456-78');
+  assert.equal((await req('PATCH', '/api/panel/local', { whatsapp: '123' })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { nombre: '   ' })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { cupo_franja: 0 })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { horario: { 1: ['25:00', '10:00'] } })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { horario: { 1: ['10:00', 'diez'] } })).status, 400);
+  // apertura = cierre es abierto 24 h (así viene un local 24 h): debe poder guardarse
+  assert.equal((await req('PATCH', '/api/panel/local', { horario: Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']])) })).status, 200);
+  assert.equal((await req('GET', '/api/locales/gassuso/franjas')).body.abierto, true);
+  // un intento de inyectar columnas no tiene efecto
+  assert.equal((await req('PATCH', '/api/panel/local', { slug: 'otro', 'id=1; --': 1 })).status, 200);
+  assert.equal((await req('GET', '/api/locales/gassuso')).status, 200);
+});
+
+test('datos del local: día cerrado sin horario y vuelta al horario de 24 h', async () => {
+  await login();
+  const todos = Object.fromEntries([...'0123456'].map((d) => [d, null]));
+  await req('PATCH', '/api/panel/local', { horario: todos });
+  const f = (await req('GET', '/api/locales/gassuso/franjas')).body;
+  assert.equal(f.abierto, false);
+  assert.equal(f.slots.length, 0);
+  assert.equal((await pedir([{ producto_id: (await prod('Italiano')).id }])).status, 400);
+  await req('PATCH', '/api/panel/local', { horario: Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '23:59']])) });
+  assert.equal((await pedir([{ producto_id: (await prod('Italiano')).id }])).status, 201);
+});
+
+test('pausa: el local deja de recibir pedidos web, pero el mostrador sigue', async () => {
+  await login();
+  const id = (await prod('Italiano')).id;
+  await req('PATCH', '/api/panel/local', { pausa: true });
+  assert.equal((await menu()).local.pausa, true);
+  const r = await pedir([{ producto_id: id }]);
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /paus/i);
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: id }], medio_pago: 'tarjeta' })).status, 201);
+  await req('PATCH', '/api/panel/local', { pausa: false });
+  assert.equal((await pedir([{ producto_id: id }])).status, 201);
+});
+
+test('seguimiento muestra los datos para transferir del local', async () => {
+  const r = await pedir([{ producto_id: (await prod('Italiano')).id }]);
+  const s = (await req('GET', `/api/seguimiento/${r.body.token}`)).body;
+  assert.equal(s.local.transferencia.banco, 'Banco Estado');
+});
+
+// ---------- observaciones ----------
+test('observación por producto y comentario general: se guardan limpios y acotados', async () => {
+  const p = await prod('Italiano');
+  const r = await pedir([
+    { producto_id: p.id, cantidad: 1, nota: '  sin   tomate\n\u0000<b>ojo</b>  ' },
+    { producto_id: p.id, cantidad: 1, nota: 'x'.repeat(500) },
+    { producto_id: p.id, cantidad: 1 },
+  ], { notas: 'Tocar el timbre dos veces' });
+  assert.equal(r.status, 201);
+  await login();
+  const d = (await req('GET', `/api/panel/pedidos/${r.body.id}`)).body;
+  assert.equal(d.items[0].nota, 'sin tomate <b>ojo</b>'); // se guarda como texto; el panel lo escapa al mostrar
+  assert.equal(d.items[1].nota.length, 140);
+  assert.equal(d.items[2].nota, null);
+  assert.equal(d.notas, 'Tocar el timbre dos veces');
+  const s = (await req('GET', `/api/seguimiento/${r.body.token}`)).body;
+  assert.equal(s.items[0].nota, 'sin tomate <b>ojo</b>');
+  const v = await req('POST', '/api/panel/venta', { items: [{ producto_id: p.id, nota: 'bien tostado' }], medio_pago: 'efectivo', recibido: 5000 });
+  assert.equal((await req('GET', `/api/panel/pedidos/${v.body.id}`)).body.items[0].nota, 'bien tostado');
+});

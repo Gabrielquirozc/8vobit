@@ -16,3 +16,22 @@ export async function api(path, opts = {}) {
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Botones de imprimir sin onclick en línea (la CSP no permite manejadores en línea).
 document.addEventListener('click', (e) => { if (e.target.closest('[data-print]')) print(); });
+
+// Emoji para productos sin foto, según lo que es. El orden importa: lo más
+// específico primero (un "batido de frutilla" es frutilla, no batido genérico).
+const EMOJIS = [
+  [/frutilla/, '🍓'], [/pi[nñ]a/, '🍍'], [/ar[aá]ndano/, '🫐'], [/pl[aá]tano/, '🍌'],
+  [/jugo/, '🧃'], [/batido|leche/, '🥛'], [/bebida|lata|gaseosa/, '🥤'], [/caf[eé]/, '☕'],
+  [/salchipapa/, '🍟'], [/papa/, '🍟'], [/bowl|ensalada/, '🥗'],
+  [/burger|hamburguesa/, '🍔'], [/vega|vegetarian|vegano/, '🌱'],
+  [/hot ?dog|completo|italiano|alem[aá]n|din[aá]mico|campesino|coleslow|champipleto|champiluco|luco$|palta queso|queso champi|as mechada|as gassuso/, '🌭'],
+  [/pobre|churrasco|vacuno|barros|chacarero|diplom|patr[oó]n/, '🥩'],
+  [/pollo/, '🍗'], [/cerdo/, '🥓'], [/mechada/, '🥩'], [/huevo/, '🍳'],
+];
+const POR_CATEGORIA = [[/hot|complet|vegaplet/, '🌭'], [/sang|sand/, '🥪'], [/papa/, '🍟'], [/bebid|jugo/, '🥤'], [/bowl/, '🥗']];
+export function emojiDe(nombre, categoria = '') {
+  const n = String(nombre).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const c = String(categoria).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  if (/vegaplet/.test(c)) return '🌭';
+  return (EMOJIS.find(([r]) => r.test(n)) || POR_CATEGORIA.find(([r]) => r.test(c)) || [, '🍽️'])[1];
+}

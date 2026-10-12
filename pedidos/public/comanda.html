@@ -13,6 +13,7 @@
   hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
   .it { display: flex; gap: 4px; } .it .q { min-width: 3ch; font-weight: 700; }
   .it .n { flex: 1; overflow-wrap: anywhere; } .ag { padding-left: 4ch; }
+  .obs { font-weight: 700; } /* observación del cliente: que la cocina no la pase por alto */
   .tot { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; }
   .noprint { text-align: center; padding: 10px; }
   @media print { body { background: #fff; } .noprint { display: none; } }
@@ -36,7 +37,8 @@ try {
     ${p.direccion ? `<div>${esc(p.direccion)}</div>` : ''}
     <div>${esc(p.cliente)} ${esc(p.telefono)}</div><hr>
     ${p.items.map((i) => `<div class="it"><span class="q">${i.cantidad}x</span><span class="n">${esc(i.nombre)}</span></div>
-      ${i.agregados.map((a) => `<div class="ag">+ ${esc(a)}</div>`).join('')}`).join('')}
+      ${i.agregados.map((a) => `<div class="ag">+ ${esc(a)}</div>`).join('')}
+      ${i.nota ? `<div class="ag obs">&gt;&gt; ${esc(i.nota).toUpperCase()}</div>` : ''}`).join('')}
     ${p.notas ? `<hr><div><b>NOTA:</b> ${esc(p.notas)}</div>` : ''}<hr>
     <div class="tot"><span>TOTAL</span><span>${clp(p.total)}</span></div>
     <div>${p.pagado ? 'PAGADO' : 'PAGO POR CONFIRMAR'}</div>

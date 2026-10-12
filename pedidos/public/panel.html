@@ -103,6 +103,24 @@
   .link { background: none; border: 0; color: var(--ink-2); font-size: .85rem; padding: 6px; text-decoration: underline; }
   td input[type=number] { width: 110px; min-height: 44px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
   td label.ck { display: flex; align-items: center; gap: 8px; min-height: 44px; } td label.ck input { width: 20px; height: 20px; accent-color: var(--brand); }
+  .tile .emoji, .art .emoji { font-size: 44px; line-height: 1; }
+  .ped li .ag.obs { color: var(--brand); font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .ped li .ag.obs .ico { width: 14px; height: 14px; }
+  @media (max-width: 1440px) { .bar .kpi { display: none; } }
+  @media (max-width: 1320px) { .tab { padding: 0 10px; font-size: .92rem; } .tab .ico { display: none; } }
+  .pausa { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid #ffffff33; background: transparent; color: #fff; font-weight: 600; font-size: .88rem; }
+  .pausa .dot { width: 10px; height: 10px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px #4ade8033; }
+  .pausa[aria-pressed="true"] { background: var(--mustard); color: #1f1a17; border-color: var(--mustard); }
+  .pausa[aria-pressed="true"] .dot { background: #b42318; box-shadow: none; }
+  .local-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+  .cardf { background: var(--surface); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); }
+  .cardf h3 { margin-top: 0; }
+  .ayuda { color: var(--ink-2); font-size: .85rem; margin: 6px 0 0; }
+  .horario { box-shadow: none; } .horario th { font-weight: 600; } .horario td, .horario th { padding: 6px 4px; border: 0; }
+  .horario { table-layout: fixed; } .horario th { width: 26%; } .horario td:nth-child(2) { width: 24%; }
+  .horario input[type=time] { width: 100%; min-width: 0; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
+  .horario input:disabled { opacity: .4; }
+  .guardar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 12px 0; background: linear-gradient(transparent, var(--surface-2) 30%); }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
@@ -150,9 +168,11 @@
       <button class="tab" role="tab" data-v="venta" aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
       <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
+      <button class="tab" role="tab" data-v="local" aria-selected="false"><svg class="ico"><use href="#i-store"/></svg>Datos del local</button>
     </nav>
     <span class="sp"></span>
     <span class="kpi num" id="kpi"></span>
+    <button class="pausa" id="pausa" aria-pressed="false" title="Pausar o reanudar los pedidos por la web"><span class="dot"></span><span id="pausaTxt">Recibiendo pedidos web</span></button>
     <button class="icobtn" id="sonido" aria-pressed="false" aria-label="Activar sonido de pedidos nuevos" title="Sonido"><svg class="ico"><use href="#i-bell-off"/></svg></button>
     <button class="icobtn" id="salir" aria-label="Salir" title="Salir"><svg class="ico"><use href="#i-out"/></svg></button>
   </header>
@@ -175,6 +195,7 @@
     </div>
     <div id="v-cierre" hidden></div>
     <div id="v-carta" hidden></div>
+    <div id="v-local" hidden></div>
   </main>
 </div>
 
@@ -211,7 +232,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-import { api, clp, esc, BASE } from './comun.js';
+import { api, clp, esc, BASE, emojiDe } from './comun.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -257,7 +278,7 @@ function tarjeta(p) {
       ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : `<span class="chip2 warn">Por cobrar</span>`}
     </div>
     ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}</div>` : ''}
-    <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}</li>`).join('')}</ul>
+    <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
     <div class="pie"><span></span><span class="total num">${clp(p.total)}</span></div>
     ${pasos[p.estado] || ''}
@@ -278,6 +299,7 @@ function pintarPedidos() {
 async function refrescar() {
   D = await api('panel/pedidos');
   $('nomLocal').textContent = D.local;
+  marcarPausa(D.pausa);
   const nuevos = D.pedidos.filter((p) => p.estado === 'nuevo').length;
   $('bNuevos').hidden = !nuevos; $('bNuevos').textContent = nuevos;
   const cobrado = D.pedidos.filter((p) => p.pagado && p.estado !== 'anulado');
@@ -367,12 +389,13 @@ function pintarVenta() {
   $('vtiles').innerHTML = lista.map((p) => {
     const n = ticket.filter((t) => t.p.id === p.id).reduce((s, t) => s + t.cantidad, 0);
     return `<button class="tile" data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
-      ${p.imagen ? `<div class="art"><img src="${esc(p.imagen)}" alt="" loading="lazy"></div>` : `<div class="art c${p.ci % 4}"><span class="ini" aria-hidden="true">${esc(p.nombre[0])}</span></div>`}
+      ${p.imagen ? `<div class="art"><img src="${esc(p.imagen)}" alt="" loading="lazy"></div>` : `<div class="art c${p.ci % 4}"><span class="emoji" aria-hidden="true">${emojiDe(p.nombre, p.cat.nombre)}</span></div>`}
       ${n ? `<span class="q num">${n}</span>` : ''}
       <span class="t"><span class="n">${esc(p.nombre)}</span><br><span class="p num">${clp(p.precio)}</span>${p.incluye ? ` · <span class="p">+${p.incluye} ingr.</span>` : ''}</span></button>`;
   }).join('') || '<p class="vacio">No hay productos con ese nombre.</p>';
   const total = ticket.reduce((s, t) => s + t.p.precio * t.cantidad, 0);
-  $('vlines').innerHTML = ticket.length ? ticket.map((t, i) => `<div class="line"><div><div class="n">${esc(t.p.nombre)}</div>${t.ags.length ? `<div class="d">${esc(t.ags.map((a) => a.nombre).join(', '))}</div>` : ''}<div class="d num">${clp(t.p.precio * t.cantidad)}</div></div>
+  $('vlines').innerHTML = ticket.length ? ticket.map((t, i) => `<div class="line"><div><div class="n">${esc(t.p.nombre)}</div>${t.ags.length ? `<div class="d">${esc(t.ags.map((a) => a.nombre).join(', '))}</div>` : ''}${t.nota ? `<div class="d" style="color:var(--brand);font-weight:600">Nota: ${esc(t.nota)}</div>` : ''}<div class="d num">${clp(t.p.precio * t.cantidad)}</div>
+    <button type="button" class="link" data-nota="${i}" style="padding:4px 0">${t.nota ? 'Cambiar nota' : '+ Nota'}</button></div>
     <div class="stepper"><button type="button" data-l="${i}" data-d="-1" aria-label="Quitar uno">${ico(t.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${t.cantidad}</span><button type="button" data-l="${i}" data-d="1" aria-label="Agregar uno">${ico('plus')}</button></div></div>`).join('')
     : '<p style="color:var(--ink-2);text-align:center;padding:24px 0">Toca un producto para agregarlo.</p>';
   $('vtotal').textContent = clp(total);
@@ -404,6 +427,12 @@ $('vtiles').onclick = (e) => {
   $('agOk').onclick = () => { sumar(p, sel); $('dlgAg').close(); };
   pintar(); $('dlgAg').showModal();
 };
+$('vlines').addEventListener('click', (e) => {
+  const n = e.target.closest('[data-nota]'); if (!n) return;
+  const t = ticket[n.dataset.nota];
+  const v = prompt(`Observación para ${t.p.nombre} (ej: sin cebolla):`, t.nota || '');
+  if (v !== null) { t.nota = v.trim().slice(0, 140) || undefined; pintarVenta(); }
+});
 $('vlines').onclick = (e) => { const b = e.target.closest('[data-l]'); if (!b) return; const t = ticket[b.dataset.l]; t.cantidad += Number(b.dataset.d); if (t.cantidad < 1) ticket.splice(b.dataset.l, 1); pintarVenta(); };
 $('vcats').onclick = (e) => { const b = e.target.closest('[data-cat]'); if (b) { vcat = Number(b.dataset.cat); $('vq').value = ''; pintarVenta(); } };
 $('vq').oninput = pintarVenta;
@@ -413,7 +442,7 @@ $('vcobrar').onclick = () => {
   $('vcliente').value = ''; $('cocina').checked = true;
   abrirCobro({ titulo: 'Venta de mostrador', total, venta: true, boton: 'Cobrar', enviar: async (b) => {
     const r = await api('panel/venta', { method: 'POST', body: { ...b, cocina: $('cocina').checked, cliente: $('vcliente').value,
-      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id) })) } });
+      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id), nota: t.nota })) } });
     conocidos?.add(r.id);
     if ($('cocina').checked) comanda(r.id);
     ticket = []; pintarVenta();
@@ -525,12 +554,78 @@ $('v-carta').onchange = async (e) => {
   } catch (err) { alert(err.message); }
 };
 
+// ---------- pausa de pedidos web ----------
+function marcarPausa(on) {
+  $('pausa').setAttribute('aria-pressed', on);
+  $('pausaTxt').textContent = on ? 'Pedidos web en pausa' : 'Recibiendo pedidos web';
+}
+$('pausa').onclick = async () => {
+  const on = $('pausa').getAttribute('aria-pressed') !== 'true';
+  if (on && !confirm('¿Pausar los pedidos por la web? Los clientes verán que el local no está recibiendo pedidos en línea. El mostrador sigue funcionando.')) return;
+  await api('panel/local', { method: 'PATCH', body: { pausa: on } });
+  marcarPausa(on); toast(on ? 'Pedidos web en pausa' : 'Pedidos web reanudados');
+};
+
+// ---------- datos del local ----------
+const DIAS = [['1', 'Lunes'], ['2', 'Martes'], ['3', 'Miércoles'], ['4', 'Jueves'], ['5', 'Viernes'], ['6', 'Sábado'], ['0', 'Domingo']];
+async function pintarLocal() {
+  await cargarCarta();
+  const L = M.local, t = L.transferencia || {};
+  const campo = (id, label, val, extra = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}></div>`;
+  $('v-local').innerHTML = `<div class="local-grid">
+    <section class="cardf"><h3>Datos del local</h3>
+      ${campo('l-nombre', 'Nombre', L.nombre, 'maxlength="60" required')}
+      ${campo('l-whatsapp', 'WhatsApp para pedidos', L.whatsapp ? '+' + L.whatsapp : '', 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"')}
+      <p class="ayuda">Aparece en la carta como "Avisar al local por WhatsApp" y en el seguimiento.</p>
+      ${campo('l-instagram', 'Instagram', L.instagram ? '@' + L.instagram : '', 'placeholder="@tulocal"')}
+      ${campo('l-direccion', 'Dirección', L.direccion, 'maxlength="120" placeholder="Calle 123, Concepción"')}
+      ${campo('l-cupo', 'Pedidos web por franja de 30 minutos', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"')}
+      <p class="ayuda">Cuando una franja se llena, la carta la muestra como "completo" y el cliente elige otra.</p>
+    </section>
+    <section class="cardf"><h3>Horario de atención</h3>
+      <table class="horario">${DIAS.map(([d, n]) => { const h = L.horario[d];
+        return `<tr><th>${n}</th><td><label class="ck"><input type="checkbox" data-abre="${d}" ${h ? 'checked' : ''}> Abierto</label></td>
+          <td><input type="time" data-desde="${d}" value="${h ? h[0] : '10:00'}" ${h ? '' : 'disabled'} aria-label="${n} abre"></td>
+          <td><input type="time" data-hasta="${d}" value="${h ? h[1] : '22:00'}" ${h ? '' : 'disabled'} aria-label="${n} cierra"></td></tr>`; }).join('')}</table>
+      <p class="ayuda">Si cierra después de medianoche (ej. 02:00) se entiende como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.</p>
+    </section>
+    <section class="cardf"><h3>Datos para transferencia</h3>
+      <p class="ayuda" style="margin-top:0">Se muestran al cliente al pagar y en el seguimiento de su pedido. Déjalos vacíos si no recibes transferencias.</p>
+      ${campo('t-titular', 'Titular', t.titular, 'maxlength="80"')}
+      ${campo('t-rut', 'RUT', t.rut, 'maxlength="12" placeholder="12.345.678-9"')}
+      ${campo('t-banco', 'Banco', t.banco, 'maxlength="40"')}
+      ${campo('t-tipo', 'Tipo de cuenta', t.tipo, 'maxlength="30" placeholder="Cuenta corriente, vista, RUT…"')}
+      ${campo('t-numero', 'Número de cuenta', t.numero, 'maxlength="30" inputmode="numeric"')}
+      ${campo('t-email', 'Correo para el comprobante', t.email, 'type="email" maxlength="80"')}
+    </section>
+  </div>
+  <div class="guardar"><span class="formerr" id="l-err" role="alert"></span><button class="primary" id="l-guardar" style="flex:0 0 auto;min-width:220px">Guardar cambios</button></div>`;
+  $('v-local').querySelectorAll('[data-abre]').forEach((c) => c.onchange = () => {
+    for (const k of ['desde', 'hasta']) $('v-local').querySelector(`[data-${k}="${c.dataset.abre}"]`).disabled = !c.checked;
+  });
+  $('l-guardar').onclick = async () => {
+    const v = (id) => $(id).value;
+    const horario = Object.fromEntries(DIAS.map(([d]) => [d, $('v-local').querySelector(`[data-abre="${d}"]`).checked
+      ? [$('v-local').querySelector(`[data-desde="${d}"]`).value, $('v-local').querySelector(`[data-hasta="${d}"]`).value] : null]));
+    $('l-guardar').disabled = true; $('l-err').textContent = '';
+    try {
+      await api('panel/local', { method: 'PATCH', body: {
+        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), horario,
+        transferencia: { titular: v('t-titular'), rut: v('t-rut'), banco: v('t-banco'), tipo: v('t-tipo'), numero: v('t-numero'), email: v('t-email') },
+      } });
+      toast('Datos del local guardados'); pintarLocal(); refrescar();
+    } catch (e) { $('l-err').textContent = e.message; }
+    $('l-guardar').disabled = false;
+  };
+}
+
 // ---------- navegación ----------
 document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
-  for (const v of ['pedidos', 'venta', 'cierre', 'carta']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local']) $('v-' + v).hidden = v !== vista;
   if (vista === 'carta') pintarCarta();
+  else if (vista === 'local') pintarLocal();
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else refrescar();
 });
@@ -539,7 +634,7 @@ $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' })
 async function iniciar() {
   try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
   $('app').hidden = false;
-  setInterval(() => vista !== 'carta' && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  setInterval(() => !['carta', 'local'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
 $('entrar').onclick = async () => {
   try { await api('panel/login', { method: 'POST', body: { password: $('clave').value } }); $('login').hidden = true; iniciar(); }

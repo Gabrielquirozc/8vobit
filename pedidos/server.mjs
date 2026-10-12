@@ -64,9 +64,17 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!cols.has('medio_pago')) db.exec('ALTER TABLE pedidos ADD COLUMN medio_pago TEXT');
   if (!cols.has('recibido')) db.exec('ALTER TABLE pedidos ADD COLUMN recibido INTEGER');
   if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
+  // Datos del local editables desde el panel.
+  const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
+  if (!lcols.has('direccion')) db.exec('ALTER TABLE locales ADD COLUMN direccion TEXT');
+  if (!lcols.has('transferencia')) db.exec('ALTER TABLE locales ADD COLUMN transferencia TEXT');
+  if (!lcols.has('pausa')) db.exec('ALTER TABLE locales ADD COLUMN pausa INTEGER NOT NULL DEFAULT 0');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
+  // Observación por producto ("sin cebolla"), aparte del comentario general del pedido.
+  const icols = new Set(db.prepare('PRAGMA table_info(pedido_items)').all().map((c) => c.name));
+  if (!icols.has('nota')) db.exec('ALTER TABLE pedido_items ADD COLUMN nota TEXT');
   // Token de seguimiento: el cliente ve el estado de su pedido sin cuenta ni clave.
   if (!cols.has('token')) db.exec('ALTER TABLE pedidos ADD COLUMN token TEXT');
   // Canal de venta: 'web' (carta pública) o 'mostrador' (venta rápida en el panel).
@@ -116,7 +124,7 @@ function franjas(local) {
   for (const offset of [-1, 0]) {
     const d = new Date(now); d.setDate(d.getDate() + offset);
     const h = horario[d.getDay()];
-    if (!h) continue;
+    if (!h || !h[0] || !h[1]) continue;
     const open = toMin(h[0]);
     let close = toMin(h[1]); if (close <= open) close += 24 * 60;
     const nowRel = nowMin + (offset === -1 ? 24 * 60 : 0);
@@ -135,7 +143,9 @@ function franjas(local) {
     candidates.push({ dia, abierto: nowRel >= open, slots });
   }
   const c = candidates.find((x) => x.abierto) || candidates[candidates.length - 1];
-  return c || { dia: today(), abierto: false, slots: [] };
+  const r = c || { dia: today(), abierto: false, slots: [] };
+  // Pausa: el local deja de recibir pedidos web (colapsado o cerrado de improviso).
+  return local.pausa ? { ...r, abierto: false, pausa: true, slots: [] } : r;
 }
 
 // ---------- sesión del panel ----------
@@ -255,7 +265,9 @@ function menu(local) {
   const ok = new Set(prods.filter(vendible).map((p) => p.id));
   const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
   return {
-    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta, horario: JSON.parse(local.horario) },
+    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta,
+      horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja,
+      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
     agregados: db.prepare('SELECT id, nombre, disponible FROM agregados WHERE local_id=? ORDER BY id').all(local.id),
@@ -265,7 +277,7 @@ function menu(local) {
 function pedidoCompleto(id, localId) {
   const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(id, localId);
   if (!p) return null;
-  p.items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario FROM pedido_items WHERE pedido_id=?').all(id)
+  p.items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(id)
     .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
   return p;
 }
@@ -277,6 +289,7 @@ function crearPedido(local, body) {
   const direccion = modalidad === 'despacho' ? String(body.direccion || '').trim().slice(0, 200) : null;
   if (!nombre || tel.length < 8) return { error: 'Falta nombre o teléfono válido.' };
   if (modalidad === 'despacho' && !direccion) return { error: 'Falta la dirección de despacho.' };
+  if (local.pausa) return { error: 'El local pausó los pedidos en línea por ahora. Llámalo o pasa directo.' };
   const f = franjas(local);
   const franja = body.franja === 'Lo antes posible' ? 'Lo antes posible' : String(body.franja || '');
   if (!f.abierto && franja === 'Lo antes posible') return { error: 'El local está cerrado; elige una franja.' };
@@ -284,7 +297,14 @@ function crearPedido(local, body) {
 
   const v = validarItems(local, body.items);
   if (v.error) return v;
-  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: String(body.notas || '').slice(0, 300) || null, dia: f.dia }, v);
+  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia }, v);
+}
+
+// Texto libre del cliente: sin caracteres de control ni saltos raros, largo acotado.
+// Se guarda tal cual y siempre se muestra escapado (nunca como HTML).
+function limpiarNota(v, max) {
+  const t = String(v ?? '').replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+  return t || null;
 }
 
 // Valida productos, cantidades y agregados contra la base y calcula el total.
@@ -302,7 +322,7 @@ function validarItems(local, lista) {
     const ags = Array.isArray(it.agregados) ? it.agregados.map(Number) : [];
     if (ags.length !== p.incluye) return { error: `${p.nombre} lleva exactamente ${p.incluye} agregado(s).` };
     if (!ags.every((a) => agregadosOk.has(a))) return { error: 'Un agregado ya no está disponible.' };
-    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)) });
+    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)), nota: limpiarNota(it.nota, 140) });
     total += p.precio * cant;
   }
   return { items, total };
@@ -319,11 +339,49 @@ function guardarPedido(local, d, { items, total }) {
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null);
     for (const i of items) db.prepare(
-      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)'
-    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), i.cant, i.p.precio);
+      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,cantidad,precio_unitario,nota) VALUES (?,?,?,?,?,?,?)'
+    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), i.cant, i.p.precio, i.nota);
     db.exec('COMMIT');
     return { id: Number(pid), numero, total, franja: d.franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
+}
+
+// Valida y guarda los datos del local. Solo se tocan los campos enviados.
+function actualizarLocal(local, b) {
+  const txt = (v, max) => String(v ?? '').trim().slice(0, max);
+  const c = {};
+  if (b.nombre !== undefined) { c.nombre = txt(b.nombre, 60); if (!c.nombre) return { error: 'El nombre no puede quedar vacío.' }; }
+  if (b.whatsapp !== undefined) {
+    c.whatsapp = String(b.whatsapp).replace(/\D/g, '');
+    if (c.whatsapp.length === 9 && c.whatsapp.startsWith('9')) c.whatsapp = '56' + c.whatsapp; // celular chileno sin código
+    if (c.whatsapp && (c.whatsapp.length < 10 || c.whatsapp.length > 15)) return { error: 'WhatsApp inválido. Ej: +56 9 1234 5678' };
+  }
+  if (b.instagram !== undefined) c.instagram = txt(b.instagram, 40).replace(/^@/, '').replace(/[^\w.]/g, '');
+  if (b.direccion !== undefined) c.direccion = txt(b.direccion, 120) || null;
+  if (b.cupo_franja !== undefined) {
+    c.cupo_franja = Math.round(Number(b.cupo_franja));
+    if (!(c.cupo_franja >= 1 && c.cupo_franja <= 200)) return { error: 'El cupo por franja debe estar entre 1 y 200.' };
+  }
+  if (b.pausa !== undefined) c.pausa = b.pausa ? 1 : 0;
+  if (b.horario !== undefined) {
+    const hh = /^([01]\d|2[0-3]):[0-5]\d$/, h = {};
+    for (const d of '0123456') {
+      const v = b.horario?.[d];
+      if (v === null || v === undefined) { h[d] = null; continue; }
+      // Apertura = cierre significa abierto 24 h (franjas() ya lo interpreta así).
+      if (!Array.isArray(v) || !hh.test(v[0]) || !hh.test(v[1])) return { error: 'Horario inválido: usa el formato HH:MM.' };
+      h[d] = [v[0], v[1]];
+    }
+    c.horario = JSON.stringify(h);
+  }
+  if (b.transferencia !== undefined) {
+    const t = b.transferencia || {};
+    const v = { titular: txt(t.titular, 80), rut: txt(t.rut, 12), banco: txt(t.banco, 40), tipo: txt(t.tipo, 30), numero: txt(t.numero, 30).replace(/[^\d-]/g, ''), email: txt(t.email, 80) };
+    c.transferencia = Object.values(v).some(Boolean) ? JSON.stringify(v) : null;
+  }
+  const keys = Object.keys(c);
+  if (keys.length) db.prepare(`UPDATE locales SET ${keys.map((k) => `${k}=?`).join(', ')} WHERE id=?`).run(...keys.map((k) => c[k]), local.id);
+  return { ok: true };
 }
 
 const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
@@ -350,8 +408,9 @@ async function api(req, res, url) {
   if (m === 'GET' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '')) {
     const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
     if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
-    const local = db.prepare('SELECT slug, nombre, whatsapp FROM locales WHERE id=?').get(p.local_id);
-    const items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario FROM pedido_items WHERE pedido_id=?').all(p.id)
+    const l = db.prepare('SELECT slug, nombre, whatsapp, transferencia FROM locales WHERE id=?').get(p.local_id);
+    const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null };
+    const items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(p.id)
       .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
     return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
@@ -382,7 +441,7 @@ async function api(req, res, url) {
       const ids = db.prepare('SELECT id FROM pedidos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia);
       const pedidos = ids.map((r) => pedidoCompleto(r.id, lid));
       const vendido = pedidos.filter((p) => p.estado !== 'anulado').reduce((s, p) => s + p.total, 0);
-      return send(res, 200, { dia, local: local.nombre, modo_boleta: local.modo_boleta, vendido, pedidos });
+      return send(res, 200, { dia, local: local.nombre, pausa: !!local.pausa, modo_boleta: local.modo_boleta, vendido, pedidos });
     }
     if (m === 'GET' && parts[1] === 'pedidos' && parts[2]) {
       const p = pedidoCompleto(Number(parts[2]), lid);
@@ -409,6 +468,10 @@ async function api(req, res, url) {
         .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, Date.now(), p.id);
       return send(res, 200, pedidoCompleto(p.id, lid));
     }
+    if (m === 'PATCH' && parts[1] === 'local') {
+      const r = actualizarLocal(local, await readJson(req));
+      return r.error ? send(res, 400, r) : send(res, 200, menu(db.prepare('SELECT * FROM locales WHERE id=?').get(lid)).local);
+    }
     // Venta de mostrador: se cobra al momento; opcionalmente pasa a cocina con comanda.
     if (m === 'POST' && parts[1] === 'venta') {
       const b = await readJson(req);
@@ -419,7 +482,7 @@ async function api(req, res, url) {
       if (recibido < v.total) return send(res, 400, { error: 'El monto recibido es menor al total' });
       const r = guardarPedido(local, {
         cliente: String(b.cliente || '').trim().slice(0, 80) || 'Mostrador', telefono: '', franja: 'Mostrador', modalidad: 'retiro',
-        notas: String(b.notas || '').slice(0, 300) || null, dia: franjas(local).dia, canal: 'mostrador',
+        notas: limpiarNota(b.notas, 300), dia: franjas(local).dia, canal: 'mostrador',
         estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: b.medio_pago, recibido,
         cobrado_en: new Date().toTimeString().slice(0, 5), folio: String(b.folio_boleta || '').replace(/\D/g, '').slice(0, 12) || null,
       }, v);

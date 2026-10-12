@@ -34,6 +34,19 @@ con los pedidos web.
 (web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
 (con registro de folio) y detalle imprimible.
 
+**Datos del local**: nombre, WhatsApp, Instagram, dirección, horario por día (días
+cerrados; misma hora de apertura y cierre = 24 h), cupo de pedidos por franja y datos
+para transferencia, que el cliente ve al pagar y en el seguimiento.
+
+**Pausar pedidos web** (botón en la barra superior): la carta avisa "Pedidos en línea
+pausados" y no deja agregar; el mostrador sigue funcionando.
+
+**Observaciones**: por producto ("sin cebolla", 140 caracteres) y un comentario general
+del pedido (300). Se guardan sin caracteres de control y se muestran siempre escapadas;
+en la comanda la observación sale en mayúsculas para que la cocina no la pase por alto.
+
+**Productos sin foto**: muestran un emoji según lo que son (🌭 🍔 🥤 🍓 …).
+
 **Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
 recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 
@@ -64,7 +77,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 25 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 31 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.
@@ -96,7 +109,7 @@ Empaqueta `pedidos/` (sin `data/` ni `.env`), lo copia a `/tmp` del servidor y c
 [`deploy/remoto.sh`](deploy/remoto.sh), que:
 
 1. Verifica que el puerto 8100 del host esté libre (o sea del propio `pedidos`).
-2. **Corre las 25 pruebas en el servidor**, en un contenedor desechable; si alguna
+2. **Corre las pruebas en el servidor**, en un contenedor desechable; si alguna
    falla, se detiene sin tocar nada.
 3. Respalda la versión anterior en `/srv/docker/compose/pedidos.prev-FECHA`.
 4. Copia los archivos conservando `.env`; la primera vez crea `.env` con una clave

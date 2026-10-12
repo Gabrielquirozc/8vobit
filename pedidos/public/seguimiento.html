@@ -83,9 +83,13 @@ async function cargar() {
       <ol class="steps">${PASOS.map(([k, t], i) => `<li class="${i < idx ? 'hecho' : i === idx ? 'actual' : ''}" ${i === idx ? 'aria-current="step"' : ''}>${t}</li>`).join('')}</ol>
     </section>
     <section class="card">
-      <ul class="items">${p.items.map((i) => `<li><div><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<div class="d">${esc(i.agregados.join(', '))}</div>` : ''}</div><span class="num" style="font:600 1rem var(--font-body)">${clp(i.precio_unitario * i.cantidad)}</span></li>`).join('')}</ul>
+      <ul class="items">${p.items.map((i) => `<li><div><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<div class="d">${esc(i.agregados.join(', '))}</div>` : ''}${i.nota ? `<div class="d" style="color:var(--brand);font-weight:600">Nota: ${esc(i.nota)}</div>` : ''}</div><span class="num" style="font:600 1rem var(--font-body)">${clp(i.precio_unitario * i.cantidad)}</span></li>`).join('')}</ul>
       <div class="tot"><span>Total</span><span>${clp(p.total)}</span></div>
       <div style="color:var(--ink-2);font-size:.9rem">${p.pagado ? 'Pagado' : `Pagas al ${p.modalidad === 'despacho' ? 'recibir' : 'retirar'}: efectivo, transferencia o tarjeta`}</div>
+      ${!p.pagado && p.local.transferencia ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;color:var(--brand)">Datos para transferir</summary>
+        <dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:8px 0">${[['Titular', 'titular'], ['RUT', 'rut'], ['Banco', 'banco'], ['Tipo de cuenta', 'tipo'], ['N° de cuenta', 'numero'], ['Correo', 'email']]
+          .filter(([, k]) => p.local.transferencia[k]).map(([t, k]) => `<dt style="color:var(--ink-2)">${t}</dt><dd style="margin:0;font-weight:600">${esc(p.local.transferencia[k])}</dd>`).join('')}</dl>
+        <p style="color:var(--ink-2);font-size:.85rem;margin:0">Indica el pedido #${p.numero} en el comentario de la transferencia.</p></details>` : ''}
     </section>
     <div class="row2">
       ${wa ? `<a class="primary" href="${wa}" target="_blank" rel="noopener"><svg class="ico"><use href="#i-msg"/></svg>Escribir al local</a>` : ''}

@@ -81,10 +81,10 @@
     <fieldset class="fs"><legend>Tus datos</legend>
       <div class="field"><label for="cliente">Nombre</label><input id="cliente" autocomplete="name"><div class="err" id="e-cliente"></div></div>
       <div class="field"><label for="telefono">Celular</label><input id="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678"><div class="err" id="e-telefono"></div></div>
-      <div class="field"><label for="notas">Comentario para la cocina <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><textarea id="notas" rows="2" placeholder="Sin cebolla, bien tostado…"></textarea></div>
+      <div class="field"><label for="notas">Comentario general del pedido <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><textarea id="notas" rows="2" maxlength="300" placeholder="Ej: tocar el timbre, sin servilletas…"></textarea></div>
     </fieldset>
 
-    <div class="note"><svg class="ico"><use href="#i-wallet"/></svg><div><b>Pagas al retirar o recibir</b><br>Efectivo, transferencia o tarjeta. Sin cargos extra.</div></div>
+    <div class="note"><svg class="ico"><use href="#i-wallet"/></svg><div id="pagoInfo" style="flex:1"></div></div>
     <div class="formerr" id="formErr" role="alert"></div>
   </div>
   <div class="sh-foot"><button class="primary" id="enviar"><span>Enviar pedido</span><span class="num" id="enviarTotal"></span></button></div>
@@ -108,7 +108,7 @@
 </dialog>
 
 <script type="module">
-import { api, clp, esc, BASE } from './comun.js';
+import { api, clp, esc, BASE, emojiDe } from './comun.js';
 const $ = (id) => document.getElementById(id);
 const slug = location.pathname.split('/').filter(Boolean).pop();
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -128,6 +128,7 @@ const tipoArt = (cIdx) => { const n = norm(M.categorias[cIdx]?.nombre || '');
   return /vega/.test(n) ? 2 : /hot|complet/.test(n) ? 1 : /papa|agreg/.test(n) ? 3 : /bebid|jugo|batid/.test(n) ? 4 : 0; };
 const art = (cIdx, cls = '', p = null) => { const t = tipoArt(cIdx); return p?.imagen
   ? `<div class="art ${cls}"><img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" decoding="async" width="800" height="600"></div>`
+  : p ? `<div class="art c${t % 4} ${cls}" aria-hidden="true"><span class="emoji">${emojiDe(p.nombre, M.categorias[cIdx]?.nombre)}</span></div>`
   : `<div class="art c${t % 4} ${cls}" aria-hidden="true">${ART[t]}</div>`; };
 const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
 
@@ -142,8 +143,13 @@ function estadoLocal(h) {
     if (min >= o && min < c) return { abierto: true, txt: `Abierto · cierra ${hoy[1]}` };
     if (min < o) return { abierto: false, txt: `Cerrado · abre hoy ${hoy[0]}` };
   }
-  const man = h[(now.getDay() + 1) % 7];
-  return { abierto: false, txt: man ? `Cerrado · abre mañana ${man[0]}` : 'Cerrado' };
+  // Próximo día con horario (puede haber días cerrados).
+  const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  for (let k = 1; k <= 7; k++) {
+    const d = (now.getDay() + k) % 7, x = h[d];
+    if (x) return { abierto: false, txt: `Cerrado · abre ${k === 1 ? 'mañana' : 'el ' + DIAS[d]} ${x[0]}` };
+  }
+  return { abierto: false, txt: 'Cerrado' };
 }
 
 // ---------- render ----------
@@ -197,7 +203,7 @@ $('main').addEventListener('click', (e) => { const b = e.target.closest('[data-p
 let pd = null;
 function abrirProducto(id) {
   const { p, i } = prods.get(id);
-  pd = { p, qty: 1, sel: [] };
+  pd = { p, qty: 1, sel: [], nota: '' };
   const pintar = () => {
     const falta = p.incluye - pd.sel.length;
     $('pdBody').innerHTML = `
@@ -209,7 +215,10 @@ function abrirProducto(id) {
       ${p.incluye ? `<div class="group"><div class="group-h"><h3>Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</h3>
         <span class="req ${falta ? '' : 'done'}">${falta ? `Obligatorio · ${pd.sel.length}/${p.incluye}` : 'Listo'}</span></div>
         <div class="opts">${M.agregados.filter((a) => a.disponible).map((a) => { const on = pd.sel.includes(a.id);
-          return `<button type="button" class="opt" data-ag="${a.id}" aria-pressed="${on}" ${!on && !falta ? 'disabled' : ''}>${on ? ico('check') : ''}${esc(a.nombre)}</button>`; }).join('')}</div></div>` : ''}`;
+          return `<button type="button" class="opt" data-ag="${a.id}" aria-pressed="${on}" ${!on && !falta ? 'disabled' : ''}>${on ? ico('check') : ''}${esc(a.nombre)}</button>`; }).join('')}</div></div>` : ''}
+      <div class="field" style="margin-top:18px"><label for="pdNota">¿Algo especial con este producto? <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label>
+        <input id="pdNota" maxlength="140" placeholder="Ej: sin cebolla, bien tostado" autocomplete="off" value="${esc(pd.nota)}"></div>`;
+    $('pdNota').oninput = (e) => { pd.nota = e.target.value; };
     $('pdBody').querySelector('[data-close]').onclick = () => $('dlgProd').close();
     $('pdBody').querySelectorAll('[data-ag]').forEach((b) => b.onclick = () => {
       const a = Number(b.dataset.ag);
@@ -217,19 +226,20 @@ function abrirProducto(id) {
       pintar();
     });
     $('pdQty').textContent = pd.qty;
-    $('pdAdd').disabled = !!falta;
-    $('pdAdd').innerHTML = falta ? `Elige ${falta} más` : `Agregar <span class="num">${clp(p.precio * pd.qty)}</span>`;
+    $('pdAdd').disabled = !!falta || M.local.pausa;
+    $('pdAdd').innerHTML = M.local.pausa ? 'Pedidos en línea pausados' : falta ? `Elige ${falta} más` : `Agregar <span class="num">${clp(p.precio * pd.qty)}</span>`;
   };
   $('pdMenos').onclick = () => { pd.qty = Math.max(1, pd.qty - 1); pintar(); };
   $('pdMas').onclick = () => { pd.qty = Math.min(20, pd.qty + 1); pintar(); };
-  $('pdAdd').onclick = () => { meter(p, pd.sel, pd.qty); $('dlgProd').close(); };
+  $('pdAdd').onclick = () => { meter(p, pd.sel, pd.qty, pd.nota.trim().slice(0, 140)); $('dlgProd').close(); };
   pintar();
   $('dlgProd').showModal(); $('pdBody').scrollTop = 0;
 }
-function meter(p, ags, n) {
-  const key = p.id + ':' + [...ags].sort().join(',');
+function meter(p, ags, n, nota = '') {
+  // La observación separa líneas: un Italiano "sin tomate" no se suma con uno normal.
+  const key = p.id + ':' + [...ags].sort().join(',') + ':' + nota.toLowerCase();
   const ex = carro.find((i) => i.key === key);
-  if (ex) ex.cantidad += n; else carro.push({ key, producto_id: p.id, agregados: ags, cantidad: n });
+  if (ex) ex.cantidad += n; else carro.push({ key, producto_id: p.id, agregados: ags, cantidad: n, nota: nota || undefined });
   toast(`${n > 1 ? n + ' × ' : ''}${p.nombre} agregado`);
   navigator.vibrate?.(15);
   barra();
@@ -251,10 +261,17 @@ function pintarCarro() {
   $('lines').innerHTML = carro.map((i, idx) => {
     const { p } = prods.get(i.producto_id);
     const ags = i.agregados.map((a) => M.agregados.find((x) => x.id === a)?.nombre).join(', ');
-    return `<div class="line"><div><div class="n">${esc(p.nombre)}</div>${ags ? `<div class="d">${esc(ags)}</div>` : ''}<div class="d num">${clp(p.precio * i.cantidad)}</div></div>
+    return `<div class="line"><div><div class="n">${esc(p.nombre)}</div>${ags ? `<div class="d">${esc(ags)}</div>` : ''}${i.nota ? `<div class="d nota-l">Nota: ${esc(i.nota)}</div>` : ''}<div class="d num">${clp(p.precio * i.cantidad)}</div></div>
       <div class="stepper"><button type="button" data-q="${idx}" data-d="-1" aria-label="Quitar uno de ${esc(p.nombre)}">${ico(i.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${i.cantidad}</span><button type="button" data-q="${idx}" data-d="1" aria-label="Agregar uno de ${esc(p.nombre)}">${ico('plus')}</button></div></div>`;
   }).join('');
   $('ckTotal').textContent = clp(total()); $('enviarTotal').textContent = clp(total());
+  const t = M.local.transferencia;
+  $('pagoInfo').innerHTML = `<b>Pagas al retirar o recibir</b><br>Efectivo, transferencia o tarjeta. Sin cargos extra.` + (t ? `
+    <details class="transf"><summary>Ver datos para transferir</summary><dl>
+      ${[['Titular', t.titular], ['RUT', t.rut], ['Banco', t.banco], ['Tipo de cuenta', t.tipo], ['N° de cuenta', t.numero], ['Correo', t.email]].filter(([, v]) => v)
+        .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+      ${t.numero ? `<button type="button" class="ghost" id="copiarCta" data-n="${esc(t.numero)}">Copiar n° de cuenta</button>` : ''}</details>` : '');
+  $('copiarCta')?.addEventListener('click', async (e) => { try { await navigator.clipboard.writeText(e.target.dataset.n); toast('Número de cuenta copiado'); } catch {} });
 }
 $('lines').onclick = (e) => {
   const b = e.target.closest('[data-q]'); if (!b) return;
@@ -334,7 +351,9 @@ try {
   $('nombre').textContent = M.local.nombre;
   $('logo').textContent = M.local.nombre[0];
   const st = estadoLocal(M.local.horario);
+  if (M.local.pausa) st.abierto = false, st.txt = 'Pedidos en línea pausados por ahora';
   $('facts').innerHTML = `<span class="fact ${st.abierto ? 'abierto' : 'cerrado'}">${ico('clock')}${st.txt}</span>
+    ${M.local.direccion ? `<a class="fact" href="https://maps.google.com/?q=${encodeURIComponent(M.local.direccion)}" target="_blank" rel="noopener">${ico('store')}${esc(M.local.direccion)}</a>` : ''}
     <span class="fact">${ico('store')}Retiro sin fila</span>
     ${M.local.instagram ? `<a class="fact" href="https://instagram.com/${esc(M.local.instagram)}" target="_blank" rel="noopener">${ico('insta')}@${esc(M.local.instagram)}</a>` : ''}`;
   render();

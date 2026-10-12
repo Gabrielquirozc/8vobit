@@ -194,3 +194,13 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
+
+/* Emoji en vez de foto */
+.art .emoji { font-size: 44px; line-height: 1; filter: drop-shadow(0 2px 3px rgb(0 0 0 / .12)); }
+.fav .art .emoji { font-size: 64px; }
+.sh-art .emoji { font-size: 96px; }
+.nota-l { color: var(--brand) !important; font-weight: 600; }
+.transf { margin-top: 8px; }
+.transf summary { cursor: pointer; font-weight: 600; color: var(--brand); min-height: 32px; display: flex; align-items: center; }
+.transf dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
+.transf dt { color: var(--ink-2); } .transf dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
