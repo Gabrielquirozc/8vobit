@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   cantidad INTEGER NOT NULL, precio_unitario INTEGER NOT NULL);
 `);
 
-let contactoSeed = false;
+let contactoSeed = false, salsasSeed = false;
 // Columnas de cobro agregadas después de la primera versión: migración idempotente.
 {
   const cols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
@@ -82,6 +82,16 @@ let contactoSeed = false;
   // Observación por producto ("sin cebolla"), aparte del comentario general del pedido.
   const icols = new Set(db.prepare('PRAGMA table_info(pedido_items)').all().map((c) => c.name));
   if (!icols.has('nota')) db.exec('ALTER TABLE pedido_items ADD COLUMN nota TEXT');
+  // Salsas (mostaza, ketchup…): opcionales y sin costo, aparte de los ingredientes que se eligen.
+  if (!icols.has('salsas')) db.exec("ALTER TABLE pedido_items ADD COLUMN salsas TEXT NOT NULL DEFAULT '[]'");
+  const acols = new Set(db.prepare('PRAGMA table_info(agregados)').all().map((c) => c.name));
+  if (!acols.has('tipo')) { db.exec("ALTER TABLE agregados ADD COLUMN tipo TEXT NOT NULL DEFAULT 'ingrediente'"); salsasSeed = true; }
+  // Si la categoría ofrece salsas (no tiene sentido ofrecer ketchup con una bebida).
+  const ccols = new Set(db.prepare('PRAGMA table_info(categorias)').all().map((c) => c.name));
+  if (!ccols.has('salsas')) {
+    db.exec('ALTER TABLE categorias ADD COLUMN salsas INTEGER NOT NULL DEFAULT 1');
+    db.exec("UPDATE categorias SET salsas=0 WHERE nombre LIKE 'Bebida%' OR nombre LIKE 'Jugo%'");
+  }
   // Token de seguimiento: el cliente ve el estado de su pedido sin cuenta ni clave.
   if (!cols.has('token')) db.exec('ALTER TABLE pedidos ADD COLUMN token TEXT');
   // Canal de venta: 'web' (carta pública) o 'mostrador' (venta rápida en el panel).
@@ -109,8 +119,9 @@ function seed() {
   ).run(L.slug, L.nombre, L.instagram, L.whatsapp, L.telefono || null, L.direccion || null, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
   if (L.logo) db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(lid, L.logo), lid);
   for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
+  for (const a of s.salsas || []) db.prepare("INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,'salsa')").run(lid, a);
   s.categorias.forEach((c, ci) => {
-    const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, c.nombre, ci);
+    const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden,salsas) VALUES (?,?,?,?)').run(lid, c.nombre, ci, c.salsas === false ? 0 : 1);
     c.productos.forEach((p, pi) => db.prepare(
       'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado,imagen) VALUES (?,?,?,?,?,?,?,?,?,?)'
     ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0, seedImg(lid, p.imagen)));
@@ -127,6 +138,9 @@ seed();
     db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(l.id, s.local.logo), l.id);
   if (contactoSeed) for (const k of ['whatsapp', 'telefono', 'direccion'])
     if (s.local[k]) db.prepare(`UPDATE locales SET ${k}=? WHERE slug=? AND COALESCE(${k},'')=''`).run(s.local[k], s.local.slug);
+  // Salsas del seed para la base ya creada: una sola vez, al crear la columna tipo.
+  const lid = salsasSeed && db.prepare('SELECT id FROM locales WHERE slug=?').get(s.local.slug)?.id;
+  if (lid && !db.prepare("SELECT 1 FROM agregados WHERE local_id=? AND tipo='salsa'").get(lid)) for (const a of s.salsas || []) db.prepare("INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,'salsa')").run(lid, a);
 }
 
 // ---------- franjas horarias ----------
@@ -293,7 +307,7 @@ function serveFile(res, file, versionado = false) {
 }
 
 function menu(local) {
-  const cats = db.prepare('SELECT id, nombre FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
+  const cats = db.prepare('SELECT id, nombre, salsas FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
   const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen FROM productos WHERE local_id=? ORDER BY orden').all(local.id)
     .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null }));
   // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
@@ -311,15 +325,15 @@ function menu(local) {
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
-    agregados: db.prepare('SELECT id, nombre, disponible FROM agregados WHERE local_id=? ORDER BY id').all(local.id),
+    agregados: db.prepare('SELECT id, nombre, disponible, tipo FROM agregados WHERE local_id=? ORDER BY id').all(local.id),
   };
 }
 
 function pedidoCompleto(id, localId) {
   const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(id, localId);
   if (!p) return null;
-  p.items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(id)
-    .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
+  p.items = db.prepare('SELECT nombre, agregados, salsas, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(id)
+    .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
   return p;
 }
 
@@ -352,7 +366,8 @@ function limpiarNota(v, max) {
 // El precio siempre sale de la base: lo que mande el cliente se ignora.
 function validarItems(local, lista) {
   if (!Array.isArray(lista) || !lista.length || lista.length > 50) return { error: 'El carro está vacío.' };
-  const agregadosOk = new Map(db.prepare('SELECT id, nombre FROM agregados WHERE local_id=? AND disponible=1').all(local.id).map((a) => [a.id, a.nombre]));
+  const disp = (tipo) => new Map(db.prepare('SELECT id, nombre FROM agregados WHERE local_id=? AND disponible=1 AND tipo=?').all(local.id, tipo).map((a) => [a.id, a.nombre]));
+  const agregadosOk = disp('ingrediente'), salsasOk = disp('salsa');
   const items = [];
   let total = 0;
   for (const it of lista) {
@@ -363,7 +378,10 @@ function validarItems(local, lista) {
     const ags = Array.isArray(it.agregados) ? it.agregados.map(Number) : [];
     if (ags.length !== p.incluye) return { error: `${p.nombre} lleva exactamente ${p.incluye} agregado(s).` };
     if (!ags.every((a) => agregadosOk.has(a))) return { error: 'Un agregado ya no está disponible.' };
-    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)), nota: limpiarNota(it.nota, 140) });
+    const sls = [...new Set(Array.isArray(it.salsas) ? it.salsas.map(Number) : [])];
+    if (sls.length && !db.prepare('SELECT salsas FROM categorias WHERE id=?').get(p.categoria_id)?.salsas) return { error: `${p.nombre} no lleva salsas.` };
+    if (!sls.every((a) => salsasOk.has(a))) return { error: 'Una salsa ya no está disponible.' };
+    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)), salsas: sls.map((a) => salsasOk.get(a)), nota: limpiarNota(it.nota, 140) });
     total += p.precio * cant;
   }
   return { items, total };
@@ -380,8 +398,8 @@ function guardarPedido(local, d, { items, total }) {
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null);
     for (const i of items) db.prepare(
-      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,cantidad,precio_unitario,nota) VALUES (?,?,?,?,?,?,?)'
-    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), i.cant, i.p.precio, i.nota);
+      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota) VALUES (?,?,?,?,?,?,?,?)'
+    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota);
     db.exec('COMMIT');
     return { id: Number(pid), numero, total, franja: d.franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -522,8 +540,8 @@ async function api(req, res, url) {
     if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
     const l = db.prepare('SELECT slug, nombre, whatsapp, telefono, transferencia, logo FROM locales WHERE id=?').get(p.local_id);
     const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, telefono: l.telefono, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null, logo: l.logo ? `${BASE}/img/${l.logo}` : null };
-    const items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(p.id)
-      .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
+    const items = db.prepare('SELECT nombre, agregados, salsas, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(p.id)
+      .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
     return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
       modalidad: p.modalidad, total: p.total, pagado: !!p.pagado, creado: p.creado, items });

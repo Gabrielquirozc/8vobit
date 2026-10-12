@@ -405,6 +405,35 @@ test('observación por producto y comentario general: se guardan limpios y acota
   assert.equal((await req('GET', `/api/panel/pedidos/${v.body.id}`)).body.items[0].nota, 'bien tostado');
 });
 
+test('salsas: opcionales y gratis, no cuentan como ingrediente ni se ofrecen con bebidas', async () => {
+  const m = await menu();
+  const salsas = m.agregados.filter((a) => a.tipo === 'salsa');
+  assert.deepEqual(salsas.map((a) => a.nombre), ['Mostaza', 'Ketchup', 'Ají receta Gassuso']);
+  const it = await prod('Italiano'), lata = await prod('Bebida en lata 350 cc'), mech = await prod('Carne mechada + 2 ingr.');
+  const ing = m.agregados.filter((a) => a.tipo !== 'salsa');
+  const r = await pedir([
+    { producto_id: it.id, cantidad: 2, salsas: [salsas[0].id, salsas[2].id, salsas[0].id] },
+    { producto_id: mech.id, cantidad: 1, agregados: [ing[0].id, ing[1].id], salsas: [salsas[1].id] },
+  ]);
+  assert.equal(r.status, 201);
+  assert.equal(r.body.total, it.precio * 2 + mech.precio); // las salsas no cobran
+  // una salsa no reemplaza un ingrediente obligatorio
+  assert.equal((await pedir([{ producto_id: mech.id, agregados: [ing[0].id, salsas[0].id] }])).status, 400);
+  assert.equal((await pedir([{ producto_id: lata.id, salsas: [salsas[1].id] }])).status, 400);
+  assert.equal((await pedir([{ producto_id: it.id, salsas: [ing[0].id] }])).status, 400);
+  await login();
+  const d = (await req('GET', `/api/panel/pedidos/${r.body.id}`)).body;
+  assert.deepEqual(d.items[0].salsas, ['Mostaza', 'Ají receta Gassuso']);
+  assert.deepEqual(d.items[1].salsas, ['Ketchup']);
+  assert.deepEqual((await req('GET', `/api/seguimiento/${r.body.token}`)).body.items[0].salsas, ['Mostaza', 'Ají receta Gassuso']);
+  // agotada desde el panel, deja de aceptarse
+  await req('PATCH', `/api/panel/agregados/${salsas[2].id}`, { disponible: false });
+  assert.equal((await pedir([{ producto_id: it.id, salsas: [salsas[2].id] }])).status, 400);
+  await req('PATCH', `/api/panel/agregados/${salsas[2].id}`, { disponible: true });
+  const v = await req('POST', '/api/panel/venta', { items: [{ producto_id: it.id, salsas: [salsas[1].id] }], medio_pago: 'efectivo', recibido: 10000 });
+  assert.deepEqual((await req('GET', `/api/panel/pedidos/${v.body.id}`)).body.items[0].salsas, ['Ketchup']);
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

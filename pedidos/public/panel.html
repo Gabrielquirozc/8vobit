@@ -272,7 +272,8 @@
 
 <dialog class="sheet" id="dlgAg" aria-labelledby="agTitulo">
   <div class="sh-head"><h2 id="agTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
-  <div class="sh-body"><div class="group-h"><h3 style="margin:0" id="agAyuda"></h3><span class="req" id="agReq"></span></div><div class="opts" id="agOpts"></div></div>
+  <div class="sh-body"><div id="agIng"><div class="group-h"><h3 style="margin:0" id="agAyuda"></h3><span class="req" id="agReq"></span></div><div class="opts" id="agOpts"></div></div>
+    <div id="agSl"><div class="group-h" style="margin-top:16px"><h3 style="margin:0">Salsas</h3><span class="req done">Opcional</span></div><div class="opts" id="agSalsas"></div></div></div>
   <div class="sh-foot"><button class="primary" id="agOk" disabled>Agregar</button></div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -324,7 +325,7 @@ function tarjeta(p) {
       ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : `<span class="chip2 warn">Por cobrar</span>`}
     </div>
     ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}</div>` : ''}
-    <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
+    <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
     <div class="pie"><span></span><span class="total num">${clp(p.total)}</span></div>
     ${pasos[p.estado] || ''}
@@ -441,7 +442,7 @@ function pintarVenta() {
       <span class="t"><span class="n">${esc(p.nombre)}</span><br><span class="p num">${clp(p.precio)}</span>${p.incluye ? ` · <span class="p">+${p.incluye} ingr.</span>` : ''}</span></button>`;
   }).join('') || '<p class="vacio">No hay productos con ese nombre.</p>';
   const total = ticket.reduce((s, t) => s + t.p.precio * t.cantidad, 0);
-  $('vlines').innerHTML = ticket.length ? ticket.map((t, i) => `<div class="line"><div><div class="n">${esc(t.p.nombre)}</div>${t.ags.length ? `<div class="d">${esc(t.ags.map((a) => a.nombre).join(', '))}</div>` : ''}${t.nota ? `<div class="d" style="color:var(--brand);font-weight:600">Nota: ${esc(t.nota)}</div>` : ''}<div class="d num">${clp(t.p.precio * t.cantidad)}</div>
+  $('vlines').innerHTML = ticket.length ? ticket.map((t, i) => `<div class="line"><div><div class="n">${esc(t.p.nombre)}</div>${t.ags.length || t.salsas.length ? `<div class="d">${esc([...t.ags, ...t.salsas].map((a) => a.nombre).join(', '))}</div>` : ''}${t.nota ? `<div class="d" style="color:var(--brand);font-weight:600">Nota: ${esc(t.nota)}</div>` : ''}<div class="d num">${clp(t.p.precio * t.cantidad)}</div>
     <button type="button" class="link" data-nota="${i}" style="padding:4px 0">${t.nota ? 'Cambiar nota' : '+ Nota'}</button></div>
     <div class="stepper"><button type="button" data-l="${i}" data-d="-1" aria-label="Quitar uno">${ico(t.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${t.cantidad}</span><button type="button" data-l="${i}" data-d="1" aria-label="Agregar uno">${ico('plus')}</button></div></div>`).join('')
     : '<p style="color:var(--ink-2);text-align:center;padding:24px 0">Toca un producto para agregarlo.</p>';
@@ -449,29 +450,34 @@ function pintarVenta() {
   $('vcobrar').disabled = $('vlimpiar').disabled = !ticket.length;
   $('vcobrar').textContent = ticket.length ? `Cobrar ${clp(total)}` : 'Cobrar';
 }
-function sumar(p, ags) {
-  const key = p.id + ':' + ags.map((a) => a.id).sort().join(',');
+function sumar(p, ags, salsas = []) {
+  const key = p.id + ':' + ags.map((a) => a.id).sort().join(',') + ':' + salsas.map((a) => a.id).sort().join(',');
   const ex = ticket.find((t) => t.key === key);
-  if (ex) ex.cantidad++; else ticket.push({ key, p, ags, cantidad: 1 });
+  if (ex) ex.cantidad++; else ticket.push({ key, p, ags, salsas, cantidad: 1 });
   pintarVenta();
 }
 $('vtiles').onclick = (e) => {
   const b = e.target.closest('[data-p]'); if (!b) return;
   const p = prods().find((x) => x.id === Number(b.dataset.p));
-  if (!p.incluye) return sumar(p, []);
-  let sel = [];
+  const salsas = M.categorias.find((c) => c.id === p.categoria_id)?.salsas ? M.agregados.filter((a) => a.tipo === 'salsa' && a.disponible) : [];
+  if (!p.incluye && !salsas.length) return sumar(p, []);
+  let sel = [], sls = [];
   $('agTitulo').textContent = p.nombre;
   $('agAyuda').textContent = `Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}`;
+  $('agIng').hidden = !p.incluye; $('agSl').hidden = !salsas.length;
+  const boton = (a, on, dis = false) => `<button type="button" class="opt" data-ag="${a.id}" aria-pressed="${on}" ${dis ? 'disabled' : ''}>${on ? ico('check') : ''}${esc(a.nombre)}</button>`;
   const pintar = () => {
     const falta = p.incluye - sel.length;
     $('agReq').textContent = falta ? `${sel.length}/${p.incluye}` : 'Listo'; $('agReq').classList.toggle('done', !falta);
-    $('agOpts').innerHTML = M.agregados.filter((a) => a.disponible).map((a) => { const on = sel.some((s) => s.id === a.id);
-      return `<button type="button" class="opt" data-ag="${a.id}" aria-pressed="${on}" ${!on && !falta ? 'disabled' : ''}>${on ? ico('check') : ''}${esc(a.nombre)}</button>`; }).join('');
+    $('agOpts').innerHTML = M.agregados.filter((a) => a.tipo !== 'salsa' && a.disponible).map((a) => { const on = sel.some((s) => s.id === a.id); return boton(a, on, !on && !falta); }).join('');
+    $('agSalsas').innerHTML = salsas.map((a) => boton(a, sls.some((s) => s.id === a.id))).join('');
     $('agOk').disabled = !!falta;
   };
-  $('agOpts').onclick = (ev) => { const o = ev.target.closest('[data-ag]'); if (!o) return; const a = M.agregados.find((x) => x.id === Number(o.dataset.ag));
-    sel = sel.some((s) => s.id === a.id) ? sel.filter((s) => s.id !== a.id) : [...sel, a]; pintar(); };
-  $('agOk').onclick = () => { sumar(p, sel); $('dlgAg').close(); };
+  const alternar = (lista, ev) => { const o = ev.target.closest('[data-ag]'); if (!o) return lista; const a = M.agregados.find((x) => x.id === Number(o.dataset.ag));
+    return lista.some((s) => s.id === a.id) ? lista.filter((s) => s.id !== a.id) : [...lista, a]; };
+  $('agOpts').onclick = (ev) => { sel = alternar(sel, ev); pintar(); };
+  $('agSalsas').onclick = (ev) => { sls = alternar(sls, ev); pintar(); };
+  $('agOk').onclick = () => { sumar(p, sel, sls); $('dlgAg').close(); };
   pintar(); $('dlgAg').showModal();
 };
 $('vlines').addEventListener('click', (e) => {
@@ -489,7 +495,7 @@ $('vcobrar').onclick = () => {
   $('vcliente').value = ''; $('cocina').checked = true;
   abrirCobro({ titulo: 'Venta de mostrador', total, venta: true, boton: 'Cobrar', enviar: async (b) => {
     const r = await api('panel/venta', { method: 'POST', body: { ...b, cocina: $('cocina').checked, cliente: $('vcliente').value,
-      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id), nota: t.nota })) } });
+      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id), salsas: t.salsas.map((a) => a.id), nota: t.nota })) } });
     conocidos?.add(r.id);
     if ($('cocina').checked) comanda(r.id);
     ticket = []; pintarVenta();
@@ -537,6 +543,7 @@ $('v-cierre').onclick = async (e) => {
 };
 
 // ---------- carta y precios ----------
+const chipAg = (a) => `<button type="button" class="opt" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ''}${esc(a.nombre)}</button>`;
 async function pintarCarta() {
   const [, h] = await Promise.all([cargarCarta(), api('panel/historial')]);
   $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a></p>` +
@@ -549,8 +556,8 @@ async function pintarCarta() {
       <td><label class="ck"><input type="checkbox" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
       <td><label class="ck"><input type="checkbox" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
     </tr>`).join('')}</table>`).join('') +
-    `<h3>Ingredientes</h3><p style="color:var(--ink-2)">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="opts">${M.agregados.map((a) =>
-      `<button type="button" class="opt" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ''}${esc(a.nombre)}</button>`).join('')}</div>
+    `<h3>Ingredientes</h3><p style="color:var(--ink-2)">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="opts">${M.agregados.filter((a) => a.tipo !== 'salsa').map(chipAg).join('')}</div>
+    <h3>Salsas</h3><p style="color:var(--ink-2)">Opcionales y sin costo; se ofrecen en todo menos bebidas y jugos.</p><div class="opts">${M.agregados.filter((a) => a.tipo === 'salsa').map(chipAg).join('')}</div>
     <h3>Historial de precios</h3>` +
     (h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th class="r">Antes</th><th class="r">Ahora</th></tr>${h.map((r) =>
       `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p style="color:var(--ink-2)">Aún no hay cambios de precio.</p>');

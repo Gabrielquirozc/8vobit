@@ -53,6 +53,10 @@ clientes que repitieron y **comisión ahorrada** (ventas web × % de la app, con
 en Datos del local). Ventas por día y pedidos por hora con tabla equivalente, por canal,
 ranking de platos y botón **Enviar por WhatsApp** con el texto listo.
 
+**Salsas** (Mostaza, Ketchup, Ají receta Gassuso): opcionales y sin costo, aparte de los
+ingredientes obligatorios de los "+N ingr."; se ofrecen en todas las categorías salvo bebidas y
+jugos, en la carta y en la venta rápida. Se agotan desde Carta y precios y salen en la comanda.
+
 **Productos sin foto**: muestran un emoji según lo que son (🌭 🍔 🥤 🍓 …).
 
 **Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
@@ -89,7 +93,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 35 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 36 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

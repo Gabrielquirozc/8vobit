@@ -57,6 +57,11 @@
     "Huevo",
     "Tocino"
   ],
+  "salsas": [
+    "Mostaza",
+    "Ketchup",
+    "Ají receta Gassuso"
+  ],
   "categorias": [
     {
       "nombre": "Sanguchería",
@@ -323,6 +328,7 @@
     },
     {
       "nombre": "Bebidas y jugos",
+      "salsas": false,
       "productos": [
         {
           "nombre": "Bebida en lata 350 cc",
