@@ -196,6 +196,30 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
   color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: .92rem;
   opacity: 0; transition: opacity .2s, transform .2s var(--ease); pointer-events: none; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
+.snack { position: fixed; left: 50%; bottom: 96px; z-index: 31; width: min(calc(100% - 32px), 440px); transform: translate(-50%, 12px);
+  display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--bg); padding: 8px 8px 8px 16px;
+  border-radius: 18px; box-shadow: 0 10px 30px #0004; font-size: .95rem; opacity: 0; transition: opacity .25s, transform .3s var(--ease); }
+.snack.on { opacity: 1; transform: translate(-50%, 0); }
+.snack span { flex: 1; line-height: 1.3; }
+.snack button { border: 0; border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer; }
+.snack #snackOk { background: var(--brand); color: #fff; padding: 10px 16px; }
+.snack .x { background: transparent; color: inherit; width: 36px; height: 36px; display: grid; place-items: center; opacity: .7; }
+.ups { margin: 14px 0 4px; }
+.ups h3 { font-size: 1rem; margin: 0 0 10px; }
+.ups-l { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 64%); gap: 10px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
+.ups-l::-webkit-scrollbar { display: none; }
+.ups-i { scroll-snap-align: start; position: relative; display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: center; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 8px 40px 8px 8px; cursor: pointer; font: inherit; color: inherit; }
+.ups-i .art { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; }
+.ups-i .art img { width: 100%; height: 100%; object-fit: cover; }
+.ups-i .art .emoji { font-size: 1.6rem; }
+.ups-i .t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ups-i .n { font-weight: 600; font-size: .9rem; line-height: 1.2; }
+.ups-i .p { color: var(--ink-2); font-size: .85rem; }
+.ups-i .mas { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 999px;
+  background: var(--ink); color: var(--bg); display: grid; place-items: center; }
+.ups-i .mas .ico { width: 16px; height: 16px; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
 

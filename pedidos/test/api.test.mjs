@@ -434,6 +434,25 @@ test('salsas: opcionales y gratis, no cuentan como ingrediente ni se ofrecen con
   assert.deepEqual((await req('GET', `/api/panel/pedidos/${v.body.id}`)).body.items[0].salsas, ['Ketchup']);
 });
 
+test('venta sugerida: productos marcados, editables y medidos en el resumen', async () => {
+  const m = await menu();
+  const sug = m.categorias.flatMap((c) => c.productos).filter((p) => p.sugerir).map((p) => p.nombre);
+  assert.deepEqual(sug, ['Papas', 'Bebida en lata 350 cc', 'Jugo natural 500 ml', 'Batido de frutilla 500 ml']);
+  await login();
+  const antes = (await req('GET', '/api/panel/resumen')).body.sugeridos;
+  const it = await prod('Italiano'), papas = await prod('Papas'), lata = await prod('Bebida en lata 350 cc');
+  const r = await pedir([{ producto_id: it.id }, { producto_id: papas.id, sugerido: true }, { producto_id: lata.id, cantidad: 2, sugerido: 1 }]);
+  assert.equal(r.status, 201);
+  const despues = (await req('GET', '/api/panel/resumen')).body.sugeridos;
+  assert.equal(despues.unidades - antes.unidades, 3);
+  assert.equal(despues.ventas - antes.ventas, papas.precio + lata.precio * 2);
+  // el local decide qué sugerir
+  assert.equal((await req('PATCH', `/api/panel/productos/${lata.id}`, { sugerir: false })).status, 200);
+  assert.equal((await prod('Bebida en lata 350 cc')).sugerir, 0);
+  assert.equal((await prod('Bebida en lata 350 cc')).precio, lata.precio); // no toca el precio
+  await req('PATCH', `/api/panel/productos/${lata.id}`, { sugerir: true });
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

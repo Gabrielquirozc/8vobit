@@ -143,6 +143,11 @@
   .ico-b { width: 44px; padding: 0; display: grid; place-items: center; }
   .ico-b:disabled { opacity: .35; }
   .kpis6 { grid-template-columns: repeat(3, 1fr); }
+  .extra-sug { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px dashed var(--line); color: var(--ink-2); }
+  .extra-sug b { color: var(--ink); }
+  .ofrece { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 16px 4px; }
+  .ofrece .k { font-size: .85rem; font-weight: 700; color: var(--ink-2); margin-right: 2px; }
+  .ofrece .opt { font-size: .85rem; padding: 6px 10px; } .ofrece .opt .ico { width: 14px; height: 14px; }
   @media (max-width: 900px) { .kpis6 { grid-template-columns: repeat(2, 1fr); } }
   .kpis6 .k { display: block; font-size: .85rem; } .kpis6 .sub { display: block; font-size: .82rem; margin-top: 4px; color: var(--ink-2); }
   .kpis6 b.txt { font-size: 1.25rem; line-height: 1.2; margin-top: 4px; }
@@ -232,6 +237,7 @@
       <aside class="ticket" aria-label="Venta en curso">
         <h2>Venta en curso</h2>
         <div class="lines" id="vlines"></div>
+        <div class="ofrece" id="vofrece" hidden></div>
         <div class="foot">
           <div class="tot"><span>Total</span><span class="num" id="vtotal">$0</span></div>
           <div style="display:flex;gap:8px"><button class="ghost" id="vlimpiar" disabled>Limpiar</button><button class="primary" id="vcobrar" disabled>Cobrar</button></div>
@@ -447,13 +453,19 @@ function pintarVenta() {
     <div class="stepper"><button type="button" data-l="${i}" data-d="-1" aria-label="Quitar uno">${ico(t.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${t.cantidad}</span><button type="button" data-l="${i}" data-d="1" aria-label="Agregar uno">${ico('plus')}</button></div></div>`).join('')
     : '<p style="color:var(--ink-2);text-align:center;padding:24px 0">Toca un producto para agregarlo.</p>';
   $('vtotal').textContent = clp(total);
+  // Guion para el mostrador: qué ofrecer según lo que aún no lleva (papas, bebida…).
+  const tiene = new Set(ticket.map((t) => t.p.categoria_id)), porCat = {};
+  const ofrece = ticket.length ? prods().filter((p) => p.sugerir && p.activo && !p.precio_pendiente && p.precio > 0 && !p.incluye && !tiene.has(p.categoria_id)
+    && (porCat[p.categoria_id] = (porCat[p.categoria_id] || 0) + 1) <= 1).slice(0, 3) : [];
+  $('vofrece').hidden = !ofrece.length;
+  $('vofrece').innerHTML = `<span class="k">Ofrece:</span>` + ofrece.map((p) => `<button type="button" class="opt" data-ofr="${p.id}">${ico('plus')}${esc(p.nombre)} <span class="num">${clp(p.precio)}</span></button>`).join('');
   $('vcobrar').disabled = $('vlimpiar').disabled = !ticket.length;
   $('vcobrar').textContent = ticket.length ? `Cobrar ${clp(total)}` : 'Cobrar';
 }
-function sumar(p, ags, salsas = []) {
+function sumar(p, ags, salsas = [], sugerido = false) {
   const key = p.id + ':' + ags.map((a) => a.id).sort().join(',') + ':' + salsas.map((a) => a.id).sort().join(',');
   const ex = ticket.find((t) => t.key === key);
-  if (ex) ex.cantidad++; else ticket.push({ key, p, ags, salsas, cantidad: 1 });
+  if (ex) ex.cantidad++; else ticket.push({ key, p, ags, salsas, cantidad: 1, sugerido });
   pintarVenta();
 }
 $('vtiles').onclick = (e) => {
@@ -487,6 +499,7 @@ $('vlines').addEventListener('click', (e) => {
   if (v !== null) { t.nota = v.trim().slice(0, 140) || undefined; pintarVenta(); }
 });
 $('vlines').onclick = (e) => { const b = e.target.closest('[data-l]'); if (!b) return; const t = ticket[b.dataset.l]; t.cantidad += Number(b.dataset.d); if (t.cantidad < 1) ticket.splice(b.dataset.l, 1); pintarVenta(); };
+$('vofrece').onclick = (e) => { const b = e.target.closest('[data-ofr]'); if (b) sumar(prods().find((x) => x.id === Number(b.dataset.ofr)), [], [], true); };
 $('vcats').onclick = (e) => { const b = e.target.closest('[data-cat]'); if (b) { vcat = Number(b.dataset.cat); $('vq').value = ''; pintarVenta(); } };
 $('vq').oninput = pintarVenta;
 $('vlimpiar').onclick = () => { if (confirm('¿Vaciar la venta en curso?')) { ticket = []; pintarVenta(); } };
@@ -495,7 +508,7 @@ $('vcobrar').onclick = () => {
   $('vcliente').value = ''; $('cocina').checked = true;
   abrirCobro({ titulo: 'Venta de mostrador', total, venta: true, boton: 'Cobrar', enviar: async (b) => {
     const r = await api('panel/venta', { method: 'POST', body: { ...b, cocina: $('cocina').checked, cliente: $('vcliente').value,
-      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id), salsas: t.salsas.map((a) => a.id), nota: t.nota })) } });
+      items: ticket.map((t) => ({ producto_id: t.p.id, cantidad: t.cantidad, agregados: t.ags.map((a) => a.id), salsas: t.salsas.map((a) => a.id), nota: t.nota, sugerido: t.sugerido })) } });
     conocidos?.add(r.id);
     if ($('cocina').checked) comanda(r.id);
     ticket = []; pintarVenta();
@@ -546,7 +559,7 @@ $('v-cierre').onclick = async (e) => {
 const chipAg = (a) => `<button type="button" class="opt" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ''}${esc(a.nombre)}</button>`;
 async function pintarCarta() {
   const [, h] = await Promise.all([cargarCarta(), api('panel/historial')]);
-  $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a></p>` +
+  $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. "Sugerir" ofrece el producto como acompañamiento al agregar un plato, en el carro y en el mostrador. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a></p>` +
     M.categorias.map((c) => `<h3>${esc(c.nombre)}</h3><table>${c.productos.map((p) => `<tr>
       <td style="width:140px"><div class="foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : '<span>Sin foto</span>'}</div>
         <label class="mini-btn">${p.imagen ? 'Cambiar' : 'Subir foto'}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
@@ -555,6 +568,7 @@ async function pintarCarta() {
       <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio" aria-label="Precio de ${esc(p.nombre)}"></td>
       <td><label class="ck"><input type="checkbox" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
       <td><label class="ck"><input type="checkbox" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
+      <td>${p.incluye ? '' : `<label class="ck" title="Se ofrece como acompañamiento en el carro y en el mostrador"><input type="checkbox" ${p.sugerir ? 'checked' : ''} data-p="${p.id}" data-f="sugerir"> Sugerir</label>`}</td>
     </tr>`).join('')}</table>`).join('') +
     `<h3>Ingredientes</h3><p style="color:var(--ink-2)">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="opts">${M.agregados.filter((a) => a.tipo !== 'salsa').map(chipAg).join('')}</div>
     <h3>Salsas</h3><p style="color:var(--ink-2)">Opcionales y sin costo; se ofrecen en todo menos bebidas y jugos.</p><div class="opts">${M.agregados.filter((a) => a.tipo === 'salsa').map(chipAg).join('')}</div>
@@ -726,7 +740,8 @@ function textoResumen(s) {
     `3. Más vendido: ${s.mas_vendido ? `${s.mas_vendido.nombre} (${s.mas_vendido.n})` : '—'}${s.menos_vendido ? ` · menos: ${s.menos_vendido.nombre} (${s.menos_vendido.n})` : ''}`,
     `4. Hora peak: ${s.peak ? hh(s.peak.hora) : '—'}${s.valle ? ` · hora valle: ${hh(s.valle.hora)}` : ''}`,
     `5. Clientes que repitieron: ${s.repiten} de ${s.clientes_web}`,
-    `6. Comisión ahorrada: ${clp(s.comision_ahorrada)} (pedidos directos vs. ${s.comision_app}% de la app)`].join('\n');
+    `6. Comisión ahorrada: ${clp(s.comision_ahorrada)} (pedidos directos vs. ${s.comision_app}% de la app)`,
+    `Extra: venta sugerida ${clp(s.sugeridos.ventas)} (${s.sugeridos.unidades} productos)`].join('\n');
 }
 async function pintarResumen() {
   const s = await api(`panel/resumen${semana ? `?semana=${semana}` : ''}`);
@@ -752,6 +767,7 @@ async function pintarResumen() {
       <div><span class="k">5 · Clientes que repitieron</span><b class="num">${s.repiten}</b><span class="sub">de ${s.clientes_web} clientes web</span></div>
       <div class="destacado"><span class="k">6 · Comisión ahorrada</span><b class="num">${clp(s.comision_ahorrada)}</b><span class="sub">${s.canal.web.pedidos} pedidos directos × ${s.comision_app}% que cobraría la app</span></div>
     </div>
+    <p class="extra-sug"><b>Venta sugerida:</b> <span class="num">${clp(s.sugeridos.ventas)}</span> en ${s.sugeridos.unidades} producto${s.sugeridos.unidades === 1 ? '' : 's'} agregados desde las sugerencias (papas, bebidas…)${s.ventas ? ` · ${Math.round(s.sugeridos.ventas * 100 / s.ventas)}% de las ventas` : ''}.</p>
     <div class="charts">
       ${barras(s.por_dia, { titulo: 'Ventas por día', etiqueta: (d) => diaCorto(d.dia), valor: (d) => d.ventas, formato: clp })}
       ${barras(s.por_hora, { titulo: 'Pedidos por hora', etiqueta: (d) => String(d.hora).padStart(2, '0'), valor: (d) => d.pedidos, formato: (n) => `${n} pedido${n === 1 ? '' : 's'}`, corto: String })}

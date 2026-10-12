@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   cantidad INTEGER NOT NULL, precio_unitario INTEGER NOT NULL);
 `);
 
-let contactoSeed = false, salsasSeed = false;
+let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
 // Columnas de cobro agregadas después de la primera versión: migración idempotente.
 {
   const cols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
@@ -79,10 +79,14 @@ let contactoSeed = false, salsasSeed = false;
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
+  // Venta sugerida: productos que la carta ofrece como acompañamiento (papas, bebidas…).
+  if (!pcols.has('sugerir')) { db.exec('ALTER TABLE productos ADD COLUMN sugerir INTEGER NOT NULL DEFAULT 0'); sugerirSeed = true; }
   // Observación por producto ("sin cebolla"), aparte del comentario general del pedido.
   const icols = new Set(db.prepare('PRAGMA table_info(pedido_items)').all().map((c) => c.name));
   if (!icols.has('nota')) db.exec('ALTER TABLE pedido_items ADD COLUMN nota TEXT');
   // Salsas (mostaza, ketchup…): opcionales y sin costo, aparte de los ingredientes que se eligen.
+  // Línea agregada desde una sugerencia: mide cuánto vende la venta sugerida.
+  if (!icols.has('sugerido')) db.exec('ALTER TABLE pedido_items ADD COLUMN sugerido INTEGER NOT NULL DEFAULT 0');
   if (!icols.has('salsas')) db.exec("ALTER TABLE pedido_items ADD COLUMN salsas TEXT NOT NULL DEFAULT '[]'");
   const acols = new Set(db.prepare('PRAGMA table_info(agregados)').all().map((c) => c.name));
   if (!acols.has('tipo')) { db.exec("ALTER TABLE agregados ADD COLUMN tipo TEXT NOT NULL DEFAULT 'ingrediente'"); salsasSeed = true; }
@@ -123,8 +127,8 @@ function seed() {
   s.categorias.forEach((c, ci) => {
     const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden,salsas) VALUES (?,?,?,?)').run(lid, c.nombre, ci, c.salsas === false ? 0 : 1);
     c.productos.forEach((p, pi) => db.prepare(
-      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado,imagen) VALUES (?,?,?,?,?,?,?,?,?,?)'
-    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0, seedImg(lid, p.imagen)));
+      'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado,imagen,sugerir) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0, seedImg(lid, p.imagen), p.sugerir ? 1 : 0));
   });
 }
 seed();
@@ -140,6 +144,9 @@ seed();
     if (s.local[k]) db.prepare(`UPDATE locales SET ${k}=? WHERE slug=? AND COALESCE(${k},'')=''`).run(s.local[k], s.local.slug);
   // Salsas del seed para la base ya creada: una sola vez, al crear la columna tipo.
   const lid = salsasSeed && db.prepare('SELECT id FROM locales WHERE slug=?').get(s.local.slug)?.id;
+  // Sugeridos del seed para la base ya creada: una sola vez, al crear la columna.
+  if (sugerirSeed) for (const n of s.categorias.flatMap((c) => c.productos).filter((p) => p.sugerir).map((p) => p.nombre))
+    db.prepare('UPDATE productos SET sugerir=1 WHERE nombre=? AND local_id=(SELECT id FROM locales WHERE slug=?)').run(n, s.local.slug);
   if (lid && !db.prepare("SELECT 1 FROM agregados WHERE local_id=? AND tipo='salsa'").get(lid)) for (const a of s.salsas || []) db.prepare("INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,'salsa')").run(lid, a);
 }
 
@@ -308,7 +315,7 @@ function serveFile(res, file, versionado = false) {
 
 function menu(local) {
   const cats = db.prepare('SELECT id, nombre, salsas FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
-  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen FROM productos WHERE local_id=? ORDER BY orden').all(local.id)
+  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir FROM productos WHERE local_id=? ORDER BY orden').all(local.id)
     .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null }));
   // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
   // suficientes, se completa con los destacados elegidos a mano.
@@ -381,7 +388,7 @@ function validarItems(local, lista) {
     const sls = [...new Set(Array.isArray(it.salsas) ? it.salsas.map(Number) : [])];
     if (sls.length && !db.prepare('SELECT salsas FROM categorias WHERE id=?').get(p.categoria_id)?.salsas) return { error: `${p.nombre} no lleva salsas.` };
     if (!sls.every((a) => salsasOk.has(a))) return { error: 'Una salsa ya no está disponible.' };
-    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)), salsas: sls.map((a) => salsasOk.get(a)), nota: limpiarNota(it.nota, 140) });
+    items.push({ p, cant, agNames: ags.map((a) => agregadosOk.get(a)), salsas: sls.map((a) => salsasOk.get(a)), sugerido: it.sugerido ? 1 : 0, nota: limpiarNota(it.nota, 140) });
     total += p.precio * cant;
   }
   return { items, total };
@@ -398,8 +405,8 @@ function guardarPedido(local, d, { items, total }) {
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null);
     for (const i of items) db.prepare(
-      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota) VALUES (?,?,?,?,?,?,?,?)'
-    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota);
+      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido) VALUES (?,?,?,?,?,?,?,?,?)'
+    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0);
     db.exec('COMMIT');
     return { id: Number(pid), numero, total, franja: d.franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -467,6 +474,8 @@ function resumen(local, fecha) {
     WHERE pedido_id IN (${ps.map(() => '?').join(',')}) GROUP BY nombre ORDER BY n DESC, monto DESC`).all(...ps.map((p) => p.id)) : [];
   const vendibles = db.prepare('SELECT nombre FROM productos WHERE local_id=? AND activo=1 AND precio_pendiente=0 AND precio>0').all(local.id).map((r) => r.nombre);
   const vendidos = new Set(items.map((i) => i.nombre));
+  const sug = ps.length ? db.prepare(`SELECT COALESCE(SUM(cantidad),0) n, COALESCE(SUM(cantidad*precio_unitario),0) monto FROM pedido_items
+    WHERE sugerido=1 AND pedido_id IN (${ps.map(() => '?').join(',')})`).get(...ps.map((p) => p.id)) : { n: 0, monto: 0 };
 
   // Horas: solo las que el local estuvo abierto, para que la "hora valle" no sea las 4 AM.
   // "Núcleo": sin la primera ni la última hora de cada día, que siempre son flojas y no
@@ -511,6 +520,7 @@ function resumen(local, fecha) {
     por_dia: dias.map((d) => { const l = ps.filter((p) => p.dia === d); return { dia: d, pedidos: l.length, ventas: suma(l) }; }),
     por_hora: horas,
     platos: items,
+    sugeridos: { unidades: sug.n, ventas: sug.monto },
   };
 }
 
@@ -648,8 +658,9 @@ async function api(req, res, url) {
       }
       const activo = b.activo === undefined ? p.activo : (b.activo ? 1 : 0);
       const pend = b.precio_pendiente === undefined ? p.precio_pendiente : (b.precio_pendiente ? 1 : 0);
+      const sugerir = b.sugerir === undefined ? p.sugerir : (b.sugerir ? 1 : 0);
       db.exec('BEGIN');
-      db.prepare('UPDATE productos SET precio=?, activo=?, precio_pendiente=? WHERE id=?').run(precio, activo, pend, p.id);
+      db.prepare('UPDATE productos SET precio=?, activo=?, precio_pendiente=?, sugerir=? WHERE id=?').run(precio, activo, pend, sugerir, p.id);
       if (precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, p.id, p.precio, precio);
       db.exec('COMMIT');
       return send(res, 200, { ok: true });

@@ -51,6 +51,7 @@
 
 <div class="cartbar"><button class="cartbtn" id="cartbtn" hidden><span class="count num" id="cartCount"></span><span>Ver pedido</span><span class="num" id="cartTotal" style="padding-right:12px"></span></button></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="snack" id="snack" role="status" aria-live="polite" hidden><span id="snackTxt"></span><button type="button" id="snackOk">Agregar</button><button type="button" class="x" id="snackNo" aria-label="No, gracias"><svg class="ico"><use href="#i-x"/></svg></button></div>
 
 <!-- Producto -->
 <dialog class="sheet" id="dlgProd" aria-labelledby="pdName">
@@ -70,6 +71,7 @@
   <div class="sh-head"><h2 id="ckTitle">Tu pedido</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
   <div class="sh-body">
     <div id="lines"></div>
+    <section id="ups" class="ups" aria-labelledby="upsT" hidden></section>
     <div class="tot"><span>Total</span><span class="num" id="ckTotal"></span></div>
 
     <fieldset class="fs"><legend>¿Cómo lo recibes?</legend>
@@ -268,15 +270,15 @@ function abrirProducto(id) {
   };
   $('pdMenos').onclick = () => { pd.qty = Math.max(1, pd.qty - 1); pintar(); };
   $('pdMas').onclick = () => { pd.qty = Math.min(20, pd.qty + 1); pintar(); };
-  $('pdAdd').onclick = () => { meter(p, pd.sel, pd.qty, pd.nota.trim().slice(0, 140), pd.salsas); $('dlgProd').close(); };
+  $('pdAdd').onclick = () => { meter(p, pd.sel, pd.qty, pd.nota.trim().slice(0, 140), pd.salsas); $('dlgProd').close(); ofrecer(p); };
   pintar();
   $('dlgProd').showModal(); $('pdBody').scrollTop = 0;
 }
-function meter(p, ags, n, nota = '', salsas = []) {
+function meter(p, ags, n, nota = '', salsas = [], sugerido = false) {
   // La observación y las salsas separan líneas: un Italiano "sin tomate" no se suma con uno normal.
   const key = p.id + ':' + [...ags].sort().join(',') + ':' + [...salsas].sort().join(',') + ':' + nota.toLowerCase();
   const ex = carro.find((i) => i.key === key);
-  if (ex) ex.cantidad += n; else carro.push({ key, producto_id: p.id, agregados: ags, salsas, cantidad: n, nota: nota || undefined });
+  if (ex) ex.cantidad += n; else carro.push({ key, producto_id: p.id, agregados: ags, salsas, cantidad: n, nota: nota || undefined, sugerido: sugerido || undefined });
   toast(`${n > 1 ? n + ' × ' : ''}${p.nombre} agregado`);
   navigator.vibrate?.(15);
   barra();
@@ -291,6 +293,39 @@ function barra() {
     b.hidden = !q; b.textContent = q;
   });
 }
+// ---------- venta sugerida ----------
+// Acompañamientos que el local marcó como "sugerir" (papas, bebidas…), sin los de una
+// categoría que ya está en el carro: si ya lleva una bebida, no se le ofrece otra.
+function sugerencias(max = 4) {
+  const enCarro = new Set(carro.map((i) => prods.get(i.producto_id).p.categoria_id)), porCat = {};
+  return [...prods.values()].map((x) => x.p).filter((p) => p.sugerir && vendible(p) && !p.incluye && !enCarro.has(p.categoria_id) && !M.local.pausa
+    && (porCat[p.categoria_id] = (porCat[p.categoria_id] || 0) + 1) <= 2).slice(0, max); // hasta 2 por categoría: variedad
+}
+// Momento 1: justo después de agregar un plato, una sola oferta por visita y sin insistir.
+let ofrecido = false;
+function ofrecer(p) {
+  if (ofrecido || p.sugerir) return;
+  const s = sugerencias(1)[0]; if (!s) return;
+  ofrecido = true;
+  $('toast').classList.remove('on');
+  $('snackTxt').innerHTML = `¿Le sumas <b>${esc(s.nombre)}</b> por <span class="num">${clp(s.precio)}</span>?`;
+  const el = $('snack'); el.hidden = false; requestAnimationFrame(() => el.classList.add('on'));
+  const cerrar = () => { el.classList.remove('on'); clearTimeout(el._t); setTimeout(() => { el.hidden = true; }, 250); };
+  $('snackOk').onclick = () => { meter(s, [], 1, '', [], true); cerrar(); };
+  $('snackNo').onclick = cerrar;
+  clearTimeout(el._t); el._t = setTimeout(cerrar, 6000);
+}
+// Momento 2: en el carro, antes de pagar.
+function pintarSugeridos() {
+  const l = sugerencias(4), box = $('ups');
+  box.hidden = !l.length; if (!l.length) return;
+  box.innerHTML = `<h3 id="upsT">¿Lo acompañas con algo?</h3><div class="ups-l">${l.map((p) => { const { i } = prods.get(p.id);
+    return `<button type="button" class="ups-i" data-up="${p.id}" aria-label="Agregar ${esc(p.nombre)} por ${clp(p.precio)}">${art(i, '', p)}<span class="t"><span class="n">${esc(p.nombre)}</span><span class="p num">${clp(p.precio)}</span></span><span class="mas" aria-hidden="true">${ico('plus')}</span></button>`; }).join('')}</div>`;
+}
+$('ups').onclick = (e) => {
+  const b = e.target.closest('[data-up]'); if (!b) return;
+  meter(prods.get(Number(b.dataset.up)).p, [], 1, '', [], true); pintarCarro();
+};
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800); }
 
 // ---------- carro y envío ----------
@@ -310,6 +345,7 @@ function pintarCarro() {
         .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
       ${t.numero ? `<button type="button" class="ghost" id="copiarCta" data-n="${esc(t.numero)}">Copiar n° de cuenta</button>` : ''}</details>` : '');
   $('copiarCta')?.addEventListener('click', async (e) => { try { await navigator.clipboard.writeText(e.target.dataset.n); toast('Número de cuenta copiado'); } catch {} });
+  pintarSugeridos();
 }
 $('lines').onclick = (e) => {
   const b = e.target.closest('[data-q]'); if (!b) return;

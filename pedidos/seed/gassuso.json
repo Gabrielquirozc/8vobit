@@ -297,7 +297,8 @@
           "nombre": "Papas",
           "desc": "Papas fritas caseras y naturales, no congeladas (250 g)",
           "precio": 2990,
-          "imagen": "papas.webp"
+          "imagen": "papas.webp",
+          "sugerir": true
         },
         {
           "nombre": "Salchipapa grande",
@@ -324,12 +325,14 @@
         {
           "nombre": "Bebida en lata 350 cc",
           "desc": "Bien helada",
-          "precio": 1490
+          "precio": 1490,
+          "sugerir": true
         },
         {
           "nombre": "Jugo natural 500 ml",
           "desc": "Pregunta por los sabores del día",
-          "precio": 2590
+          "precio": 2590,
+          "sugerir": true
         },
         {
           "nombre": "Leche con plátano 500 ml",
@@ -339,7 +342,8 @@
         {
           "nombre": "Batido de frutilla 500 ml",
           "desc": "Leche con frutilla natural",
-          "precio": 2790
+          "precio": 2790,
+          "sugerir": true
         },
         {
           "nombre": "Batido de piña 500 ml",

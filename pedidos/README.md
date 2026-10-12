@@ -57,6 +57,14 @@ ranking de platos y botón **Enviar por WhatsApp** con el texto listo.
 ingredientes obligatorios de los "+N ingr."; se ofrecen en todas las categorías salvo bebidas y
 jugos, en la carta y en la venta rápida. Se agotan desde Carta y precios y salen en la comanda.
 
+**Venta sugerida** (productos con "Sugerir" en Carta y precios; por defecto Papas, Bebida en
+lata, Jugo natural y Batido de frutilla), en tres momentos:
+1. Al agregar un plato, un aviso "¿Le sumas Papas por $2.990?" con botón Agregar: una sola vez
+   por visita y solo de categorías que no estén en el carro.
+2. En el carro, "¿Lo acompañas con algo?" con hasta 4 acompañamientos de un toque.
+3. En la venta rápida, una línea "Ofrece:" como guion para quien atiende.
+Cada línea agregada desde una sugerencia queda marcada y el Resumen muestra cuánto vendió.
+
 **Productos sin foto**: muestran un emoji según lo que son (🌭 🍔 🥤 🍓 …).
 
 **Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
@@ -93,7 +101,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 36 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 37 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.
