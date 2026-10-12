@@ -13,8 +13,17 @@ if ss -ltn "sport = :$PORT" | grep -q LISTEN && ! docker ps --format '{{.Names}}
 fi
 
 paso "2/7 Pruebas automáticas en este servidor (contenedor desechable, no toca producción)"
-docker run --rm -v "$SRC":/app:ro -w /app -e TMPDIR=/tmp node:22-alpine \
-  sh -c 'cp -r /app /tmp/src && cd /tmp/src && node --test test/*.test.mjs' | tail -n 12
+OUT=$(mktemp)
+if ! docker run --rm -v "$SRC":/app:ro -w /app -e TMPDIR=/tmp node:22-alpine \
+  sh -c 'node --version && cp -r /app /tmp/src && cd /tmp/src && node --test --test-reporter=spec test/*.test.mjs' > "$OUT" 2>&1; then
+  echo "FALLARON PRUEBAS. No se cambio nada en el servidor. Detalle:"
+  head -n 1 "$OUT" | sed 's/^/node /'
+  grep -E '^(✔|✖)' "$OUT" | grep '✖' || true
+  sed -n '/failing tests/,$p' "$OUT" | head -n 60
+  echo "(salida completa en $OUT)"
+  exit 1
+fi
+grep -E '^ℹ (tests|pass|fail)' "$OUT"
 
 paso "3/7 Respaldo de la versión anterior (si existe)"
 if [ -d "$DEST" ]; then

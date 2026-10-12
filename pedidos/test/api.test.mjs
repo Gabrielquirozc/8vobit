@@ -113,7 +113,9 @@ test('limita la cantidad por línea y rechaza franjas inventadas', async () => {
   const p = await prod('Italiano');
   const r = await pedir([{ producto_id: p.id, cantidad: 500 }]);
   assert.equal(r.body.total, p.precio * 20);
-  assert.equal((await pedir([{ producto_id: p.id }], { franja: '03:00–03:30' })).status, 400);
+  // Una franja imposible a cualquier hora y en cualquier zona horaria.
+  assert.equal((await pedir([{ producto_id: p.id }], { franja: '25:00–25:30' })).status, 400);
+  assert.equal((await pedir([{ producto_id: p.id }], { franja: 'mañana' })).status, 400);
 });
 
 test('JSON inválido da 400 y un cuerpo enorme da 413', async () => {
