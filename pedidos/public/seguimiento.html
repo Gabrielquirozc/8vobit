@@ -73,7 +73,7 @@ async function cargar() {
   app.className = `wrap ${p.estado === 'anulado' ? 'anulado' : ''}`;
   app.removeAttribute('aria-busy');
   app.innerHTML = `
-    <div class="top"><div class="logo" aria-hidden="true">${esc(p.local.nombre[0])}</div>
+    <div class="top">${p.local.logo ? `<img src="${esc(p.local.logo)}" alt="" width="130" height="47" style="height:47px;width:auto">` : `<div class="logo" aria-hidden="true">${esc(p.local.nombre[0])}</div>`}
       <div><b>${esc(p.local.nombre)}</b><br><a href="${BASE}/${esc(p.local.slug)}">Ver la carta</a></div></div>
     <section class="card" aria-live="polite">
       <div class="muted" style="color:var(--ink-2)">Pedido de ${esc(p.cliente)} · ${p.franja === 'Lo antes posible' ? 'lo antes posible' : esc(p.franja)}</div>

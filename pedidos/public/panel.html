@@ -126,6 +126,9 @@
   .pausa .dot { width: 10px; height: 10px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px #4ade8033; }
   .pausa[aria-pressed="true"] { background: var(--mustard); color: #1f1a17; border-color: var(--mustard); }
   .pausa[aria-pressed="true"] .dot { background: #b42318; box-shadow: none; }
+  .logo-prev { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .lp { border-radius: var(--r-sm); padding: 12px; display: grid; place-items: center; min-height: 90px; }
+  .lp img { max-width: 100%; max-height: 70px; } .lp.oscuro { background: #241c17; } .lp.claro { background: #fbf6ee; border: 1px solid var(--line); }
   .local-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-items: start; }
   .cardf { background: var(--surface); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); }
   .cardf h3 { margin-top: 0; }
@@ -340,7 +343,8 @@ function pintarPedidos() {
 }
 async function refrescar() {
   D = await api('panel/pedidos');
-  $('nomLocal').textContent = D.local;
+  if (D.logo) { if ($('nomLocal').dataset.logo !== D.logo) { $('nomLocal').innerHTML = `<img src="${esc(D.logo)}" alt="${esc(D.local)}" style="height:36px;width:auto;display:block">`; $('nomLocal').dataset.logo = D.logo; } }
+  else { $('nomLocal').textContent = D.local; delete $('nomLocal').dataset.logo; }
   marcarPausa(D.pausa);
   const nuevos = D.pedidos.filter((p) => p.estado === 'nuevo').length;
   $('bNuevos').hidden = !nuevos; $('bNuevos').textContent = nuevos;
@@ -552,9 +556,11 @@ async function pintarCarta() {
 }
 // Achica la foto en el navegador (4:3, 1000 px, WebP) antes de subirla: el
 // celular del dueño saca fotos de 4 MB y el servidor tiene poca memoria.
-async function aWebp(file) {
+// Con { contener: true } (logos) no recorta ni rellena: conserva proporción y transparencia.
+async function aWebp(file, { contener = false } = {}) {
   const bmp = await createImageBitmap(file);
-  const W = 1000, H = 750, r = Math.max(W / bmp.width, H / bmp.height);
+  let W = 1000, H = 750, r = Math.max(W / bmp.width, H / bmp.height);
+  if (contener) { r = Math.min(1, 900 / bmp.width, 600 / bmp.height); W = Math.round(bmp.width * r); H = Math.round(bmp.height * r); }
   const w = bmp.width * r, h = bmp.height * r;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   cv.getContext('2d').drawImage(bmp, (W - w) / 2, (H - h) / 2, w, h);
@@ -627,6 +633,12 @@ async function pintarLocal() {
       ${campo('l-comision', 'Comisión de la app de delivery (%)', L.comision_app, 'type="number" min="0" max="50" inputmode="numeric"')}
       <p class="ayuda">Se usa para calcular la "comisión ahorrada" del resumen semanal. Uber Eats cobra entre 25% y 29%.</p>
     </section>
+    <section class="cardf"><h3>Logo</h3>
+      <div class="logo-prev">${L.logo ? `<div class="lp oscuro"><img src="${esc(L.logo)}" alt="Logo sobre fondo oscuro"></div><div class="lp claro"><img src="${esc(L.logo)}" alt="Logo sobre fondo claro"></div>` : '<p class="ayuda" style="margin:0">Sin logo: la carta muestra la inicial del nombre.</p>'}</div>
+      <label class="mini-btn">${L.logo ? 'Cambiar logo' : 'Subir logo'}<input type="file" accept="image/*" hidden id="l-logo"></label>
+      ${L.logo ? '<button class="link" id="l-quitar-logo">Quitar</button>' : ''}
+      <p class="ayuda">Ideal: PNG con fondo transparente. Se ve sobre la portada de la carta, en este panel, en el seguimiento y en la carta imprimible.</p>
+    </section>
     <section class="cardf"><h3>Horario de atención</h3>
       <table class="horario">${DIAS.map(([d, n]) => { const h = L.horario[d];
         return `<tr><th>${n}</th><td><label class="ck"><input type="checkbox" data-abre="${d}" ${h ? 'checked' : ''}> Abierto</label></td>
@@ -647,6 +659,18 @@ async function pintarLocal() {
   <div class="guardar"><span class="formerr" id="l-err" role="alert"></span><button class="primary" id="l-guardar" style="flex:0 0 auto;min-width:220px">Guardar cambios</button></div>`;
   $('v-local').querySelectorAll('[data-abre]').forEach((c) => c.onchange = () => {
     for (const k of ['desde', 'hasta']) $('v-local').querySelector(`[data-${k}="${c.dataset.abre}"]`).disabled = !c.checked;
+  });
+  $('l-logo').onchange = async (e) => {
+    const lbl = e.target.closest('label'); lbl.firstChild.textContent = 'Subiendo…';
+    try {
+      const r = await fetch(`${BASE}/api/panel/local/logo`, { method: 'PUT', headers: { 'Content-Type': 'image/webp' }, body: await aWebp(e.target.files[0], { contener: true }) });
+      if (!r.ok) throw new Error((await r.json()).error);
+      toast('Logo actualizado'); pintarLocal(); refrescar();
+    } catch (err) { alert(err.message); lbl.firstChild.textContent = 'Subir logo'; }
+  };
+  $('l-quitar-logo')?.addEventListener('click', async () => {
+    if (!confirm('¿Quitar el logo?')) return;
+    await fetch(`${BASE}/api/panel/local/logo`, { method: 'DELETE' }); pintarLocal(); refrescar();
   });
   $('l-guardar').onclick = async () => {
     const v = (id) => $(id).value;

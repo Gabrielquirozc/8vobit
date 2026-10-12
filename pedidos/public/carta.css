@@ -5,7 +5,7 @@
 :root {
   --bg: #fbf6ee; --surface: #fff; --surface-2: #f4ece0;
   --ink: #1f1a17; --ink-2: #5c524a; --line: #e8dccb;
-  --brand: #b93c0c; --brand-ink: #fff; --brand-soft: #fde7da;
+  --brand: #c1121f; --brand-ink: #fff; --brand-soft: #fde4e4; /* rojo del logo de Gassuso */
   --mustard: #f2b33d; --veg: #3c7a3a; --veg-soft: #e3f1df;
   --ok: #2f7d32; --danger: #b42318;
   --r-sm: 10px; --r: 16px; --r-lg: 22px;
@@ -19,7 +19,7 @@
   :root {
     --bg: #17130f; --surface: #221c17; --surface-2: #2c251f;
     --ink: #f6efe6; --ink-2: #c4b8aa; --line: #3a3129;
-    --brand: #f0703a; --brand-ink: #1a0f08; --brand-soft: #3d2216;
+    --brand: #ff6b6b; --brand-ink: #1a0f08; --brand-soft: #3d1b1b;
     --veg: #8fce86; --veg-soft: #1f3320; --shadow: none; color-scheme: dark;
   }
 }
@@ -37,7 +37,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .hero { position: relative; padding: 0 16px 16px; max-width: 720px; margin: 0 auto; }
 .cover { height: 132px; margin: 0 -16px; background:
   radial-gradient(circle at 18% 120%, var(--mustard) 0 26%, transparent 27%),
-  radial-gradient(circle at 92% -30%, #e4572e 0 30%, transparent 31%),
+  radial-gradient(circle at 92% -30%, #d62828 0 30%, transparent 31%),
   repeating-linear-gradient(135deg, #2a211b 0 14px, #241c17 14px 28px); }
 .logo { width: 76px; height: 76px; border-radius: 22px; margin-top: -38px; position: relative;
   display: grid; place-items: center; background: var(--brand); color: var(--brand-ink);
@@ -122,7 +122,7 @@ main { max-width: 720px; margin: 0 auto; padding: 8px 16px 140px; }
   pointer-events: none; display: flex; justify-content: center; }
 .cartbtn { pointer-events: auto; width: 100%; max-width: 688px; min-height: 56px; border: 0; border-radius: 999px;
   background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1.02rem; display: flex;
-  align-items: center; justify-content: space-between; padding: 0 8px 0 20px; box-shadow: 0 8px 24px rgb(185 60 12 / .35);
+  align-items: center; justify-content: space-between; padding: 0 8px 0 20px; box-shadow: 0 8px 24px rgb(193 18 31 / .35);
   transform: translateY(0); transition: transform .25s var(--ease), opacity .2s; }
 .cartbtn[hidden] { display: flex !important; transform: translateY(140%); opacity: 0; pointer-events: none; }
 .cartbtn .count { background: rgb(0 0 0 / .18); border-radius: 999px; padding: 8px 14px; }
@@ -204,3 +204,8 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
 .transf summary { cursor: pointer; font-weight: 600; color: var(--brand); min-height: 32px; display: flex; align-items: center; }
 .transf dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
 .transf dt { color: var(--ink-2); } .transf dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+/* Logo del local (sticker con fondo transparente) montado sobre la portada */
+.hero.con-logo .logo { display: none; }
+.hero.con-logo h1 { margin-top: -70px; position: relative; line-height: 0; }
+.wordmark { width: min(82%, 380px); height: auto; filter: drop-shadow(0 6px 14px rgb(0 0 0 / .28)); transform: rotate(-3deg); transform-origin: left center; }

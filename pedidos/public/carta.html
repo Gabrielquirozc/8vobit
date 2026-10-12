@@ -348,8 +348,14 @@ try {
   M = await api(`locales/${slug}`);
   M.categorias.forEach((c, i) => c.productos.forEach((p) => prods.set(p.id, { p, i })));
   document.title = `${M.local.nombre} · Pide en línea`;
-  $('nombre').textContent = M.local.nombre;
-  $('logo').textContent = M.local.nombre[0];
+  if (M.local.logo) {
+    // El logo es el título: el nombre queda como texto alternativo para lectores de pantalla y buscadores.
+    document.querySelector('.hero').classList.add('con-logo');
+    $('nombre').innerHTML = `<img class="wordmark" src="${esc(M.local.logo)}" alt="${esc(M.local.nombre)}" width="900" height="325" fetchpriority="high">`;
+  } else {
+    $('nombre').textContent = M.local.nombre;
+    $('logo').textContent = M.local.nombre[0];
+  }
   const st = estadoLocal(M.local.horario);
   if (M.local.pausa) st.abierto = false, st.txt = 'Pedidos en línea pausados por ahora';
   $('facts').innerHTML = `<span class="fact ${st.abierto ? 'abierto' : 'cerrado'}">${ico('clock')}${st.txt}</span>

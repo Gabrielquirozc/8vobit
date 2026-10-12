@@ -88,7 +88,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 34 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 35 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

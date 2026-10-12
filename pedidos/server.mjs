@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!lcols.has('transferencia')) db.exec('ALTER TABLE locales ADD COLUMN transferencia TEXT');
   if (!lcols.has('pausa')) db.exec('ALTER TABLE locales ADD COLUMN pausa INTEGER NOT NULL DEFAULT 0');
   // Comisión que cobraría la app de delivery (%): base del "comisión ahorrada" del resumen.
+  if (!lcols.has('logo')) db.exec('ALTER TABLE locales ADD COLUMN logo TEXT');
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
@@ -102,6 +103,7 @@ function seed() {
   const { lastInsertRowid: lid } = db.prepare(
     'INSERT INTO locales (slug,nombre,instagram,whatsapp,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?)'
   ).run(L.slug, L.nombre, L.instagram, L.whatsapp, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
+  if (L.logo) db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(lid, L.logo), lid);
   for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
   s.categorias.forEach((c, ci) => {
     const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, c.nombre, ci);
@@ -111,6 +113,15 @@ function seed() {
   });
 }
 seed();
+
+// Logo del seed para locales ya creados (la base de producción se sembró antes de que
+// existiera el logo): solo si el local aún no tiene uno, nunca pisa uno subido desde el panel.
+{
+  const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
+  const l = s.local.logo && db.prepare('SELECT id, logo FROM locales WHERE slug=?').get(s.local.slug);
+  if (l && !l.logo && fs.existsSync(path.resolve(import.meta.dirname, 'seed/img', path.basename(s.local.logo))))
+    db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(l.id, s.local.logo), l.id);
+}
 
 // ---------- franjas horarias ----------
 const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
@@ -290,6 +301,7 @@ function menu(local) {
   return {
     local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
+      logo: local.logo ? `${BASE}/img/${local.logo}` : null,
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
@@ -501,8 +513,8 @@ async function api(req, res, url) {
   if (m === 'GET' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '')) {
     const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
     if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
-    const l = db.prepare('SELECT slug, nombre, whatsapp, transferencia FROM locales WHERE id=?').get(p.local_id);
-    const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null };
+    const l = db.prepare('SELECT slug, nombre, whatsapp, transferencia, logo FROM locales WHERE id=?').get(p.local_id);
+    const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null, logo: l.logo ? `${BASE}/img/${l.logo}` : null };
     const items = db.prepare('SELECT nombre, agregados, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(p.id)
       .map((i) => ({ ...i, agregados: JSON.parse(i.agregados) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
@@ -534,7 +546,7 @@ async function api(req, res, url) {
       const ids = db.prepare('SELECT id FROM pedidos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia);
       const pedidos = ids.map((r) => pedidoCompleto(r.id, lid));
       const vendido = pedidos.filter((p) => p.estado !== 'anulado').reduce((s, p) => s + p.total, 0);
-      return send(res, 200, { dia, local: local.nombre, pausa: !!local.pausa, modo_boleta: local.modo_boleta, vendido, pedidos });
+      return send(res, 200, { dia, local: local.nombre, logo: local.logo ? `${BASE}/img/${local.logo}` : null, pausa: !!local.pausa, modo_boleta: local.modo_boleta, vendido, pedidos });
     }
     if (m === 'GET' && parts[1] === 'pedidos' && parts[2]) {
       const p = pedidoCompleto(Number(parts[2]), lid);
@@ -565,6 +577,20 @@ async function api(req, res, url) {
       const f = url.searchParams.get('semana') || franjas(local).dia;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || isNaN(new Date(f))) return send(res, 400, { error: 'Fecha inválida' });
       return send(res, 200, resumen(local, f));
+    }
+    // Logo del local: mismo control que las fotos (WebP, tamaño máximo), con transparencia.
+    if (parts[1] === 'local' && parts[2] === 'logo' && (m === 'PUT' || m === 'DELETE')) {
+      let nombre = null;
+      if (m === 'PUT') {
+        let buf;
+        try { buf = await readBytes(req, IMG_MAX); } catch (e) { if (e.tooBig) return send(res, 413, { error: 'El logo pesa demasiado' }); throw e; }
+        if (!esWebp(buf)) return send(res, 415, { error: 'Formato no válido' });
+        nombre = `${lid}-logo-${crypto.createHash('sha1').update(buf).digest('hex').slice(0, 10)}.webp`;
+        fs.writeFileSync(path.join(IMG_DIR, nombre), buf);
+      }
+      db.prepare('UPDATE locales SET logo=? WHERE id=?').run(nombre, lid);
+      if (local.logo && local.logo !== nombre) borrarImagen(local.logo);
+      return send(res, 200, { logo: nombre ? `${BASE}/img/${nombre}` : null });
     }
     if (m === 'PATCH' && parts[1] === 'local') {
       const r = actualizarLocal(local, await readJson(req));

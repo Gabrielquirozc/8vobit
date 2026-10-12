@@ -455,3 +455,21 @@ test('caché: las páginas referencian .js/.css versionados y esos se cachean un
   // el panel también
   assert.match(await (await fetch(B + '/panel')).text(), /from '\.\/comun\.js\?v=[0-9a-f]{10}'/);
 });
+
+// ---------- logo ----------
+test('logo: viene del seed, se reemplaza desde el panel y se puede quitar', async () => {
+  const m = await menu();
+  assert.match(m.local.logo, /^\/img\/[\w-]+\.webp$/);
+  assert.equal((await fetch(B + m.local.logo)).status, 200);
+  const webp = new Uint8Array([...Buffer.from('RIFF'), 0, 0, 0, 0, ...Buffer.from('WEBPVP8L'), 0, 0, 0, 0]);
+  cookie = '';
+  assert.equal((await req('PUT', '/api/panel/local/logo', webp)).status, 401);
+  await login();
+  assert.equal((await req('PUT', '/api/panel/local/logo', new Uint8Array(Buffer.from('<svg onload=alert(1)>')))).status, 415);
+  const r = await req('PUT', '/api/panel/local/logo', webp);
+  assert.equal(r.status, 200);
+  assert.equal((await menu()).local.logo, r.body.logo);
+  assert.equal((await fetch(B + m.local.logo)).status, 404, 'el logo anterior se borra');
+  assert.equal((await req('DELETE', '/api/panel/local/logo')).body.logo, null);
+  assert.equal((await menu()).local.logo, null);
+});

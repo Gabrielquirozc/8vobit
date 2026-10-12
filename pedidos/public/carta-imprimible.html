@@ -25,7 +25,8 @@
 <script type="module">
 import { api, clp, esc } from './comun.js';
 const M = await api('panel/carta');
-document.getElementById('nom').textContent = M.local.nombre;
+if (M.local.logo) document.getElementById('nom').innerHTML = `<img src="${esc(M.local.logo)}" alt="${esc(M.local.nombre)}" style="height:110px;width:auto">`;
+else document.getElementById('nom').textContent = M.local.nombre;
 document.getElementById('sub').textContent = (M.local.instagram ? '@' + M.local.instagram + ' · ' : '') + 'Precios vigentes al ' + new Date().toLocaleDateString('es-CL');
 document.getElementById('cats').innerHTML = M.categorias.map((c) => {
   const ps = c.productos.filter((p) => p.activo);
