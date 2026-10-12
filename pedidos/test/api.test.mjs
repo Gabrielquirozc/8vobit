@@ -15,6 +15,7 @@ before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pedidos-test-'));
   const seed = JSON.parse(fs.readFileSync(path.join(ROOT, 'seed/gassuso.json'), 'utf8'));
   for (const d of '0123456') seed.local.horario[d] = ['00:00', '00:00'];
+  seed.local.despacho = { activo: true, costo: 0, minimo: 0, zona: '', horario: Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']])) };
   fs.writeFileSync(path.join(dir, 'seed.json'), JSON.stringify(seed));
   srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server.mjs'], {
     cwd: ROOT,
@@ -451,6 +452,50 @@ test('venta sugerida: productos marcados, editables y medidos en el resumen', as
   assert.equal((await prod('Bebida en lata 350 cc')).sugerir, 0);
   assert.equal((await prod('Bebida en lata 350 cc')).precio, lata.precio); // no toca el precio
   await req('PATCH', `/api/panel/productos/${lata.id}`, { sugerir: true });
+});
+
+test('despacho: solo en los días y horarios configurados, con costo y pedido mínimo', async () => {
+  await login();
+  const dias = (v) => Object.fromEntries([...'0123456'].map((d) => [d, v]));
+  const conf = (d) => req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 1500, minimo: 5000, zona: 'Concepción centro', horario: dias(['00:00', '00:00']), ...d } });
+  const it = await prod('Italiano'), ch = await prod('Chacarero');
+  const despacho = (items, franja = 'Lo antes posible') => pedir(items, { modalidad: 'despacho', direccion: 'Freire 145', franja });
+  // activo todo el día: cobra el despacho y exige el mínimo
+  assert.equal((await conf()).status, 200);
+  assert.equal((await menu()).local.despacho.costo, 1500);
+  let f = (await req('GET', '/api/locales/gassuso/franjas')).body;
+  assert.ok(f.despacho_ya && f.slots.every((x) => x.despacho));
+  const r = await despacho([{ producto_id: ch.id }]);
+  assert.equal(r.status, 201);
+  assert.equal(r.body.total, ch.precio + 1500);
+  await login();
+  assert.equal((await req('GET', `/api/panel/pedidos/${r.body.id}`)).body.costo_despacho, 1500);
+  assert.equal((await req('GET', `/api/seguimiento/${r.body.token}`)).body.costo_despacho, 1500);
+  const chico = await despacho([{ producto_id: it.id }]);
+  assert.equal(chico.status, 400);
+  assert.match(chico.body.error, /mínimo/);
+  // el retiro no paga despacho ni tiene mínimo
+  assert.equal((await pedir([{ producto_id: it.id }])).body.total, it.precio);
+  // solo una franja específica de hoy
+  const s0 = f.slots[0].franja, [a, b] = s0.split('–');
+  assert.equal((await conf({ horario: { ...dias(null), [new Date().getDay()]: [a, b] } })).status, 200);
+  f = (await req('GET', '/api/locales/gassuso/franjas')).body;
+  assert.equal(f.slots.find((x) => x.franja === s0).despacho, true);
+  assert.ok(f.slots.filter((x) => x.franja !== s0).every((x) => !x.despacho));
+  assert.equal((await despacho([{ producto_id: ch.id }], s0)).status, 201);
+  if (f.slots[1]) assert.equal((await despacho([{ producto_id: ch.id }], f.slots[1].franja)).status, 400);
+  // día sin despacho y despacho apagado
+  await conf({ horario: dias(null) });
+  assert.equal((await despacho([{ producto_id: ch.id }])).status, 400);
+  await conf({ activo: false });
+  f = (await req('GET', '/api/locales/gassuso/franjas')).body;
+  assert.ok(!f.despacho_ya && f.slots.every((x) => !x.despacho));
+  assert.equal((await despacho([{ producto_id: ch.id }])).status, 400);
+  // validaciones
+  assert.equal((await conf({ costo: -1 })).status, 400);
+  assert.equal((await conf({ horario: { 1: ['25:00', '10:00'] } })).status, 400);
+  // deja el despacho como venía (24 h, gratis) para el resto de las pruebas
+  await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias(['00:00', '00:00']) } });
 });
 
 // ---------- resumen semanal ----------

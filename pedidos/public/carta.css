@@ -205,6 +205,11 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
 .snack #snackOk { background: var(--brand); color: #fff; padding: 10px 16px; }
 .snack .x { background: transparent; color: inherit; width: 36px; height: 36px; display: grid; place-items: center; opacity: .7; }
 .ups { margin: 14px 0 4px; }
+.desp-info { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); color: var(--ink-2); font-size: .88rem; line-height: 1.4; }
+.subtot { display: flex; justify-content: space-between; color: var(--ink-2); padding: 12px 0 0; }
+.subtot + .tot { padding-top: 6px; }
+.seg button small { display: block; font-size: .72rem; font-weight: 500; color: var(--ink-2); }
+.seg button:disabled { opacity: .55; cursor: not-allowed; }
 .ups h3 { font-size: 1rem; margin: 0 0 10px; }
 .ups-l { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 64%); gap: 10px; overflow-x: auto; scrollbar-width: none;
   margin: 0 -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }

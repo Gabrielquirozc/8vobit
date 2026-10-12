@@ -72,13 +72,15 @@
   <div class="sh-body">
     <div id="lines"></div>
     <section id="ups" class="ups" aria-labelledby="upsT" hidden></section>
+    <div class="subtot" id="despLinea" hidden><span>Despacho</span><span class="num" id="despCosto"></span></div>
     <div class="tot"><span>Total</span><span class="num" id="ckTotal"></span></div>
 
     <fieldset class="fs"><legend>¿Cómo lo recibes?</legend>
-      <div class="seg">
+      <div class="seg" id="segMod">
         <button type="button" data-mod="retiro" aria-pressed="true"><svg class="ico"><use href="#i-store"/></svg>Retiro</button>
         <button type="button" data-mod="despacho" aria-pressed="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
       </div>
+      <p class="desp-info" id="despInfo" hidden></p>
       <div class="field" id="dirBox" hidden><label for="direccion">Dirección de despacho</label><input id="direccion" autocomplete="street-address" placeholder="Calle, número, depto"><div class="err" id="e-direccion"></div></div>
       <div class="field"><label for="franja">¿Para cuándo?</label><select id="franja"></select></div>
     </fieldset>
@@ -118,7 +120,7 @@ const $ = (id) => document.getElementById(id);
 const slug = location.pathname.split('/').filter(Boolean).pop();
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-let M, carro = [], modalidad = 'retiro', prods = new Map();
+let M, carro = [], modalidad = 'retiro', prods = new Map(), F = null;
 
 // Ilustraciones por categoría (se reemplazan por fotos cuando existan).
 const ART = [
@@ -337,7 +339,7 @@ function pintarCarro() {
     return `<div class="line"><div><div class="n">${esc(p.nombre)}</div>${ags ? `<div class="d">${esc(ags)}</div>` : ''}${i.nota ? `<div class="d nota-l">Nota: ${esc(i.nota)}</div>` : ''}<div class="d num">${clp(p.precio * i.cantidad)}</div></div>
       <div class="stepper"><button type="button" data-q="${idx}" data-d="-1" aria-label="Quitar uno de ${esc(p.nombre)}">${ico(i.cantidad > 1 ? 'minus' : 'x')}</button><span class="num">${i.cantidad}</span><button type="button" data-q="${idx}" data-d="1" aria-label="Agregar uno de ${esc(p.nombre)}">${ico('plus')}</button></div></div>`;
   }).join('');
-  $('ckTotal').textContent = clp(total()); $('enviarTotal').textContent = clp(total());
+  pintarTotales();
   const t = M.local.transferencia;
   $('pagoInfo').innerHTML = `<b>Pagas al retirar o recibir</b><br>Efectivo, transferencia o tarjeta. Sin cargos extra.` + (t ? `
     <details class="transf"><summary>Ver datos para transferir</summary><dl>
@@ -353,21 +355,57 @@ $('lines').onclick = (e) => {
   if (i.cantidad < 1) carro.splice(b.dataset.q, 1);
   barra(); carro.length ? pintarCarro() : $('dlgCarro').close();
 };
+
+// ---------- despacho ----------
+// El despacho tiene su propio horario: con despacho solo se ofrecen las franjas que lo permiten.
+const D = () => M.local.despacho || { activo: false };
+const hayDespacho = () => D().activo && !!F && (F.despacho_ya || F.slots.some((s) => s.despacho && s.disponible));
+const costoDespacho = () => (modalidad === 'despacho' ? D().costo : 0);
+function pintarTotales() {
+  const c = costoDespacho(), sub = total(), falta = modalidad === 'despacho' ? D().minimo - sub : 0;
+  $('despLinea').hidden = modalidad !== 'despacho';
+  $('despCosto').textContent = c ? clp(c) : 'Gratis';
+  $('ckTotal').textContent = clp(sub + c); $('enviarTotal').textContent = clp(sub + c);
+  $('enviar').disabled = falta > 0;
+  $('formErr').textContent = falta > 0 ? `Te faltan ${clp(falta)} para el mínimo de despacho (${clp(D().minimo)}).` : $('formErr').textContent.startsWith('Te faltan') ? '' : $('formErr').textContent;
+}
+function pintarFranjas() {
+  const f = F || { abierto: true, slots: [] }, desp = modalidad === 'despacho', ops = [];
+  if (f.abierto && (!desp || f.despacho_ya)) ops.push('<option>Lo antes posible</option>');
+  for (const s of f.slots) if (!desp || s.despacho) ops.push(`<option ${s.disponible ? '' : 'disabled'} value="${s.franja}">${s.franja}${s.disponible ? '' : ' · completo'}</option>`);
+  const antes = $('franja').value;
+  $('franja').innerHTML = ops.join('') || '<option disabled selected value="">Sin horarios disponibles hoy</option>';
+  if ([...$('franja').options].some((o) => o.value === antes && !o.disabled)) $('franja').value = antes;
+}
+// Rango de despacho de hoy en texto ("19:00 a 23:00"), a partir de las franjas que lo permiten.
+function rangoDespacho() {
+  const l = (F?.slots || []).filter((s) => s.despacho);
+  return l.length ? `${l[0].franja.split('–')[0]} a ${l[l.length - 1].franja.split('–')[1]}` : '';
+}
+function pintarModalidad() {
+  const d = D(), ok = hayDespacho();
+  if (!ok && modalidad === 'despacho') modalidad = 'retiro';
+  $('segMod').hidden = !d.activo;
+  const bd = document.querySelector('[data-mod="despacho"]');
+  bd.disabled = !ok;
+  bd.innerHTML = `${ico('bike')}${ok ? 'Despacho' : 'Despacho <small>no disponible ahora</small>'}`;
+  document.querySelectorAll('[data-mod]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.mod === modalidad));
+  $('dirBox').hidden = modalidad !== 'despacho';
+  const info = [d.costo ? `Despacho ${clp(d.costo)}` : 'Despacho gratis', d.minimo ? `pedido mínimo ${clp(d.minimo)}` : '',
+    rangoDespacho() ? `hoy de ${rangoDespacho()}` : '', d.zona ? `zona: ${esc(d.zona)}` : ''].filter(Boolean).join(' · ');
+  $('despInfo').hidden = !d.activo || modalidad !== 'despacho';
+  $('despInfo').innerHTML = info;
+  pintarFranjas(); pintarTotales();
+}
 $('cartbtn').onclick = async () => {
   pintarCarro(); $('formErr').textContent = '';
   $('dlgCarro').showModal();
-  try {
-    const f = await api(`locales/${slug}/franjas`);
-    const ops = [];
-    if (f.abierto) ops.push('<option>Lo antes posible</option>');
-    for (const s of f.slots) ops.push(`<option ${s.disponible ? '' : 'disabled'} value="${s.franja}">${s.franja}${s.disponible ? '' : ' · completo'}</option>`);
-    $('franja').innerHTML = ops.join('') || '<option disabled selected value="">Sin horarios disponibles hoy</option>';
-  } catch { $('franja').innerHTML = '<option>Lo antes posible</option>'; }
+  try { F = await api(`locales/${slug}/franjas`); } catch { F = null; }
+  pintarModalidad();
 };
 document.querySelectorAll('[data-mod]').forEach((b) => b.onclick = () => {
-  modalidad = b.dataset.mod;
-  document.querySelectorAll('[data-mod]').forEach((x) => x.setAttribute('aria-pressed', x === b));
-  $('dirBox').hidden = modalidad !== 'despacho';
+  if (b.disabled) return;
+  modalidad = b.dataset.mod; pintarModalidad();
 });
 function validar() {
   const errs = {

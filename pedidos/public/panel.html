@@ -130,12 +130,13 @@
   .logo-prev { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .lp { border-radius: var(--r-sm); padding: 12px; display: grid; place-items: center; min-height: 90px; }
   .lp img { max-width: 100%; max-height: 70px; } .lp.oscuro { background: #241c17; } .lp.claro { background: #fbf6ee; border: 1px solid var(--line); }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
   .local-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-items: start; }
   .cardf { background: var(--surface); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); }
   .cardf h3 { margin-top: 0; }
   .ayuda { color: var(--ink-2); font-size: .85rem; margin: 6px 0 0; }
   .horario { box-shadow: none; } .horario th { font-weight: 600; } .horario td, .horario th { padding: 6px 4px; border: 0; }
-  .horario { table-layout: fixed; } .horario th { width: 26%; } .horario td:nth-child(2) { width: 24%; }
+  .horario { table-layout: fixed; } .horario th { width: 38%; text-align: left; } .horario th .ck { font-weight: 600; }
   .horario input[type=time] { width: 100%; min-width: 0; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
   .horario input:disabled { opacity: .4; }
   .guardar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 12px 0; background: linear-gradient(transparent, var(--surface-2) 30%); }
@@ -333,7 +334,7 @@ function tarjeta(p) {
     ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}</div>` : ''}
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
-    <div class="pie"><span></span><span class="total num">${clp(p.total)}</span></div>
+    <div class="pie"><span>${p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : ''}</span><span class="total num">${clp(p.total)}</span></div>
     ${pasos[p.estado] || ''}
     <div class="acc">
       ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
@@ -641,7 +642,7 @@ $('pausa').onclick = async () => {
 const DIAS = [['1', 'Lunes'], ['2', 'Martes'], ['3', 'Miércoles'], ['4', 'Jueves'], ['5', 'Viernes'], ['6', 'Sábado'], ['0', 'Domingo']];
 async function pintarLocal() {
   await cargarCarta();
-  const L = M.local, t = L.transferencia || {};
+  const L = M.local, t = L.transferencia || {}, D = L.despacho || { activo: false, costo: 0, minimo: 0, zona: '', horario: {} };
   const campo = (id, label, val, extra = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}></div>`;
   $('v-local').innerHTML = `<div class="local-grid">
     <section class="cardf"><h3>Datos del local</h3>
@@ -665,10 +666,23 @@ async function pintarLocal() {
     </section>
     <section class="cardf"><h3>Horario de atención</h3>
       <table class="horario">${DIAS.map(([d, n]) => { const h = L.horario[d];
-        return `<tr><th>${n}</th><td><label class="ck"><input type="checkbox" data-abre="${d}" ${h ? 'checked' : ''}> Abierto</label></td>
+        return `<tr><th><label class="ck"><input type="checkbox" data-abre="${d}" ${h ? 'checked' : ''} aria-label="${n} abierto"> ${n}</label></th>
           <td><input type="time" data-desde="${d}" value="${h ? h[0] : '10:00'}" ${h ? '' : 'disabled'} aria-label="${n} abre"></td>
           <td><input type="time" data-hasta="${d}" value="${h ? h[1] : '22:00'}" ${h ? '' : 'disabled'} aria-label="${n} cierra"></td></tr>`; }).join('')}</table>
       <p class="ayuda">Si cierra después de medianoche (ej. 02:00) se entiende como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.</p>
+    </section>
+    <section class="cardf"><h3>Despacho</h3>
+      <label class="ck" style="font-weight:700"><input type="checkbox" id="d-activo" ${D.activo ? 'checked' : ''}> Ofrecer despacho en la carta</label>
+      <p class="ayuda">Apagado, la carta solo ofrece retiro. Encendido, el cliente puede pedir despacho solo en los días y horas marcados abajo.</p>
+      <div class="dos">${campo('d-costo', 'Costo de despacho ($)', D.costo, 'type="number" min="0" step="100" inputmode="numeric"')}
+        ${campo('d-minimo', 'Pedido mínimo ($)', D.minimo, 'type="number" min="0" step="500" inputmode="numeric"')}</div>
+      ${campo('d-zona', 'Zona de despacho', D.zona, 'maxlength="160" placeholder="Ej: Concepción centro, hasta 3 km"')}
+      <table class="horario">${DIAS.map(([d, n]) => { const h = D.horario[d], base = L.horario[d] || ['19:00', '23:00'];
+        return `<tr><th><label class="ck"><input type="checkbox" data-dabre="${d}" ${h ? 'checked' : ''} aria-label="Despacho el ${n.toLowerCase()}"> ${n}</label></th>
+          <td><input type="time" data-ddesde="${d}" value="${h ? h[0] : base[0]}" ${h ? '' : 'disabled'} aria-label="${n} despacho desde"></td>
+          <td><input type="time" data-dhasta="${d}" value="${h ? h[1] : base[1]}" ${h ? '' : 'disabled'} aria-label="${n} despacho hasta"></td></tr>`; }).join('')}</table>
+      <button type="button" class="link" id="d-copiar">Usar el horario de atención</button>
+      <p class="ayuda">Las franjas fuera de este horario se ofrecen solo para retiro.</p>
     </section>
     <section class="cardf"><h3>Datos para transferencia</h3>
       <p class="ayuda" style="margin-top:0">Se muestran al cliente al pagar y en el seguimiento de su pedido. Déjalos vacíos si no recibes transferencias.</p>
@@ -683,6 +697,16 @@ async function pintarLocal() {
   <div class="guardar"><span class="formerr" id="l-err" role="alert"></span><button class="primary" id="l-guardar" style="flex:0 0 auto;min-width:220px">Guardar cambios</button></div>`;
   $('v-local').querySelectorAll('[data-abre]').forEach((c) => c.onchange = () => {
     for (const k of ['desde', 'hasta']) $('v-local').querySelector(`[data-${k}="${c.dataset.abre}"]`).disabled = !c.checked;
+  });
+  const q = (sel) => $('v-local').querySelector(sel);
+  $('v-local').querySelectorAll('[data-dabre]').forEach((c) => c.onchange = () => {
+    for (const k of ['ddesde', 'dhasta']) q(`[data-${k}="${c.dataset.dabre}"]`).disabled = !c.checked;
+  });
+  $('d-copiar').onclick = () => DIAS.forEach(([d]) => {
+    const abre = q(`[data-abre="${d}"]`).checked;
+    q(`[data-dabre="${d}"]`).checked = abre;
+    q(`[data-ddesde="${d}"]`).value = q(`[data-desde="${d}"]`).value; q(`[data-dhasta="${d}"]`).value = q(`[data-hasta="${d}"]`).value;
+    q(`[data-ddesde="${d}"]`).disabled = q(`[data-dhasta="${d}"]`).disabled = !abre;
   });
   $('l-logo').onchange = async (e) => {
     const lbl = e.target.closest('label'); lbl.firstChild.textContent = 'Subiendo…';
@@ -700,10 +724,13 @@ async function pintarLocal() {
     const v = (id) => $(id).value;
     const horario = Object.fromEntries(DIAS.map(([d]) => [d, $('v-local').querySelector(`[data-abre="${d}"]`).checked
       ? [$('v-local').querySelector(`[data-desde="${d}"]`).value, $('v-local').querySelector(`[data-hasta="${d}"]`).value] : null]));
+    const q = (sel) => $('v-local').querySelector(sel);
+    const despacho = { activo: $('d-activo').checked, costo: v('d-costo'), minimo: v('d-minimo'), zona: v('d-zona'),
+      horario: Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-dabre="${d}"]`).checked ? [q(`[data-ddesde="${d}"]`).value, q(`[data-dhasta="${d}"]`).value] : null])) };
     $('l-guardar').disabled = true; $('l-err').textContent = '';
     try {
       await api('panel/local', { method: 'PATCH', body: {
-        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), telefono: v('l-telefono'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), comision_app: v('l-comision'), horario,
+        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), telefono: v('l-telefono'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), comision_app: v('l-comision'), horario, despacho,
         transferencia: { titular: v('t-titular'), rut: v('t-rut'), banco: v('t-banco'), tipo: v('t-tipo'), numero: v('t-numero'), email: v('t-email') },
       } });
       toast('Datos del local guardados'); pintarLocal(); refrescar();

@@ -65,6 +65,7 @@ let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
   if (!cols.has('medio_pago')) db.exec('ALTER TABLE pedidos ADD COLUMN medio_pago TEXT');
   if (!cols.has('recibido')) db.exec('ALTER TABLE pedidos ADD COLUMN recibido INTEGER');
   if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
+  if (!cols.has('costo_despacho')) db.exec('ALTER TABLE pedidos ADD COLUMN costo_despacho INTEGER NOT NULL DEFAULT 0');
   // Datos del local editables desde el panel.
   const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
   if (!lcols.has('direccion')) db.exec('ALTER TABLE locales ADD COLUMN direccion TEXT');
@@ -75,6 +76,8 @@ let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
   // Teléfono para llamadas, aparte del WhatsApp. Al crear la columna se completan una sola vez los
   // datos de contacto vacíos con los del seed; después mandan los que se editen en el panel.
   if (!lcols.has('telefono')) { db.exec('ALTER TABLE locales ADD COLUMN telefono TEXT'); contactoSeed = true; }
+  // Despacho: { activo, costo, minimo, zona, horario: { día: [desde, hasta] | null } }.
+  if (!lcols.has('despacho')) db.exec('ALTER TABLE locales ADD COLUMN despacho TEXT');
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
@@ -122,6 +125,7 @@ function seed() {
     'INSERT INTO locales (slug,nombre,instagram,whatsapp,telefono,direccion,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?,?,?)'
   ).run(L.slug, L.nombre, L.instagram, L.whatsapp, L.telefono || null, L.direccion || null, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
   if (L.logo) db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(lid, L.logo), lid);
+  if (L.despacho) db.prepare('UPDATE locales SET despacho=? WHERE id=?').run(JSON.stringify(L.despacho), lid);
   for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
   for (const a of s.salsas || []) db.prepare("INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,'salsa')").run(lid, a);
   s.categorias.forEach((c, ci) => {
@@ -156,8 +160,22 @@ const fmt = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${St
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 // Día "operativo": si es antes del cierre de madrugada del día anterior, sigue contando como ese día.
+// Configuración de despacho con valores por defecto (sin configurar = sin despacho).
+function despachoDe(local) {
+  const d = local.despacho ? JSON.parse(local.despacho) : {};
+  return { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {} };
+}
+// ¿Se despacha en [desde, hasta) minutos del día operativo `fecha`? El horario de despacho
+// es por día de la semana y, como el del local, puede cruzar la medianoche.
+function enDespacho(desp, fecha, desde, hasta) {
+  if (!desp.activo) return false;
+  const h = desp.horario[fecha.getDay()];
+  if (!h || !h[0] || !h[1]) return false;
+  const a = toMin(h[0]); let b = toMin(h[1]); if (b <= a) b += 24 * 60;
+  return desde >= a && hasta <= b;
+}
 function franjas(local) {
-  const horario = JSON.parse(local.horario);
+  const horario = JSON.parse(local.horario), desp = despachoDe(local);
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const candidates = [];
@@ -178,14 +196,16 @@ function franjas(local) {
     const slots = [];
     for (let m = start; m + SLOT_MIN <= close + 1; m += SLOT_MIN) {
       const label = `${fmt(m)}–${fmt(m + SLOT_MIN)}`;
-      slots.push({ franja: label, disponible: (usados[label] || 0) < local.cupo_franja });
+      slots.push({ franja: label, disponible: (usados[label] || 0) < local.cupo_franja, despacho: enDespacho(desp, d, m, m + SLOT_MIN) });
     }
-    candidates.push({ dia, abierto: nowRel >= open, slots });
+    // "Lo antes posible" con despacho: si ahora (más la preparación) cae dentro del horario de despacho.
+    const ya = Math.max(open, nowRel) + LEAD_MIN;
+    candidates.push({ dia, abierto: nowRel >= open, slots, despacho_ya: nowRel >= open && enDespacho(desp, d, ya, Math.min(ya + SLOT_MIN, close)) });
   }
   const c = candidates.find((x) => x.abierto) || candidates[candidates.length - 1];
   const r = c || { dia: today(), abierto: false, slots: [] };
   // Pausa: el local deja de recibir pedidos web (colapsado o cerrado de improviso).
-  return local.pausa ? { ...r, abierto: false, pausa: true, slots: [] } : r;
+  return local.pausa ? { ...r, abierto: false, pausa: true, slots: [], despacho_ya: false } : r;
 }
 
 // ---------- sesión del panel ----------
@@ -328,7 +348,7 @@ function menu(local) {
   return {
     local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
-      logo: local.logo ? `${BASE}/img/${local.logo}` : null,
+      logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local),
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
@@ -344,6 +364,7 @@ function pedidoCompleto(id, localId) {
   return p;
 }
 
+const clpTxt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
 function crearPedido(local, body) {
   const nombre = String(body.cliente || '').trim().slice(0, 80);
   const tel = String(body.telefono || '').replace(/[^\d+]/g, '').slice(0, 16);
@@ -355,11 +376,20 @@ function crearPedido(local, body) {
   const f = franjas(local);
   const franja = body.franja === 'Lo antes posible' ? 'Lo antes posible' : String(body.franja || '');
   if (!f.abierto && franja === 'Lo antes posible') return { error: 'El local está cerrado; elige una franja.' };
-  if (franja !== 'Lo antes posible' && !f.slots.some((s) => s.franja === franja && s.disponible)) return { error: 'Esa franja ya no está disponible.' };
+  const slot = f.slots.find((s) => s.franja === franja);
+  if (franja !== 'Lo antes posible' && !slot?.disponible) return { error: 'Esa franja ya no está disponible.' };
 
   const v = validarItems(local, body.items);
   if (v.error) return v;
-  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia }, v);
+  let costo = 0;
+  if (modalidad === 'despacho') {
+    const desp = despachoDe(local);
+    if (!desp.activo) return { error: 'El local no está despachando por ahora; elige retiro.' };
+    if (!(franja === 'Lo antes posible' ? f.despacho_ya : slot.despacho)) return { error: 'No hay despacho en ese horario; elige otra franja o retiro.' };
+    if (v.total < desp.minimo) return { error: `El pedido mínimo para despacho es ${clpTxt(desp.minimo)}.` };
+    costo = desp.costo;
+  }
+  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo }, { ...v, total: v.total + costo });
 }
 
 // Texto libre del cliente: sin caracteres de control ni saltos raros, largo acotado.
@@ -400,10 +430,10 @@ function guardarPedido(local, d, { items, total }) {
     const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, d.dia).n;
     const token = crypto.randomBytes(16).toString('base64url');
     const { lastInsertRowid: pid } = db.prepare(
-      `INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado,token,canal,estado,pagado,medio_pago,recibido,cobrado_en,folio_boleta)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      `INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,direccion,notas,total,dia,actualizado,token,canal,estado,pagado,medio_pago,recibido,cobrado_en,folio_boleta,costo_despacho)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
-      d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null);
+      d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido) VALUES (?,?,?,?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0);
@@ -444,6 +474,19 @@ function actualizarLocal(local, b) {
       h[d] = [v[0], v[1]];
     }
     c.horario = JSON.stringify(h);
+  }
+  if (b.despacho !== undefined) {
+    const d = b.despacho || {}, hh = /^([01]\d|2[0-3]):[0-5]\d$/, h = {};
+    const costo = Math.round(Number(d.costo) || 0), minimo = Math.round(Number(d.minimo) || 0);
+    if (!(costo >= 0 && costo <= 50000)) return { error: 'El costo de despacho debe estar entre $0 y $50.000.' };
+    if (!(minimo >= 0 && minimo <= 200000)) return { error: 'El pedido mínimo para despacho no es válido.' };
+    for (const k of '0123456') {
+      const v = d.horario?.[k];
+      if (v === null || v === undefined) { h[k] = null; continue; }
+      if (!Array.isArray(v) || !hh.test(v[0]) || !hh.test(v[1])) return { error: 'Horario de despacho inválido: usa el formato HH:MM.' };
+      h[k] = [v[0], v[1]];
+    }
+    c.despacho = JSON.stringify({ activo: !!d.activo, costo, minimo, zona: txt(d.zona, 160), horario: h });
   }
   if (b.transferencia !== undefined) {
     const t = b.transferencia || {};
@@ -554,7 +597,7 @@ async function api(req, res, url) {
       .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
     return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
-      modalidad: p.modalidad, total: p.total, pagado: !!p.pagado, creado: p.creado, items });
+      modalidad: p.modalidad, total: p.total, costo_despacho: p.costo_despacho, pagado: !!p.pagado, creado: p.creado, items });
   }
 
   // --- panel ---

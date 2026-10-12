@@ -39,6 +39,13 @@ y el seguimiento), Instagram, dirección, horario por día (días
 cerrados; misma hora de apertura y cierre = 24 h), cupo de pedidos por franja y datos
 para transferencia, que el cliente ve al pagar y en el seguimiento.
 
+**Despacho** (Datos del local → Despacho): se enciende o apaga, con costo, pedido mínimo, zona
+(texto que ve el cliente) y **horario propio por día**, que puede ser distinto del de atención
+(ej. solo viernes y sábado de 19:00 a 23:00). En la carta, con "Despacho" solo se ofrecen las
+franjas dentro de ese horario; si hoy no hay, el botón aparece como "no disponible ahora". El
+servidor valida todo de nuevo y suma el costo al total; la comanda, la tarjeta del pedido y el
+seguimiento muestran el despacho por separado. Sin configurar, la carta ofrece solo retiro.
+
 **Pausar pedidos web** (botón en la barra superior): la carta avisa "Pedidos en línea
 pausados" y no deja agregar; el mostrador sigue funcionando.
 
@@ -101,7 +108,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 37 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 38 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.
