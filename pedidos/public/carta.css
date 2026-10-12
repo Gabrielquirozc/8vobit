@@ -63,9 +63,13 @@ button { cursor: pointer; touch-action: manipulation; }
 .cats { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
 .cats::-webkit-scrollbar { display: none; }
 .cats a { flex: none; text-decoration: none; color: var(--ink-2); font-weight: 600; font-size: .92rem;
-  padding: 8px 14px; border-radius: 999px; min-height: 40px; display: inline-flex; align-items: center;
-  transition: background .2s var(--ease), color .2s var(--ease); }
-.cats a[aria-current="true"] { background: var(--ink); color: var(--bg); }
+  padding: 8px 14px; border-radius: 999px; min-height: 40px; display: inline-flex; align-items: center; }
+/* Indicador que se desliza entre categorías en vez de saltar de una a otra. */
+.cats { position: relative; }
+.cats a { position: relative; z-index: 1; transition: color .3s var(--ease); }
+.cats a[aria-current="true"] { color: var(--bg); }
+.cats .ind { position: absolute; z-index: 0; left: 0; top: 10px; height: 40px; width: 0; border-radius: 999px; background: var(--ink);
+  opacity: 0; pointer-events: none; transition: transform .45s var(--ease), width .45s var(--ease), opacity .25s var(--ease); }
 
 /* ---------- contenido ---------- */
 main { max-width: 720px; margin: 0 auto; padding: 8px 16px 140px; }

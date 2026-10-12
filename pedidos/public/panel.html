@@ -110,8 +110,9 @@
      y las pestañas en una segunda línea que se desplaza de lado (nunca se parte). */
   .bar { flex-wrap: nowrap; }
   .tabs-nav { display: flex; gap: 4px; min-width: 0; }
-  @media (max-width: 1500px) { .bar .kpi { display: none; } }
-  @media (max-width: 1365px) {
+  .tab, .pausa { white-space: nowrap; }
+  @media (max-width: 1640px) { .bar .kpi { display: none; } }
+  @media (max-width: 1499px) {
     .bar { flex-wrap: wrap; row-gap: 6px; }
     .bar .marca { order: 0; } .bar .sp { order: 1; } .bar .pausa { order: 2; } #sonido { order: 3; } #salir { order: 4; }
     .tabs-nav { order: 5; flex: 0 0 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }

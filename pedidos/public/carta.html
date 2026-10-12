@@ -175,7 +175,8 @@ function render() {
   html += cats.map((c) => `<section aria-labelledby="c${c.id}"><h2 class="sec-t" id="c${c.id}">${esc(c.nombre)}</h2><p class="sec-s">${c.ps.filter(vendible).length ? c.ps.filter(vendible).length + ' opciones' : 'Precios por confirmar con el local'}</p><div class="list">${c.ps.map((p) => itemHtml(p, c.i)).join('')}</div></section>`).join('');
   if (!cats.length) html = `<p class="empty">No encontramos “${esc($('q').value)}”.<br><button class="ghost" id="limpiar" style="margin-top:12px">Ver toda la carta</button></p>`;
   $('main').innerHTML = html;
-  $('cats').innerHTML = cats.map((c) => `<a href="#c${c.id}">${esc(c.nombre)}</a>`).join('');
+  $('cats').innerHTML = cats.map((c) => `<a href="#c${c.id}">${esc(c.nombre)}</a>`).join('') + '<span class="ind" aria-hidden="true"></span>';
+  activa = undefined;
   $('limpiar')?.addEventListener('click', () => { $('q').value = ''; render(); });
   espiar(); barra();
 }
@@ -183,15 +184,39 @@ function render() {
 // ya pasó bajo la barra fija. Arriba de todo no se marca ninguna.
 let heads = [], activa = null;
 function espiar() { heads = [...document.querySelectorAll('main h2[id^="c"]')]; marcar(); }
+const quieto = matchMedia('(prefers-reduced-motion: reduce)');
+let bloqueo = 0; // mientras dura el desplazamiento suave tras un toque, el indicador no persigue cada sección que pasa
+// Mueve el indicador y centra la pestaña activa dentro de la barra (solo en horizontal).
+function pintarActiva(id) {
+  activa = id;
+  const cats = $('cats'), ind = cats.querySelector('.ind');
+  cats.querySelectorAll('a').forEach((a) => a.setAttribute('aria-current', a.hash === '#' + id));
+  const on = cats.querySelector('[aria-current="true"]');
+  if (ind) {
+    ind.style.opacity = on ? 1 : 0;
+    if (on) { ind.style.transform = `translateX(${on.offsetLeft}px)`; ind.style.width = `${on.offsetWidth}px`; }
+  }
+  const izq = on ? on.offsetLeft - (cats.clientWidth - on.offsetWidth) / 2 : 0;
+  cats.scrollTo({ left: Math.max(0, izq), behavior: quieto.matches ? 'auto' : 'smooth' });
+}
+$('cats').addEventListener('click', (e) => {
+  const a = e.target.closest('a'); if (!a) return;
+  e.preventDefault();
+  const h = document.getElementById(a.hash.slice(1)); if (!h) return;
+  pintarActiva(h.id);
+  bloqueo = Date.now() + 1200;
+  const y = h.getBoundingClientRect().top + scrollY - document.querySelector('.stick').offsetHeight - 12;
+  scrollTo({ top: y, behavior: quieto.matches ? 'auto' : 'smooth' });
+  history.replaceState(null, '', a.hash);
+});
+addEventListener('scrollend', () => { bloqueo = 0; marcar(); });
 function marcar() {
+  if (Date.now() < bloqueo) return;
   const lim = document.querySelector('.stick').getBoundingClientRect().bottom + 24;
   const h = heads.filter((x) => x.getBoundingClientRect().top <= lim).pop();
   const id = h?.id || null;
   if (id === activa) return;
-  activa = id;
-  $('cats').querySelectorAll('a').forEach((a) => a.setAttribute('aria-current', a.hash === '#' + id));
-  const on = $('cats').querySelector('[aria-current="true"]');
-  if (on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); else $('cats').scrollTo({ left: 0, behavior: 'smooth' });
+  pintarActiva(id);
 }
 let tick = false;
 addEventListener('scroll', () => { if (!tick) { tick = true; requestAnimationFrame(() => { tick = false; marcar(); }); } }, { passive: true });
