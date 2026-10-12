@@ -104,7 +104,7 @@ test('exige la cantidad exacta de ingredientes en productos "+N ingr."', async (
 });
 
 test('no vende productos sin precio, inexistentes ni carros vacíos', async () => {
-  assert.equal((await pedir([{ producto_id: (await prod('Papas')).id }])).status, 400);
+  assert.equal((await pedir([{ producto_id: (await prod('Vegetariano')).id }])).status, 400);
   assert.equal((await pedir([{ producto_id: 999999 }])).status, 400);
   assert.equal((await pedir([])).status, 400);
 });

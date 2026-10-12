@@ -139,8 +139,7 @@
         {
           "nombre": "Churrasco a lo pobre",
           "desc": "Churrascos de vacuno, huevo frito, cebolla caramelizada y papas medianas",
-          "precio": 0,
-          "pendiente": true,
+          "precio": 7990,
           "imagen": "churrasco-a-lo-pobre.webp"
         },
         {
@@ -228,32 +227,27 @@
         {
           "nombre": "As mechada queso champiñón",
           "desc": "Carne mechada, queso fundido, champiñones salteados",
-          "precio": 0,
-          "pendiente": true
+          "precio": 4490
         },
         {
           "nombre": "As mechada luco",
           "desc": "Carne mechada, queso fundido",
-          "precio": 0,
-          "pendiente": true
+          "precio": 3990
         },
         {
           "nombre": "Palta queso",
           "desc": "Salchicha sureña ahumada, palta, queso fundido",
-          "precio": 0,
-          "pendiente": true
+          "precio": 3490
         },
         {
           "nombre": "Queso champiñón",
           "desc": "Salchicha sureña ahumada, queso fundido, champiñones salteados",
-          "precio": 0,
-          "pendiente": true
+          "precio": 3390
         },
         {
           "nombre": "Luco",
           "desc": "Salchicha sureña ahumada, queso fundido",
-          "precio": 0,
-          "pendiente": true
+          "precio": 2990
         }
       ]
     },
@@ -302,15 +296,13 @@
         {
           "nombre": "Papas",
           "desc": "Papas fritas caseras y naturales, no congeladas (250 g)",
-          "precio": 0,
-          "pendiente": true,
+          "precio": 2990,
           "imagen": "papas.webp"
         },
         {
           "nombre": "Salchipapa grande",
           "desc": "Para una o dos personas, papas naturales y salchichas sureñas",
-          "precio": 0,
-          "pendiente": true
+          "precio": 4990
         }
       ]
     },
@@ -320,8 +312,7 @@
         {
           "nombre": "Bowl de pollo a la plancha",
           "desc": "Arroz blanco, lechuga, repollo morado, zanahoria, pollo a la plancha y tu salsa preferida",
-          "precio": 0,
-          "pendiente": true,
+          "precio": 5590,
           "imagen": "bowl-pollo.webp"
         }
       ]
@@ -333,38 +324,32 @@
         {
           "nombre": "Bebida en lata 350 cc",
           "desc": "Bien helada",
-          "precio": 0,
-          "pendiente": true
+          "precio": 1490
         },
         {
           "nombre": "Jugo natural 500 ml",
           "desc": "Pregunta por los sabores del día",
-          "precio": 0,
-          "pendiente": true
+          "precio": 2590
         },
         {
           "nombre": "Leche con plátano 500 ml",
           "desc": "",
-          "precio": 0,
-          "pendiente": true
+          "precio": 2590
         },
         {
           "nombre": "Batido de frutilla 500 ml",
           "desc": "Leche con frutilla natural",
-          "precio": 0,
-          "pendiente": true
+          "precio": 2790
         },
         {
           "nombre": "Batido de piña 500 ml",
           "desc": "Leche batida con piña natural",
-          "precio": 0,
-          "pendiente": true
+          "precio": 2790
         },
         {
           "nombre": "Batido de arándano 500 ml",
           "desc": "Leche batida con arándano natural",
-          "precio": 0,
-          "pendiente": true
+          "precio": 2790
         }
       ]
     }

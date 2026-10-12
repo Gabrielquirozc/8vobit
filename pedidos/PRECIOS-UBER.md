@@ -36,32 +36,31 @@ argumento de venta: *"el mismo Barros Luco, $1.700 más barato pidiendo directo"
 Antes de usar ese mensaje en público, revisar el contrato del local con Uber
 (algunos exigen paridad de precios).
 
-## Precios que faltan (quedan como "Precio por confirmar")
+## Precios derivados de Uber (12-10-2026)
 
-Productos que están en Uber pero no en la pizarra, o sin precio en la pizarra.
-El precio de Uber se muestra solo como referencia: **no** usarlo en el canal propio.
+Según Gabriel, en Uber todos los precios están un 25% sobre el precio del local. Los productos
+sin precio de pizarra se cargaron como **Uber ÷ 1,25, redondeado al "…90" más cercano** (estilo
+de la pizarra). Quedan en el historial de precios del panel; **confirmar con el dueño**.
 
-| Categoría | Producto | Uber (referencia) |
+| Producto | Uber | Canal propio |
 |---|---|---|
-| Sanguchería | Churrasco a lo pobre | $9.999 |
-| Sanguchería | Pollo + 1 ingr. | — |
-| Sanguchería | Vegetariano | — |
-| Hot dogs | As mechada queso champiñón | $5.599 |
-| Hot dogs | As mechada luco | $4.999 |
-| Hot dogs | Palta queso | $4.399 |
-| Hot dogs | Queso champiñón | $4.299 |
-| Hot dogs | Luco | $3.699 |
-| Papas | Papas | $3.799 |
-| Papas | Salchipapa grande | $6.299 |
-| Bowls | Bowl de pollo a la plancha | $7.000 |
-| Bebidas y jugos | Bebida en lata 350 cc | $1.900 |
-| Bebidas y jugos | Jugo natural 500 ml | $3.299 |
-| Bebidas y jugos | Leche con plátano 500 ml | $3.299 |
-| Bebidas y jugos | Batido de frutilla 500 ml | $3.500 |
-| Bebidas y jugos | Batido de piña 500 ml | $3.500 |
-| Bebidas y jugos | Batido de arándano 500 ml | $3.500 |
+| Churrasco a lo pobre | $9.999 | $7.990 |
+| As mechada queso champiñón | $5.599 | $4.490 |
+| As mechada luco | $4.999 | $3.990 |
+| Palta queso | $4.399 | $3.490 |
+| Queso champiñón | $4.299 | $3.390 |
+| Luco | $3.699 | $2.990 |
+| Papas | $3.799 | $2.990 |
+| Salchipapa grande | $6.299 | $4.990 |
+| Bowl de pollo a la plancha | $7.000 | $5.590 |
+| Bebida en lata 350 cc | $1.900 | $1.490 |
+| Jugo natural 500 ml | $3.299 | $2.590 |
+| Leche con plátano 500 ml | $3.299 | $2.590 |
+| Batido de frutilla 500 ml | $3.500 | $2.790 |
+| Batido de piña 500 ml | $3.500 | $2.790 |
+| Batido de arándano 500 ml | $3.500 | $2.790 |
 
-Se cargan en un minuto desde el panel (*Carta y precios*), desmarcando "Precio pendiente".
+Siguen sin precio (no están en Uber): **Pollo + 1 ingr.** y **Vegetariano**.
 
 ## Cruce de productos (revisar con el dueño)
 
