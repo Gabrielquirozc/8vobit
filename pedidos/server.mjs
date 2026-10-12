@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   if (!lcols.has('direccion')) db.exec('ALTER TABLE locales ADD COLUMN direccion TEXT');
   if (!lcols.has('transferencia')) db.exec('ALTER TABLE locales ADD COLUMN transferencia TEXT');
   if (!lcols.has('pausa')) db.exec('ALTER TABLE locales ADD COLUMN pausa INTEGER NOT NULL DEFAULT 0');
+  // Comisión que cobraría la app de delivery (%): base del "comisión ahorrada" del resumen.
+  if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
@@ -266,7 +268,7 @@ function menu(local) {
   const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
   return {
     local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, modo_boleta: local.modo_boleta,
-      horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja,
+      horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
@@ -363,6 +365,10 @@ function actualizarLocal(local, b) {
     if (!(c.cupo_franja >= 1 && c.cupo_franja <= 200)) return { error: 'El cupo por franja debe estar entre 1 y 200.' };
   }
   if (b.pausa !== undefined) c.pausa = b.pausa ? 1 : 0;
+  if (b.comision_app !== undefined) {
+    c.comision_app = Math.round(Number(b.comision_app));
+    if (!(c.comision_app >= 0 && c.comision_app <= 50)) return { error: 'La comisión de la app debe estar entre 0 y 50 %.' };
+  }
   if (b.horario !== undefined) {
     const hh = /^([01]\d|2[0-3]):[0-5]\d$/, h = {};
     for (const d of '0123456') {
@@ -382,6 +388,72 @@ function actualizarLocal(local, b) {
   const keys = Object.keys(c);
   if (keys.length) db.prepare(`UPDATE locales SET ${keys.map((k) => `${k}=?`).join(', ')} WHERE id=?`).run(...keys.map((k) => c[k]), local.id);
   return { ok: true };
+}
+
+// ---------- resumen semanal ----------
+// Los 6 números del plan: pedidos (vs. semana anterior), ticket promedio, plato más y
+// menos vendido, hora peak y valle, clientes que repiten y comisión ahorrada.
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function lunesDe(fecha) { const d = new Date(`${fecha}T12:00:00`); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+function resumen(local, fecha) {
+  const lun = lunesDe(fecha), dias = [...Array(7)].map((_, i) => { const d = new Date(lun); d.setDate(d.getDate() + i); return iso(d); });
+  const prevLun = new Date(lun); prevLun.setDate(prevLun.getDate() - 7);
+  const rango = (desde, hasta) => db.prepare("SELECT * FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ? AND estado!='anulado'").all(local.id, desde, hasta);
+  const ps = rango(dias[0], dias[6]);
+  const prevDom = new Date(lun); prevDom.setDate(prevDom.getDate() - 1);
+  const prev = rango(iso(prevLun), iso(prevDom));
+  const suma = (l) => l.reduce((a, p) => a + p.total, 0);
+  const ventas = suma(ps), web = ps.filter((p) => p.canal !== 'mostrador');
+
+  const items = ps.length ? db.prepare(`SELECT nombre, SUM(cantidad) n, SUM(cantidad*precio_unitario) monto FROM pedido_items
+    WHERE pedido_id IN (${ps.map(() => '?').join(',')}) GROUP BY nombre ORDER BY n DESC, monto DESC`).all(...ps.map((p) => p.id)) : [];
+  const vendibles = db.prepare('SELECT nombre FROM productos WHERE local_id=? AND activo=1 AND precio_pendiente=0 AND precio>0').all(local.id).map((r) => r.nombre);
+  const vendidos = new Set(items.map((i) => i.nombre));
+
+  // Horas: solo las que el local estuvo abierto, para que la "hora valle" no sea las 4 AM.
+  // "Núcleo": sin la primera ni la última hora de cada día, que siempre son flojas y no
+  // sirven como "hora valle" para una promo (la del plan es el bache de la tarde).
+  // Días de la semana en que cada hora estuvo abierta: el valle se mide por día abierto,
+  // para no comparar una hora abierta 2 días con una abierta los 7.
+  const horario = JSON.parse(local.horario), abiertas = new Set(), nucleo = new Set(), diasAbierta = {};
+  for (const d of '0123456') {
+    const h = horario[d]; if (!h) continue;
+    let a = toMin(h[0]), b = toMin(h[1]); if (b <= a) b += 1440;
+    for (let m = a; m < b; m += 60) { const hr = Math.floor(m / 60) % 24; abiertas.add(hr); diasAbierta[hr] = (diasAbierta[hr] || 0) + 1; }
+    for (let m = a + 60; m < b - 60; m += 60) nucleo.add(Math.floor(m / 60) % 24);
+  }
+  // Orden del día operativo (desde las 06:00), no numérico: así 00 y 01 quedan al final.
+  // Arreglo y no objeto: un objeto con claves numéricas las reordena solo.
+  const horas = [...abiertas].sort((a, b) => ((a + 18) % 24) - ((b + 18) % 24)).map((h) => ({ hora: h, pedidos: 0 }));
+  const idx = new Map(horas.map((x) => [x.hora, x]));
+  for (const p of ps) { const x = idx.get(Number(p.creado.slice(11, 13))); if (x) x.pedidos++; }
+  const conPedidos = horas.filter((x) => x.pedidos > 0);
+  const peak = conPedidos.length ? conPedidos.reduce((a, b) => (b.pedidos > a.pedidos ? b : a)) : null;
+  const candidatas = horas.filter((x) => nucleo.has(x.hora) && x.hora !== peak?.hora);
+  const tasa = (x) => x.pedidos / (diasAbierta[x.hora] || 1);
+  const valle = conPedidos.length > 1 && candidatas.length ? candidatas.reduce((a, b) => (tasa(b) < tasa(a) ? b : a)) : null;
+
+  // Clientes que repiten: teléfonos con pedidos web esta semana que ya habían pedido antes (o 2+ veces en la semana).
+  const tels = [...new Set(web.map((p) => p.telefono).filter(Boolean))];
+  const repiten = tels.filter((t) => web.filter((p) => p.telefono === t).length > 1 ||
+    db.prepare('SELECT 1 FROM pedidos WHERE local_id=? AND telefono=? AND dia<? AND estado!=? LIMIT 1').get(local.id, t, dias[0], 'anulado')).length;
+
+  return {
+    semana: { desde: dias[0], hasta: dias[6] },
+    pedidos: ps.length, pedidos_prev: prev.length,
+    variacion: prev.length ? Math.round(((ps.length - prev.length) / prev.length) * 100) : null,
+    ventas, ticket: ps.length ? Math.round(ventas / ps.length) : 0,
+    canal: { web: { pedidos: web.length, ventas: suma(web) }, mostrador: { pedidos: ps.length - web.length, ventas: ventas - suma(web) } },
+    mas_vendido: items[0] || null,
+    menos_vendido: items.length > 1 ? items[items.length - 1] : null,
+    sin_ventas: vendibles.filter((n) => !vendidos.has(n)).length,
+    peak, valle,
+    clientes_web: tels.length, repiten,
+    comision_app: local.comision_app, comision_ahorrada: Math.round(suma(web) * local.comision_app / 100),
+    por_dia: dias.map((d) => { const l = ps.filter((p) => p.dia === d); return { dia: d, pedidos: l.length, ventas: suma(l) }; }),
+    por_hora: horas,
+    platos: items,
+  };
 }
 
 const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
@@ -467,6 +539,11 @@ async function api(req, res, url) {
       db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, actualizado=? WHERE id=?')
         .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, Date.now(), p.id);
       return send(res, 200, pedidoCompleto(p.id, lid));
+    }
+    if (m === 'GET' && parts[1] === 'resumen') {
+      const f = url.searchParams.get('semana') || franjas(local).dia;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || isNaN(new Date(f))) return send(res, 400, { error: 'Fecha inválida' });
+      return send(res, 200, resumen(local, f));
     }
     if (m === 'PATCH' && parts[1] === 'local') {
       const r = actualizarLocal(local, await readJson(req));

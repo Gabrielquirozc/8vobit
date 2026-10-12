@@ -121,6 +121,29 @@
   .horario input[type=time] { width: 100%; min-width: 0; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
   .horario input:disabled { opacity: .4; }
   .guardar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 12px 0; background: linear-gradient(transparent, var(--surface-2) 30%); }
+  .res-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ico-b { width: 44px; padding: 0; display: grid; place-items: center; }
+  .ico-b:disabled { opacity: .35; }
+  .kpis6 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) { .kpis6 { grid-template-columns: repeat(2, 1fr); } }
+  .kpis6 .k { display: block; font-size: .85rem; } .kpis6 .sub { display: block; font-size: .82rem; margin-top: 4px; color: var(--ink-2); }
+  .kpis6 b.txt { font-size: 1.25rem; line-height: 1.2; margin-top: 4px; }
+  .kpis6 .destacado { background: var(--ink); color: #f6efe6cc; } .kpis6 .destacado b { color: #fff; } .kpis6 .destacado .sub { color: #f6efe6b3; }
+  .delta { display: block; font-size: .85rem; font-weight: 700; margin-top: 4px; } .delta span { font-weight: 400; color: var(--ink-2); }
+  .delta.up { color: var(--ok); } .delta.down { color: var(--danger); }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; margin-top: 14px; align-items: start; }
+  .chart { margin: 0; background: var(--surface); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); }
+  .chart figcaption { font: 800 1rem var(--font-display); margin-bottom: 10px; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; height: 160px; border-bottom: 1px solid var(--line); }
+  .bar-col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: default; outline-offset: 2px; }
+  .bar-col:hover .vbar, .bar-col:focus .vbar { filter: brightness(.88); }
+  .vbar { width: min(70%, 36px); background: var(--brand); border-radius: 4px 4px 0 0; transition: filter .15s; }
+  .bar-val { font-size: .75rem; font-weight: 700; color: var(--ink); margin-bottom: 2px; white-space: nowrap; width: 0; display: flex; justify-content: center; overflow: visible; }
+  .bars-x { display: flex; gap: 2px; } .bars-x span { flex: 1; min-width: 0; overflow: hidden; text-align: center; font-size: .72rem; color: var(--ink-2); padding-top: 4px; }
+  .tabla { margin-top: 10px; font-size: .85rem; } .tabla summary { cursor: pointer; color: var(--ink-2); }
+  .tabla table { box-shadow: none; margin-top: 6px; } .tabla td { padding: 4px 8px; }
+  .tip { position: absolute; z-index: 50; background: var(--ink); color: var(--bg); font-size: .82rem; font-weight: 600; padding: 6px 10px; border-radius: 8px; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  .tip.on { opacity: 1; }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
@@ -150,6 +173,9 @@
   <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h2l3 11.5M5.5 17.5 9 10h7l-4.5 7.5"/></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
   <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
 </svg>
 
@@ -167,6 +193,7 @@
       <button class="tab" role="tab" data-v="pedidos" aria-selected="true"><svg class="ico"><use href="#i-list"/></svg>Pedidos<span class="badge" id="bNuevos" hidden></span></button>
       <button class="tab" role="tab" data-v="venta" aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
       <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
+      <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
       <button class="tab" role="tab" data-v="local" aria-selected="false"><svg class="ico"><use href="#i-store"/></svg>Datos del local</button>
     </nav>
@@ -196,6 +223,7 @@
     <div id="v-cierre" hidden></div>
     <div id="v-carta" hidden></div>
     <div id="v-local" hidden></div>
+    <div id="v-resumen" hidden></div>
   </main>
 </div>
 
@@ -581,6 +609,8 @@ async function pintarLocal() {
       ${campo('l-direccion', 'Dirección', L.direccion, 'maxlength="120" placeholder="Calle 123, Concepción"')}
       ${campo('l-cupo', 'Pedidos web por franja de 30 minutos', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"')}
       <p class="ayuda">Cuando una franja se llena, la carta la muestra como "completo" y el cliente elige otra.</p>
+      ${campo('l-comision', 'Comisión de la app de delivery (%)', L.comision_app, 'type="number" min="0" max="50" inputmode="numeric"')}
+      <p class="ayuda">Se usa para calcular la "comisión ahorrada" del resumen semanal. Uber Eats cobra entre 25% y 29%.</p>
     </section>
     <section class="cardf"><h3>Horario de atención</h3>
       <table class="horario">${DIAS.map(([d, n]) => { const h = L.horario[d];
@@ -610,7 +640,7 @@ async function pintarLocal() {
     $('l-guardar').disabled = true; $('l-err').textContent = '';
     try {
       await api('panel/local', { method: 'PATCH', body: {
-        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), horario,
+        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), comision_app: v('l-comision'), horario,
         transferencia: { titular: v('t-titular'), rut: v('t-rut'), banco: v('t-banco'), tipo: v('t-tipo'), numero: v('t-numero'), email: v('t-email') },
       } });
       toast('Datos del local guardados'); pintarLocal(); refrescar();
@@ -619,12 +649,96 @@ async function pintarLocal() {
   };
 }
 
+// ---------- resumen semanal ----------
+let semana = null;
+const fechaCorta = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+const diaCorto = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '');
+const hh = (h) => `${String(h).padStart(2, '0')}:00`;
+// Barras de una sola serie: un solo color (marca), sin leyenda; el título nombra la serie.
+// Etiqueta directa solo en el máximo; tooltip al pasar o enfocar; tabla equivalente debajo.
+function barras(datos, { etiqueta, valor, formato, titulo, corto }) {
+  const max = Math.max(1, ...datos.map(valor));
+  const iMax = datos.findIndex((d) => valor(d) === max && max > 0);
+  return `<figure class="chart"><figcaption>${titulo}</figcaption>
+    <div class="bars" role="img" aria-label="${esc(titulo)}">${datos.map((d, i) => `
+      <div class="bar-col" tabindex="0" data-tip="${esc(etiqueta(d))}: ${esc(formato(valor(d)))}">
+        <span class="bar-val">${i === iMax ? esc(corto ? corto(valor(d)) : formato(valor(d))) : ''}</span>
+        <span class="vbar" style="height:${valor(d) ? Math.max(3, (valor(d) / max) * 100) : 0}%"></span>
+      </div>`).join('')}</div>
+    <div class="bars-x">${datos.map((d) => `<span>${esc(etiqueta(d))}</span>`).join('')}</div>
+    <details class="tabla"><summary>Ver como tabla</summary><table>${datos.map((d) => `<tr><td>${esc(etiqueta(d))}</td><td class="r">${esc(formato(valor(d)))}</td></tr>`).join('')}</table></details>
+  </figure>`;
+}
+function textoResumen(s) {
+  const v = s.variacion === null ? '' : ` (${s.variacion >= 0 ? '+' : ''}${s.variacion}% vs. semana anterior)`;
+  return [`*Resumen ${D.local}* · semana del ${fechaCorta(s.semana.desde)} al ${fechaCorta(s.semana.hasta)}`, '',
+    `1. Pedidos: ${s.pedidos}${v}`,
+    `2. Ticket promedio: ${clp(s.ticket)}`,
+    `3. Más vendido: ${s.mas_vendido ? `${s.mas_vendido.nombre} (${s.mas_vendido.n})` : '—'}${s.menos_vendido ? ` · menos: ${s.menos_vendido.nombre} (${s.menos_vendido.n})` : ''}`,
+    `4. Hora peak: ${s.peak ? hh(s.peak.hora) : '—'}${s.valle ? ` · hora valle: ${hh(s.valle.hora)}` : ''}`,
+    `5. Clientes que repitieron: ${s.repiten} de ${s.clientes_web}`,
+    `6. Comisión ahorrada: ${clp(s.comision_ahorrada)} (pedidos directos vs. ${s.comision_app}% de la app)`].join('\n');
+}
+async function pintarResumen() {
+  const s = await api(`panel/resumen${semana ? `?semana=${semana}` : ''}`);
+  semana = s.semana.desde;
+  const hoyLun = (await api('panel/resumen')).semana.desde;
+  const flecha = s.variacion === null ? '' : `<span class="delta ${s.variacion >= 0 ? 'up' : 'down'}">${s.variacion >= 0 ? '▲' : '▼'} ${Math.abs(s.variacion)}% <span>vs. semana anterior (${s.pedidos_prev})</span></span>`;
+  $('v-resumen').innerHTML = `
+    <div class="res-head">
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="ghost ico-b" data-sem="-7" aria-label="Semana anterior">${ico('left')}</button>
+        <h2 class="t" style="margin:0">Semana del ${fechaCorta(s.semana.desde)} al ${fechaCorta(s.semana.hasta)}</h2>
+        <button class="ghost ico-b" data-sem="7" aria-label="Semana siguiente" ${s.semana.desde >= hoyLun ? 'disabled' : ''}>${ico('right')}</button>
+      </div>
+      <a class="primary" style="flex:0 0 auto;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(textoResumen(s))}">${ico('msg')}Enviar por WhatsApp</a>
+    </div>
+    ${s.pedidos ? '' : '<p class="vacio">Esta semana todavía no hay ventas registradas.</p>'}
+    <div class="kpis kpis6">
+      <div><span class="k">1 · Pedidos</span><b class="num">${s.pedidos}</b>${flecha}</div>
+      <div><span class="k">2 · Ticket promedio</span><b class="num">${clp(s.ticket)}</b><span class="sub">${clp(s.ventas)} vendidos</span></div>
+      <div><span class="k">3 · Más vendido</span><b class="txt">${s.mas_vendido ? esc(s.mas_vendido.nombre) : '—'}</b>
+        <span class="sub">${s.mas_vendido ? `${s.mas_vendido.n} vendidos` : ''}${s.menos_vendido ? ` · menos: ${esc(s.menos_vendido.nombre)} (${s.menos_vendido.n})` : ''}${s.sin_ventas ? ` · ${s.sin_ventas} sin ventas` : ''}</span></div>
+      <div><span class="k">4 · Hora peak</span><b class="num">${s.peak ? hh(s.peak.hora) : '—'}</b><span class="sub">${s.valle ? `Hora valle: ${hh(s.valle.hora)} · buena para una promo` : ''}</span></div>
+      <div><span class="k">5 · Clientes que repitieron</span><b class="num">${s.repiten}</b><span class="sub">de ${s.clientes_web} clientes web</span></div>
+      <div class="destacado"><span class="k">6 · Comisión ahorrada</span><b class="num">${clp(s.comision_ahorrada)}</b><span class="sub">${s.canal.web.pedidos} pedidos directos × ${s.comision_app}% que cobraría la app</span></div>
+    </div>
+    <div class="charts">
+      ${barras(s.por_dia, { titulo: 'Ventas por día', etiqueta: (d) => diaCorto(d.dia), valor: (d) => d.ventas, formato: clp })}
+      ${barras(s.por_hora, { titulo: 'Pedidos por hora', etiqueta: (d) => String(d.hora).padStart(2, '0'), valor: (d) => d.pedidos, formato: (n) => `${n} pedido${n === 1 ? '' : 's'}`, corto: String })}
+    </div>
+    <div class="charts">
+      <div><h3>Por canal</h3><table><tr><th></th><th class="r">Pedidos</th><th class="r">Ventas</th></tr>
+        <tr><td>Web (directo)</td><td class="r">${s.canal.web.pedidos}</td><td class="r">${clp(s.canal.web.ventas)}</td></tr>
+        <tr><td>Mostrador</td><td class="r">${s.canal.mostrador.pedidos}</td><td class="r">${clp(s.canal.mostrador.ventas)}</td></tr></table></div>
+      <div><h3>Platos de la semana</h3>${s.platos.length ? `<table><tr><th>Plato</th><th class="r">Unidades</th><th class="r">Ventas</th></tr>${s.platos.slice(0, 10).map((x) =>
+        `<tr><td>${esc(x.nombre)}</td><td class="r">${x.n}</td><td class="r">${clp(x.monto)}</td></tr>`).join('')}</table>` : '<p class="vacio">Sin ventas.</p>'}</div>
+    </div>
+    <p class="ayuda">La comisión ahorrada usa ${s.comision_app}% (se ajusta en Datos del local). Las ventas de mostrador no cuentan porque no pasarían por la app.</p>`;
+  $('v-resumen').querySelectorAll('[data-sem]').forEach((b) => b.onclick = () => {
+    const d = new Date(`${semana}T12:00:00`); d.setDate(d.getDate() + Number(b.dataset.sem));
+    semana = d.toISOString().slice(0, 10); pintarResumen();
+  });
+}
+// Tooltip de las barras: al pasar el mouse o con el foco del teclado.
+const tip = Object.assign(document.createElement('div'), { className: 'tip', role: 'tooltip' });
+document.body.append(tip);
+for (const ev of ['mouseover', 'focusin']) document.addEventListener(ev, (e) => {
+  const c = e.target.closest?.('[data-tip]'); if (!c) return;
+  tip.textContent = c.dataset.tip; tip.classList.add('on');
+  const r = c.getBoundingClientRect();
+  tip.style.left = `${Math.min(innerWidth - 8 - tip.offsetWidth, Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2))}px`;
+  tip.style.top = `${r.top + scrollY - tip.offsetHeight - 6}px`;
+});
+for (const ev of ['mouseout', 'focusout']) document.addEventListener(ev, (e) => { if (e.target.closest?.('[data-tip]')) tip.classList.remove('on'); });
+
 // ---------- navegación ----------
 document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
-  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen']) $('v-' + v).hidden = v !== vista;
   if (vista === 'carta') pintarCarta();
+  else if (vista === 'resumen') pintarResumen();
   else if (vista === 'local') pintarLocal();
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else refrescar();
@@ -634,7 +748,7 @@ $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' })
 async function iniciar() {
   try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
   $('app').hidden = false;
-  setInterval(() => !['carta', 'local'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  setInterval(() => !['carta', 'local', 'resumen'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
 $('entrar').onclick = async () => {
   try { await api('panel/login', { method: 'POST', body: { password: $('clave').value } }); $('login').hidden = true; iniciar(); }

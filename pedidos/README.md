@@ -45,6 +45,13 @@ pausados" y no deja agregar; el mostrador sigue funcionando.
 del pedido (300). Se guardan sin caracteres de control y se muestran siempre escapadas;
 en la comanda la observación sale en mayúsculas para que la cocina no la pase por alto.
 
+**Resumen semanal** (pestaña Resumen): los 6 números del plan con la semana anterior
+como comparación: pedidos, ticket promedio, plato más y menos vendido, hora peak y hora
+valle (solo horas centrales, por día abierto, para que sirva como hora de promo),
+clientes que repitieron y **comisión ahorrada** (ventas web × % de la app, configurable
+en Datos del local). Ventas por día y pedidos por hora con tabla equivalente, por canal,
+ranking de platos y botón **Enviar por WhatsApp** con el texto listo.
+
 **Productos sin foto**: muestran un emoji según lo que son (🌭 🍔 🥤 🍓 …).
 
 **Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
@@ -77,7 +84,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 31 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 33 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

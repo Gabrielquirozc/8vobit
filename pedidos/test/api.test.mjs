@@ -399,3 +399,44 @@ test('observación por producto y comentario general: se guardan limpios y acota
   const v = await req('POST', '/api/panel/venta', { items: [{ producto_id: p.id, nota: 'bien tostado' }], medio_pago: 'efectivo', recibido: 5000 });
   assert.equal((await req('GET', `/api/panel/pedidos/${v.body.id}`)).body.items[0].nota, 'bien tostado');
 });
+
+// ---------- resumen semanal ----------
+test('resumen semanal: los 6 números cuadran entre sí', async () => {
+  await login();
+  const r = await req('GET', '/api/panel/resumen');
+  assert.equal(r.status, 200);
+  const s = r.body;
+  const lun = new Date(`${s.semana.desde}T12:00:00`), dom = new Date(`${s.semana.hasta}T12:00:00`);
+  assert.equal(lun.getDay(), 1); assert.equal(dom.getDay(), 0);
+  assert.ok(s.pedidos > 0);
+  assert.equal(s.por_dia.reduce((a, d) => a + d.pedidos, 0), s.pedidos);
+  assert.equal(s.canal.web.pedidos + s.canal.mostrador.pedidos, s.pedidos);
+  assert.equal(s.canal.web.ventas + s.canal.mostrador.ventas, s.ventas);
+  assert.equal(s.ticket, Math.round(s.ventas / s.pedidos));
+  assert.equal(s.comision_ahorrada, Math.round(s.canal.web.ventas * s.comision_app / 100));
+  assert.ok(s.mas_vendido.n >= s.menos_vendido.n);
+  assert.ok(s.peak && s.peak.pedidos >= 1);
+  assert.ok(s.repiten >= 1, 'Ana pidió varias veces con el mismo teléfono');
+  assert.ok(s.repiten <= s.clientes_web);
+  assert.equal(s.por_hora.reduce((a, h) => a + h.pedidos, 0) <= s.pedidos, true);
+  // horas en orden del día operativo: nunca una hora de madrugada antes de una de la mañana
+  const orden = s.por_hora.map((h) => (h.hora + 18) % 24);
+  assert.deepEqual(orden, [...orden].sort((a, b) => a - b));
+});
+
+test('resumen semanal: semana anterior vacía, fecha inválida y comisión configurable', async () => {
+  await login();
+  const hoy = (await req('GET', '/api/panel/resumen')).body;
+  const d = new Date(`${hoy.semana.desde}T12:00:00`); d.setDate(d.getDate() - 7);
+  const ant = (await req('GET', `/api/panel/resumen?semana=${d.toISOString().slice(0, 10)}`)).body;
+  assert.equal(ant.pedidos, 0);
+  assert.equal(ant.peak, null);
+  assert.equal((await req('GET', '/api/panel/resumen?semana=ayer')).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { comision_app: 90 })).status, 400);
+  await req('PATCH', '/api/panel/local', { comision_app: 30 });
+  const r = (await req('GET', '/api/panel/resumen')).body;
+  assert.equal(r.comision_ahorrada, Math.round(r.canal.web.ventas * 0.3));
+  await req('PATCH', '/api/panel/local', { comision_app: 25 });
+  cookie = '';
+  assert.equal((await req('GET', '/api/panel/resumen')).status, 401);
+});
