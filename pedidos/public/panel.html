@@ -106,8 +106,22 @@
   .tile .emoji, .art .emoji { font-size: 44px; line-height: 1; }
   .ped li .ag.obs { color: var(--brand); font-weight: 700; display: flex; align-items: center; gap: 4px; }
   .ped li .ag.obs .ico { width: 14px; height: 14px; }
-  @media (max-width: 1440px) { .bar .kpi { display: none; } }
-  @media (max-width: 1320px) { .tab { padding: 0 10px; font-size: .92rem; } .tab .ico { display: none; } }
+  /* Barra superior: una línea en pantallas anchas; en el resto, nombre y acciones arriba
+     y las pestañas en una segunda línea que se desplaza de lado (nunca se parte). */
+  .bar { flex-wrap: nowrap; }
+  .tabs-nav { display: flex; gap: 4px; min-width: 0; }
+  @media (max-width: 1500px) { .bar .kpi { display: none; } }
+  @media (max-width: 1365px) {
+    .bar { flex-wrap: wrap; row-gap: 6px; }
+    .bar .marca { order: 0; } .bar .sp { order: 1; } .bar .pausa { order: 2; } #sonido { order: 3; } #salir { order: 4; }
+    .tabs-nav { order: 5; flex: 0 0 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }
+    .tabs-nav::-webkit-scrollbar { display: none; }
+    .tab { flex: none; }
+  }
+  @media (max-width: 600px) {
+    .pausa #pausaTxt { display: none; } .pausa { width: 44px; padding: 0; justify-content: center; }
+    .tab .ico { display: none; } .tab { padding: 0 12px; }
+  }
   .pausa { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid #ffffff33; background: transparent; color: #fff; font-weight: 600; font-size: .88rem; }
   .pausa .dot { width: 10px; height: 10px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px #4ade8033; }
   .pausa[aria-pressed="true"] { background: var(--mustard); color: #1f1a17; border-color: var(--mustard); }
@@ -189,7 +203,7 @@
 <div id="app" hidden>
   <header class="bar">
     <span class="marca" id="nomLocal">Pedidos</span>
-    <nav role="tablist" aria-label="Secciones" style="display:flex;gap:4px;flex-wrap:wrap">
+    <nav class="tabs-nav" role="tablist" aria-label="Secciones">
       <button class="tab" role="tab" data-v="pedidos" aria-selected="true"><svg class="ico"><use href="#i-list"/></svg>Pedidos<span class="badge" id="bNuevos" hidden></span></button>
       <button class="tab" role="tab" data-v="venta" aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
       <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
@@ -586,6 +600,7 @@ $('v-carta').onchange = async (e) => {
 function marcarPausa(on) {
   $('pausa').setAttribute('aria-pressed', on);
   $('pausaTxt').textContent = on ? 'Pedidos web en pausa' : 'Recibiendo pedidos web';
+  $('pausa').setAttribute('aria-label', $('pausaTxt').textContent);
 }
 $('pausa').onclick = async () => {
   const on = $('pausa').getAttribute('aria-pressed') !== 'true';
@@ -698,7 +713,7 @@ async function pintarResumen() {
       <div><span class="k">1 · Pedidos</span><b class="num">${s.pedidos}</b>${flecha}</div>
       <div><span class="k">2 · Ticket promedio</span><b class="num">${clp(s.ticket)}</b><span class="sub">${clp(s.ventas)} vendidos</span></div>
       <div><span class="k">3 · Más vendido</span><b class="txt">${s.mas_vendido ? esc(s.mas_vendido.nombre) : '—'}</b>
-        <span class="sub">${s.mas_vendido ? `${s.mas_vendido.n} vendidos` : ''}${s.menos_vendido ? ` · menos: ${esc(s.menos_vendido.nombre)} (${s.menos_vendido.n})` : ''}${s.sin_ventas ? ` · ${s.sin_ventas} sin ventas` : ''}</span></div>
+        <span class="sub">${[s.mas_vendido && `${s.mas_vendido.n} vendidos`, s.menos_vendido && `menos: ${esc(s.menos_vendido.nombre)} (${s.menos_vendido.n})`, s.sin_ventas && `${s.sin_ventas} sin ventas`].filter(Boolean).join(' · ')}</span></div>
       <div><span class="k">4 · Hora peak</span><b class="num">${s.peak ? hh(s.peak.hora) : '—'}</b><span class="sub">${s.valle ? `Hora valle: ${hh(s.valle.hora)} · buena para una promo` : ''}</span></div>
       <div><span class="k">5 · Clientes que repitieron</span><b class="num">${s.repiten}</b><span class="sub">de ${s.clientes_web} clientes web</span></div>
       <div class="destacado"><span class="k">6 · Comisión ahorrada</span><b class="num">${clp(s.comision_ahorrada)}</b><span class="sub">${s.canal.web.pedidos} pedidos directos × ${s.comision_app}% que cobraría la app</span></div>
@@ -736,6 +751,7 @@ for (const ev of ['mouseout', 'focusout']) document.addEventListener(ev, (e) => 
 document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
+  b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
   for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen']) $('v-' + v).hidden = v !== vista;
   if (vista === 'carta') pintarCarta();
   else if (vista === 'resumen') pintarResumen();
