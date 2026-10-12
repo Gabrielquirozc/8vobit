@@ -290,6 +290,9 @@ function pagina(file) {
   return paginas.get(file);
 }
 const SEGURIDAD = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
+// Antes del lanzamiento nada se indexa (ni la carta): INDEXAR=1 en .env cuando el local lo publique.
+const INDEXAR = process.env.INDEXAR === '1';
+if (!INDEXAR) SEGURIDAD['X-Robots-Tag'] = 'noindex, nofollow';
 
 // ---------- utilidades HTTP ----------
 function send(res, code, body, headers = {}) {
@@ -318,7 +321,7 @@ async function readJson(req) {
   for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw demasiado(req); }
   return raw ? JSON.parse(raw) : {};
 }
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.webmanifest': 'application/manifest+json' };
 function serveFile(res, file, versionado = false) {
   const p = path.join(PUBLIC, file);
   if (!p.startsWith(PUBLIC) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) return send(res, 404, 'No encontrado');
@@ -747,6 +750,7 @@ const server = http.createServer(async (req, res) => {
     }
     url.pathname = p;
     if (p === '/salud') return send(res, 200, 'ok');
+    if (p === '/robots.txt') return send(res, 200, INDEXAR ? 'User-agent: *\nDisallow: /panel\nDisallow: /api/\nDisallow: /seguimiento\nDisallow: /comanda\n' : 'User-agent: *\nDisallow: /\n');
     if (p.startsWith('/img/')) {
       const f = path.join(IMG_DIR, path.basename(p));
       if (!/^\/img\/[\w-]+\.webp$/.test(p) || !fs.existsSync(f)) return send(res, 404, 'No encontrado');
@@ -759,6 +763,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/panel') return serveFile(res, 'panel.html');
     if (p === '/comanda') return serveFile(res, 'comanda.html');
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
+    if (p === '/cartel') return serveFile(res, 'cartel.html');
     if (p === '/seguimiento') return serveFile(res, 'seguimiento.html');
     if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
     const f = p.slice(1);

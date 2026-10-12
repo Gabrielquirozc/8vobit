@@ -9,6 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="carta.css">
+<link rel="manifest" href="panel.webmanifest">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   /* Panel para una tablet en el ventanal: mismos tokens que la carta, botones
      grandes y un solo paso principal por pedido. */
@@ -560,7 +563,7 @@ $('v-cierre').onclick = async (e) => {
 const chipAg = (a) => `<button type="button" class="opt" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ''}${esc(a.nombre)}</button>`;
 async function pintarCarta() {
   const [, h] = await Promise.all([cargarCarta(), api('panel/historial')]);
-  $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. "Sugerir" ofrece el producto como acompañamiento al agregar un plato, en el carro y en el mostrador. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a></p>` +
+  $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. "Sugerir" ofrece el producto como acompañamiento al agregar un plato, en el carro y en el mostrador. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a> · <a href="cartel" target="_blank">Cartel y tarjetas con QR</a></p>` +
     M.categorias.map((c) => `<h3>${esc(c.nombre)}</h3><table>${c.productos.map((p) => `<tr>
       <td style="width:140px"><div class="foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : '<span>Sin foto</span>'}</div>
         <label class="mini-btn">${p.imagen ? 'Cambiar' : 'Subir foto'}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
@@ -838,9 +841,19 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
 });
 $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
 
+// La tablet del local no debe apagar la pantalla mientras el panel está abierto: si se apaga,
+// nadie oye ni ve los pedidos nuevos. El navegador suelta el bloqueo al ocultar la pestaña,
+// así que se vuelve a pedir al volver.
+let bloqueo = null;
+async function despierta() {
+  if (!('wakeLock' in navigator) || document.hidden || bloqueo) return;
+  try { bloqueo = await navigator.wakeLock.request('screen'); bloqueo.addEventListener('release', () => { bloqueo = null; }); } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) despierta(); });
 async function iniciar() {
   try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
   $('app').hidden = false;
+  despierta();
   setInterval(() => !['carta', 'local', 'resumen'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
 $('entrar').onclick = async () => {

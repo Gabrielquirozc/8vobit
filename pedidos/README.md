@@ -72,6 +72,15 @@ lata, Jugo natural y Batido de frutilla), en tres momentos:
 3. En la venta rápida, una línea "Ofrece:" como guion para quien atiende.
 Cada línea agregada desde una sugerencia queda marcada y el Resumen muestra cuánto vendió.
 
+**Material impreso** (Carta y precios → *Cartel y tarjetas con QR*): cartel A4 para el mostrador
+y 8 tarjetas por hoja para las bolsas, con el logo, el QR a la carta y los datos de contacto.
+
+**Tablet del local**: el panel se puede instalar como app (menú del navegador → *Instalar* o
+*Agregar a pantalla de inicio*) y mantiene la pantalla encendida mientras está abierto.
+
+**Antes del lanzamiento** nada se indexa en buscadores (`X-Robots-Tag` y `robots.txt`). Al lanzar,
+agregar `INDEXAR=1` al `.env` del servidor y volver a desplegar.
+
 **Productos sin foto**: muestran un emoji según lo que son (🌭 🍔 🥤 🍓 …).
 
 **Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
@@ -99,6 +108,12 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
   `/data/backups`, se conservan `BACKUP_DIAS` (14). **Están en el mismo disco**:
   para sobrevivir a una falla de disco hay que copiar `/data` fuera del servidor,
   por ejemplo con un `rsync` nocturno a otra máquina por Tailscale.
+- **Respaldo fuera del servidor** (desde Windows, en la carpeta del repo):
+  `powershell -ExecutionPolicy Bypass -File .\pedidos\deploy\respaldo.ps1 -Instalar`.
+  Pide al servidor una copia consistente (base + fotos, [`deploy/exportar.sh`](deploy/exportar.sh)),
+  la descarga a `D:\Respaldos\pedidos`, verifica que se pueda abrir y conserva las últimas 30.
+  `-Instalar` además la programa todos los días a las 13:00 (o al prender el PC). `-Restaurar`
+  muestra los pasos para volver a una copia.
 - **Caché**: Cloudflare impone 4 h de caché de navegador a `.js` y `.css`. Por eso las
   páginas referencian `comun.js?v=<hash>` y `carta.css?v=<hash>` (el servidor los agrega
   al servir): cada despliegue cambia la URL y nadie queda con una versión vieja. Esas
@@ -108,7 +123,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 38 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 40 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

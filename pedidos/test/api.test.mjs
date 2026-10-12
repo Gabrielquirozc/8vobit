@@ -498,6 +498,21 @@ test('despacho: solo en los días y horarios configurados, con costo y pedido m�
   await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias(['00:00', '00:00']) } });
 });
 
+test('antes del lanzamiento no se indexa nada', async () => {
+  const r = await fetch(B + '/gassuso');
+  assert.equal(r.headers.get('x-robots-tag'), 'noindex, nofollow');
+  assert.equal(await (await fetch(B + '/robots.txt')).text(), 'User-agent: *\nDisallow: /\n');
+});
+
+test('material del local: cartel con QR y panel instalable en la tablet', async () => {
+  for (const [ruta, tipo] of [['/cartel', 'text/html'], ['/qrcode.js', 'text/javascript'], ['/panel.webmanifest', 'application/manifest+json'], ['/icono-512.png', 'image/png']]) {
+    const r = await fetch(B + ruta);
+    assert.equal(r.status, 200, ruta);
+    assert.ok(r.headers.get('content-type').startsWith(tipo), ruta);
+  }
+  assert.match(await (await fetch(B + '/panel')).text(), /rel="manifest"/);
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();
