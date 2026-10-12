@@ -12,7 +12,7 @@ awk -v host="$HOST" '
   /^  - service: http_status:404/ && !done {
     print "  # Pedidos propios para locales (ver infra/docker-compose.pedidos.yml)."
     print "  - hostname: " host
-    print "    service: http://127.0.0.1:8099"
+    print "    service: http://127.0.0.1:8100"
     done=1
   }
   { print }

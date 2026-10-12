@@ -4,7 +4,7 @@
 set -euo pipefail
 SRC=/tmp/pedidos-deploy
 DEST=/srv/docker/compose/pedidos
-PORT=8099
+PORT=8100
 paso() { printf '\n== %s\n' "$*"; }
 
 paso "1/7 Puerto $PORT libre o ya usado por pedidos"

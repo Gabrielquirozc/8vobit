@@ -6,8 +6,9 @@ services:
     container_name: pedidos
     restart: unless-stopped
     # Solo 127.0.0.1: la entrada es el túnel. Nunca 0.0.0.0 (Docker se salta UFW).
+    # Puerto del host 8100: el 8099 lo ocupa completapp-dev-wordpress (visto 2026-10-12).
     ports:
-      - "127.0.0.1:8099:8099"
+      - "127.0.0.1:8100:8099"
     env_file: .env
     volumes:
       - pedidos-data:/data

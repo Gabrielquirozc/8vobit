@@ -80,6 +80,12 @@ Los datos quedan en `./data/pedidos.db`. Para recargar la carta desde
 
 ## Desplegar en lenovo-edge
 
+**Puerto del host: 8100** (dentro del contenedor sigue siendo 8099). Puertos ocupados
+en `lenovo-edge` al 2026-10-12: 8089 gabriel-profile-link, 8092 radio, 8093 codice,
+8094 home-8vobit, 8095 agenda, 8097 boldus, 8098 chatbot, **8099
+completapp-dev-wordpress** (no figura en el espejo `D:\VPS`); reservados aunque no
+escuchaban: 8091 ongtapitas, 8096 Jellyfin.
+
 Desde Windows, en la carpeta del repo (PowerShell):
 
 ```powershell
@@ -89,7 +95,7 @@ Desde Windows, en la carpeta del repo (PowerShell):
 Empaqueta `pedidos/` (sin `data/` ni `.env`), lo copia a `/tmp` del servidor y corre
 [`deploy/remoto.sh`](deploy/remoto.sh), que:
 
-1. Verifica que el puerto 8099 esté libre (o sea del propio `pedidos`).
+1. Verifica que el puerto 8100 del host esté libre (o sea del propio `pedidos`).
 2. **Corre las 25 pruebas en el servidor**, en un contenedor desechable; si alguna
    falla, se detiene sin tocar nada.
 3. Respalda la versión anterior en `/srv/docker/compose/pedidos.prev-FECHA`.
@@ -106,7 +112,7 @@ La **primera vez**, agregar el hostname al túnel (una sola vez, a mano):
 ssh gabriel@lenovo-edge 'sudo bash /srv/docker/compose/pedidos/deploy/tunel.sh'
 ```
 
-Respalda `/etc/cloudflared/config.yml`, inserta `pedidos.8vobit.xyz → 127.0.0.1:8099`
+Respalda `/etc/cloudflared/config.yml`, inserta `pedidos.8vobit.xyz → 127.0.0.1:8100`
 antes de la regla final 404, **valida con `cloudflared` antes de reemplazar** y reinicia
 `cloudflared.service`. Luego indica el comando de DNS si el registro aún no existe.
 
