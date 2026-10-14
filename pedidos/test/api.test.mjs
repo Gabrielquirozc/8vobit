@@ -721,6 +721,32 @@ test('costo de productos: privado, se congela en cada venta y da el margen de la
   await req('PATCH', '/api/panel/local', { costo_pct: 35 });
 });
 
+// ---------- términos y privacidad ----------
+test('legal: páginas públicas, datos legales validados y borrado de datos de un cliente', async () => {
+  for (const r of ['/terminos', '/privacidad']) {
+    const p = await req('GET', `${r}?l=gassuso`);
+    assert.equal(p.status, 200);
+    assert.match(p.body, /legal|Términos/);
+  }
+  await login();
+  assert.equal((await req('PATCH', '/api/panel/local', { legal: { rut: '76.123.456-1' } })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { legal: { correo: 'no-es-correo' } })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { legal: { razon_social: 'Gassuso SpA', rut: '76.086.428-5', correo: 'hola@gassuso.cl' } })).status, 200);
+  assert.deepEqual((await menu()).local.legal, { razon_social: 'Gassuso SpA', rut: '76.086.428-5', correo: 'hola@gassuso.cl' });
+  const it = await prod('Italiano');
+  const r = await pedir([{ producto_id: it.id }], { cliente: 'Borra Me', telefono: '+56 9 7777 8888' });
+  assert.equal(r.status, 201);
+  assert.equal((await req('POST', '/api/panel/privacidad/borrar', { telefono: '123' })).status, 400);
+  const b = await req('POST', '/api/panel/privacidad/borrar', { telefono: '977778888' });
+  assert.equal(b.body.pedidos, 1);
+  const lista = (await req('GET', '/api/panel/pedidos')).body;
+  const p = (lista.pedidos || lista).find((x) => x.numero === r.body.numero);
+  assert.equal(p.cliente, '(datos borrados)');
+  assert.equal(p.telefono, '');
+  assert.equal(p.total, it.precio);
+  await req('PATCH', '/api/panel/local', { legal: null });
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

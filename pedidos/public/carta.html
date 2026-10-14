@@ -48,6 +48,7 @@
 
 <div id="seguir" hidden style="max-width:720px;margin:12px auto 0;padding:0 16px"></div>
 <main id="main"></main>
+<footer class="pie-legal"><a data-legal="terminos">Términos y condiciones</a> · <a data-legal="privacidad">Privacidad</a></footer>
 
 <div class="cartbar"><button class="cartbtn" id="cartbtn" hidden><span class="count num" id="cartCount"></span><span>Ver pedido</span><span class="num" id="cartTotal" style="padding-right:12px"></span></button></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -102,6 +103,7 @@
 
     <div class="note"><svg class="ico"><use href="#i-wallet"/></svg><div id="pagoInfo" style="flex:1"></div></div>
     <div class="formerr" id="formErr" role="alert"></div>
+    <p class="acepta">Al enviar el pedido aceptas los <a data-legal="terminos" target="_blank">Términos y condiciones</a> y la <a data-legal="privacidad" target="_blank">Política de privacidad</a>.</p>
   </div>
   <div class="sh-foot"><button class="primary" id="enviar"><span>Enviar pedido</span><span class="num" id="enviarTotal"></span></button></div>
 </dialog>
@@ -131,6 +133,7 @@ const slug = location.pathname.split('/').filter(Boolean).pop();
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 let M, carro = [], modalidad = 'retiro', prods = new Map(), F = null;
+document.querySelectorAll('[data-legal]').forEach((a) => { a.href = `${BASE}/${a.dataset.legal}?l=${encodeURIComponent(slug)}`; });
 
 // Ilustraciones por categoría (se reemplazan por fotos cuando existan).
 const ART = [

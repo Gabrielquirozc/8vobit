@@ -1121,9 +1121,9 @@ function tablaHorario(pre, hor, base) {
 }
 async function pintarLocal() {
   await cargarCarta();
-  const L = M.local, t = L.transferencia || {};
+  const L = M.local, t = L.transferencia || {}, g = L.legal || {};
   const campo = (id, label, val, extra = '', ayuda = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}<div class="err" id="${id}-err"></div></div>`;
-  const SEC = [['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
+  const SEC = [['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-legal', 'Datos legales'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
   const tipoOk = !t.tipo || TIPOS.includes(t.tipo);
   $('v-local').innerHTML = `<div class="lwrap">
     <nav class="lnav" aria-label="Secciones">${SEC.map(([id, n]) => `<a href="#${id}" data-sec="${id}">${n}</a>`).join('')}</nav>
@@ -1149,6 +1149,16 @@ async function pintarLocal() {
         ${campo('t-numero', 'Número de cuenta', t.numero, 'maxlength="30" inputmode="numeric" autocomplete="off"')}
         ${campo('t-email', 'Correo para el comprobante', t.email, 'type="email" maxlength="80" autocomplete="off"')}
       </div><datalist id="bancos">${BANCOS.map((b) => `<option value="${b}">`).join('')}</datalist></section>
+    <section class="cardf" id="s-legal"><h3>Datos legales y privacidad</h3><p class="ayuda top">Aparecen en los <a href="${BASE}/terminos?l=${esc(L.slug)}" target="_blank">Términos y condiciones</a> y la <a href="${BASE}/privacidad?l=${esc(L.slug)}" target="_blank">Política de privacidad</a> que la carta muestra al cliente. Mientras falten, esas páginas dicen "Borrador".</p>
+      <div class="dos">
+        ${campo('g-razon', 'Razón social', g.razon_social, 'maxlength="100" placeholder="Como figura en el SII"')}
+        ${campo('g-rut', 'RUT de la empresa', g.rut, 'maxlength="12" placeholder="76.123.456-7" autocomplete="off"')}
+        ${campo('g-correo', 'Correo de contacto', g.correo, 'type="email" maxlength="80"', 'Para consultas, reclamos y solicitudes sobre datos personales.')}
+      </div>
+      <div class="field"><label for="g-borrar">Borrar los datos de un cliente</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="g-borrar" type="tel" inputmode="tel" placeholder="Celular del cliente" style="flex:1;min-width:180px"><button type="button" class="ghostb" id="g-borrarB">Borrar sus datos</button></div>
+        <p class="ayuda">Si un cliente lo pide: se borran su nombre, celular, dirección y comentarios de todos sus pedidos; las ventas quedan. Además se borran solos a los 24 meses.</p><div class="err" id="g-borrar-err"></div></div>
+    </section>
     <section class="cardf" id="s-pedidos"><h3>Pedidos en línea</h3>
       <div class="dos">
         ${campo('l-cupo', 'Pedidos web por franja de 30 min', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"', 'Al llenarse, la franja aparece como "completo".')}
@@ -1164,7 +1174,7 @@ async function pintarLocal() {
       <button type="button" class="ghost" id="l-descartar">Descartar</button><button class="primary" id="l-guardar">Guardar cambios</button></div>`;
   marcarSucio(false);
   const v = $('v-local'), q = (sel) => v.querySelector(sel);
-  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo') marcarSucio(true); };
+  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar') marcarSucio(true); };
   const enlazar = (pre) => v.querySelectorAll(`[data-${pre}abre]`).forEach((c) => c.addEventListener('change', () => {
     const d = c.dataset[`${pre}abre`]; for (const k of ['desde', 'hasta']) q(`[data-${pre}${k}="${d}"]`).disabled = !c.checked;
   }));
@@ -1195,16 +1205,25 @@ async function pintarLocal() {
     if (!confirm('¿Quitar el logo?')) return;
     await fetch(`${BASE}/api/panel/local/logo`, { method: 'DELETE' }); if (!localSucio) pintarLocal(); refrescar();
   });
+  $('g-borrarB').onclick = async () => {
+    const tel = $('g-borrar').value; $('g-borrar-err').textContent = '';
+    if (!confirm(`¿Borrar el nombre, celular y dirección del cliente ${tel} en todos sus pedidos? No se puede deshacer.`)) return;
+    try { const r = await api('panel/privacidad/borrar', { method: 'POST', body: { telefono: tel } });
+      $('g-borrar').value = ''; toast(r.pedidos ? `✓ Datos borrados en ${r.pedidos} pedido${r.pedidos > 1 ? 's' : ''}` : 'No hay pedidos con ese celular');
+    } catch (e) { $('g-borrar-err').textContent = e.message; }
+  };
   $('l-guardar').onclick = async () => {
     const val = (id) => $(id).value;
     const hor = (pre) => Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-${pre}abre="${d}"]`).checked ? [q(`[data-${pre}desde="${d}"]`).value, q(`[data-${pre}hasta="${d}"]`).value] : null]));
     if (val('t-rut') && !rutValido(val('t-rut'))) { $('t-rut-err').textContent = 'Revisa el RUT: el dígito verificador no coincide.'; $('t-rut').focus(); return; }
+    if (val('g-rut') && !rutValido(val('g-rut'))) { $('g-rut-err').textContent = 'Revisa el RUT: el dígito verificador no coincide.'; $('g-rut').focus(); return; }
     $('l-guardar').disabled = true; $('l-err').textContent = '';
     try {
       await api('panel/local', { method: 'PATCH', body: {
         nombre: val('l-nombre'), whatsapp: val('l-whatsapp'), telefono: val('l-telefono'), instagram: val('l-instagram'), direccion: val('l-direccion'),
         cupo_franja: val('l-cupo'), comision_app: val('l-comision'), horario: hor(''),
         transferencia: { titular: val('t-titular'), rut: rutFormato(val('t-rut')), banco: val('t-banco'), tipo: val('t-tipo'), numero: val('t-numero'), email: val('t-email') },
+        legal: { razon_social: val('g-razon'), rut: val('g-rut') ? rutFormato(val('g-rut')) : '', correo: val('g-correo') },
       } });
       marcarSucio(false); toast('✓ Datos del local guardados'); pintarLocal(); refrescar();
     } catch (e) { $('l-err').textContent = e.message; }

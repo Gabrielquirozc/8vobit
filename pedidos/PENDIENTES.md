@@ -83,8 +83,11 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [ ] Registro de turnos realmente trabajados (hoy el sueldo sale del turno pactado).
 - [ ] Combos/promociones (necesita precios del dueño).
 - [ ] Al lanzar: `INDEXAR=1` en el `.env` del servidor y desplegar.
-- [ ] Legal al final: términos y condiciones, privacidad (se guardan nombre, teléfono, dirección y
-      ubicación del cliente), acuerdo del piloto con autorización escrita de uso de fotos.
+- [x] Borradores de Términos y Privacidad (`public/legal.html`, rutas `/terminos` y `/privacidad`,
+      enlazados desde la carta). Faltan: razón social, RUT y correo del local (Datos del local →
+      Datos legales), revisión de un abogado, y confirmar dónde está físicamente el servidor.
+      Datos del cliente: se borran solos a los 24 meses y a pedido desde el panel.
+- [ ] Acuerdo del piloto con autorización escrita de uso de fotos.
 - [ ] Infra: copiar `docker-compose.yml` y la regla del túnel al espejo `D:\VPS`; anotar puertos
       8099/8100 en su `CLAUDE.md`.
 

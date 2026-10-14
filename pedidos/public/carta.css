@@ -72,7 +72,7 @@ button { cursor: pointer; touch-action: manipulation; }
   opacity: 0; pointer-events: none; transition: transform .45s var(--ease), width .45s var(--ease), opacity .25s var(--ease); }
 
 /* ---------- contenido ---------- */
-main { max-width: 720px; margin: 0 auto; padding: 8px 16px 140px; }
+main { max-width: 720px; margin: 0 auto; padding: 8px 16px 16px; }
 .sec-t { font: 800 1.35rem/1.2 var(--font-display); letter-spacing: -.01em; margin: 28px 0 4px; }
 .sec-s { color: var(--ink-2); font-size: .9rem; margin: 0 0 12px; }
 
@@ -252,3 +252,8 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
 .hero.con-logo .logo { display: none; }
 .hero.con-logo h1 { margin-top: -70px; position: relative; line-height: 0; }
 .wordmark { width: min(82%, 380px); height: auto; filter: drop-shadow(0 6px 14px rgb(0 0 0 / .28)); transform: rotate(-3deg); transform-origin: left center; }
+
+/* Términos y privacidad */
+.acepta { margin: 10px 0 0; font-size: .82rem; color: var(--ink-2); text-align: center; }
+.acepta a, .pie-legal a { color: inherit; }
+.pie-legal { max-width: 720px; margin: 8px auto 0; padding: 16px 16px 140px; text-align: center; font-size: .85rem; color: var(--ink-2); }

@@ -92,6 +92,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   if (!lcols.has('equipo')) db.exec('ALTER TABLE locales ADD COLUMN equipo TEXT');
   // Ubicación del local: centro de las zonas de despacho (se ajusta en el panel).
   if (!lcols.has('lat')) { db.exec('ALTER TABLE locales ADD COLUMN lat REAL'); db.exec('ALTER TABLE locales ADD COLUMN lng REAL'); ubicacionSeed = true; }
+  // Datos legales del local (razón social, RUT, correo): se muestran en Términos y Privacidad.
+  if (!lcols.has('legal')) db.exec('ALTER TABLE locales ADD COLUMN legal TEXT');
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
@@ -335,6 +337,26 @@ function respaldar() {
 respaldar();
 setInterval(respaldar, 3600e3).unref();
 
+// ---------- privacidad ----------
+// Los datos de contacto del cliente (nombre, celular, dirección, ubicación, comentario) se borran
+// a los RETENCION_MESES; el pedido queda para las ventas y la contabilidad. Lo mismo a pedido
+// del cliente, por su celular. Lo promete la Política de privacidad (public/legal.html).
+const RETENCION_MESES = 24;
+const ANONIMO = "cliente='(datos borrados)', telefono='', direccion=NULL, notas=NULL, lat=NULL, lng=NULL";
+function borrarAntiguos() {
+  const d = new Date(); d.setMonth(d.getMonth() - RETENCION_MESES);
+  db.prepare(`UPDATE pedidos SET ${ANONIMO} WHERE dia < ? AND telefono != ''`).run(d.toISOString().slice(0, 10));
+}
+borrarAntiguos();
+setInterval(borrarAntiguos, 24 * 3600e3).unref();
+// Borra los datos de un cliente en todos sus pedidos (se compara por los últimos 9 dígitos del celular).
+function borrarCliente(local, telefono) {
+  const t = String(telefono || '').replace(/\D/g, '').slice(-9);
+  if (t.length < 8) return { error: 'Escribe el celular completo del cliente.' };
+  const r = db.prepare(`UPDATE pedidos SET ${ANONIMO} WHERE local_id=? AND telefono != '' AND substr(replace(replace(telefono,'+',''),' ',''), -9) = ?`).run(local.id, t);
+  return { ok: true, pedidos: Number(r.changes) };
+}
+
 // ---------- cabeceras de seguridad ----------
 // CSP con el hash de cada <script> en línea de cada página: un script inyectado no corre.
 // Versiones de los .js/.css: hash del contenido. Cloudflare impone su propio caché de
@@ -432,7 +454,7 @@ function menu(local) {
     local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
       logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local), ubicacion: ubicacionDe(local),
-      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
+      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null, legal: local.legal ? JSON.parse(local.legal) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
     agregados: db.prepare('SELECT id, nombre, disponible, tipo FROM agregados WHERE local_id=? AND archivado=0 ORDER BY id').all(local.id),
@@ -571,6 +593,15 @@ function guardarPedido(local, d, { items, total }) {
 }
 
 // Valida y guarda los datos del local. Solo se tocan los campos enviados.
+// RUT chileno con dígito verificador (módulo 11).
+function rutValido(r) {
+  const m = String(r).replace(/[.\s]/g, '').toUpperCase().match(/^(\d{7,8})-?([\dK])$/);
+  if (!m) return false;
+  let s = 0, k = 2;
+  for (const d of [...m[1]].reverse()) { s += Number(d) * k; k = k === 7 ? 2 : k + 1; }
+  const dv = 11 - (s % 11);
+  return m[2] === (dv === 11 ? '0' : dv === 10 ? 'K' : String(dv));
+}
 function actualizarLocal(local, b) {
   const txt = (v, max) => String(v ?? '').trim().slice(0, max);
   const c = {};
@@ -675,6 +706,13 @@ function actualizarLocal(local, b) {
     const t = b.transferencia || {};
     const v = { titular: txt(t.titular, 80), rut: txt(t.rut, 12), banco: txt(t.banco, 40), tipo: txt(t.tipo, 30), numero: txt(t.numero, 30).replace(/[^\d-]/g, ''), email: txt(t.email, 80) };
     c.transferencia = Object.values(v).some(Boolean) ? JSON.stringify(v) : null;
+  }
+  if (b.legal !== undefined) {
+    const t = b.legal || {};
+    const v = { razon_social: txt(t.razon_social, 100), rut: txt(t.rut, 12), correo: txt(t.correo, 80) };
+    if (v.rut && !rutValido(v.rut)) return { error: 'RUT de la empresa inválido: revisa el dígito verificador.' };
+    if (v.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.correo)) return { error: 'Correo de contacto inválido.' };
+    c.legal = Object.values(v).some(Boolean) ? JSON.stringify(v) : null;
   }
   const keys = Object.keys(c);
   if (keys.length) db.prepare(`UPDATE locales SET ${keys.map((k) => `${k}=?`).join(', ')} WHERE id=?`).run(...keys.map((k) => c[k]), local.id);
@@ -915,6 +953,10 @@ async function api(req, res, url) {
       if (local.logo && local.logo !== nombre) borrarImagen(local.logo);
       return send(res, 200, { logo: nombre ? `${BASE}/img/${nombre}` : null });
     }
+    if (m === 'POST' && parts[1] === 'privacidad' && parts[2] === 'borrar') {
+      const r = borrarCliente(local, (await readJson(req)).telefono);
+      return send(res, r.error ? 400 : 200, r);
+    }
     if (m === 'PATCH' && parts[1] === 'local') {
       const r = actualizarLocal(local, await readJson(req));
       return r.error ? send(res, 400, r) : send(res, 200, menu(db.prepare('SELECT * FROM locales WHERE id=?').get(lid)).local);
@@ -1041,6 +1083,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
     if (p === '/cartel') return serveFile(res, 'cartel.html');
     if (p === '/seguimiento') return serveFile(res, 'seguimiento.html');
+    if (p === '/terminos' || p === '/privacidad') return serveFile(res, 'legal.html');
     if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
     const f = p.slice(1);
     return serveFile(res, f, url.searchParams.get('v') === ver(path.basename(f)));
