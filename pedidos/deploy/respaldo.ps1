@@ -56,6 +56,14 @@ if ($LASTEXITCODE -ne 0 -or -not ($lista -match 'externo.db')) { Remove-Item $ar
 $kb = [math]::Round((Get-Item $archivo).Length / 1KB)
 Write-Host "   OK: $archivo ($kb KB, $(($lista | Where-Object { $_ -like 'img/*.webp' }).Count) fotos)"
 
+# Un respaldo sirve solo si se puede volver a el: se restaura en una carpeta temporal y se
+# levanta el servidor con esa copia (no toca nada real). Requiere Node 22+ en este PC.
+Write-Host '== Probando que se puede restaurar'
+if (Get-Command node -ErrorAction SilentlyContinue) {
+  & node --disable-warning=ExperimentalWarning (Join-Path $PSScriptRoot 'probar-respaldo.mjs') $archivo
+  if ($LASTEXITCODE -ne 0) { throw 'El respaldo se descargo, pero NO se pudo restaurar en la prueba. Revisar.' }
+} else { Write-Host '   (Node no esta instalado en este PC: se omite la prueba)' }
+
 # Conserva los ultimos $Conservar respaldos.
 Get-ChildItem $Destino -Filter 'pedidos-*.tgz' | Sort-Object Name -Descending | Select-Object -Skip $Conservar | Remove-Item
 Write-Host "== Listo. Respaldos guardados: $((Get-ChildItem $Destino -Filter 'pedidos-*.tgz').Count) (se conservan $Conservar)"

@@ -339,6 +339,18 @@ function respaldar() {
 respaldar();
 setInterval(respaldar, 3600e3).unref();
 
+// Revisión para el monitoreo externo. Solo dice qué falla, sin rutas ni detalles internos.
+function saludCompleta() {
+  const fallas = [];
+  try { db.prepare('SELECT COUNT(*) n FROM locales').get(); } catch { fallas.push('base'); }
+  try {
+    const ult = fs.readdirSync(BACKUP_DIR).filter((n) => /^pedidos-\d{4}-\d{2}-\d{2}\.db$/.test(n)).sort().pop();
+    if (!ult || Date.now() - fs.statSync(path.join(BACKUP_DIR, ult)).mtimeMs > 26 * 3600e3) fallas.push('respaldo');
+  } catch { fallas.push('respaldo'); }
+  try { const d = fs.statfsSync(DATA_DIR); if (d.bavail * d.bsize < 500e6) fallas.push('disco'); } catch { /* sin statfs: no se revisa */ }
+  return { ok: !fallas.length, texto: fallas.length ? `falla: ${fallas.join(', ')}` : 'ok' };
+}
+
 // ---------- privacidad ----------
 // Los datos de contacto del cliente (nombre, celular, dirección, ubicación, comentario) se borran
 // a los RETENCION_MESES; el pedido queda para las ventas y la contabilidad. Lo mismo a pedido
@@ -1097,6 +1109,8 @@ const server = http.createServer(async (req, res) => {
     }
     url.pathname = p;
     if (p === '/salud') return send(res, 200, 'ok');
+    // Para el monitoreo externo (ver deploy/MONITOREO.md): base, respaldo del día y espacio en disco.
+    if (p === '/salud/completo') { const r = saludCompleta(); return send(res, r.ok ? 200 : 503, r.texto); }
     if (p === '/robots.txt') return send(res, 200, INDEXAR ? 'User-agent: *\nDisallow: /panel\nDisallow: /api/\nDisallow: /seguimiento\nDisallow: /comanda\n' : 'User-agent: *\nDisallow: /\n');
     if (p.startsWith('/img/')) {
       const f = path.join(IMG_DIR, path.basename(p));

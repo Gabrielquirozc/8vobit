@@ -965,3 +965,29 @@ test('exportar: CSV de ventas, productos, caja y gastos, sin datos de contacto y
   cookie = '';
   assert.equal((await bajar('ventas')).status, 401);
 });
+
+// ---------- monitoreo y respaldos ----------
+test('salud completa: base, respaldo del día y disco', async () => {
+  const r = await req('GET', '/salud/completo');
+  assert.equal(r.status, 200);
+  assert.equal(r.body, 'ok');
+});
+
+test('el respaldo diario se puede restaurar (probar-respaldo.mjs)', async () => {
+  const bk = path.join(dir, 'data', 'backups');
+  const f = fs.readdirSync(bk).find((n) => /^pedidos-\d{4}-\d{2}-\d{2}\.db$/.test(n));
+  assert.ok(f, 'existe el respaldo del día');
+  const correr = (archivo) => new Promise((ok) => {
+    const p = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'deploy/probar-respaldo.mjs', archivo], { cwd: ROOT });
+    let out = ''; p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
+    p.on('exit', (code) => ok({ code, out }));
+  });
+  const bien = await correr(path.join(bk, f));
+  assert.equal(bien.code, 0, bien.out);
+  assert.match(bien.out, /Respaldo restaurable/);
+  const malo = path.join(dir, 'malo.db');
+  fs.writeFileSync(malo, 'esto no es una base');
+  const mal = await correr(malo);
+  assert.notEqual(mal.code, 0);
+  assert.match(mal.out, /dañada/);
+});

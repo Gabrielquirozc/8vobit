@@ -90,8 +90,11 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
       arqueo al cierre. Pestaña Gastos y bloque "Efectivo en caja" en Caja del día.
 - [x] Exportar a CSV para el contador (2026-10-14): ventas, productos, caja diaria y gastos.
-- [ ] Producto de entrada v1.0: falta monitoreo de caída, probar la restauración de un
-      respaldo y la prueba en el local. Luego multi-local (L3) y gestor de licencias (L4).
+- [x] Monitoreo (2026-10-14): `/salud/completo` (base, respaldo del día, disco) y guía de UptimeRobot en
+      `deploy/MONITOREO.md`. **Falta que el dueño cree el monitor** (5 min).
+- [x] Prueba de restauración: `deploy/probar-respaldo.mjs`; `respaldo.ps1` la corre después de cada
+      descarga y `npm test` la corre siempre.
+- [ ] Producto de entrada v1.0: solo falta la prueba en el local. Luego multi-local (L3) y gestor de licencias (L4).
 - [ ] **Sistema de control propio**: plan por etapas en `PLAN-CONTROL.md` (comparado con Fudo). Siguiente:
       etapa 1, gastos y movimientos de caja con arqueo; luego estado de resultados y usuarios con PIN
       (incluye registro de turnos reales para el sueldo).
