@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS caja_cierres (
   creado TEXT NOT NULL DEFAULT (datetime('now','localtime')), anulado_en TEXT);
 CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia) WHERE anulado=0;
 `);
+  // Quién registró, anuló o cerró (nombre del usuario del panel).
+  for (const t of ['caja_movimientos', 'caja_cierres']) {
+    const cols = new Set(db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name));
+    if (!cols.has('usuario')) { db.exec(`ALTER TABLE ${t} ADD COLUMN usuario TEXT`); db.exec(`ALTER TABLE ${t} ADD COLUMN anulado_por TEXT`); }
+  }
 
   const cierreDe = (lid, dia) => db.prepare('SELECT * FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
 
@@ -62,14 +67,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const previo = db.prepare('SELECT dia, contado FROM caja_cierres WHERE local_id=? AND dia<? AND anulado=0 ORDER BY dia DESC LIMIT 1').get(lid, dia);
     return {
       dia, hoy: hoy(local), categorias: CATEGORIAS,
-      movimientos: db.prepare('SELECT id, tipo, categoria, descripcion, monto, medio, documento, anulado, creado FROM caja_movimientos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
+      movimientos: db.prepare('SELECT id, tipo, categoria, descripcion, monto, medio, documento, anulado, creado, usuario, anulado_por FROM caja_movimientos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       esperado: esperado(lid, dia),
       cierre: c ? { ...c, detalle: JSON.parse(c.detalle) } : null,
       fondo_sugerido: previo ? { dia: previo.dia, monto: previo.contado } : null,
     };
   }
 
-  function nuevoMovimiento(local, b) {
+  function nuevoMovimiento(local, b, quien = null) {
     const lid = local.id, h = hoy(local);
     const tipo = TIPOS.includes(b.tipo) ? b.tipo : null;
     if (!tipo) return { error: 'Tipo de movimiento inválido' };
@@ -89,23 +94,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (medio === 'efectivo' && cierreDe(lid, dia)) return { error: 'La caja de ese día ya está cerrada. Reábrela para agregar movimientos en efectivo.', cerrado: true };
     if (tipo === 'fondo') {
       // Un solo fondo por día: el nuevo reemplaza al anterior.
-      db.prepare("UPDATE caja_movimientos SET anulado=1, anulado_en=datetime('now','localtime') WHERE local_id=? AND dia=? AND tipo='fondo' AND anulado=0").run(lid, dia);
+      db.prepare("UPDATE caja_movimientos SET anulado=1, anulado_en=datetime('now','localtime'), anulado_por=? WHERE local_id=? AND dia=? AND tipo='fondo' AND anulado=0").run(quien, lid, dia);
     }
-    const { lastInsertRowid: id } = db.prepare('INSERT INTO caja_movimientos (local_id,dia,tipo,categoria,descripcion,monto,medio,documento) VALUES (?,?,?,?,?,?,?,?)')
-      .run(lid, dia, tipo, categoria, descripcion, monto, medio, tipo === 'gasto' ? texto(b.documento, 40) : null);
+    const { lastInsertRowid: id } = db.prepare('INSERT INTO caja_movimientos (local_id,dia,tipo,categoria,descripcion,monto,medio,documento,usuario) VALUES (?,?,?,?,?,?,?,?,?)')
+      .run(lid, dia, tipo, categoria, descripcion, monto, medio, tipo === 'gasto' ? texto(b.documento, 40) : null, quien);
     return { id: Number(id) };
   }
 
-  function anularMovimiento(local, id) {
+  function anularMovimiento(local, id, quien = null) {
     const m = db.prepare('SELECT * FROM caja_movimientos WHERE id=? AND local_id=?').get(id, local.id);
     if (!m) return { error: 'No existe', status: 404 };
     if (m.anulado) return { ok: true };
     if (m.medio === 'efectivo' && cierreDe(local.id, m.dia)) return { error: 'La caja de ese día ya está cerrada. Reábrela para anular movimientos en efectivo.', status: 409 };
-    db.prepare("UPDATE caja_movimientos SET anulado=1, anulado_en=datetime('now','localtime') WHERE id=?").run(m.id);
+    db.prepare("UPDATE caja_movimientos SET anulado=1, anulado_en=datetime('now','localtime'), anulado_por=? WHERE id=?").run(quien, m.id);
     return { ok: true };
   }
 
-  function cerrar(local, b) {
+  function cerrar(local, b, quien = null) {
     const lid = local.id, h = hoy(local);
     const dia = b.dia === undefined ? h : b.dia;
     if (!esDia(dia) || dia > h) return { error: 'Fecha inválida' };
@@ -115,14 +120,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (cierreDe(lid, dia)) return { error: 'La caja de ese día ya está cerrada', status: 409 };
     const e = esperado(lid, dia);
     const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0").get(lid, dia).n;
-    db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota) VALUES (?,?,?,?,?,?,?)')
-      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar }), texto(b.nota, 300));
+    db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario) VALUES (?,?,?,?,?,?,?,?)')
+      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar }), texto(b.nota, 300), quien);
     return caja(local, dia);
   }
 
-  function reabrir(local, dia) {
+  function reabrir(local, dia, quien = null) {
     if (!esDia(dia)) return { error: 'Fecha inválida' };
-    const r = db.prepare("UPDATE caja_cierres SET anulado=1, anulado_en=datetime('now','localtime') WHERE local_id=? AND dia=? AND anulado=0").run(local.id, dia);
+    const r = db.prepare("UPDATE caja_cierres SET anulado=1, anulado_en=datetime('now','localtime'), anulado_por=? WHERE local_id=? AND dia=? AND anulado=0").run(quien, local.id, dia);
     if (!r.changes) return { error: 'Esa caja no está cerrada', status: 409 };
     return caja(local, dia);
   }

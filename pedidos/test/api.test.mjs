@@ -19,7 +19,7 @@ before(async () => {
   fs.writeFileSync(path.join(dir, 'seed.json'), JSON.stringify(seed));
   srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server.mjs'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: '0', HOST: '127.0.0.1', DATA_DIR: path.join(dir, 'data'), SEED_FILE: path.join(dir, 'seed.json'), PANEL_PASSWORD: 'clave-de-prueba', SESSION_SECRET: 'x'.repeat(64) },
+    env: { ...process.env, PORT: '0', HOST: '127.0.0.1', DATA_DIR: path.join(dir, 'data'), SEED_FILE: path.join(dir, 'seed.json'), PANEL_PASSWORD: 'clave-de-prueba', ADMIN_PASSWORD: 'admin-de-prueba', SESSION_SECRET: 'x'.repeat(64) },
     stdio: ['ignore', 'pipe', 'inherit'],
   });
   B = await new Promise((ok, fail) => {
@@ -45,7 +45,7 @@ async function req(method, p, body, headers = {}) {
 const menu = async () => (await req('GET', '/api/locales/gassuso')).body;
 const prod = async (nombre) => (await menu()).categorias.flatMap((c) => c.productos).find((p) => p.nombre === nombre);
 const pedir = (items, extra = {}) => req('POST', '/api/locales/gassuso/pedidos', { cliente: 'Ana', telefono: '+56 9 1111 2222', franja: 'Lo antes posible', items, ...extra });
-const login = async () => { cookie = ''; return req('POST', '/api/panel/login', { password: 'clave-de-prueba' }); };
+const login = async () => { cookie = ''; return req('POST', '/api/panel/login', { slug: 'gassuso', password: 'clave-de-prueba' }); };
 
 // ---------- carta ----------
 test('la carta trae categorías, productos con foto y "los más pedidos"', async () => {
@@ -990,4 +990,204 @@ test('el respaldo diario se puede restaurar (probar-respaldo.mjs)', async () => 
   const mal = await correr(malo);
   assert.notEqual(mal.code, 0);
   assert.match(mal.out, /dañada/);
+});
+
+// ---------- varios locales, usuarios con PIN, licencias y administración ----------
+// Cliente con su propio frasco de cookies (dueño, tablet, administración).
+function cliente() {
+  const jar = new Map();
+  return async (method, p, body) => {
+    const r = await fetch(B + p, {
+      method, redirect: 'manual',
+      headers: { 'cf-connecting-ip': `10.9.${Math.random() * 255 | 0}.${Math.random() * 255 | 0}`, ...(body ? { 'Content-Type': 'application/json' } : {}), Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    for (const c of r.headers.getSetCookie()) { const [kv] = c.split(';'); const i = kv.indexOf('='); jar.set(kv.slice(0, i), kv.slice(i + 1)); }
+    const text = await r.text();
+    let json; try { json = JSON.parse(text); } catch { json = text; }
+    return { status: r.status, body: json };
+  };
+}
+const sumarDias = (d, n) => { const x = new Date(`${d}T12:00:00`); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+const picada = {};
+
+test('admin: sin sesión no entra, crea un local con clave propia y lo administra', async () => {
+  const ad = cliente();
+  assert.equal((await ad('GET', '/api/admin/resumen')).status, 401);
+  assert.equal((await ad('POST', '/api/admin/login', { password: 'mala' })).status, 401);
+  assert.equal((await ad('POST', '/api/admin/login', { password: 'admin-de-prueba' })).status, 200);
+  const r0 = (await ad('GET', '/api/admin/resumen')).body;
+  const gas = r0.locales.find((l) => l.slug === 'gassuso');
+  assert.equal(gas.plan, 'gestion');
+  assert.equal(gas.estado, 'prueba'); // cliente fundador: piloto de 90 días desde el seed
+  assert.ok(gas.dias > 80);
+
+  for (const b of [{ slug: 'Mal Slug', nombre: 'X' }, { slug: 'panel', nombre: 'X' }, { slug: 'gassuso', nombre: 'X' }, { slug: 'nuevo-local', nombre: '' }, { slug: 'nuevo-local', nombre: 'X', plan: 'oro' }, { slug: 'nuevo-local', nombre: 'X', carta: '{malo' }])
+    assert.equal((await ad('POST', '/api/admin/locales', b)).status, 400, JSON.stringify(b));
+  const carta = { categorias: [{ nombre: 'Sándwiches', productos: [{ nombre: 'Lomito', precio: 6000 }, { nombre: 'Especial' }] }], agregados: ['Palta'] };
+  const nuevo = await ad('POST', '/api/admin/locales', { slug: 'la-picada', nombre: 'La Picada', plan: 'canal', prueba_dias: 14, whatsapp: '+56 9 1234 5678', carta });
+  assert.equal(nuevo.status, 201);
+  assert.match(nuevo.body.clave, /^[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  // La carta del nuevo local es pública y separada de Gassuso.
+  const m = (await req('GET', '/api/locales/la-picada')).body;
+  assert.equal(m.local.nombre, 'La Picada');
+  assert.deepEqual(m.categorias[0].productos.map((p) => p.nombre), ['Lomito', 'Especial']);
+  assert.equal((await req('GET', '/la-picada')).status, 200);
+  const det = (await ad('GET', `/api/admin/locales/${nuevo.body.id}`)).body;
+  assert.equal(det.estado.estado, 'prueba');
+  assert.equal(det.precios.gestion.anual, 355980);
+  assert.equal(det.precios.canal.semestral, 107460);
+  Object.assign(picada, nuevo.body);
+});
+
+test('multi-local: cada dueño entra con su clave y no ve datos del otro', async () => {
+  const { slug, clave } = picada;
+  const pic = cliente();
+  assert.equal((await pic('POST', '/api/panel/login', { password: clave })).status, 401); // hay 2 locales: falta el código
+  assert.equal((await pic('POST', '/api/panel/login', { slug, password: 'clave-de-prueba' })).status, 401); // la clave general no vale para un local con clave propia
+  assert.equal((await pic('POST', '/api/panel/login', { slug, password: clave })).status, 200);
+  const ped = (await pic('GET', '/api/panel/pedidos')).body;
+  assert.equal(ped.local, 'La Picada');
+  assert.equal(ped.pedidos.length, 0);
+  // Gassuso sigue entrando con la clave general (no tiene clave propia), indicando su código.
+  cookie = '';
+  assert.equal((await req('POST', '/api/panel/login', { slug: 'gassuso', password: 'clave-de-prueba' })).status, 200);
+  const gp = (await req('GET', '/api/panel/pedidos')).body.pedidos[0];
+  // Un pedido o producto de Gassuso no se puede leer ni tocar desde La Picada.
+  assert.equal((await pic('GET', `/api/panel/pedidos/${gp.id}`)).status, 404);
+  assert.equal((await pic('PATCH', `/api/panel/pedidos/${gp.id}`, { estado: 'anulado' })).status, 404);
+  const gm = (await req('GET', '/api/panel/carta')).body.categorias[0].productos[0];
+  assert.equal((await pic('PATCH', `/api/panel/productos/${gm.id}`, { precio: 1 })).status, 404);
+  assert.equal((await pic('GET', '/api/panel/caja')).body.movimientos.length, 0);
+  // Plan Canal: sin exportar ni equipo; dos usuarios con PIN como máximo.
+  const yo = (await pic('GET', '/api/panel/yo')).body;
+  assert.equal(yo.rol, 'dueno');
+  assert.equal(yo.licencia.plan, 'canal');
+  assert.equal((await pic('GET', '/api/panel/equipo')).status, 402);
+  const ex = await pic('GET', '/api/panel/exportar?tipo=ventas&desde=2026-01-01&hasta=2026-01-31');
+  assert.equal(ex.status, 402);
+  assert.match(ex.body.error, /Gestión/);
+  assert.equal((await pic('POST', '/api/panel/usuarios', { nombre: 'Ana', rol: 'caja', pin: '4826' })).status, 201);
+  assert.equal((await pic('POST', '/api/panel/usuarios', { nombre: 'Beto', rol: 'cocina', pin: '4826' })).status, 400); // PIN repetido
+  assert.equal((await pic('POST', '/api/panel/usuarios', { nombre: 'Beto', rol: 'cocina', pin: '1234' })).status, 400); // PIN débil
+  assert.equal((await pic('POST', '/api/panel/usuarios', { nombre: 'Beto', rol: 'cocina', pin: '7391' })).status, 201);
+  assert.equal((await pic('POST', '/api/panel/usuarios', { nombre: 'Caro', rol: 'cocina', pin: '5172' })).status, 402); // límite del plan
+  assert.equal((await pic('POST', '/api/panel/usuarios', { nombre: 'Dueño 2', rol: 'dueno', pin: '6618' })).status, 400);
+  picada.tablet = pic;
+});
+
+test('PIN y roles: la tablet del local, permisos por rol y turnos', async () => {
+  const pic = picada.tablet;
+  // Sin tablet asociada no se puede entrar con PIN.
+  assert.equal((await cliente()('POST', '/api/panel/pin', { pin: '4826' })).status, 401);
+  // La tablet del dueño quedó asociada: aparece el teclado de PIN.
+  const acc = (await pic('GET', '/api/panel/acceso')).body;
+  assert.equal(acc.dispositivo.slug, 'la-picada');
+  assert.ok(acc.dispositivo.con_pin);
+  assert.equal((await pic('POST', '/api/panel/pin', { pin: '0000' })).status, 401);
+  // Cocina: ve pedidos y marca agotados; no cobra, no vende, no ve caja ni costos.
+  const coc = await pic('POST', '/api/panel/pin', { pin: '7391' });
+  assert.equal(coc.status, 200);
+  assert.equal(coc.body.rol, 'cocina');
+  assert.equal((await pic('GET', '/api/panel/yo')).body.nombre, 'Beto');
+  assert.equal((await pic('GET', '/api/panel/pedidos')).status, 200);
+  assert.equal((await pic('GET', '/api/panel/caja')).status, 403);
+  assert.equal((await pic('POST', '/api/panel/venta', { items: [], medio_pago: 'efectivo' })).status, 403);
+  assert.equal((await pic('PATCH', '/api/panel/local', { nombre: 'Hackeado' })).status, 403);
+  assert.equal((await pic('GET', '/api/panel/usuarios')).status, 403);
+  assert.equal((await pic('GET', '/api/panel/licencia')).status, 403);
+  const carta = (await pic('GET', '/api/panel/carta')).body;
+  assert.ok(carta.categorias.flatMap((c) => c.productos).every((p) => p.costo === null));
+  assert.ok(carta.equipo.trabajadores.every((t) => t.sueldoBase === undefined));
+  const ag = carta.agregados[0];
+  assert.equal((await pic('PATCH', `/api/panel/agregados/${ag.id}`, { disponible: false })).status, 200);
+  assert.equal((await pic('PATCH', `/api/panel/agregados/${ag.id}`, { nombre: 'Otro' })).status, 403);
+  // Caja: vende, cobra, anota gastos y pausa; no reabre la caja ni ve el resumen.
+  assert.equal((await pic('POST', '/api/panel/pin', { pin: '4826' })).body.rol, 'caja');
+  const lom = carta.categorias[0].productos.find((p) => p.nombre === 'Lomito');
+  const v = await pic('POST', '/api/panel/venta', { items: [{ producto_id: lom.id }], medio_pago: 'efectivo', recibido: 10000 });
+  assert.equal(v.status, 201);
+  assert.equal((await pic('POST', '/api/panel/caja/movimientos', { tipo: 'gasto', monto: 500, categoria: 'otros', medio: 'transferencia' })).status, 201);
+  assert.equal((await pic('PATCH', '/api/panel/local', { pausa: true })).status, 200);
+  assert.equal((await pic('PATCH', '/api/panel/local', { pausa: false })).status, 200);
+  assert.equal((await pic('GET', '/api/panel/resumen')).status, 403);
+  const c = (await pic('GET', '/api/panel/caja')).body;
+  assert.equal(c.movimientos[0].usuario, 'Ana');
+  const ped = (await pic('GET', '/api/panel/pedidos')).body.pedidos.find((p) => p.id === v.body.id);
+  assert.equal(ped.cobrado_por, 'Ana');
+  assert.equal((await pic('POST', '/api/panel/caja/cierre', { contado: c.esperado.total })).status, 200);
+  assert.equal((await pic('DELETE', '/api/panel/caja/cierre')).status, 403);
+  // Turnos: entrada y salida con PIN, sin abrir el panel.
+  assert.equal((await pic('POST', '/api/panel/turno', { pin: '4826', tipo: 'entrada' })).status, 200);
+  assert.equal((await pic('POST', '/api/panel/turno', { pin: '4826', tipo: 'entrada' })).status, 409);
+  assert.equal((await pic('POST', '/api/panel/turno', { pin: '4826', tipo: 'salida' })).status, 200);
+  // Un usuario desactivado pierde la sesión al instante.
+  const duen = cliente();
+  await duen('POST', '/api/panel/login', { slug: picada.slug, password: picada.clave });
+  const ana = (await duen('GET', '/api/panel/usuarios')).body.usuarios.find((u) => u.nombre === 'Ana');
+  assert.equal((await duen('PATCH', `/api/panel/usuarios/${ana.id}`, { activo: false })).status, 200);
+  assert.equal((await pic('GET', '/api/panel/pedidos')).status, 401);
+});
+
+test('licencia: los pagos extienden el plazo; vencida pasa a gracia y luego a solo lectura', async () => {
+  const ad = cliente();
+  await ad('POST', '/api/admin/login', { password: 'admin-de-prueba' });
+  const { id, slug, clave } = picada;
+  const hoy = (await ad('GET', '/api/admin/resumen')).body.hoy;
+  // Pago semestral durante la prueba: el período parte cuando termina la prueba.
+  const pago = await ad('POST', `/api/admin/locales/${id}/pagos`, { ciclo: 'semestral', medio: 'transferencia', factura: '101' });
+  assert.equal(pago.status, 201);
+  assert.equal(pago.body.monto, 107460);
+  assert.equal(pago.body.desde, sumarDias(hoy, 14));
+  let det = (await ad('GET', `/api/admin/locales/${id}`)).body;
+  assert.equal(det.estado.estado, 'activa');
+  assert.equal(det.licencia.vence, pago.body.hasta);
+  assert.equal((await ad('POST', `/api/admin/locales/${id}/pagos`, { medio: 'cheque' })).status, 400);
+  // Venció ayer: gracia (todo funciona, con aviso).
+  await ad('PATCH', `/api/admin/locales/${id}/licencia`, { vence: sumarDias(hoy, -1), prueba_hasta: sumarDias(hoy, -30) });
+  det = (await ad('GET', `/api/admin/locales/${id}`)).body;
+  assert.equal(det.estado.estado, 'gracia');
+  const d = cliente();
+  await d('POST', '/api/panel/login', { slug, password: clave });
+  assert.equal((await d('PATCH', '/api/panel/local', { pausa: false })).status, 200);
+  // 10 días vencida: suspendida → panel en solo lectura, carta sin pedidos, exportar sí.
+  await ad('PATCH', `/api/admin/locales/${id}/licencia`, { vence: sumarDias(hoy, -10) });
+  const yo = (await d('GET', '/api/panel/yo')).body;
+  assert.equal(yo.licencia.estado, 'suspendida');
+  assert.equal((await d('PATCH', '/api/panel/local', { pausa: false })).status, 402);
+  assert.equal((await d('GET', '/api/panel/pedidos')).status, 200);
+  assert.equal((await d('GET', `/api/panel/exportar?tipo=ventas&desde=${hoy}&hasta=${hoy}`)).status, 200);
+  const carta = (await req('GET', `/api/locales/${slug}`)).body;
+  assert.equal(carta.local.pausa, true);
+  const lom = carta.categorias[0].productos[0];
+  const p = await req('POST', `/api/locales/${slug}/pedidos`, { cliente: 'Eva', telefono: '+56 9 3333 4444', franja: 'Lo antes posible', items: [{ producto_id: lom.id }] });
+  assert.equal(p.status, 400);
+  // Un pago la reactiva desde hoy.
+  const p2 = await ad('POST', `/api/admin/locales/${id}/pagos`, { ciclo: 'mensual', medio: 'transferencia', monto: 19900 });
+  assert.equal(p2.body.desde, hoy);
+  assert.equal((await d('GET', '/api/panel/yo')).body.licencia.estado, 'activa');
+  det = (await ad('GET', `/api/admin/locales/${id}`)).body;
+  assert.ok(det.eventos.some((e) => e.tipo === 'pago'));
+  const r = (await ad('GET', '/api/admin/resumen')).body;
+  assert.equal(r.locales.find((l) => l.slug === slug).mrr, 19900);
+  // Nueva clave: la anterior deja de valer.
+  const nc = (await ad('POST', `/api/admin/locales/${id}/clave`)).body.clave;
+  assert.equal((await cliente()('POST', '/api/panel/login', { slug, password: clave })).status, 401);
+  assert.equal((await cliente()('POST', '/api/panel/login', { slug, password: nc })).status, 200);
+});
+
+test('tarifa por pedido: 0,5 % con tope de $100, solo web y respetando la exención', async () => {
+  const { tarifaPedido } = await import('../lib/licencias.mjs');
+  assert.equal(tarifaPedido(12000), 60);
+  assert.equal(tarifaPedido(20000), 100);
+  assert.equal(tarifaPedido(45000), 100);
+  assert.equal(tarifaPedido(990), 5);
+  cookie = '';
+  await req('POST', '/api/panel/login', { slug: 'gassuso', password: 'clave-de-prueba' });
+  const l = (await req('GET', '/api/panel/licencia')).body;
+  // Gassuso está exento el primer año: tiene pedidos web este mes, pero la tarifa es 0.
+  assert.ok(l.tarifa_mes.pedidos > 0);
+  assert.equal(l.tarifa_mes.monto, 0);
+  assert.equal(l.tarifa_mes.exentos, l.tarifa_mes.pedidos);
+  assert.equal(l.descuento.pct, 50);
 });

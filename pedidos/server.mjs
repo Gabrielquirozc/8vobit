@@ -10,12 +10,17 @@ import * as H from './public/hex.js';
 import * as LB from './public/laboral.js';
 import { crearCaja } from './lib/caja.mjs';
 import { crearExportar } from './lib/exportar.mjs';
+import { crearLicencias, PLANES, PLAN_DE } from './lib/licencias.mjs';
+import { crearUsuarios, ROLES, PERMISOS, puedeRol, verificar } from './lib/usuarios.mjs';
+import { crearAdmin } from './lib/admin.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
 const BASE = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
 const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
+// Consola de administración (/admin): sin esta variable no existe.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const PUBLIC = path.resolve(import.meta.dirname, 'public');
 const SEED_FILE = process.env.SEED_FILE || path.resolve(import.meta.dirname, 'seed/gassuso.json');
@@ -128,6 +133,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   if (!cols.has('token')) db.exec('ALTER TABLE pedidos ADD COLUMN token TEXT');
   // Canal de venta: 'web' (carta pública) o 'mostrador' (venta rápida en el panel).
   if (!cols.has('canal')) db.exec("ALTER TABLE pedidos ADD COLUMN canal TEXT NOT NULL DEFAULT 'web'");
+  // Quién cobró o anuló (nombre del usuario del panel).
+  if (!cols.has('cobrado_por')) { db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_por TEXT'); db.exec('ALTER TABLE pedidos ADD COLUMN anulado_por TEXT'); }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS pedidos_token ON pedidos(token)');
   for (const { id } of db.prepare('SELECT id FROM pedidos WHERE token IS NULL').all())
     db.prepare('UPDATE pedidos SET token=? WHERE id=?').run(crypto.randomBytes(16).toString('base64url'), id);
@@ -136,7 +143,7 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
 // Las fotos del seed (entregadas por el local) se copian al volumen de datos para
 // que se sirvan y reemplacen igual que las que se suben desde el panel.
 function seedImg(lid, file) {
-  if (!file) return null;
+  if (!file || !fs.existsSync(path.resolve(import.meta.dirname, 'seed/img', path.basename(file)))) return null;
   const nombre = `${lid}-seed-${path.basename(file)}`;
   fs.copyFileSync(path.resolve(import.meta.dirname, 'seed/img', path.basename(file)), path.join(IMG_DIR, nombre));
   return nombre;
@@ -144,7 +151,11 @@ function seedImg(lid, file) {
 
 function seed() {
   if (db.prepare('SELECT COUNT(*) n FROM locales').get().n) return;
-  const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
+  crearLocal(JSON.parse(fs.readFileSync(SEED_FILE, 'utf8')));
+}
+// Crea un local con su carta desde un JSON con el formato de seed/gassuso.json (lo usa también
+// la consola de administración). Las fotos del seed solo se copian si existen en seed/img.
+function crearLocal(s) {
   const L = s.local;
   const { lastInsertRowid: lid } = db.prepare(
     'INSERT INTO locales (slug,nombre,instagram,whatsapp,telefono,direccion,horario,cupo_franja,modo_boleta) VALUES (?,?,?,?,?,?,?,?,?)'
@@ -152,14 +163,15 @@ function seed() {
   if (L.logo) db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(lid, L.logo), lid);
   if (L.despacho) db.prepare('UPDATE locales SET despacho=? WHERE id=?').run(JSON.stringify(L.despacho), lid);
   if (L.lat) db.prepare('UPDATE locales SET lat=?, lng=? WHERE id=?').run(L.lat, L.lng, lid);
-  for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
+  for (const a of s.agregados || []) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
   for (const a of s.salsas || []) db.prepare("INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,'salsa')").run(lid, a);
-  s.categorias.forEach((c, ci) => {
+  (s.categorias || []).forEach((c, ci) => {
     const { lastInsertRowid: cid } = db.prepare('INSERT INTO categorias (local_id,nombre,orden,salsas) VALUES (?,?,?,?)').run(lid, c.nombre, ci, c.salsas === false ? 0 : 1);
     c.productos.forEach((p, pi) => db.prepare(
       'INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,incluye,orden,destacado,imagen,sugerir) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
-    ).run(lid, cid, p.nombre, p.desc || null, p.precio, p.pendiente ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0, seedImg(lid, p.imagen), p.sugerir ? 1 : 0));
+    ).run(lid, cid, p.nombre, p.desc || null, p.precio || 0, p.pendiente || !p.precio ? 1 : 0, p.incluye || 0, pi, p.destacado ? 1 : 0, seedImg(lid, p.imagen), p.sugerir ? 1 : 0));
   });
+  return Number(lid);
 }
 seed();
 
@@ -294,20 +306,26 @@ function franjas(local) {
 
 // ---------- sesión del panel ----------
 const sign = (v) => crypto.createHmac('sha256', SECRET).update(v).digest('base64url');
-function makeSession(localId) {
-  const v = `${localId}.${Date.now() + 12 * 3600e3}`;
-  return `${v}.${sign(v)}`;
+// Cookies firmadas: `panel` = sesión (local, usuario; 0 = dueño con la clave del local) por 12 h;
+// `equipo` = tablet asociada a un local por un año, para que el equipo entre solo con su PIN.
+function firmar(tipo, partes, horas) {
+  const v = `${partes.join('.')}.${Date.now() + horas * 3600e3}`;
+  return `${v}.${sign(`${tipo}.${v}`)}`;
 }
-function session(req) {
-  const m = /(?:^|;\s*)panel=([^;]+)/.exec(req.headers.cookie || '');
+function leerFirmada(req, nombre, tipo, n) {
+  const m = new RegExp(`(?:^|;\\s*)${nombre}=([^;]+)`).exec(req.headers.cookie || '');
   if (!m) return null;
-  const [lid, exp, sig] = m[1].split('.');
-  const v = `${lid}.${exp}`;
-  const good = sign(v);
-  if (!sig || sig.length !== good.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
-  if (Number(exp) < Date.now()) return null;
-  return Number(lid);
+  const partes = m[1].split('.');
+  if (partes.length !== n + 2) return null;
+  const sig = partes.pop(), good = sign(`${tipo}.${partes.join('.')}`);
+  if (sig.length !== good.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
+  if (!(Number(partes.pop()) > Date.now())) return null;
+  return partes.map(Number);
 }
+const makeSession = (localId, uid = 0) => firmar('s', [localId, uid], 12);
+function session(req) { const r = leerFirmada(req, 'panel', 's', 2); return r ? { lid: r[0], uid: r[1] } : null; }
+const dispositivo = (req) => leerFirmada(req, 'equipo', 'd', 1)?.[0] ?? null;
+const cookie = (req, nombre, valor, segundos) => `${nombre}=${valor}; HttpOnly; SameSite=Strict; Path=${BASE || '/'}; Max-Age=${segundos}${(req.headers['x-forwarded-proto'] || '') === 'https' ? '; Secure' : ''}`;
 
 // ---------- límites de uso ----------
 // Ventana deslizante en memoria: basta para un solo contenedor. Frena fuerza bruta
@@ -840,6 +858,39 @@ const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
 const MEDIOS = ['efectivo', 'transferencia', 'tarjeta', 'otro'];
 const CAJA = crearCaja(db, { hoy: (local) => franjas(local).dia, MEDIOS });
 const exportar = crearExportar(db, { caja: CAJA });
+const LIC = crearLicencias(db, { hoy: today });
+const USU = crearUsuarios(db);
+const ADMIN = crearAdmin(db, { LIC, USU, crearLocal, hoy: today });
+// Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
+{
+  const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
+  for (const l of db.prepare('SELECT id, slug FROM locales').all())
+    if (!LIC.fila(l.id)) LIC.crear(l.id, l.slug === s.local.slug && s.licencia ? s.licencia : {});
+}
+// Pausa efectiva: la del local, o la de una cuenta suspendida (los datos quedan; los pedidos web no).
+const conLicencia = (local) => (local && LIC.estado(local.id)?.solo_lectura ? { ...local, pausa: 1 } : local);
+// Permiso que pide cada ruta del panel (las que dependen del cuerpo se revisan dentro de la ruta).
+function permisoRuta(m, parts) {
+  const [, a, b] = parts;
+  if (a === 'pedidos') return m === 'GET' ? 'ver_pedidos' : null;
+  if (a === 'carta') return 'ver_pedidos';
+  if (a === 'venta') return 'venta';
+  if (a === 'caja') return m === 'DELETE' && b === 'cierre' ? 'reabrir_caja' : 'caja';
+  if (a === 'gastos') return 'gastos';
+  if (a === 'exportar') return 'exportar';
+  if (a === 'resumen') return 'resumen';
+  if (a === 'resultados') return 'resultados';
+  if (a === 'equipo' || a === 'turnos') return 'equipo';
+  if (['productos', 'categorias', 'historial'].includes(a)) return 'carta';
+  if (a === 'agregados') return m === 'POST' ? 'carta' : null;
+  if (a === 'local') return b === 'logo' ? 'local' : m === 'PATCH' ? null : 'local';
+  if (a === 'privacidad') return 'local';
+  if (a === 'usuarios') return 'usuarios';
+  if (a === 'licencia' || a === 'yo' || a === 'logout') return null;
+  return 'local';
+}
+// Función del plan que pide cada ruta.
+const FUNCION_RUTA = { exportar: 'exportar', resultados: 'resultados', equipo: 'equipo', turnos: 'equipo' };
 
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1); // sin "api"
@@ -847,7 +898,7 @@ async function api(req, res, url) {
 
   // --- público ---
   if (parts[0] === 'locales' && parts[1]) {
-    const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(parts[1]);
+    const local = conLicencia(db.prepare('SELECT * FROM locales WHERE slug=?').get(parts[1]));
     if (!local) return send(res, 404, { error: 'Local no encontrado' });
     if (m === 'GET' && parts.length === 2) return send(res, 200, menu(local));
     if (m === 'GET' && parts[2] === 'franjas') return send(res, 200, franjas(local));
@@ -882,31 +933,104 @@ async function api(req, res, url) {
       modalidad: p.modalidad, total: p.total, costo_despacho: p.costo_despacho, pagado: !!p.pagado, creado: p.creado, items });
   }
 
+  // --- administración (solo nosotros) ---
+  if (parts[0] === 'admin') {
+    if (!ADMIN_PASSWORD) return send(res, 404, { error: 'No encontrado' });
+    if (m === 'POST' && parts[1] === 'login') {
+      if (limitar(`admin:${ipDe(req)}`, 5, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
+      const h = (v) => crypto.createHash('sha256').update(String(v)).digest();
+      if (!crypto.timingSafeEqual(h((await readJson(req)).password ?? ''), h(ADMIN_PASSWORD))) return send(res, 401, { error: 'Clave incorrecta' });
+      return send(res, 200, { ok: true }, { 'Set-Cookie': cookie(req, 'admin', firmar('a', [1], 8), 8 * 3600) });
+    }
+    if (!leerFirmada(req, 'admin', 'a', 1)) return send(res, 401, { error: 'Sesión expirada' });
+    if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': cookie(req, 'admin', '', 0) });
+    if (m === 'GET' && parts[1] === 'resumen') return send(res, 200, ADMIN.resumen());
+    if (parts[1] === 'locales') {
+      if (m === 'POST' && !parts[2]) { const r = ADMIN.alta(await readJson(req)); return send(res, r.error ? 400 : 201, r); }
+      const id = Number(parts[2]);
+      if (!db.prepare('SELECT 1 FROM locales WHERE id=?').get(id)) return send(res, 404, { error: 'No existe' });
+      if (m === 'GET' && !parts[3]) return send(res, 200, ADMIN.detalle(id));
+      if (m === 'PATCH' && parts[3] === 'licencia') { const r = LIC.actualizar(id, await readJson(req)); return send(res, r.error ? 400 : 200, r.error ? r : ADMIN.detalle(id)); }
+      if (m === 'POST' && parts[3] === 'pagos') { const r = LIC.registrarPago(id, await readJson(req)); return send(res, r.error ? 400 : 201, r); }
+      if (m === 'POST' && parts[3] === 'clave') { const r = ADMIN.nuevaClave(id); return send(res, r.error ? r.status || 400 : 200, r); }
+    }
+    return send(res, 404, { error: 'No encontrado' });
+  }
+
   // --- panel ---
   if (parts[0] === 'panel') {
+    // Pantalla de entrada: si la tablet ya está asociada a un local, se muestra el teclado de PIN.
+    if (m === 'GET' && parts[1] === 'acceso') {
+      const d = dispositivo(req), l = d && db.prepare('SELECT slug, nombre, logo FROM locales WHERE id=?').get(d);
+      const todos = db.prepare('SELECT slug FROM locales').all();
+      return send(res, 200, { dispositivo: l ? { slug: l.slug, nombre: l.nombre, logo: l.logo ? `${BASE}/img/${l.logo}` : null, con_pin: USU.activos(d) > 0 } : null,
+        unico: todos.length === 1 ? todos[0].slug : null });
+    }
+    // Dueño: clave del local. Asocia además esta tablet al local (cookie `equipo`).
     if (m === 'POST' && parts[1] === 'login') {
       if (limitar(`login:${ipDe(req)}`, 8, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
       const b = await readJson(req);
-      const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(String(b.slug || 'gassuso'));
-      // Se comparan los hashes: mismo largo siempre, así timingSafeEqual no falla con tildes o largos distintos.
+      const todos = db.prepare('SELECT slug FROM locales').all();
+      const slug = String(b.slug || '').trim().toLowerCase() || (todos.length === 1 ? todos[0].slug : '');
+      const local = slug && db.prepare('SELECT * FROM locales WHERE slug=?').get(slug);
+      // Sin clave propia (cuenta anterior al gestor), vale la clave general del servidor.
+      // Esa comparación usa hashes: mismo largo siempre, así timingSafeEqual no falla.
       const h = (v) => crypto.createHash('sha256').update(String(v)).digest();
-      const ok = PANEL_PASSWORD && local && crypto.timingSafeEqual(h(b.password ?? ''), h(PANEL_PASSWORD));
-      if (!ok) return send(res, 401, { error: 'Clave incorrecta' });
-      const secure = (req.headers['x-forwarded-proto'] || '') === 'https' ? '; Secure' : '';
-      return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=${makeSession(local.id)}; HttpOnly; SameSite=Strict; Path=${BASE || '/'}; Max-Age=43200${secure}` });
+      const ok = local && (local.clave_hash ? verificar(b.password ?? '', local.clave_hash) : !!PANEL_PASSWORD && crypto.timingSafeEqual(h(b.password ?? ''), h(PANEL_PASSWORD)));
+      if (!ok) return send(res, 401, { error: slug ? 'Clave incorrecta' : 'Escribe el código del local' });
+      return send(res, 200, { ok: true }, { 'Set-Cookie': [cookie(req, 'panel', makeSession(local.id, 0), 43200), cookie(req, 'equipo', firmar('d', [local.id], 24 * 365), 365 * 86400)] });
     }
-    const lid = session(req);
-    if (!lid) return send(res, 401, { error: 'Sesión expirada' });
+    // Equipo: PIN en una tablet ya asociada. Con `turno` marca entrada o salida sin abrir el panel.
+    if (m === 'POST' && (parts[1] === 'pin' || parts[1] === 'turno')) {
+      const d = dispositivo(req);
+      if (!d) return send(res, 401, { error: 'Esta tablet no está asociada al local. Entra primero con la clave del local.' });
+      if (limitar(`pin:${ipDe(req)}`, 6, 15 * 60e3) || limitar(`pin-local:${d}`, 30, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
+      const b = await readJson(req);
+      const u = USU.porPin(d, b.pin);
+      if (!u) return send(res, 401, { error: 'PIN incorrecto' });
+      if (parts[1] === 'turno') {
+        const r = USU.marcar(d, u.id, b.tipo === 'salida' ? 'salida' : 'entrada');
+        return send(res, r.error ? 409 : 200, { ...r, nombre: u.nombre });
+      }
+      return send(res, 200, { ok: true, nombre: u.nombre, rol: u.rol }, { 'Set-Cookie': cookie(req, 'panel', makeSession(d, u.id), 43200) });
+    }
+    const ses = session(req);
+    if (!ses) return send(res, 401, { error: 'Sesión expirada' });
+    const lid = ses.lid;
     const local = db.prepare('SELECT * FROM locales WHERE id=?').get(lid);
+    const yo = ses.uid === 0 ? { id: 0, nombre: 'Dueño', rol: 'dueno' } : USU.porId(lid, ses.uid);
+    if (!local || !yo || yo.activo === 0) return send(res, 401, { error: 'Sesión expirada' });
+    const lic = LIC.estado(lid);
+    const puede = (perm) => puedeRol(yo.rol, perm);
+    const conPlan = (f) => LIC.puede(lid, f);
+    const sinPermiso = () => send(res, 403, { error: 'Tu usuario no tiene permiso para esto. Pídeselo al dueño.' });
+    const sinPlan = (f) => send(res, 402, { error: `Disponible en el plan ${PLANES[PLAN_DE[f]].nombre}.`, plan_requerido: PLAN_DE[f] });
+    {
+      const perm = permisoRuta(m, parts);
+      if (perm && !puede(perm)) return sinPermiso();
+      const f = FUNCION_RUTA[parts[1]];
+      if (f && !conPlan(f)) return sinPlan(f);
+      if (lic?.solo_lectura && m !== 'GET' && parts[1] !== 'logout')
+        return send(res, 402, { error: 'La cuenta está suspendida por falta de pago: el panel queda en solo lectura. Tus datos están a salvo y puedes exportarlos.' });
+    }
+    if (m === 'GET' && parts[1] === 'yo') {
+      const t = yo.id ? db.prepare('SELECT entrada FROM turnos WHERE usuario_id=? AND salida IS NULL').get(yo.id) : null;
+      return send(res, 200, { id: yo.id, nombre: yo.nombre, rol: yo.rol, rol_nombre: ROLES[yo.rol].nombre, turno_desde: t?.entrada || null,
+        permisos: Object.fromEntries(Object.keys(PERMISOS).map((k) => [k, puede(k)])),
+        licencia: lic && { plan: lic.plan, plan_nombre: lic.plan_nombre, estado: lic.estado, dias: lic.dias, hasta: lic.hasta, funciones: lic.funciones, solo_lectura: lic.solo_lectura } });
+    }
 
     if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=; Path=${BASE || '/'}; Max-Age=0` });
     if (m === 'GET' && parts[1] === 'carta') {
       // Costos de insumos: solo para el panel (nunca en la carta pública).
       const costos = new Map(db.prepare('SELECT id, costo FROM productos WHERE local_id=?').all(lid).map((r) => [r.id, r.costo]));
       const mm = menu(local);
-      mm.categorias = mm.categorias.map((c) => ({ ...c, productos: c.productos.map((p) => ({ ...p, costo: costos.get(p.id) ?? null })) }));
-      mm.local = { ...mm.local, costo_pct: local.costo_pct };
-      return send(res, 200, { ...mm, equipo: equipoDe(local) });
+      const verCostos = puede('costos') && conPlan('costos');
+      mm.categorias = mm.categorias.map((c) => ({ ...c, productos: c.productos.map((p) => ({ ...p, costo: verCostos ? costos.get(p.id) ?? null : null })) }));
+      mm.local = { ...mm.local, costo_pct: verCostos ? local.costo_pct : null };
+      // Sueldos y datos laborales: solo el dueño. El resto ve los nombres (para asignar repartidor).
+      const eq = equipoDe(local);
+      return send(res, 200, { ...mm, equipo: puede('equipo') ? eq : { trabajadores: eq.trabajadores.map((t) => ({ id: t.id, nombre: t.nombre, rol: t.rol, activo: t.activo })) } });
     }
     // Equipo del mes: entregas, km y liquidación estimada de cada trabajador, con el resultado del despacho.
     if (m === 'GET' && parts[1] === 'equipo') {
@@ -928,6 +1052,8 @@ async function api(req, res, url) {
       const b = await readJson(req);
       const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
       if (!p) return send(res, 404, { error: 'No existe' });
+      if ((b.medio_pago !== undefined || b.pagado !== undefined || b.folio_boleta !== undefined) && !puede('cobrar')) return sinPermiso();
+      if (b.estado === 'anulado' && !puede('anular')) return sinPermiso();
       const estado = ESTADOS.includes(b.estado) ? b.estado : p.estado;
       const pagado = b.pagado === undefined ? p.pagado : (b.pagado ? 1 : 0);
       const folio = b.folio_boleta === undefined ? p.folio_boleta : (String(b.folio_boleta).replace(/\D/g, '').slice(0, 12) || null);
@@ -948,6 +1074,9 @@ async function api(req, res, url) {
       }
       db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, repartidor_id=?, actualizado=? WHERE id=?')
         .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, Date.now(), p.id);
+      // Quién cobró y quién anuló: queda registrado.
+      if (medio_pago && !p.medio_pago) db.prepare('UPDATE pedidos SET cobrado_por=? WHERE id=?').run(yo.nombre, p.id);
+      if (estado === 'anulado' && p.estado !== 'anulado') db.prepare('UPDATE pedidos SET anulado_por=? WHERE id=?').run(yo.nombre, p.id);
       return send(res, 200, pedidoCompleto(p.id, lid));
     }
     if (m === 'GET' && parts[1] === 'resumen') {
@@ -955,18 +1084,38 @@ async function api(req, res, url) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || isNaN(new Date(f))) return send(res, 400, { error: 'Fecha inválida' });
       return send(res, 200, resumen(local, f));
     }
+    // Usuarios con PIN del local (solo el dueño). El límite depende del plan.
+    if (parts[1] === 'usuarios') {
+      if (m === 'GET' && !parts[2]) return send(res, 200, { usuarios: USU.lista(lid), limite: lic?.usuarios ?? null, roles: Object.fromEntries(Object.entries(ROLES).filter(([k]) => k !== 'dueno').map(([k, v]) => [k, v.nombre])) });
+      if ((m === 'POST' && !parts[2]) || (m === 'PATCH' && parts[2])) {
+        const x = USU.guardar(lid, await readJson(req), parts[2] ? Number(parts[2]) : null, { maxUsuarios: lic?.usuarios ?? null });
+        return x.error ? send(res, x.status || 400, { error: x.error }) : send(res, parts[2] ? 200 : 201, x);
+      }
+    }
+    // Plan, estado de la cuenta, tarifa por pedido del mes y pagos (solo el dueño).
+    if (m === 'GET' && parts[1] === 'licencia') {
+      if (!puede('licencia')) return sinPermiso();
+      const mes = franjas(local).dia.slice(0, 7);
+      return send(res, 200, { ...lic, tarifa_mes: LIC.tarifaMes(lid, mes), pagos: LIC.pagos(lid).map(({ fecha, desde, hasta, monto, tarifa, medio, factura }) => ({ fecha, desde, hasta, monto, tarifa, medio, factura })),
+        planes: Object.fromEntries(Object.entries(PLANES).map(([k, v]) => [k, { nombre: v.nombre, mes: v.mes, funciones: v.funciones, usuarios: v.usuarios === Infinity ? null : v.usuarios }])) });
+    }
+    // Horas trabajadas del mes según las marcas de entrada y salida.
+    if (m === 'GET' && parts[1] === 'turnos') {
+      const mes = /^\d{4}-\d{2}$/.test(url.searchParams.get('mes') || '') ? url.searchParams.get('mes') : franjas(local).dia.slice(0, 7);
+      return send(res, 200, { mes, horas: USU.horasMes(lid, mes) });
+    }
     // Caja: movimientos (fondo, ingresos, retiros, gastos), arqueo al cierre y gastos del mes.
     if (parts[1] === 'caja') {
       const r = (x) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, 200, x));
       const dia = url.searchParams.get('dia') || franjas(local).dia;
       if (m === 'GET' && !parts[2]) return CAJA.esDia(dia) ? send(res, 200, CAJA.caja(local, dia)) : send(res, 400, { error: 'Fecha inválida' });
       if (m === 'POST' && parts[2] === 'movimientos' && !parts[3]) {
-        const x = CAJA.nuevoMovimiento(local, await readJson(req));
+        const x = CAJA.nuevoMovimiento(local, await readJson(req), yo.nombre);
         return x.error ? send(res, x.cerrado ? 409 : 400, { error: x.error }) : send(res, 201, x);
       }
-      if (m === 'DELETE' && parts[2] === 'movimientos' && parts[3]) return r(CAJA.anularMovimiento(local, Number(parts[3])));
-      if (m === 'POST' && parts[2] === 'cierre') return r(CAJA.cerrar(local, await readJson(req)));
-      if (m === 'DELETE' && parts[2] === 'cierre') return r(CAJA.reabrir(local, dia));
+      if (m === 'DELETE' && parts[2] === 'movimientos' && parts[3]) return r(CAJA.anularMovimiento(local, Number(parts[3]), yo.nombre));
+      if (m === 'POST' && parts[2] === 'cierre') return r(CAJA.cerrar(local, await readJson(req), yo.nombre));
+      if (m === 'DELETE' && parts[2] === 'cierre') return r(CAJA.reabrir(local, dia, yo.nombre));
     }
     // CSV para el contador (se descarga desde el Resumen).
     if (m === 'GET' && parts[1] === 'exportar') {
@@ -999,7 +1148,12 @@ async function api(req, res, url) {
       return send(res, r.error ? 400 : 200, r);
     }
     if (m === 'PATCH' && parts[1] === 'local') {
-      const r = actualizarLocal(local, await readJson(req));
+      const b = await readJson(req), claves = Object.keys(b);
+      const perm = claves.every((k) => k === 'pausa') ? 'pausa' : claves.every((k) => k === 'despacho') ? 'despacho' : 'local';
+      if (!puede(perm)) return sinPermiso();
+      if ((b.equipo !== undefined && !conPlan('equipo'))) return sinPlan('equipo');
+      if (b.costo_pct !== undefined && !conPlan('costos')) return sinPlan('costos');
+      const r = actualizarLocal(local, b);
       return r.error ? send(res, 400, r) : send(res, 200, menu(db.prepare('SELECT * FROM locales WHERE id=?').get(lid)).local);
     }
     // Venta de mostrador: se cobra al momento; opcionalmente pasa a cocina con comanda.
@@ -1016,10 +1170,13 @@ async function api(req, res, url) {
         estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: b.medio_pago, recibido,
         cobrado_en: new Date().toTimeString().slice(0, 5), folio: String(b.folio_boleta || '').replace(/\D/g, '').slice(0, 12) || null,
       }, v);
+      db.prepare('UPDATE pedidos SET cobrado_por=? WHERE id=?').run(yo.nombre, r.id);
       return send(res, 201, { ...r, vuelto: recibido - v.total });
     }
     if (m === 'POST' && parts[1] === 'productos' && !parts[2]) {
-      const v = datosProducto(lid, await readJson(req), null);
+      const bp = await readJson(req);
+      if (bp.costo !== undefined && !(puede('costos') && conPlan('costos'))) delete bp.costo;
+      const v = datosProducto(lid, bp, null);
       if (v.error) return send(res, 400, v);
       const orden = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM productos WHERE categoria_id=?').get(v.categoria_id).n;
       const { lastInsertRowid: id } = db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir,costo)
@@ -1031,6 +1188,7 @@ async function api(req, res, url) {
       const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
       if (!p) return send(res, 404, { error: 'No existe' });
       if (b.mover) { mover('productos', p, Number(b.mover), 'categoria_id'); return send(res, 200, { ok: true }); }
+      if (b.costo !== undefined && !(puede('costos') && conPlan('costos'))) delete b.costo;
       const v = datosProducto(lid, b, p);
       if (v.error) return send(res, 400, v);
       db.exec('BEGIN');
@@ -1082,6 +1240,7 @@ async function api(req, res, url) {
     }
     if (m === 'PATCH' && parts[1] === 'agregados' && parts[2]) {
       const b = await readJson(req);
+      if (!puede(Object.keys(b).every((k) => k === 'disponible') ? 'agotar' : 'carta')) return sinPermiso();
       const a = db.prepare('SELECT * FROM agregados WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
       if (!a) return send(res, 404, { error: 'No existe' });
       const nombre = b.nombre === undefined ? a.nombre : String(b.nombre).trim().slice(0, 40);
@@ -1122,6 +1281,7 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/api/')) return await api(req, res, url);
     if (p === '/' ) { res.writeHead(302, { Location: `${BASE}/gassuso` }); return res.end(); }
     if (p === '/panel') return serveFile(res, 'panel.html');
+    if (p === '/admin' && ADMIN_PASSWORD) return serveFile(res, 'admin.html');
     if (p === '/comanda') return serveFile(res, 'comanda.html');
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
     if (p === '/cartel') return serveFile(res, 'cartel.html');

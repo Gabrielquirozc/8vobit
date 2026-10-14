@@ -1,4 +1,5 @@
 {
+  "licencia": { "plan": "gestion", "pruebaDias": 90, "descuentoPct": 50, "descuentoMeses": 12, "tarifaExentaMeses": 12, "notas": "Cliente fundador: piloto de 3 meses, 50 % y sin tarifa por pedido el primer año pagado." },
   "local": {
     "slug": "gassuso",
     "nombre": "Gassuso",
