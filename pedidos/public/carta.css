@@ -205,6 +205,16 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
 .snack #snackOk { background: var(--brand); color: #fff; padding: 10px 16px; }
 .snack .x { background: transparent; color: inherit; width: 36px; height: 36px; display: grid; place-items: center; opacity: .7; }
 .ups { margin: 14px 0 4px; }
+.geo-row { display: flex; gap: 8px; } .geo-row input { flex: 1; min-width: 0; }
+.geo-row button { width: auto; flex: none; padding: 0 16px; min-height: 48px; } .geo-row button.fuerte { border-color: var(--ink); }
+.geo-yo { display: inline-block; margin: 8px 0 0; padding: 6px 0; font-weight: 600; color: var(--brand); text-decoration: none; background: none; border: 0; }
+.geo-res { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: .85rem; color: var(--ink-2); }
+.geo-res button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 10px; font-size: .82rem; text-align: left; }
+.geo-mapa-w { position: relative; margin-top: 10px; border-radius: var(--r-sm); overflow: hidden; border: 1.5px solid var(--line); }
+.geo-mapa { height: 220px; z-index: 0; }
+.geo-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); font-size: 34px; line-height: 1; pointer-events: none; z-index: 500; filter: drop-shadow(0 2px 2px #0006); }
+.geo-info { margin: 8px 0 0; font-size: .9rem; color: var(--ink-2); } .geo-info.ok b { color: var(--ok); } .geo-info.mal b { color: var(--danger); }
+.geo-ref { margin-top: 8px; }
 .desp-info { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); color: var(--ink-2); font-size: .88rem; line-height: 1.4; }
 .subtot { display: flex; justify-content: space-between; color: var(--ink-2); padding: 12px 0 0; }
 .subtot + .tot { padding-top: 6px; }

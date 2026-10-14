@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="carta.css">
+<link rel="stylesheet" href="leaflet.css">
 <link rel="manifest" href="panel.webmanifest">
 <link rel="apple-touch-icon" href="icono-192.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -285,6 +286,33 @@
   .lbar .primary { width: auto; flex: none; min-width: 180px; }
   @media (max-width: 1100px) { .lwrap { grid-template-columns: minmax(0, 1fr); } .lnav { display: none; } }
   @media (max-width: 640px) { .dos, .tres { grid-template-columns: 1fr; } }
+  /* ---- Despacho ---- */
+  .dgrid { display: grid; grid-template-columns: minmax(340px, 430px) minmax(0, 1fr); gap: 14px; align-items: start; padding-bottom: 90px; }
+  .dcol { display: grid; gap: 14px; }
+  .dcol .cardf { padding: 16px 18px; } .dcol h3 { margin: 0 0 8px; }
+  .dmapwrap { position: sticky; top: calc(var(--barh, 64px) + 14px); }
+  .dmapcard { padding: 12px; display: flex; flex-direction: column; gap: 10px; height: calc(100dvh - var(--barh, 64px) - 28px); min-height: 460px; }
+  .dmapa { flex: 1; border-radius: var(--r-sm); overflow: hidden; min-height: 300px; z-index: 0; }
+  .dbusca { display: flex; gap: 8px; } .dbusca input { flex: 1; min-height: 44px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  .dleyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; color: var(--ink-2); font-weight: 600; }
+  .dleyenda i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; opacity: .8; }
+  .segn.ancho { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .segn button:disabled { opacity: .45; }
+  .tramo { display: grid; grid-template-columns: 14px 120px minmax(0, 1fr) 44px; gap: 10px; align-items: center; margin-top: 8px; }
+  .tramo.th { margin: 6px 0 -2px; font-size: .78rem; font-weight: 700; color: var(--ink-2); }
+  .tramo > i { width: 14px; height: 14px; border-radius: 4px; opacity: .85; }
+  .kmin { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); padding-right: 10px; }
+  .kmin:focus-within { border-color: var(--ink); }
+  .kmin input { border: 0; outline: 0; min-height: 44px; width: 100%; padding: 0 6px 0 12px; font: 600 16px var(--font-body); background: transparent; color: var(--ink); }
+  .kmin span { color: var(--ink-2); font-weight: 600; }
+  .pedit:disabled { opacity: .3; }
+  .pinlocal span, .pincliente span { font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 2px #0006); display: block; }
+  .pinlocal { cursor: grab; }
+  .hexpop { display: grid; gap: 8px; min-width: 210px; font-family: var(--font-body); }
+  .hexpop small { color: var(--ink-2); }
+  .hexbtns { display: grid; gap: 6px; } .hexbtns .primary { min-height: 44px; } .hexbtns .ghostb { justify-content: center; }
+  .leaflet-container { font: inherit; }
+  @media (max-width: 980px) { .dgrid { grid-template-columns: 1fr; } .dmapwrap { position: static; order: -1; } .dmapcard { height: 60dvh; } }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
@@ -336,6 +364,7 @@
       <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
       <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
+      <button class="tab" role="tab" data-v="despacho" aria-selected="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
       <button class="tab" role="tab" data-v="local" aria-selected="false"><svg class="ico"><use href="#i-store"/></svg>Datos del local</button>
     </nav>
     <span class="sp"></span>
@@ -365,6 +394,7 @@
     <div id="v-cierre" hidden></div>
     <div id="v-carta" hidden></div>
     <div id="v-local" hidden></div>
+    <div id="v-despacho" hidden></div>
     <div id="v-resumen" hidden></div>
   </main>
 </div>
@@ -407,8 +437,10 @@
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="leaflet.js"></script>
 <script type="module">
 import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
+import * as H from './hex.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -455,7 +487,7 @@ function tarjeta(p) {
       ${mostrador ? '' : `<span class="chip2">${ico('clock')}${p.franja === 'Lo antes posible' ? 'Lo antes posible' : esc(p.franja)}</span>`}
       ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : `<span class="chip2 warn">Por cobrar</span>`}
     </div>
-    ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}</div>` : ''}
+    ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}${p.lat != null ? ` · <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener">Ver en el mapa (${(p.distancia_m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km)</a>` : ''}</div>` : ''}
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
     <div class="pie"><span>${p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : ''}</span><span class="total num">${clp(p.total)}</span></div>
@@ -688,7 +720,7 @@ const digitos = (v) => Number(String(v ?? '').replace(/\D/g, '')) || 0;
 const miles = (n) => (n ? Math.round(n).toLocaleString('es-CL') : '');
 // Campo de dinero: muestra "4.990" mientras se escribe; el valor real se lee con digitos().
 function dinero(id, val, extra = '') {
-  return `<div class="money"><span aria-hidden="true">$</span><input id="${id}" inputmode="numeric" autocomplete="off" value="${miles(val)}" ${extra}></div>`;
+  return `<div class="money"><span aria-hidden="true">$</span><input ${id ? `id="${id}"` : ''} inputmode="numeric" autocomplete="off" value="${miles(val)}" ${extra}></div>`;
 }
 document.addEventListener('input', (e) => {
   const t = e.target; if (!t.closest?.('.money')) return;
@@ -970,9 +1002,9 @@ function tablaHorario(pre, hor, base) {
 }
 async function pintarLocal() {
   await cargarCarta();
-  const L = M.local, t = L.transferencia || {}, Dsp = L.despacho || { activo: false, costo: 0, minimo: 0, zona: '', horario: {} };
+  const L = M.local, t = L.transferencia || {};
   const campo = (id, label, val, extra = '', ayuda = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}<div class="err" id="${id}-err"></div></div>`;
-  const SEC = [['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-despacho', 'Despacho'], ['s-pagos', 'Transferencias'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
+  const SEC = [['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
   const tipoOk = !t.tipo || TIPOS.includes(t.tipo);
   $('v-local').innerHTML = `<div class="lwrap">
     <nav class="lnav" aria-label="Secciones">${SEC.map(([id, n]) => `<a href="#${id}" data-sec="${id}">${n}</a>`).join('')}</nav>
@@ -987,18 +1019,8 @@ async function pintarLocal() {
       </div></section>
     <section class="cardf" id="s-horario"><header class="sh"><h3>Horario de atención</h3><span class="sp"></span><button type="button" class="ghostb" id="h-copiar">Copiar el lunes a todos</button></header>
       ${tablaHorario('', L.horario)}
-      <p class="ayuda">Si cierra después de medianoche (ej. 02:00) cuenta como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.</p></section>
-    <section class="cardf ${Dsp.activo ? '' : 'apagado'}" id="s-despacho"><header class="sh"><h3>Despacho</h3><span class="sp"></span>
-        <div class="swl corto"><label class="sw"><input type="checkbox" id="d-activo" ${Dsp.activo ? 'checked' : ''} aria-label="Ofrecer despacho"><span></span></label><label for="d-activo"><b id="d-estado">${Dsp.activo ? 'Ofreciendo despacho' : 'Solo retiro'}</b></label></div></header>
-      <div class="dbody">
-      <div class="tres">
-        <div class="field"><label for="d-costo">Costo de despacho</label>${dinero('d-costo', Dsp.costo, 'placeholder="0 = gratis"')}</div>
-        <div class="field"><label for="d-minimo">Pedido mínimo</label>${dinero('d-minimo', Dsp.minimo, 'placeholder="0 = sin mínimo"')}</div>
-        ${campo('d-zona', 'Zona', Dsp.zona, 'maxlength="160" placeholder="Ej: Concepción centro, hasta 3 km"')}
-      </div>
-      <header class="sh" style="margin-top:14px"><b>Días y horas de despacho</b><span class="sp"></span><button type="button" class="ghostb" id="d-copiar">Igual que el horario de atención</button></header>
-      ${tablaHorario('d', Dsp.horario, L.horario)}
-      <p class="ayuda">Fuera de estos horarios la carta ofrece solo retiro.</p></div></section>
+      <p class="ayuda">Si cierra después de medianoche (ej. 02:00) cuenta como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.
+        El despacho tiene su propio horario y precios en la pestaña <b>Despacho</b>.</p></section>
     <section class="cardf" id="s-pagos"><h3>Datos para transferencias</h3><p class="ayuda top">El cliente los ve al pagar y en el seguimiento, con un botón para copiar el número. Vacíos si no reciben transferencias.</p>
       <div class="dos">
         ${campo('t-titular', 'Titular de la cuenta', t.titular, 'maxlength="80" autocomplete="off"')}
@@ -1027,19 +1049,12 @@ async function pintarLocal() {
   const enlazar = (pre) => v.querySelectorAll(`[data-${pre}abre]`).forEach((c) => c.addEventListener('change', () => {
     const d = c.dataset[`${pre}abre`]; for (const k of ['desde', 'hasta']) q(`[data-${pre}${k}="${d}"]`).disabled = !c.checked;
   }));
-  enlazar(''); enlazar('d');
+  enlazar('');
   $('h-copiar').onclick = () => {
     const a = q('[data-abre="1"]').checked, de = q('[data-desde="1"]').value, ha = q('[data-hasta="1"]').value;
     DIAS.forEach(([d]) => { q(`[data-abre="${d}"]`).checked = a; q(`[data-desde="${d}"]`).value = de; q(`[data-hasta="${d}"]`).value = ha; q(`[data-desde="${d}"]`).disabled = q(`[data-hasta="${d}"]`).disabled = !a; });
     marcarSucio(true); toast('Horario del lunes copiado a todos los días');
   };
-  $('d-copiar').onclick = () => { DIAS.forEach(([d]) => {
-    const abre = q(`[data-abre="${d}"]`).checked;
-    q(`[data-dabre="${d}"]`).checked = abre;
-    q(`[data-ddesde="${d}"]`).value = q(`[data-desde="${d}"]`).value; q(`[data-dhasta="${d}"]`).value = q(`[data-hasta="${d}"]`).value;
-    q(`[data-ddesde="${d}"]`).disabled = q(`[data-dhasta="${d}"]`).disabled = !abre;
-  }); marcarSucio(true); };
-  $('d-activo').addEventListener('change', (e) => { $('s-despacho').classList.toggle('apagado', !e.target.checked); $('d-estado').textContent = e.target.checked ? 'Ofreciendo despacho' : 'Solo retiro'; });
   // Teléfonos y RUT se ordenan solos al salir del campo.
   for (const id of ['l-whatsapp', 'l-telefono']) $(id).addEventListener('blur', (e) => { const d = e.target.value.replace(/\D/g, ''); if (d) e.target.value = fmtTel(d.length === 9 && d[0] === '9' ? '56' + d : d); });
   $('t-rut').addEventListener('blur', (e) => {
@@ -1070,7 +1085,6 @@ async function pintarLocal() {
       await api('panel/local', { method: 'PATCH', body: {
         nombre: val('l-nombre'), whatsapp: val('l-whatsapp'), telefono: val('l-telefono'), instagram: val('l-instagram'), direccion: val('l-direccion'),
         cupo_franja: val('l-cupo'), comision_app: val('l-comision'), horario: hor(''),
-        despacho: { activo: $('d-activo').checked, costo: digitos(val('d-costo')), minimo: digitos(val('d-minimo')), zona: val('d-zona'), horario: hor('d') },
         transferencia: { titular: val('t-titular'), rut: rutFormato(val('t-rut')), banco: val('t-banco'), tipo: val('t-tipo'), numero: val('t-numero'), email: val('t-email') },
       } });
       marcarSucio(false); toast('✓ Datos del local guardados'); pintarLocal(); refrescar();
@@ -1078,7 +1092,187 @@ async function pintarLocal() {
     $('l-guardar').disabled = false;
   };
 }
-addEventListener('beforeunload', (e) => { if (localSucio && vista === 'local') e.preventDefault(); });
+addEventListener('beforeunload', (e) => { if ((localSucio && vista === 'local') || (despSucio && vista === 'despacho')) e.preventDefault(); });
+
+// ---------- despacho ----------
+// Pestaña propia: si se despacha, cuándo, cuánto se cobra (precio único o por zonas) y el
+// mapa de hexágonos. Precio por zonas = tramos de distancia desde el local, que pintan los
+// hexágonos solos; tocando un hexágono se le pone otro precio o se bloquea (como Uber).
+const COLORES = ['#2b8a3e', '#fab005', '#f76707', '#e03131', '#c2255c', '#862e9c', '#5f3dc4', '#364fc7', '#1864ab', '#0b7285'];
+const TAMS = [[300, 'Chicos', '≈ 500 m de lado a lado'], [450, 'Medianos', '≈ 800 m'], [700, 'Grandes', '≈ 1,2 km']];
+const km = (m) => `${(m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km`;
+let DS = null, dmapa = null, dcapa = null, dpin = null, dprueba = null, despSucio = false;
+const marcarDespSucio = (on) => { despSucio = on; $('dbar')?.classList.toggle('on', on); };
+const colorDe = (costo) => { const i = DS.tramos.findIndex((t) => t.costo === costo); return i >= 0 ? COLORES[i % COLORES.length] : '#868e96'; };
+function pintarDespacho() {
+  const d = M.local.despacho || {}, u = M.local.ubicacion;
+  DS = { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {}, modo: d.modo || 'fijo',
+    tam: d.tam || 450, tramos: (d.tramos?.length ? d.tramos : [{ hasta: 1500, costo: 1500 }, { hasta: 3000, costo: 2000 }, { hasta: 5000, costo: 2800 }]).map((t) => ({ ...t })),
+    ajustes: { ...(d.ajustes || {}) }, ubicacion: u ? { ...u } : null };
+  $('v-despacho').innerHTML = `<div class="dgrid">
+    <div class="dcol">
+      <section class="cardf"><header class="sh"><h3>Despacho</h3><span class="sp"></span>
+        <div class="swl corto"><label class="sw"><input type="checkbox" id="ds-activo" ${DS.activo ? 'checked' : ''} aria-label="Ofrecer despacho"><span></span></label><label for="ds-activo"><b id="ds-estado"></b></label></div></header>
+        <p class="ayuda top" id="ds-resumen"></p></section>
+      <section class="cardf"><h3>Cómo se cobra</h3>
+        <div class="segn ancho" role="group" aria-label="Forma de cobrar"><button type="button" data-dmodo="fijo">Precio único</button><button type="button" data-dmodo="zonas" ${u ? '' : 'disabled title="Falta la ubicación del local"'}>Por zonas en el mapa</button></div>
+        <div id="ds-fijo"><div class="field"><label for="ds-costo">Costo del despacho</label>${dinero('ds-costo', DS.costo, 'placeholder="0 = gratis"')}</div></div>
+        <div id="ds-zonas">
+          <p class="ayuda">Precio según la distancia en línea recta desde el local. Cada tramo pinta los sectores del mapa.</p>
+          <div id="ds-tramos"></div>
+          <button type="button" class="ghostb" id="ds-mas">${ico('plus')}Agregar tramo</button>
+          <div class="field"><label>Tamaño de los sectores</label><div class="segn ancho" role="group">${TAMS.map(([v, n, a]) => `<button type="button" data-dtam="${v}" title="${a}">${n}</button>`).join('')}</div>
+            <p class="ayuda" id="ds-tamayuda"></p></div>
+          <p class="ayuda" id="ds-ajustes"></p>
+        </div></section>
+      <section class="cardf"><h3>Condiciones</h3>
+        <div class="dos"><div class="field"><label for="ds-minimo">Pedido mínimo</label>${dinero('ds-minimo', DS.minimo, 'placeholder="0 = sin mínimo"')}</div>
+          <div class="field"><label for="ds-zona">Texto para el cliente</label><input id="ds-zona" maxlength="160" value="${esc(DS.zona)}" placeholder="Ej: Concepción y Talcahuano"></div></div></section>
+      <section class="cardf"><header class="sh"><h3>Días y horas de despacho</h3><span class="sp"></span><button type="button" class="ghostb" id="ds-copiar">Igual que la atención</button></header>
+        ${tablaHorario('d', DS.horario, M.local.horario)}
+        <p class="ayuda">Fuera de estos horarios la carta ofrece solo retiro.</p></section>
+    </div>
+    <div class="dmapwrap"><div class="cardf dmapcard">
+      <form class="dbusca" id="ds-busca"><input placeholder="Probar una dirección del cliente, ej: Freire 145" aria-label="Probar una dirección"><button class="ghostb fuerte">${ico('search')}Probar</button></form>
+      <div id="dmapa" class="dmapa" role="application" aria-label="Mapa de zonas de despacho"></div>
+      <div class="dleyenda" id="ds-leyenda"></div>
+      <p class="ayuda" id="ds-mapayuda"></p>
+    </div></div>
+  </div>
+  <div class="lbar" id="dbar" role="region" aria-label="Cambios sin guardar"><span><b>Cambios del despacho sin guardar</b><span class="formerr" id="ds-err" role="alert"></span></span>
+    <button type="button" class="ghost" id="ds-descartar">Descartar</button><button class="primary" id="ds-guardar">Guardar cambios</button></div>`;
+  marcarDespSucio(false);
+  const v = $('v-despacho'), q = (sel) => v.querySelector(sel);
+  v.querySelectorAll('[data-dabre]').forEach((c) => c.addEventListener('change', () => { for (const k of ['desde', 'hasta']) q(`[data-d${k}="${c.dataset.dabre}"]`).disabled = !c.checked; }));
+  v.oninput = v.onchange = (e) => { if (!e.target.closest('#ds-busca')) marcarDespSucio(true); };
+  $('ds-activo').addEventListener('change', (e) => { DS.activo = e.target.checked; pintarEstadoDesp(); });
+  $('ds-costo').addEventListener('input', (e) => { DS.costo = digitos(e.target.value); pintarEstadoDesp(); });
+  $('ds-minimo').addEventListener('input', (e) => { DS.minimo = digitos(e.target.value); pintarEstadoDesp(); });
+  v.querySelectorAll('[data-dmodo]').forEach((b) => b.onclick = () => { DS.modo = b.dataset.dmodo; marcarDespSucio(true); pintarModoDesp(); });
+  v.querySelectorAll('[data-dtam]').forEach((b) => b.onclick = () => {
+    const n = Number(b.dataset.dtam);
+    if (n !== DS.tam && Object.keys(DS.ajustes).length && !confirm('Al cambiar el tamaño de los sectores se pierden los ajustes hechos a mano en el mapa. ¿Seguir?')) return;
+    if (n !== DS.tam) DS.ajustes = {};
+    DS.tam = n; marcarDespSucio(true); pintarModoDesp(); dibujarZonas();
+  });
+  $('ds-mas').onclick = () => { const u2 = DS.tramos.at(-1); DS.tramos.push({ hasta: (u2?.hasta || 0) + 1500, costo: (u2?.costo || 1000) + 500 }); marcarDespSucio(true); pintarTramos(); dibujarZonas(); };
+  $('ds-copiar').onclick = () => { DIAS.forEach(([d]) => { const h = M.local.horario[d];
+    q(`[data-dabre="${d}"]`).checked = !!h; if (h) { q(`[data-ddesde="${d}"]`).value = h[0]; q(`[data-dhasta="${d}"]`).value = h[1]; }
+    q(`[data-ddesde="${d}"]`).disabled = q(`[data-dhasta="${d}"]`).disabled = !h; }); marcarDespSucio(true); };
+  $('ds-busca').onsubmit = async (e) => {
+    e.preventDefault(); const t = e.target.querySelector('input').value.trim(); if (!t) return;
+    try { const r = await api(`locales/${M.local.slug}/geo?q=${encodeURIComponent(t)}`); if (!r.length) return toast('No encontramos esa dirección');
+      probarEn(r[0].lat, r[0].lng, r[0].nombre); } catch (err) { toast(err.message); }
+  };
+  $('ds-descartar').onclick = () => { if (confirm('¿Descartar los cambios del despacho?')) { cargarCarta().then(pintarDespacho); } };
+  $('ds-guardar').onclick = guardarDespacho;
+  pintarTramos(); pintarModoDesp(); pintarEstadoDesp();
+  iniciarMapa();
+}
+function pintarEstadoDesp() {
+  $('ds-estado').textContent = DS.activo ? 'Ofreciendo despacho' : 'Solo retiro';
+  const precio = DS.modo === 'zonas' ? `por zonas: ${DS.tramos.map((t) => `hasta ${km(t.hasta)} ${clp(t.costo)}`).join(' · ')}` : DS.costo ? `precio único ${clp(DS.costo)}` : 'gratis';
+  $('ds-resumen').textContent = DS.activo ? `La carta ofrece despacho ${precio}${DS.minimo ? `, con pedido mínimo de ${clp(DS.minimo)}` : ''}, en los días y horas marcados.` : 'La carta ofrece solo retiro. Enciéndelo para ofrecer despacho.';
+}
+function pintarModoDesp() {
+  $('v-despacho').querySelectorAll('[data-dmodo]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.dmodo === DS.modo));
+  $('v-despacho').querySelectorAll('[data-dtam]').forEach((b) => b.setAttribute('aria-pressed', Number(b.dataset.dtam) === DS.tam));
+  $('ds-fijo').hidden = DS.modo !== 'fijo'; $('ds-zonas').hidden = DS.modo !== 'zonas';
+  $('ds-tamayuda').textContent = `Cada sector mide ${TAMS.find(([v]) => v === DS.tam)?.[2] || `${DS.tam} m`}. Más chicos = más precisión al ajustar a mano.`;
+  const n = Object.keys(DS.ajustes).length, nb = Object.values(DS.ajustes).filter((x) => x === null).length;
+  $('ds-ajustes').innerHTML = n ? `${n} sector${n > 1 ? 'es' : ''} ajustado${n > 1 ? 's' : ''} a mano${nb ? ` (${nb} bloqueado${nb > 1 ? 's' : ''})` : ''}. <button type="button" class="link" id="ds-limpiar">Quitar ajustes</button>` : 'Toca un sector del mapa para cambiarle el precio o bloquearlo.';
+  $('ds-limpiar')?.addEventListener('click', () => { if (confirm('¿Quitar todos los ajustes hechos a mano?')) { DS.ajustes = {}; marcarDespSucio(true); pintarModoDesp(); dibujarZonas(); } });
+  $('ds-mapayuda').textContent = DS.modo === 'zonas' ? 'Toca un sector para cambiar su precio o bloquearlo. Arrastra el pin del local si no está en su lugar.' : 'Con precio único no se usan zonas: cualquier dirección paga lo mismo. Arrastra el pin si el local no está en su lugar.';
+  pintarEstadoDesp(); dibujarZonas();
+}
+function pintarTramos() {
+  $('ds-tramos').innerHTML = `<div class="tramo th"><span></span><span>Hasta</span><span>Cuesta</span><span></span></div>` + DS.tramos.map((t, i) => `<div class="tramo">
+    <i style="background:${COLORES[i % COLORES.length]}"></i>
+    <div class="kmin"><input inputmode="decimal" value="${(t.hasta / 1000).toLocaleString('es-CL')}" data-thasta="${i}" aria-label="Tramo ${i + 1}: hasta cuántos km"><span>km</span></div>
+    ${dinero('', t.costo, `data-tcosto="${i}" aria-label="Tramo ${i + 1}: costo"`)}
+    <button type="button" class="pedit" data-tquitar="${i}" aria-label="Quitar tramo" ${DS.tramos.length > 1 ? '' : 'disabled'}>${ico('x')}</button></div>`).join('');
+  $('ds-tramos').querySelectorAll('[data-thasta]').forEach((inp) => inp.onchange = () => {
+    const n = Math.round(Number(inp.value.replace(',', '.')) * 1000);
+    if (!(n >= 100)) { inp.value = (DS.tramos[inp.dataset.thasta].hasta / 1000).toLocaleString('es-CL'); return; }
+    DS.tramos[inp.dataset.thasta].hasta = n; DS.tramos.sort((a, b) => a.hasta - b.hasta); pintarTramos(); pintarEstadoDesp(); dibujarZonas();
+  });
+  $('ds-tramos').querySelectorAll('[data-tcosto]').forEach((inp) => inp.onchange = () => { DS.tramos[inp.dataset.tcosto].costo = digitos(inp.value); pintarEstadoDesp(); dibujarZonas(); });
+  $('ds-tramos').querySelectorAll('[data-tquitar]').forEach((b) => b.onclick = () => { DS.tramos.splice(Number(b.dataset.tquitar), 1); marcarDespSucio(true); pintarTramos(); pintarEstadoDesp(); dibujarZonas(); });
+}
+function iniciarMapa() {
+  if (dmapa) { dmapa.remove(); dmapa = null; }
+  const o = DS.ubicacion || { lat: -36.8270, lng: -73.0503 };
+  dmapa = L.map('dmapa', { zoomControl: true, attributionControl: true }).setView([o.lat, o.lng], 13);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(dmapa);
+  dcapa = L.layerGroup().addTo(dmapa);
+  dpin = L.marker([o.lat, o.lng], { draggable: true, icon: L.divIcon({ className: 'pinlocal', html: '<span>🏠</span>', iconSize: [36, 36], iconAnchor: [18, 34] }), zIndexOffset: 1000 })
+    .addTo(dmapa).bindTooltip('El local (arrástralo para ajustar)', { direction: 'top', offset: [0, -30] });
+  dpin.on('dragend', () => {
+    const p = dpin.getLatLng();
+    if (Object.keys(DS.ajustes).length && !confirm('Al mover el local los sectores cambian de lugar y se pierden los ajustes a mano. ¿Seguir?')) { dpin.setLatLng([DS.ubicacion.lat, DS.ubicacion.lng]); return; }
+    DS.ajustes = {}; DS.ubicacion = { lat: p.lat, lng: p.lng }; marcarDespSucio(true); pintarModoDesp();
+  });
+  setTimeout(() => { dmapa.invalidateSize(); dibujarZonas(true); }, 50);
+}
+function dibujarZonas(encuadrar = false) {
+  if (!dmapa || !dcapa) return;
+  dcapa.clearLayers();
+  const o = DS.ubicacion; if (!o) return;
+  if (DS.modo !== 'zonas') { $('ds-leyenda').innerHTML = ''; return; }
+  const z = H.hexesZona({ tam: DS.tam, tramos: DS.tramos, ajustes: DS.ajustes }, o), puntos = [];
+  for (const h of z) {
+    const verts = H.vertices(o, DS.tam, h.q, h.r).map((p) => [p.lat, p.lng]); puntos.push(...verts);
+    const bloq = !h.ok && h.motivo === 'bloqueado', fuera = !h.ok && !bloq;
+    const pol = L.polygon(verts, { color: bloq ? '#495057' : '#ffffff', weight: h.ajustado || bloq ? 2 : 1, dashArray: h.ajustado || bloq ? '4 3' : null,
+      fillColor: fuera ? '#adb5bd' : bloq ? '#343a40' : colorDe(h.costo), fillOpacity: fuera ? 0.08 : bloq ? 0.45 : 0.38 }).addTo(dcapa);
+    pol.bindTooltip(fuera ? `Fuera de zona · ${km(h.distancia)}` : bloq ? 'Bloqueado' : `${clp(h.costo)} · ${km(h.distancia)}${h.ajustado ? ' (a mano)' : ''}`, { sticky: true });
+    pol.on('click', (e) => editarHex(h, e.latlng));
+  }
+  $('ds-leyenda').innerHTML = DS.tramos.map((t, i) => `<span><i style="background:${COLORES[i % COLORES.length]}"></i>Hasta ${km(t.hasta)} · ${clp(t.costo)}</span>`).join('')
+    + '<span><i style="background:#343a40"></i>Bloqueado</span><span><i style="background:#dee2e6"></i>Fuera de zona</span>';
+  if (encuadrar && puntos.length) dmapa.fitBounds(puntos, { padding: [12, 12] });
+}
+function editarHex(h, donde) {
+  const actual = DS.ajustes[h.id];
+  const base = H.precioHex({ tam: DS.tam, tramos: DS.tramos, ajustes: {} }, DS.ubicacion, h.q, h.r);
+  const div = document.createElement('div'); div.className = 'hexpop';
+  div.innerHTML = `<b>Sector a ${km(h.distancia)}</b><small>${base.ok ? `Por distancia: ${clp(base.costo)}` : 'Por distancia: fuera de zona'}</small>
+    <div class="money"><span>$</span><input inputmode="numeric" value="${h.ok ? miles(h.costo) : ''}" placeholder="Precio"></div>
+    <div class="hexbtns"><button type="button" class="primary" data-h="precio">Usar este precio</button>
+      <button type="button" class="ghostb peligro" data-h="bloquear" ${actual === null ? 'disabled' : ''}>Bloquear sector</button>
+      ${h.id in DS.ajustes ? '<button type="button" class="ghostb" data-h="volver">Volver al precio por distancia</button>' : ''}</div>`;
+  const pop = L.popup({ minWidth: 220 }).setLatLng(donde).setContent(div).openOn(dmapa);
+  setTimeout(() => div.querySelector('input').focus(), 50);
+  div.onclick = (e) => {
+    const b = e.target.closest('[data-h]'); if (!b) return;
+    if (b.dataset.h === 'precio') { const n = digitos(div.querySelector('input').value); if (!n && !confirm('¿Despacho gratis en este sector?')) return; DS.ajustes[h.id] = n; }
+    if (b.dataset.h === 'bloquear') DS.ajustes[h.id] = null;
+    if (b.dataset.h === 'volver') delete DS.ajustes[h.id];
+    dmapa.closePopup(pop); marcarDespSucio(true); pintarModoDesp();
+  };
+  div.querySelector('input').onkeydown = (e) => { if (e.key === 'Enter') div.querySelector('[data-h=precio]').click(); };
+}
+function probarEn(lat, lng, nombre) {
+  if (dprueba) dprueba.remove();
+  const c = DS.modo === 'zonas' ? H.cotizar({ tam: DS.tam, tramos: DS.tramos, ajustes: DS.ajustes }, DS.ubicacion, lat, lng) : { ok: true, costo: DS.costo, distancia: Math.round(H.distancia(DS.ubicacion, { lat, lng })) };
+  dprueba = L.marker([lat, lng], { icon: L.divIcon({ className: 'pincliente', html: '<span>📍</span>', iconSize: [30, 30], iconAnchor: [15, 28] }) }).addTo(dmapa)
+    .bindPopup(`<b>${esc(nombre)}</b><br>${c.ok ? `Despacho ${clp(c.costo)} · ${km(c.distancia)}` : c.motivo === 'bloqueado' ? 'Sector bloqueado: no se despacha' : `Fuera de la zona (${km(c.distancia)})`}`).openPopup();
+  dmapa.setView([lat, lng], Math.max(dmapa.getZoom(), 14));
+}
+async function guardarDespacho() {
+  const q = (sel) => $('v-despacho').querySelector(sel);
+  const horario = Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-dabre="${d}"]`).checked ? [q(`[data-ddesde="${d}"]`).value, q(`[data-dhasta="${d}"]`).value] : null]));
+  $('ds-guardar').disabled = true; $('ds-err').textContent = '';
+  try {
+    const body = { despacho: { activo: DS.activo, costo: digitos($('ds-costo').value), minimo: digitos($('ds-minimo').value), zona: $('ds-zona').value, horario,
+      modo: DS.modo, tam: DS.tam, tramos: DS.tramos, ajustes: DS.ajustes } };
+    const u = M.local.ubicacion;
+    if (DS.ubicacion && (!u || u.lat !== DS.ubicacion.lat || u.lng !== DS.ubicacion.lng)) body.ubicacion = DS.ubicacion;
+    await api('panel/local', { method: 'PATCH', body });
+    marcarDespSucio(false); toast('✓ Despacho guardado'); await cargarCarta(); pintarDespacho();
+  } catch (e) { $('ds-err').textContent = e.message; }
+  $('ds-guardar').disabled = false;
+}
 
 // ---------- resumen semanal ----------
 let semana = null;
@@ -1168,14 +1362,17 @@ for (const ev of ['mouseout', 'focusout']) document.addEventListener(ev, (e) => 
 // ---------- navegación ----------
 document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   if (vista === 'local' && b.dataset.v !== 'local' && localSucio && !confirm('Tienes cambios sin guardar en Datos del local. ¿Salir sin guardar?')) return;
+  if (vista === 'despacho' && b.dataset.v !== 'despacho' && despSucio && !confirm('Tienes cambios del despacho sin guardar. ¿Salir sin guardar?')) return;
   if (b.dataset.v !== 'local') marcarSucio(false);
+  if (b.dataset.v !== 'despacho') marcarDespSucio(false);
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
-  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen', 'despacho']) $('v-' + v).hidden = v !== vista;
   if (vista === 'carta') pintarCarta();
   else if (vista === 'resumen') pintarResumen();
   else if (vista === 'local') pintarLocal();
+  else if (vista === 'despacho') { await cargarCarta(); pintarDespacho(); }
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else refrescar();
 });

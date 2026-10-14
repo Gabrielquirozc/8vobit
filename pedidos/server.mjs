@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import * as H from './public/hex.js';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -42,6 +43,7 @@ CREATE TABLE IF NOT EXISTS productos (
 CREATE TABLE IF NOT EXISTS agregados (
   id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id),
   nombre TEXT NOT NULL, disponible INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS geocache (q TEXT PRIMARY KEY, res TEXT NOT NULL, t INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS historial_precio (
   id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL, producto_id INTEGER NOT NULL,
   anterior INTEGER, nuevo INTEGER, fecha TEXT NOT NULL DEFAULT (datetime('now','localtime')));
@@ -58,13 +60,15 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   cantidad INTEGER NOT NULL, precio_unitario INTEGER NOT NULL);
 `);
 
-let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
+let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed = false;
 // Columnas de cobro agregadas después de la primera versión: migración idempotente.
 {
   const cols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
   if (!cols.has('medio_pago')) db.exec('ALTER TABLE pedidos ADD COLUMN medio_pago TEXT');
   if (!cols.has('recibido')) db.exec('ALTER TABLE pedidos ADD COLUMN recibido INTEGER');
   if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
+  // Dónde se entrega un despacho por zonas (para el repartidor y para recalcular el costo).
+  if (!cols.has('lat')) { for (const c of ['lat REAL', 'lng REAL', 'distancia_m INTEGER']) db.exec(`ALTER TABLE pedidos ADD COLUMN ${c}`); }
   if (!cols.has('costo_despacho')) db.exec('ALTER TABLE pedidos ADD COLUMN costo_despacho INTEGER NOT NULL DEFAULT 0');
   // Datos del local editables desde el panel.
   const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
@@ -78,6 +82,8 @@ let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
   if (!lcols.has('telefono')) { db.exec('ALTER TABLE locales ADD COLUMN telefono TEXT'); contactoSeed = true; }
   // Despacho: { activo, costo, minimo, zona, horario: { día: [desde, hasta] | null } }.
   if (!lcols.has('despacho')) db.exec('ALTER TABLE locales ADD COLUMN despacho TEXT');
+  // Ubicación del local: centro de las zonas de despacho (se ajusta en el panel).
+  if (!lcols.has('lat')) { db.exec('ALTER TABLE locales ADD COLUMN lat REAL'); db.exec('ALTER TABLE locales ADD COLUMN lng REAL'); ubicacionSeed = true; }
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
@@ -129,6 +135,7 @@ function seed() {
   ).run(L.slug, L.nombre, L.instagram, L.whatsapp, L.telefono || null, L.direccion || null, JSON.stringify(L.horario), L.cupo_franja, L.modo_boleta);
   if (L.logo) db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(lid, L.logo), lid);
   if (L.despacho) db.prepare('UPDATE locales SET despacho=? WHERE id=?').run(JSON.stringify(L.despacho), lid);
+  if (L.lat) db.prepare('UPDATE locales SET lat=?, lng=? WHERE id=?').run(L.lat, L.lng, lid);
   for (const a of s.agregados) db.prepare('INSERT INTO agregados (local_id,nombre) VALUES (?,?)').run(lid, a);
   for (const a of s.salsas || []) db.prepare("INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,'salsa')").run(lid, a);
   s.categorias.forEach((c, ci) => {
@@ -147,6 +154,7 @@ seed();
   const l = s.local.logo && db.prepare('SELECT id, logo FROM locales WHERE slug=?').get(s.local.slug);
   if (l && !l.logo && fs.existsSync(path.resolve(import.meta.dirname, 'seed/img', path.basename(s.local.logo))))
     db.prepare('UPDATE locales SET logo=? WHERE id=?').run(seedImg(l.id, s.local.logo), l.id);
+  if (ubicacionSeed && s.local.lat) db.prepare('UPDATE locales SET lat=?, lng=? WHERE slug=? AND lat IS NULL').run(s.local.lat, s.local.lng, s.local.slug);
   if (contactoSeed) for (const k of ['whatsapp', 'telefono', 'direccion'])
     if (s.local[k]) db.prepare(`UPDATE locales SET ${k}=? WHERE slug=? AND COALESCE(${k},'')=''`).run(s.local[k], s.local.slug);
   // Salsas del seed para la base ya creada: una sola vez, al crear la columna tipo.
@@ -164,9 +172,59 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 // Día "operativo": si es antes del cierre de madrugada del día anterior, sigue contando como ese día.
 // Configuración de despacho con valores por defecto (sin configurar = sin despacho).
+// modo 'fijo': un solo costo. modo 'zonas': hexágonos de `tam` metros con precio por tramos
+// de distancia desde el local (`tramos` [{hasta (m), costo}]) y ajustes a mano por hexágono
+// (`ajustes` { "q,r": costo | null = bloqueado }).
 function despachoDe(local) {
   const d = local.despacho ? JSON.parse(local.despacho) : {};
-  return { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {} };
+  return { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {},
+    modo: d.modo === 'zonas' && local.lat != null ? 'zonas' : 'fijo', tam: d.tam || 450, tramos: d.tramos || [], ajustes: d.ajustes || {} };
+}
+const ubicacionDe = (local) => (local.lat == null ? null : { lat: local.lat, lng: local.lng });
+// Búsqueda de direcciones con Nominatim (OpenStreetMap), pasando por el servidor: se cachea,
+// se limita a la zona del local y respeta su regla de 1 consulta por segundo.
+let colaGeo = Promise.resolve(), ultimaGeo = 0;
+async function geocodificar(local, q) {
+  const clave = `${local.id}|${q.toLowerCase()}`;
+  const c = db.prepare('SELECT res FROM geocache WHERE q=? AND t>?').get(clave, Date.now() - 30 * 864e5);
+  if (c) return JSON.parse(c.res);
+  const o = ubicacionDe(local) || { lat: -36.8270, lng: -73.0503 };
+  // Comuna por defecto: la del local ("Janequeo 507, Concepción" → Concepción).
+  const ciudad = (local.direccion || '').split(',').map((x) => x.trim()).filter(Boolean).slice(1).pop() || 'Concepción';
+  const pedir = (params) => {
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    Object.entries({ format: 'jsonv2', limit: 6, countrycodes: 'cl', 'accept-language': 'es', ...params }).forEach(([k, v]) => url.searchParams.set(k, v));
+    return (colaGeo = colaGeo.then(async () => {
+      const espera = ultimaGeo + 1100 - Date.now(); if (espera > 0) await new Promise((r) => setTimeout(r, espera));
+      ultimaGeo = Date.now();
+      const r = await fetch(url, { headers: { 'User-Agent': `pedidos-8vobit/1.0 (${process.env.GEO_CONTACTO || 'https://pedidos.8vobit.xyz'})` }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) throw new Error('geo ' + r.status);
+      return r.json();
+    }).catch((e) => { console.error('geocodificar:', e.message); return null; }));
+  };
+  // "Freire 145" o "Freire 145, Talcahuano": búsqueda estructurada (calle + número + comuna),
+  // que encuentra la cuadra; si no, búsqueda libre acotada a la zona del local.
+  const m = q.match(/^\s*(.+?)\s+#?(\d{1,5})\s*(?:,\s*(.+))?$/);
+  const caja = { viewbox: `${o.lng - 0.18},${o.lat + 0.14},${o.lng + 0.18},${o.lat - 0.14}`, bounded: 1 };
+  let res = m ? await pedir({ street: `${m[2]} ${m[1]}`, city: m[3] || ciudad, ...caja }) : null;
+  if (!res?.length) res = await pedir({ q: q.includes(',') ? q : `${q}, ${ciudad}`, ...caja });
+  if (!res) return null;
+  const comuna = (m?.[3] || (q.includes(',') ? q.split(',').pop() : ciudad)).trim().toLowerCase();
+  const vistos = new Set();
+  const out = res.map((x) => ({ nombre: x.display_name.replace(/, (Provincia de|Región del|Región de) [^,]+/g, '').replace(/, Chile$/, '').replace(/, \d{7}/, ''),
+    lat: Number(x.lat), lng: Number(x.lon) }))
+    .map((x) => ({ ...x, d: H.distancia(o, x), en: x.nombre.toLowerCase().includes(comuna) }))
+    .sort((a, b) => (b.en - a.en) || (a.d - b.d))
+    .filter((x) => !vistos.has(x.nombre) && vistos.add(x.nombre)).slice(0, 5)
+    .map(({ nombre, lat, lng }) => ({ nombre, lat, lng }));
+  db.prepare('INSERT OR REPLACE INTO geocache (q,res,t) VALUES (?,?,?)').run(clave, JSON.stringify(out), Date.now());
+  return out;
+}
+function cotizarDespacho(local, lat, lng) {
+  const desp = despachoDe(local), o = ubicacionDe(local);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return { ok: false, motivo: 'sin_ubicacion' };
+  if (desp.modo !== 'zonas') return { ok: true, costo: desp.costo, distancia: o ? Math.round(H.distancia(o, { lat, lng })) : null };
+  return H.cotizar(desp, o, lat, lng);
 }
 // ¿Se despacha en [desde, hasta) minutos del día operativo `fecha`? El horario de despacho
 // es por día de la semana y, como el del local, puede cruzar la medianoche.
@@ -286,13 +344,13 @@ function pagina(file) {
     paginas.set(file, { html, csp: [
       // static.cloudflareinsights.com: Cloudflare Web Analytics, que la zona inyecta sola.
       "default-src 'self'", `script-src 'self' ${hashes.join(' ')} https://static.cloudflareinsights.com`, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "connect-src 'self' https://cloudflareinsights.com", "frame-ancestors 'none'",
+      "font-src https://fonts.gstatic.com", "img-src 'self' data: blob: https://tile.openstreetmap.org", "connect-src 'self' https://cloudflareinsights.com", "frame-ancestors 'none'",
       "base-uri 'none'", "form-action 'self'", "object-src 'none'",
     ].join('; ') });
   }
   return paginas.get(file);
 }
-const SEGURIDAD = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
+const SEGURIDAD = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)' };
 // Antes del lanzamiento nada se indexa (ni la carta): INDEXAR=1 en .env cuando el local lo publique.
 const INDEXAR = process.env.INDEXAR === '1';
 if (!INDEXAR) SEGURIDAD['X-Robots-Tag'] = 'noindex, nofollow';
@@ -354,7 +412,7 @@ function menu(local) {
   return {
     local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
-      logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local),
+      logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local), ubicacion: ubicacionDe(local),
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
@@ -419,15 +477,20 @@ function crearPedido(local, body) {
 
   const v = validarItems(local, body.items);
   if (v.error) return v;
-  let costo = 0;
+  let costo = 0, geo = null;
   if (modalidad === 'despacho') {
     const desp = despachoDe(local);
     if (!desp.activo) return { error: 'El local no está despachando por ahora; elige retiro.' };
     if (!(franja === 'Lo antes posible' ? f.despacho_ya : slot.despacho)) return { error: 'No hay despacho en ese horario; elige otra franja o retiro.' };
     if (v.total < desp.minimo) return { error: `El pedido mínimo para despacho es ${clpTxt(desp.minimo)}.` };
     costo = desp.costo;
+    if (desp.modo === 'zonas') {
+      const u = body.ubicacion || {}, c = cotizarDespacho(local, Number(u.lat), Number(u.lng));
+      if (!c.ok) return { error: c.motivo === 'sin_ubicacion' ? 'Marca en el mapa dónde entregamos el pedido.' : 'Esa ubicación está fuera de la zona de despacho; elige retiro o llama al local.' };
+      costo = c.costo; geo = { lat: Number(u.lat), lng: Number(u.lng), distancia_m: c.distancia };
+    }
   }
-  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo }, { ...v, total: v.total + costo });
+  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo, geo }, { ...v, total: v.total + costo });
 }
 
 // Texto libre del cliente: sin caracteres de control ni saltos raros, largo acotado.
@@ -472,6 +535,7 @@ function guardarPedido(local, d, { items, total }) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
+    if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, pid);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido) VALUES (?,?,?,?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0);
@@ -524,7 +588,20 @@ function actualizarLocal(local, b) {
       if (!Array.isArray(v) || !hh.test(v[0]) || !hh.test(v[1])) return { error: 'Horario de despacho inválido: usa el formato HH:MM.' };
       h[k] = [v[0], v[1]];
     }
-    c.despacho = JSON.stringify({ activo: !!d.activo, costo, minimo, zona: txt(d.zona, 160), horario: h });
+    const modo = d.modo === 'zonas' ? 'zonas' : 'fijo', tam = Math.round(Number(d.tam) || 450);
+    if (!(tam >= 150 && tam <= 2000)) return { error: 'El tamaño de los sectores debe estar entre 150 y 2000 metros.' };
+    const tramos = (Array.isArray(d.tramos) ? d.tramos : []).map((t) => ({ hasta: Math.round(Number(t.hasta)), costo: Math.round(Number(t.costo)) })).sort((a, b) => a.hasta - b.hasta);
+    if (tramos.length > 10 || tramos.some((t) => !(t.hasta >= 100 && t.hasta <= 30000) || !(t.costo >= 0 && t.costo <= 50000))) return { error: 'Revisa los tramos: distancia entre 0,1 y 30 km y costo hasta $50.000.' };
+    if (new Set(tramos.map((t) => t.hasta)).size !== tramos.length) return { error: 'Hay dos tramos con la misma distancia.' };
+    if (modo === 'zonas' && !tramos.length) return { error: 'Agrega al menos un tramo de distancia para despachar por zonas.' };
+    const aj = d.ajustes && typeof d.ajustes === 'object' ? Object.entries(d.ajustes) : [];
+    if (aj.length > 3000 || aj.some(([k, x]) => !/^-?\d{1,3},-?\d{1,3}$/.test(k) || !(x === null || (Number.isInteger(x) && x >= 0 && x <= 50000)))) return { error: 'Ajustes de zonas inválidos.' };
+    c.despacho = JSON.stringify({ activo: !!d.activo, costo, minimo, zona: txt(d.zona, 160), horario: h, modo, tam, tramos, ajustes: Object.fromEntries(aj) });
+  }
+  if (b.ubicacion !== undefined) {
+    const lat = Number(b.ubicacion?.lat), lng = Number(b.ubicacion?.lng);
+    if (!(lat >= -56 && lat <= -17 && lng >= -110 && lng <= -66)) return { error: 'La ubicación del local debe estar en Chile.' };
+    c.lat = lat; c.lng = lng;
   }
   if (b.transferencia !== undefined) {
     const t = b.transferencia || {};
@@ -618,6 +695,17 @@ async function api(req, res, url) {
     if (!local) return send(res, 404, { error: 'Local no encontrado' });
     if (m === 'GET' && parts.length === 2) return send(res, 200, menu(local));
     if (m === 'GET' && parts[2] === 'franjas') return send(res, 200, franjas(local));
+    if (m === 'POST' && parts[2] === 'cotizar') {
+      const b = await readJson(req);
+      return send(res, 200, cotizarDespacho(local, Number(b.lat), Number(b.lng)));
+    }
+    if (m === 'GET' && parts[2] === 'geo') {
+      const q = String(url.searchParams.get('q') || '').trim().slice(0, 120);
+      if (q.length < 4) return send(res, 400, { error: 'Escribe calle y número.' });
+      if (limitar(`geo:${ipDe(req)}`, 40, 15 * 60e3)) return send(res, 429, { error: 'Demasiadas búsquedas. Marca tu ubicación en el mapa.' });
+      const r = await geocodificar(local, q);
+      return r ? send(res, 200, r) : send(res, 503, { error: 'El buscador de direcciones no responde. Marca tu ubicación en el mapa.' });
+    }
     if (m === 'POST' && parts[2] === 'pedidos') {
       if (limitar(`pedido:${ipDe(req)}`, 15, 15 * 60e3)) return send(res, 429, { error: 'Demasiados pedidos seguidos. Espera unos minutos o llama al local.' });
       const r = crearPedido(local, await readJson(req));

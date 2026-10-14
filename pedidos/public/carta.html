@@ -81,7 +81,16 @@
         <button type="button" data-mod="despacho" aria-pressed="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
       </div>
       <p class="desp-info" id="despInfo" hidden></p>
-      <div class="field" id="dirBox" hidden><label for="direccion">Dirección de despacho</label><input id="direccion" autocomplete="street-address" placeholder="Calle, número, depto"><div class="err" id="e-direccion"></div></div>
+      <div class="field" id="dirBox" hidden><label for="direccion">Dirección de despacho</label>
+        <div class="geo-row"><input id="direccion" autocomplete="street-address" placeholder="Calle y número, ej: Freire 145"><button type="button" class="ghost" id="geoBuscar" hidden>Buscar</button></div>
+        <div class="err" id="e-direccion"></div>
+        <div id="geoBox" hidden>
+          <button type="button" class="link geo-yo" id="geoYo">📍 Usar mi ubicación actual</button>
+          <div class="geo-res" id="geoRes"></div>
+          <div class="geo-mapa-w" id="geoMapaW" hidden><div class="geo-mapa" id="geoMapa" aria-label="Mapa: mueve el mapa para dejar el pin en tu puerta"></div><span class="geo-pin" aria-hidden="true">📍</span></div>
+          <p class="geo-info" id="geoInfo" aria-live="polite"></p>
+          <input id="dirRef" class="geo-ref" maxlength="80" placeholder="Depto, block o referencia (opcional)" autocomplete="address-line2">
+        </div></div>
       <div class="field"><label for="franja">¿Para cuándo?</label><select id="franja"></select></div>
     </fieldset>
 
@@ -116,6 +125,7 @@
 
 <script type="module">
 import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
+import * as H from './hex.js';
 const $ = (id) => document.getElementById(id);
 const slug = location.pathname.split('/').filter(Boolean).pop();
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -360,15 +370,76 @@ $('lines').onclick = (e) => {
 // El despacho tiene su propio horario: con despacho solo se ofrecen las franjas que lo permiten.
 const D = () => M.local.despacho || { activo: false };
 const hayDespacho = () => D().activo && !!F && (F.despacho_ya || F.slots.some((s) => s.despacho && s.disponible));
-const costoDespacho = () => (modalidad === 'despacho' ? D().costo : 0);
+// Despacho por zonas: el costo depende de dónde está el cliente (hexágono del mapa).
+const porZonas = () => D().modo === 'zonas' && !!M.local.ubicacion;
+let ubic = null, cot = null;
+const costoDespacho = () => (modalidad !== 'despacho' ? 0 : porZonas() ? (cot?.ok ? cot.costo : 0) : D().costo);
 function pintarTotales() {
   const c = costoDespacho(), sub = total(), falta = modalidad === 'despacho' ? D().minimo - sub : 0;
+  const zonaMala = modalidad === 'despacho' && porZonas() && cot && !cot.ok;
   $('despLinea').hidden = modalidad !== 'despacho';
-  $('despCosto').textContent = c ? clp(c) : 'Gratis';
+  $('despCosto').textContent = porZonas() && !cot ? 'Según tu dirección' : zonaMala ? '—' : c ? clp(c) : 'Gratis';
   $('ckTotal').textContent = clp(sub + c); $('enviarTotal').textContent = clp(sub + c);
-  $('enviar').disabled = falta > 0;
-  $('formErr').textContent = falta > 0 ? `Te faltan ${clp(falta)} para el mínimo de despacho (${clp(D().minimo)}).` : $('formErr').textContent.startsWith('Te faltan') ? '' : $('formErr').textContent;
+  $('enviar').disabled = falta > 0 || zonaMala;
+  const msg = zonaMala ? 'Tu dirección está fuera de la zona de despacho. Puedes elegir retiro.' : falta > 0 ? `Te faltan ${clp(falta)} para el mínimo de despacho (${clp(D().minimo)}).` : '';
+  const auto = /^(Te faltan|Tu dirección está fuera)/.test($('formErr').textContent);
+  if (msg || auto) $('formErr').textContent = msg;
 }
+// ---------- ubicación del cliente (mapa con pin fijo al centro, como las apps de delivery) ----------
+let geoMapa = null;
+function cargarLeaflet() {
+  if (window.L) return Promise.resolve();
+  return new Promise((ok, mal) => {
+    const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: `${BASE}/leaflet.css` }); document.head.append(css);
+    const js = Object.assign(document.createElement('script'), { src: `${BASE}/leaflet.js`, onload: ok, onerror: mal }); document.head.append(js);
+  });
+}
+async function mostrarMapa(lat, lng) {
+  await cargarLeaflet();
+  $('geoMapaW').hidden = false;
+  if (!geoMapa) {
+    geoMapa = L.map('geoMapa', { zoomControl: false, attributionControl: true }).setView([lat, lng], 17);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(geoMapa);
+    geoMapa.on('moveend', () => { const c = geoMapa.getCenter(); fijarUbic(c.lat, c.lng); });
+  } else geoMapa.setView([lat, lng], 17);
+  setTimeout(() => geoMapa.invalidateSize(), 30);
+  fijarUbic(lat, lng);
+}
+function fijarUbic(lat, lng) {
+  ubic = { lat, lng };
+  cot = H.cotizar(D(), M.local.ubicacion, lat, lng);
+  const km = (m) => `${(m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km`;
+  $('geoInfo').className = `geo-info ${cot.ok ? 'ok' : 'mal'}`;
+  $('geoInfo').innerHTML = cot.ok ? `<b>Despacho ${cot.costo ? clp(cot.costo) : 'gratis'}</b> · a ${km(cot.distancia)} del local. Mueve el mapa para dejar el pin justo en tu puerta.`
+    : `<b>No despachamos a este punto</b>${cot.motivo === 'lejos' ? ` (a ${km(cot.distancia)})` : ''}. Revisa la dirección o elige retiro.`;
+  $('e-direccion').textContent = '';
+  pintarTotales();
+}
+async function buscarDireccion() {
+  const q = $('direccion').value.trim();
+  if (q.length < 4) { $('e-direccion').textContent = 'Escribe calle y número.'; return; }
+  $('geoBuscar').disabled = true; $('geoBuscar').textContent = 'Buscando…'; $('geoRes').innerHTML = '';
+  try {
+    const r = await api(`locales/${slug}/geo?q=${encodeURIComponent(q)}`);
+    if (!r.length) { $('e-direccion').textContent = 'No encontramos esa dirección. Prueba con la comuna (ej: Freire 145, Concepción) o usa tu ubicación.'; await mostrarMapa(M.local.ubicacion.lat, M.local.ubicacion.lng); $('geoInfo').textContent = 'Mueve el mapa hasta tu puerta.'; }
+    else {
+      await mostrarMapa(r[0].lat, r[0].lng);
+      if (r.length > 1) $('geoRes').innerHTML = `<span>¿Es otra?</span>${r.slice(1, 4).map((x, i) => `<button type="button" data-geo="${i + 1}">${esc(x.nombre.split(',').slice(0, 3).join(','))}</button>`).join('')}`;
+      $('geoRes').onclick = (e) => { const b = e.target.closest('[data-geo]'); if (b) { const x = r[b.dataset.geo]; mostrarMapa(x.lat, x.lng); $('geoRes').innerHTML = ''; } };
+    }
+  } catch (e) { $('e-direccion').textContent = e.message; if (M.local.ubicacion) await mostrarMapa(M.local.ubicacion.lat, M.local.ubicacion.lng); }
+  $('geoBuscar').disabled = false; $('geoBuscar').textContent = 'Buscar';
+}
+$('geoBuscar').onclick = buscarDireccion;
+$('direccion').addEventListener('keydown', (e) => { if (e.key === 'Enter' && porZonas() && modalidad === 'despacho') { e.preventDefault(); buscarDireccion(); } });
+$('direccion').addEventListener('input', () => { if (porZonas()) $('geoBuscar').classList.toggle('fuerte', true); });
+$('geoYo').onclick = () => {
+  if (!navigator.geolocation) return;
+  $('geoYo').textContent = '📍 Buscando tu ubicación…';
+  navigator.geolocation.getCurrentPosition((p) => { $('geoYo').textContent = '📍 Usar mi ubicación actual'; mostrarMapa(p.coords.latitude, p.coords.longitude); },
+    () => { $('geoYo').textContent = '📍 Usar mi ubicación actual'; $('e-direccion').textContent = 'No pudimos obtener tu ubicación. Escribe la dirección y toca Buscar.'; },
+    { enableHighAccuracy: true, timeout: 10000 });
+};
 function pintarFranjas() {
   const f = F || { abierto: true, slots: [] }, desp = modalidad === 'despacho', ops = [];
   if (f.abierto && (!desp || f.despacho_ya)) ops.push('<option>Lo antes posible</option>');
@@ -391,7 +462,9 @@ function pintarModalidad() {
   bd.innerHTML = `${ico('bike')}${ok ? 'Despacho' : 'Despacho <small>no disponible ahora</small>'}`;
   document.querySelectorAll('[data-mod]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.mod === modalidad));
   $('dirBox').hidden = modalidad !== 'despacho';
-  const info = [d.costo ? `Despacho ${clp(d.costo)}` : 'Despacho gratis', d.minimo ? `pedido mínimo ${clp(d.minimo)}` : '',
+  $('geoBox').hidden = $('geoBuscar').hidden = !porZonas();
+  const desde = porZonas() ? Math.min(...(d.tramos || []).map((t) => t.costo)) : 0;
+  const info = [porZonas() ? `Despacho desde ${clp(desde)} según la distancia` : d.costo ? `Despacho ${clp(d.costo)}` : 'Despacho gratis', d.minimo ? `pedido mínimo ${clp(d.minimo)}` : '',
     rangoDespacho() ? `hoy de ${rangoDespacho()}` : '', d.zona ? `zona: ${esc(d.zona)}` : ''].filter(Boolean).join(' · ');
   $('despInfo').hidden = !d.activo || modalidad !== 'despacho';
   $('despInfo').innerHTML = info;
@@ -411,7 +484,7 @@ function validar() {
   const errs = {
     cliente: $('cliente').value.trim() ? '' : 'Escribe tu nombre para llamarte al entregar.',
     telefono: $('telefono').value.replace(/\D/g, '').length >= 8 ? '' : 'Escribe un celular válido, ej. +56 9 1234 5678.',
-    direccion: modalidad === 'despacho' && !$('direccion').value.trim() ? 'Indica dónde despachamos.' : '',
+    direccion: modalidad !== 'despacho' ? '' : !$('direccion').value.trim() ? 'Indica dónde despachamos.' : porZonas() && !ubic ? 'Toca Buscar o usa tu ubicación para confirmar dónde entregamos.' : '',
   };
   for (const [k, v] of Object.entries(errs)) { $('e-' + k).textContent = v; $(k).setAttribute('aria-invalid', !!v); }
   const first = Object.keys(errs).find((k) => errs[k]);
@@ -425,7 +498,8 @@ $('enviar').onclick = async () => {
   $('enviar').disabled = true; $('enviar').firstElementChild.textContent = 'Enviando…';
   try {
     const r = await api(`locales/${slug}/pedidos`, { method: 'POST', body: {
-      items: carro, franja: $('franja').value, modalidad, direccion: $('direccion').value,
+      items: carro, franja: $('franja').value, modalidad,
+      direccion: [$('direccion').value.trim(), $('dirRef').value.trim()].filter(Boolean).join(' · '), ubicacion: modalidad === 'despacho' && porZonas() ? ubic : undefined,
       cliente: $('cliente').value, telefono: $('telefono').value, notas: $('notas').value,
     } });
     $('dlgCarro').close();

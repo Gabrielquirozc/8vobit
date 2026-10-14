@@ -48,12 +48,25 @@ y el seguimiento), Instagram, dirección, horario por día (días
 cerrados; misma hora de apertura y cierre = 24 h), cupo de pedidos por franja y datos
 para transferencia, que el cliente ve al pagar y en el seguimiento.
 
-**Despacho** (Datos del local → Despacho): se enciende o apaga, con costo, pedido mínimo, zona
-(texto que ve el cliente) y **horario propio por día**, que puede ser distinto del de atención
-(ej. solo viernes y sábado de 19:00 a 23:00). En la carta, con "Despacho" solo se ofrecen las
-franjas dentro de ese horario; si hoy no hay, el botón aparece como "no disponible ahora". El
-servidor valida todo de nuevo y suma el costo al total; la comanda, la tarjeta del pedido y el
-seguimiento muestran el despacho por separado. Sin configurar, la carta ofrece solo retiro.
+**Despacho** (pestaña propia del panel): encendido/apagado, pedido mínimo, texto de zona, **horario
+propio por día** y cómo se cobra:
+- *Precio único*: el mismo costo a cualquier dirección.
+- *Por zonas en el mapa* (como Uber): la comuna se divide en **hexágonos** (chicos ≈ 500 m, medianos
+  ≈ 800 m, grandes ≈ 1,2 km). Cada hexágono toma el precio del **tramo de distancia** en que cae su
+  centro (ej. hasta 1,5 km $1.500, hasta 3 km $2.000, hasta 5 km $2.800) y el dueño puede **tocar un
+  hexágono** para darle otro precio o **bloquearlo**. El pin del local se arrastra si no está en su
+  lugar, y "Probar una dirección" muestra cuánto pagaría un cliente.
+
+En la carta, con despacho por zonas, el cliente escribe su dirección y toca *Buscar* (o *Usar mi
+ubicación*), ajusta el pin moviendo el mapa y ve al tiro el costo o "No despachamos a este punto".
+El servidor recalcula el costo con la ubicación (no confía en el navegador) y guarda las coordenadas:
+la tarjeta del pedido trae *Ver en el mapa* (Google Maps, para el repartidor) y la distancia.
+
+Mapa: OpenStreetMap con [Leaflet](https://leafletjs.com) incluido en `public/` (BSD-2). Las
+direcciones se buscan con Nominatim (OpenStreetMap) **a través del servidor**: con caché de 30 días,
+una consulta por segundo como pide su política, búsqueda por calle + número + comuna y resultados de
+la comuna del local primero. Si no responde, el cliente igual puede marcar su ubicación en el mapa.
+La grilla de hexágonos es propia (`public/hex.js`), la misma en el servidor y en el navegador.
 
 **Pausar pedidos web** (botón en la barra superior): la carta avisa "Pedidos en línea
 pausados" y no deja agregar; el mostrador sigue funcionando.
@@ -132,7 +145,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 42 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 43 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

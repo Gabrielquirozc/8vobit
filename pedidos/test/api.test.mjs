@@ -573,6 +573,44 @@ test('ingredientes y salsas: agregar, renombrar y quitar de la lista', async () 
   assert.deepEqual((await req('GET', `/api/panel/pedidos/${okp.body.id}`)).body.items[0].agregados, ['Pimentón asado', 'Palta']);
 });
 
+test('despacho por zonas: hexágonos con precio por distancia, ajustes y bloqueos', async () => {
+  await login();
+  const H = await import('../public/hex.js');
+  const m0 = await menu(), o = m0.local.ubicacion;
+  assert.ok(o && Math.abs(o.lat + 36.82) < 0.01);
+  const dias = Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']]));
+  const tam = 400, tramos = [{ hasta: 1500, costo: 1500 }, { hasta: 3000, costo: 2200 }];
+  const lejos = H.centro(o, tam, 3, 0), bloq = H.centro(o, tam, 0, 1), fuera = H.centro(o, tam, 12, 0);
+  const conf = { activo: true, costo: 999, minimo: 0, horario: dias, modo: 'zonas', tam, tramos, ajustes: { '0,1': null, '-1,0': 900 } };
+  assert.equal((await req('PATCH', '/api/panel/local', { despacho: conf })).status, 200);
+  const cot = async (p) => (await req('POST', '/api/locales/gassuso/cotizar', p)).body;
+  assert.equal((await cot(o)).costo, 1500);
+  assert.equal((await cot(lejos)).costo, 2200);
+  assert.equal((await cot(bloq)).motivo, 'bloqueado');
+  assert.equal((await cot(fuera)).motivo, 'lejos');
+  assert.equal((await cot(H.centro(o, tam, -1, 0))).costo, 900);
+  assert.equal((await cot({ lat: 'x' })).motivo, 'sin_ubicacion');
+  // el pedido cobra lo que dice la zona, no lo que mande el navegador
+  const ch = await prod('Chacarero');
+  const pd = (u, extra = {}) => pedir([{ producto_id: ch.id }], { modalidad: 'despacho', direccion: 'Freire 145', ubicacion: u, costo_despacho: 0, ...extra });
+  const r = await pd(lejos);
+  assert.equal(r.status, 201);
+  assert.equal(r.body.total, ch.precio + 2200);
+  const det = (await req('GET', `/api/panel/pedidos/${r.body.id}`)).body;
+  assert.equal(det.costo_despacho, 2200); assert.ok(Math.abs(det.lat - lejos.lat) < 1e-9 && det.distancia_m > 1500);
+  assert.match((await pd(undefined)).body.error, /mapa/);
+  assert.match((await pd(bloq)).body.error, /fuera de la zona/);
+  assert.equal((await pd(fuera)).status, 400);
+  // validaciones de la configuración y ubicación del local
+  for (const malo of [{ ...conf, tramos: [] }, { ...conf, tramos: [{ hasta: 50, costo: 1 }] }, { ...conf, tam: 50 }, { ...conf, ajustes: { 'x': 1 } }, { ...conf, tramos: [{ hasta: 900, costo: 1 }, { hasta: 900, costo: 2 }] }])
+    assert.equal((await req('PATCH', '/api/panel/local', { despacho: malo })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { ubicacion: { lat: 40, lng: -3 } })).status, 400);
+  // la búsqueda de direcciones exige algo que buscar
+  assert.equal((await req('GET', '/api/locales/gassuso/geo?q=ab')).status, 400);
+  // vuelve al despacho fijo para el resto de las pruebas
+  await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

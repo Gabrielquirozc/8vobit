@@ -6,6 +6,8 @@
     "whatsapp": "56944562421",
     "telefono": "56984506842",
     "direccion": "Janequeo 507, Concepción",
+    "lat": -36.8224744,
+    "lng": -73.0413061,
     "modo_boleta": 2,
     "horario": {
       "1": [

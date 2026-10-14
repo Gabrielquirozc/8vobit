@@ -34,7 +34,7 @@ try {
     <div>Hora:   ${p.creado.slice(0, 16)}</div>
     <div>Franja: ${esc(p.franja)}</div>
     <div>${p.modalidad === 'despacho' ? 'DESPACHO' : 'RETIRO'}</div>
-    ${p.direccion ? `<div>${esc(p.direccion)}</div>` : ''}
+    ${p.direccion ? `<div>${esc(p.direccion)}${p.distancia_m ? ` (${(p.distancia_m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km)` : ''}</div>` : ''}
     <div>${esc(p.cliente)} ${esc(p.telefono)}</div><hr>
     ${p.items.map((i) => `<div class="it"><span class="q">${i.cantidad}x</span><span class="n">${esc(i.nombre)}</span></div>
       ${i.agregados.map((a) => `<div class="ag">+ ${esc(a)}</div>`).join('')}
