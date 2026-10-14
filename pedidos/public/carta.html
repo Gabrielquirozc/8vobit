@@ -492,6 +492,8 @@ function validar() {
   return !first;
 }
 for (const k of ['cliente', 'telefono', 'direccion']) $(k).addEventListener('blur', () => $(k).getAttribute('aria-invalid') === 'true' && validar());
+// El celular se ordena solo (9 dígitos → +56 9 …), igual que en el panel.
+$('telefono').addEventListener('blur', (e) => { const d = e.target.value.replace(/\D/g, ''); if (d.length === 9 && d[0] === '9') e.target.value = fmtTel('56' + d); else if (/^569\d{8}$/.test(d)) e.target.value = fmtTel(d); });
 $('enviar').onclick = async () => {
   $('formErr').textContent = '';
   if (!validar()) return;

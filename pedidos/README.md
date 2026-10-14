@@ -30,7 +30,7 @@ Cada pedido avanza con **un solo botón grande por paso**:
 comanda y nombre para llamar. Así la caja cuadra con todo el negocio, no solo
 con los pedidos web.
 
-**Caja del día**: cobrado total, efectivo en caja, por medio de pago, por canal
+**Caja del día** (con ‹ › para revisar días anteriores; los folios de boleta se escriben en la misma tabla, Enter guarda y pasa al siguiente): cobrado total, efectivo en caja, por medio de pago, por canal
 (web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
 (con registro de folio) y detalle imprimible.
 

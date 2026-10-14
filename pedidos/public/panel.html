@@ -96,6 +96,9 @@
   /* caja y carta */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .kpis div { background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); color: var(--ink-2); font-size: .9rem; }
+  .kpis .sub { display: block; font-size: .8rem; margin-top: 2px; }
+  .folio-f { display: flex; gap: 6px; } .folio-f input { width: 140px; min-height: 40px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  .folio-f .ghostb { min-height: 40px; }
   .kpis b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
   table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
   td, th { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: .93rem; }
@@ -426,7 +429,7 @@
       <button type="button" data-medio="otro" aria-pressed="false"><svg class="ico"><use href="#i-dots"/></svg>Otro</button>
     </div>
     <div id="efBox" hidden>
-      <div class="field"><label for="recibido">Recibido</label><input id="recibido" type="number" inputmode="numeric" min="0" step="100"></div>
+      <div class="field"><label for="recibido">Recibido</label><div class="money"><span aria-hidden="true">$</span><input id="recibido" inputmode="numeric" autocomplete="off" placeholder="0"></div></div>
       <div class="rapidos" id="rapidos"></div>
       <div class="vuelto num" id="vuelto" aria-live="polite"></div>
     </div>
@@ -541,8 +544,9 @@ async function refrescar() {
   if (conocidos && D.pedidos.some((p) => !conocidos.has(p.id) && p.canal !== 'mostrador')) beep();
   conocidos = ids;
   if (vista === 'pedidos' && !document.querySelector('dialog[open]')) pintarPedidos();
-  if (vista === 'cierre') pintarCierre();
+  if (vista === 'cierre' && !cajaDia && !$('v-cierre').contains(document.activeElement)) pintarCierre();
 }
+const DD = () => D;
 const patch = (id, body) => api(`panel/pedidos/${id}`, { method: 'PATCH', body });
 const comanda = (id) => window.open(`comanda?id=${id}&auto`, '_blank', 'width=420,height=640');
 $('v-pedidos').onclick = async (e) => {
@@ -585,10 +589,10 @@ document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
   if (cobro.medio === 'efectivo') $('recibido').focus();
   calcVuelto();
 });
-$('rapidos').onclick = (e) => { const r = e.target.closest('[data-r]'); if (r) { $('recibido').value = r.dataset.r; calcVuelto(); } };
+$('rapidos').onclick = (e) => { const r = e.target.closest('[data-r]'); if (r) { $('recibido').value = Number(r.dataset.r).toLocaleString('es-CL'); calcVuelto(); } };
 $('recibido').oninput = calcVuelto;
 function calcVuelto() {
-  const ef = cobro.medio === 'efectivo', rec = Number($('recibido').value);
+  const ef = cobro.medio === 'efectivo', rec = digitos($('recibido').value);
   const falta = ef && rec < cobro.total;
   $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(cobro.total - rec)}` : `Vuelto ${clp(rec - cobro.total)}`;
   $('cobOk').disabled = !cobro.medio || (ef && (!rec || falta));
@@ -596,11 +600,11 @@ function calcVuelto() {
 $('cobOk').onclick = async () => {
   $('cobOk').disabled = true;
   try {
-    const body = { medio_pago: cobro.medio, recibido: Number($('recibido').value) || undefined };
+    const body = { medio_pago: cobro.medio, recibido: digitos($('recibido').value) || undefined };
     if (D.modo_boleta === 2 && $('folio').value.trim()) body.folio_boleta = $('folio').value;
     const r = await cobro.enviar(body);
     $('dlgCobro').close();
-    const vuelto = cobro.medio === 'efectivo' ? Number($('recibido').value) - cobro.total : 0;
+    const vuelto = cobro.medio === 'efectivo' ? digitos($('recibido').value) - cobro.total : 0;
     toast(vuelto > 0 ? `Cobrado ${clp(cobro.total)} · vuelto ${clp(vuelto)}` : `Cobrado ${clp(cobro.total)}`);
     await refrescar();
   } catch (err) { $('cobErr').textContent = err.message; $('cobOk').disabled = false; }
@@ -695,23 +699,38 @@ $('vcobrar').onclick = () => {
 };
 
 // ---------- caja del día ----------
+// Hoy se actualiza solo con el resto del panel; con ‹ › se revisa la caja de días anteriores.
+let cajaDia = null, cajaD = null;
+const fechaLarga = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+const otroDia = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+async function irCaja(dia) {
+  cajaDia = dia && dia !== D.dia ? dia : null;
+  cajaD = cajaDia ? await api(`panel/pedidos?dia=${cajaDia}`) : null;
+  pintarCierre();
+}
 function pintarCierre() {
+  const D = cajaD || DD();
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
   const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado);
   const suma = (l) => l.reduce((s, p) => s + p.total, 0), total = suma(cobrados);
-  const porMedio = Object.keys(MEDIO).map((m) => { const ps = cobrados.filter((p) => p.medio_pago === m); return [MEDIO[m], ps.length, suma(ps)]; });
+  const porMedio = Object.keys(MEDIO).map((m) => { const ps = cobrados.filter((p) => p.medio_pago === m); return [MEDIO[m], ps.length, suma(ps)]; }).filter(([n, c]) => c || n !== 'Otro');
   const porCanal = [['Pedidos web', 'web'], ['Mostrador', 'mostrador']].map(([n, k]) => { const ps = cobrados.filter((p) => (p.canal || 'web') === k); return [n, ps.length, suma(ps)]; });
   const efectivo = cobrados.filter((p) => p.medio_pago === 'efectivo');
   const sinFolio = cobrados.filter((p) => !p.folio_boleta);
   const tabla = (filas) => `<table><tr><th></th><th class="r">Ventas</th><th class="r">Monto</th></tr>${filas.map(([n, c, s]) => `<tr><td>${n}</td><td class="r">${c}</td><td class="r">${clp(s)}</td></tr>`).join('')}<tr><th>Total</th><th class="r">${cobrados.length}</th><th class="r">${clp(total)}</th></tr></table>`;
   $('v-cierre').innerHTML = `
-    <div class="between noprint" style="display:flex;justify-content:space-between;align-items:center"><h2 class="t">Caja del ${esc(D.dia)}</h2><button class="ghost" data-print style="display:inline-flex;align-items:center;gap:6px">${ico('printer')}Imprimir cierre</button></div>
+    <div class="res-head"><div style="display:flex;align-items:center;gap:8px">
+        <button class="ghost ico-b noprint" data-caja="-1" aria-label="Día anterior">${ico('left')}</button>
+        <h2 class="t" style="margin:0">${cajaDia ? 'Caja del' : 'Caja de hoy ·'} ${esc(fechaLarga(D.dia))}</h2>
+        <button class="ghost ico-b noprint" data-caja="1" aria-label="Día siguiente" ${cajaDia ? '' : 'disabled'}>${ico('right')}</button>
+        ${cajaDia ? '<button class="ghostb noprint" data-caja="hoy">Volver a hoy</button>' : ''}</div>
+      <button class="ghost noprint" data-print style="display:inline-flex;align-items:center;gap:6px;width:auto">${ico('printer')}Imprimir cierre</button></div>
     <div class="kpis">
       <div>Cobrado<b class="num">${clp(total)}</b></div>
       <div>Efectivo en caja<b class="num">${clp(suma(efectivo))}</b></div>
       <div>Ventas<b class="num">${cobrados.length}</b></div>
       <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
-      <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b></div>
+      <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b><span class="sub">${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos</span></div>
       <div>Anulados<b class="num">${D.pedidos.length - ok.length}</b></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
@@ -719,19 +738,33 @@ function pintarCierre() {
       <div><h3>Por canal</h3>${tabla(porCanal)}</div>
     </div>
     ${D.modo_boleta === 2 ? `<h3>Boletas por emitir (${sinFolio.length})</h3>
-      ${sinFolio.length ? `<table><tr><th>#</th><th>Cliente</th><th class="r">Monto</th><th class="noprint"></th></tr>${sinFolio.map((p) =>
-        `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td class="r">${clp(p.total)}</td><td class="r noprint"><button class="mini-btn" data-folio="${p.id}">Registrar folio</button></td></tr>`).join('')}</table>`
+      ${sinFolio.length ? `<p class="ayuda noprint" style="margin:-4px 0 8px">Emite la e-Boleta en el SII y escribe aquí su folio (Enter guarda y pasa a la siguiente).</p>
+        <table class="folios"><tr><th>#</th><th>Cliente</th><th>Medio</th><th class="r">Monto</th><th class="noprint">Folio</th></tr>${sinFolio.map((p) =>
+        `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td>${MEDIO[p.medio_pago] || ''}</td><td class="r">${clp(p.total)}</td>
+          <td class="noprint"><form class="folio-f" data-folio="${p.id}"><input inputmode="numeric" placeholder="N° de folio" aria-label="Folio de la venta ${p.numero}" maxlength="20"><button class="ghostb fuerte">Guardar</button></form></td></tr>`).join('')}</table>`
         : '<p style="color:var(--ink-2)">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
     <h3>Detalle</h3>
     <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
     ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
 }
-$('v-cierre').onclick = async (e) => {
-  const b = e.target.closest('[data-folio]'); if (!b) return;
-  const f = prompt('Folio de la boleta emitida en el SII:'); if (!f) return;
-  await patch(b.dataset.folio, { folio_boleta: f }); refrescar();
+$('v-cierre').onclick = (e) => {
+  const b = e.target.closest('[data-caja]'); if (!b) return;
+  const D = cajaD || DD();
+  irCaja(b.dataset.caja === 'hoy' ? null : otroDia(D.dia, Number(b.dataset.caja)));
 };
+$('v-cierre').addEventListener('submit', async (e) => {
+  const f = e.target.closest('[data-folio]'); if (!f) return;
+  e.preventDefault();
+  const v = f.querySelector('input').value.trim(); if (!v) return f.querySelector('input').focus();
+  try {
+    await patch(f.dataset.folio, { folio_boleta: v }); toast(`✓ Folio ${v} guardado`);
+    const sig = f.closest('tr').nextElementSibling?.querySelector('input')?.getAttribute('aria-label');
+    document.activeElement?.blur();
+    if (cajaDia) await irCaja(cajaDia); else { await refrescar(); pintarCierre(); }
+    if (sig) $('v-cierre').querySelector(`[aria-label="${sig}"]`)?.focus();
+  } catch (err) { alert(err.message); }
+});
 
 // ---------- carta y precios ----------
 // Pensado para que el dueño ingrese y corrija datos rápido desde la tablet: buscador y
@@ -1482,7 +1515,7 @@ async function pintarResumen() {
       <div class="destacado"><span class="k">6 · Comisión ahorrada</span><b class="num">${clp(s.comision_ahorrada)}</b><span class="sub">${s.canal.web.pedidos} pedidos directos × ${s.comision_app}% que cobraría la app</span></div>
     </div>
     ${s.despachos?.pedidos ? `<p class="extra-sug"><b>Despacho:</b> ${s.despachos.pedidos} pedido${s.despachos.pedidos > 1 ? 's' : ''} · cobrado <span class="num">${clp(s.despachos.cobrado)}</span>${s.despachos.con_costo
-      ? ` · costo estimado del viaje <span class="num">${clp(s.despachos.costo)}</span> · <b style="color:${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'var(--ok)' : 'var(--danger)'}">${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'quedan' : 'faltan'} ${clp(Math.abs(s.despachos.cobrado_con_costo - s.despachos.costo))}</b>` : ''}${s.despachos.km ? ` · ${s.despachos.km.toLocaleString('es-CL')} km en línea recta` : ''}.</p>` : ''}
+      ? ` · costo estimado del viaje <span class="num">${clp(s.despachos.costo)}</span> · <b style="color:${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'var(--ok)' : 'var(--danger)'}">${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'quedan' : 'faltan'} ${clp(Math.abs(s.despachos.cobrado_con_costo - s.despachos.costo))}</b>` : ''}${s.despachos.km ? ` · ${s.despachos.km.toLocaleString('es-CL')} km en línea recta` : ''}.${s.despachos.con_costo ? '' : ' <span class="noprint">Agrega un vehículo en la pestaña Despacho para ver si sale a cuenta.</span>'}</p>` : ''}
     <p class="extra-sug"><b>Venta sugerida:</b> <span class="num">${clp(s.sugeridos.ventas)}</span> en ${s.sugeridos.unidades} producto${s.sugeridos.unidades === 1 ? '' : 's'} agregados desde las sugerencias (papas, bebidas…)${s.ventas ? ` · ${Math.round(s.sugeridos.ventas * 100 / s.ventas)}% de las ventas` : ''}.</p>
     <div class="charts">
       ${barras(s.por_dia, { titulo: 'Ventas por día', etiqueta: (d) => diaCorto(d.dia), valor: (d) => d.ventas, formato: clp })}
@@ -1528,7 +1561,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   else if (vista === 'local') pintarLocal();
   else if (vista === 'despacho') { await cargarCarta(); pintarDespacho(); }
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
-  else refrescar();
+  else { if (vista === 'cierre') { cajaDia = null; cajaD = null; } refrescar(); }
 });
 $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
 
