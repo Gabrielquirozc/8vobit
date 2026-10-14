@@ -312,6 +312,22 @@
   .hexpop small { color: var(--ink-2); }
   .hexbtns { display: grid; gap: 6px; } .hexbtns .primary { min-height: 44px; } .hexbtns .ghostb { justify-content: center; }
   .leaflet-container { font: inherit; }
+  .vrow { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); margin-top: 8px; }
+  .vrow.act { border-color: var(--ink); } .vrow .ve { font-size: 26px; text-align: center; } .vrow small { display: block; color: var(--ink-2); font-size: .82rem; }
+  .vpresets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; } .vpresets span { font-size: .85rem; color: var(--ink-2); font-weight: 600; }
+  .vpresets .ghostb { min-height: 40px; }
+  .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .calc-grid .field { margin-top: 8px; }
+  .ctabla { box-shadow: none; margin-top: 10px; font-size: .88rem; } .ctabla th { font-size: .75rem; color: var(--ink-2); padding: 6px; } .ctabla td { padding: 7px 6px; }
+  .ctabla td small { display: block; color: var(--ink-2); font-size: .75rem; }
+  .ctabla .pos { color: var(--ok); font-weight: 700; } .ctabla .mid { color: #b07b00; font-weight: 700; } .ctabla .neg { color: var(--danger); font-weight: 700; }
+  .calc-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .dvista { margin-top: 2px; } .dvista button { min-height: 40px; font-size: .88rem; }
+  .vh-sec { font: 800 .95rem var(--font-display); margin: 18px 0 0; }
+  .tres-i { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 12px; }
+  .vh-res { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--surface-2); }
+  .vh-res table { box-shadow: none; background: transparent; margin: 6px 0; } .vh-res td { padding: 4px 0; border: 0; font-size: .9rem; } .vh-res small { color: var(--ink-2); }
+  .sh-foot .peligro { color: var(--danger); margin-right: auto; }
+  @media (max-width: 640px) { .tres-i, .calc-grid { grid-template-columns: 1fr; } }
   @media (max-width: 980px) { .dgrid { grid-template-columns: 1fr; } .dmapwrap { position: static; order: -1; } .dmapcard { height: 60dvh; } }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
@@ -434,6 +450,11 @@
   <div class="sh-head"><h2 id="fpTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
   <div class="sh-body" id="fpBody"></div>
   <div class="sh-foot"><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="fpOk"></button></div>
+</dialog>
+<dialog class="sheet ancho" id="dlgVeh" aria-labelledby="vhTitulo">
+  <div class="sh-head"><h2 id="vhTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body" id="vhBody"></div>
+  <div class="sh-foot"><button class="ghost peligro" type="button" id="vhQuitar">Quitar</button><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="vhOk">Listo</button></div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1101,14 +1122,19 @@ addEventListener('beforeunload', (e) => { if ((localSucio && vista === 'local') 
 const COLORES = ['#2b8a3e', '#fab005', '#f76707', '#e03131', '#c2255c', '#862e9c', '#5f3dc4', '#364fc7', '#1864ab', '#0b7285'];
 const TAMS = [[300, 'Chicos', '≈ 500 m de lado a lado'], [450, 'Medianos', '≈ 800 m'], [700, 'Grandes', '≈ 1,2 km']];
 const km = (m) => `${(m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km`;
-let DS = null, dmapa = null, dcapa = null, dpin = null, dprueba = null, despSucio = false;
+let DS = null, dmapa = null, dcapa = null, dpin = null, dprueba = null, despSucio = false, vistaMapa = 'precio';
+const EMOJI_VEH = { moto: '🛵', auto: '🚗', bici: '🚲', otro: '🚚' };
+const vehActual = () => DS.vehiculos.find((v) => v.id === DS.calculo.vehiculo) || DS.vehiculos[0] || null;
+// Costo de llegar a `dist` metros (línea recta) con el vehículo elegido; null si no hay vehículos.
+const costoA = (dist) => { const v = vehActual(); return v ? H.costoViaje(v, DS.calculo, dist) : null; };
 const marcarDespSucio = (on) => { despSucio = on; $('dbar')?.classList.toggle('on', on); };
 const colorDe = (costo) => { const i = DS.tramos.findIndex((t) => t.costo === costo); return i >= 0 ? COLORES[i % COLORES.length] : '#868e96'; };
 function pintarDespacho() {
   const d = M.local.despacho || {}, u = M.local.ubicacion;
   DS = { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {}, modo: d.modo || 'fijo',
     tam: d.tam || 450, tramos: (d.tramos?.length ? d.tramos : [{ hasta: 1500, costo: 1500 }, { hasta: 3000, costo: 2000 }, { hasta: 5000, costo: 2800 }]).map((t) => ({ ...t })),
-    ajustes: { ...(d.ajustes || {}) }, ubicacion: u ? { ...u } : null };
+    ajustes: { ...(d.ajustes || {}) }, ubicacion: u ? { ...u } : null,
+    vehiculos: (d.vehiculos || []).map((x) => ({ ...x })), calculo: { ...H.CALCULO_BASE, ...(d.calculo || {}) } };
   $('v-despacho').innerHTML = `<div class="dgrid">
     <div class="dcol">
       <section class="cardf"><header class="sh"><h3>Despacho</h3><span class="sp"></span>
@@ -1125,6 +1151,22 @@ function pintarDespacho() {
             <p class="ayuda" id="ds-tamayuda"></p></div>
           <p class="ayuda" id="ds-ajustes"></p>
         </div></section>
+      <section class="cardf"><h3>Vehículos y costo del viaje</h3>
+        <p class="ayuda top">Lo que cuesta cada viaje: bencina, mantención y el tiempo del repartidor. Con eso vemos si el despacho sale a cuenta.</p>
+        <div id="ds-vlista"></div>
+        <div class="vpresets"><span>Agregar:</span>${H.VEHICULOS_BASE.map((x) => `<button type="button" class="ghostb" data-vnuevo="${x.tipo}">${EMOJI_VEH[x.tipo]} ${x.nombre}</button>`).join('')}</div></section>
+      <section class="cardf" id="ds-calc"><h3>¿Sale a cuenta?</h3>
+        <div class="calc-grid">
+          <div class="field"><label for="dc-veh">Calcular con</label><select id="dc-veh"></select></div>
+          <div class="field"><label for="dc-factor">Calles</label><select id="dc-factor">
+            <option value="1.25">Centro con cuadras (×1,25)</option><option value="1.35">Ciudad mixta (×1,35)</option><option value="1.5">Cerros, puentes o ríos (×1,5)</option></select></div>
+          <div class="field"><label for="dc-margen">Ganancia sobre el costo</label><div class="kmin"><input id="dc-margen" inputmode="numeric" value="${DS.calculo.margen}"><span>%</span></div></div>
+          <div class="field"><label for="dc-red">Redondear a</label><select id="dc-red">${[10, 50, 100, 500].map((n) => `<option value="${n}" ${DS.calculo.redondeo === n ? 'selected' : ''}>${clp(n)}</option>`).join('')}</select></div>
+        </div>
+        <div class="swl"><label class="sw"><input type="checkbox" id="dc-vuelta" ${DS.calculo.idaVuelta ? 'checked' : ''}><span></span></label><label for="dc-vuelta"><b>Contar la vuelta al local</b><small>El repartidor vuelve vacío: ese recorrido también se paga.</small></label></div>
+        <div id="ds-costos"></div>
+        <div class="calc-btns" id="ds-calcbtns"><button type="button" class="ghostb fuerte" id="ds-usar">Usar precios sugeridos</button><button type="button" class="ghostb" id="ds-proponer">Proponer tramos para mi área</button></div>
+      </section>
       <section class="cardf"><h3>Condiciones</h3>
         <div class="dos"><div class="field"><label for="ds-minimo">Pedido mínimo</label>${dinero('ds-minimo', DS.minimo, 'placeholder="0 = sin mínimo"')}</div>
           <div class="field"><label for="ds-zona">Texto para el cliente</label><input id="ds-zona" maxlength="160" value="${esc(DS.zona)}" placeholder="Ej: Concepción y Talcahuano"></div></div></section>
@@ -1135,6 +1177,7 @@ function pintarDespacho() {
     <div class="dmapwrap"><div class="cardf dmapcard">
       <form class="dbusca" id="ds-busca"><input placeholder="Probar una dirección del cliente, ej: Freire 145" aria-label="Probar una dirección"><button class="ghostb fuerte">${ico('search')}Probar</button></form>
       <div id="dmapa" class="dmapa" role="application" aria-label="Mapa de zonas de despacho"></div>
+      <div class="segn ancho dvista" role="group" aria-label="Qué mostrar en el mapa"><button type="button" data-vista="precio">Precio por sector</button><button type="button" data-vista="ganancia">¿Sale a cuenta?</button></div>
       <div class="dleyenda" id="ds-leyenda"></div>
       <p class="ayuda" id="ds-mapayuda"></p>
     </div></div>
@@ -1166,6 +1209,19 @@ function pintarDespacho() {
   };
   $('ds-descartar').onclick = () => { if (confirm('¿Descartar los cambios del despacho?')) { cargarCarta().then(pintarDespacho); } };
   $('ds-guardar').onclick = guardarDespacho;
+  // vehículos y cálculo
+  const fac = [1.25, 1.35, 1.5].reduce((a, b) => (Math.abs(b - DS.calculo.factor) < Math.abs(a - DS.calculo.factor) ? b : a));
+  $('dc-factor').value = String(fac);
+  $('dc-veh').onchange = (e) => { DS.calculo.vehiculo = e.target.value; pintarCostos(); dibujarZonas(); };
+  $('dc-factor').onchange = (e) => { DS.calculo.factor = Number(e.target.value); pintarCostos(); dibujarZonas(); };
+  $('dc-margen').oninput = (e) => { DS.calculo.margen = Number(e.target.value.replace(/[^\d-]/g, '')) || 0; pintarCostos(); dibujarZonas(); };
+  $('dc-red').onchange = (e) => { DS.calculo.redondeo = Number(e.target.value); pintarCostos(); };
+  $('dc-vuelta').onchange = (e) => { DS.calculo.idaVuelta = e.target.checked; pintarCostos(); dibujarZonas(); };
+  v.querySelectorAll('[data-vnuevo]').forEach((b) => b.onclick = () => abrirVehiculo(null, b.dataset.vnuevo));
+  v.querySelectorAll('[data-vista]').forEach((b) => b.onclick = () => { vistaMapa = b.dataset.vista; v.querySelectorAll('[data-vista]').forEach((x) => x.setAttribute('aria-pressed', x === b)); dibujarZonas(); });
+  v.querySelector(`[data-vista="${vistaMapa}"]`).setAttribute('aria-pressed', 'true');
+  $('ds-usar').onclick = usarSugeridos; $('ds-proponer').onclick = proponerTramos;
+  pintarVehiculos();
   pintarTramos(); pintarModoDesp(); pintarEstadoDesp();
   iniciarMapa();
 }
@@ -1183,7 +1239,7 @@ function pintarModoDesp() {
   $('ds-ajustes').innerHTML = n ? `${n} sector${n > 1 ? 'es' : ''} ajustado${n > 1 ? 's' : ''} a mano${nb ? ` (${nb} bloqueado${nb > 1 ? 's' : ''})` : ''}. <button type="button" class="link" id="ds-limpiar">Quitar ajustes</button>` : 'Toca un sector del mapa para cambiarle el precio o bloquearlo.';
   $('ds-limpiar')?.addEventListener('click', () => { if (confirm('¿Quitar todos los ajustes hechos a mano?')) { DS.ajustes = {}; marcarDespSucio(true); pintarModoDesp(); dibujarZonas(); } });
   $('ds-mapayuda').textContent = DS.modo === 'zonas' ? 'Toca un sector para cambiar su precio o bloquearlo. Arrastra el pin del local si no está en su lugar.' : 'Con precio único no se usan zonas: cualquier dirección paga lo mismo. Arrastra el pin si el local no está en su lugar.';
-  pintarEstadoDesp(); dibujarZonas();
+  pintarEstadoDesp(); pintarCostos(); dibujarZonas();
 }
 function pintarTramos() {
   $('ds-tramos').innerHTML = `<div class="tramo th"><span></span><span>Hasta</span><span>Cuesta</span><span></span></div>` + DS.tramos.map((t, i) => `<div class="tramo">
@@ -1194,10 +1250,10 @@ function pintarTramos() {
   $('ds-tramos').querySelectorAll('[data-thasta]').forEach((inp) => inp.onchange = () => {
     const n = Math.round(Number(inp.value.replace(',', '.')) * 1000);
     if (!(n >= 100)) { inp.value = (DS.tramos[inp.dataset.thasta].hasta / 1000).toLocaleString('es-CL'); return; }
-    DS.tramos[inp.dataset.thasta].hasta = n; DS.tramos.sort((a, b) => a.hasta - b.hasta); pintarTramos(); pintarEstadoDesp(); dibujarZonas();
+    DS.tramos[inp.dataset.thasta].hasta = n; DS.tramos.sort((a, b) => a.hasta - b.hasta); pintarTramos(); pintarEstadoDesp(); pintarCostos(); dibujarZonas();
   });
-  $('ds-tramos').querySelectorAll('[data-tcosto]').forEach((inp) => inp.onchange = () => { DS.tramos[inp.dataset.tcosto].costo = digitos(inp.value); pintarEstadoDesp(); dibujarZonas(); });
-  $('ds-tramos').querySelectorAll('[data-tquitar]').forEach((b) => b.onclick = () => { DS.tramos.splice(Number(b.dataset.tquitar), 1); marcarDespSucio(true); pintarTramos(); pintarEstadoDesp(); dibujarZonas(); });
+  $('ds-tramos').querySelectorAll('[data-tcosto]').forEach((inp) => inp.onchange = () => { DS.tramos[inp.dataset.tcosto].costo = digitos(inp.value); pintarEstadoDesp(); pintarCostos(); dibujarZonas(); });
+  $('ds-tramos').querySelectorAll('[data-tquitar]').forEach((b) => b.onclick = () => { DS.tramos.splice(Number(b.dataset.tquitar), 1); marcarDespSucio(true); pintarTramos(); pintarEstadoDesp(); pintarCostos(); dibujarZonas(); });
 }
 function iniciarMapa() {
   if (dmapa) { dmapa.remove(); dmapa = null; }
@@ -1223,12 +1279,20 @@ function dibujarZonas(encuadrar = false) {
   for (const h of z) {
     const verts = H.vertices(o, DS.tam, h.q, h.r).map((p) => [p.lat, p.lng]); puntos.push(...verts);
     const bloq = !h.ok && h.motivo === 'bloqueado', fuera = !h.ok && !bloq;
+    // "¿Sale a cuenta?": verde si el precio deja la ganancia pedida, amarillo si solo cubre el costo, rojo si pierde.
+    const cv = h.ok ? costoA(h.distancia) : null, gana = cv ? h.costo - cv.total : null;
+    const colG = gana == null ? '#adb5bd' : gana >= cv.total * (DS.calculo.margen / 100) ? '#2b8a3e' : gana >= 0 ? '#fab005' : '#e03131';
+    const fill = fuera ? '#adb5bd' : bloq ? '#343a40' : vistaMapa === 'ganancia' ? colG : colorDe(h.costo);
     const pol = L.polygon(verts, { color: bloq ? '#495057' : '#ffffff', weight: h.ajustado || bloq ? 2 : 1, dashArray: h.ajustado || bloq ? '4 3' : null,
-      fillColor: fuera ? '#adb5bd' : bloq ? '#343a40' : colorDe(h.costo), fillOpacity: fuera ? 0.08 : bloq ? 0.45 : 0.38 }).addTo(dcapa);
-    pol.bindTooltip(fuera ? `Fuera de zona · ${km(h.distancia)}` : bloq ? 'Bloqueado' : `${clp(h.costo)} · ${km(h.distancia)}${h.ajustado ? ' (a mano)' : ''}`, { sticky: true });
+      fillColor: fill, fillOpacity: fuera ? 0.08 : bloq ? 0.45 : vistaMapa === 'ganancia' ? 0.5 : 0.38 }).addTo(dcapa);
+    pol.bindTooltip(fuera ? `Fuera de zona · ${km(h.distancia)}` : bloq ? 'Bloqueado'
+      : `${clp(h.costo)} · ${km(h.distancia)}${h.ajustado ? ' (a mano)' : ''}${cv ? `<br>Viaje ${clp(cv.total)} · ${gana >= 0 ? 'gana' : 'pierde'} ${clp(Math.abs(gana))}` : ''}`, { sticky: true });
     pol.on('click', (e) => editarHex(h, e.latlng));
   }
-  $('ds-leyenda').innerHTML = DS.tramos.map((t, i) => `<span><i style="background:${COLORES[i % COLORES.length]}"></i>Hasta ${km(t.hasta)} · ${clp(t.costo)}</span>`).join('')
+  $('ds-leyenda').innerHTML = (vistaMapa === 'ganancia' ? (vehActual()
+    ? `<span><i style="background:#2b8a3e"></i>Gana ${DS.calculo.margen}% o más</span><span><i style="background:#fab005"></i>Cubre el costo, gana menos</span><span><i style="background:#e03131"></i>No cubre el costo</span>`
+    : '<span>Agrega un vehículo para ver si cada sector sale a cuenta.</span>')
+    : DS.tramos.map((t, i) => `<span><i style="background:${COLORES[i % COLORES.length]}"></i>Hasta ${km(t.hasta)} · ${clp(t.costo)}</span>`).join(''))
     + '<span><i style="background:#343a40"></i>Bloqueado</span><span><i style="background:#dee2e6"></i>Fuera de zona</span>';
   if (encuadrar && puntos.length) dmapa.fitBounds(puntos, { padding: [12, 12] });
 }
@@ -1236,7 +1300,9 @@ function editarHex(h, donde) {
   const actual = DS.ajustes[h.id];
   const base = H.precioHex({ tam: DS.tam, tramos: DS.tramos, ajustes: {} }, DS.ubicacion, h.q, h.r);
   const div = document.createElement('div'); div.className = 'hexpop';
+  const cv = costoA(h.distancia), sug = cv ? H.precioSugerido(cv.total, DS.calculo) : null;
   div.innerHTML = `<b>Sector a ${km(h.distancia)}</b><small>${base.ok ? `Por distancia: ${clp(base.costo)}` : 'Por distancia: fuera de zona'}</small>
+    ${cv ? `<small>Viaje en ${esc(vehActual().nombre.toLowerCase())}: ${clp(cv.total)} (${Math.round(cv.min)} min) · sugerido ${clp(sug)}</small>` : ''}
     <div class="money"><span>$</span><input inputmode="numeric" value="${h.ok ? miles(h.costo) : ''}" placeholder="Precio"></div>
     <div class="hexbtns"><button type="button" class="primary" data-h="precio">Usar este precio</button>
       <button type="button" class="ghostb peligro" data-h="bloquear" ${actual === null ? 'disabled' : ''}>Bloquear sector</button>
@@ -1259,13 +1325,99 @@ function probarEn(lat, lng, nombre) {
     .bindPopup(`<b>${esc(nombre)}</b><br>${c.ok ? `Despacho ${clp(c.costo)} · ${km(c.distancia)}` : c.motivo === 'bloqueado' ? 'Sector bloqueado: no se despacha' : `Fuera de la zona (${km(c.distancia)})`}`).openPopup();
   dmapa.setView([lat, lng], Math.max(dmapa.getZoom(), 14));
 }
+// ---- vehículos ----
+function pintarVehiculos() {
+  const act = vehActual();
+  $('ds-vlista').innerHTML = DS.vehiculos.length ? DS.vehiculos.map((x) => `<div class="vrow ${x === act ? 'act' : ''}">
+      <span class="ve">${EMOJI_VEH[x.tipo] || '🚚'}</span>
+      <div><b>${esc(x.nombre)}</b><small>${clp(Math.round(H.costoKmDe(x)))}/km · ${x.velocidad} km/h${x.pagoHora ? ` · repartidor ${clp(x.pagoHora)}/h` : ''}${x.pagoViaje ? ` · ${clp(x.pagoViaje)} por viaje` : ''}</small></div>
+      <button type="button" class="ghostb" data-veditar="${x.id}">Editar</button></div>`).join('')
+    : '<p class="vacio" style="padding:14px">Aún no hay vehículos. Agrega el que usan para despachar.</p>';
+  $('dc-veh').innerHTML = DS.vehiculos.map((x) => `<option value="${x.id}" ${x === act ? 'selected' : ''}>${EMOJI_VEH[x.tipo] || ''} ${esc(x.nombre)}</option>`).join('') || '<option value="">Sin vehículos</option>';
+  $('dc-veh').disabled = !DS.vehiculos.length;
+  $('ds-vlista').querySelectorAll('[data-veditar]').forEach((b) => b.onclick = () => abrirVehiculo(DS.vehiculos.find((x) => x.id === b.dataset.veditar)));
+}
+function abrirVehiculo(veh, tipo) {
+  const base = veh || { ...H.VEHICULOS_BASE.find((x) => x.tipo === tipo), id: null };
+  const f = (id, label, val, suf, ayuda = '') => `<div class="field"><label for="${id}">${label}</label><div class="kmin"><input id="${id}" inputmode="decimal" value="${val ?? 0}"><span>${suf}</span></div>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}</div>`;
+  $('vhTitulo').textContent = veh ? `Editar ${veh.nombre.toLowerCase()}` : 'Nuevo vehículo';
+  $('vhBody').innerHTML = `
+    <div class="dos"><div class="field"><label for="vh-nombre">Nombre</label><input id="vh-nombre" maxlength="40" value="${esc(base.nombre)}" placeholder="Ej: Moto de Juan"></div>
+      <div class="field"><label for="vh-tipo">Tipo</label><select id="vh-tipo">${['moto', 'auto', 'bici', 'otro'].map((t) => `<option value="${t}" ${base.tipo === t ? 'selected' : ''}>${EMOJI_VEH[t]} ${{ moto: 'Moto', auto: 'Auto', bici: 'Bicicleta', otro: 'Otro' }[t]}</option>`).join('')}</select></div></div>
+    <h4 class="vh-sec">Gasto del vehículo</h4>
+    <div class="tres-i">${f('vh-rend', 'Rendimiento', base.rendimiento, 'km/l', '0 si no usa bencina')}${f('vh-litro', 'Precio del litro', base.precioLitro, '$')}${f('vh-mant', 'Mantención por km', base.mantencionKm, '$/km', 'Aceite, neumáticos, repuestos')}</div>
+    <h4 class="vh-sec">Tiempo y repartidor</h4>
+    <div class="dos">${f('vh-vel', 'Velocidad promedio en ciudad', base.velocidad, 'km/h')}${f('vh-min', 'Minutos por entrega', base.minEntrega, 'min', 'Estacionar, subir, entregar')}
+      ${f('vh-hora', 'Pago al repartidor por hora', base.pagoHora, '$/h', '0 si es alguien del local ya pagado')}${f('vh-viaje', 'Pago fijo por viaje', base.pagoViaje, '$', 'Si se le paga por despacho')}</div>
+    <div class="vh-res" id="vh-res" aria-live="polite"></div>
+    <div class="formerr" id="vh-err" role="alert"></div>`;
+  const leer = () => { const n = (id) => Number(String($(id).value).replace(/\./g, '').replace(',', '.')) || 0;
+    return { nombre: $('vh-nombre').value.trim(), tipo: $('vh-tipo').value, rendimiento: n('vh-rend'), precioLitro: n('vh-litro'), mantencionKm: n('vh-mant'),
+      velocidad: n('vh-vel'), minEntrega: n('vh-min'), pagoHora: n('vh-hora'), pagoViaje: n('vh-viaje') }; };
+  const calc = () => { const x = leer(), ej = [1000, 2000, 3000].map((d) => [d, H.costoViaje(x, DS.calculo, d)]);
+    $('vh-res').innerHTML = `<b>Gasto por km: ${clp(Math.round(H.costoKmDe(x)))}</b><table>${ej.map(([d, c]) => `<tr><td>Cliente a ${km(d)}</td><td>${c.km.toLocaleString('es-CL', { maximumFractionDigits: 1 })} km · ${Math.round(c.min)} min</td><td class="r"><b>${clp(Math.round(c.total))}</b></td></tr>`).join('')}</table>
+      <small>${DS.calculo.idaVuelta ? 'Ida y vuelta' : 'Solo ida'}, con calles ×${String(DS.calculo.factor).replace('.', ',')}.</small>`; };
+  $('vhBody').oninput = calc; calc();
+  $('vhQuitar').hidden = !veh;
+  $('vhQuitar').onclick = () => { if (!confirm(`¿Quitar ${veh.nombre}?`)) return; DS.vehiculos = DS.vehiculos.filter((x) => x !== veh); if (DS.calculo.vehiculo === veh.id) DS.calculo.vehiculo = DS.vehiculos[0]?.id || null;
+    $('dlgVeh').close(); marcarDespSucio(true); pintarVehiculos(); pintarCostos(); dibujarZonas(); };
+  $('vhOk').onclick = () => {
+    const x = leer();
+    if (!x.nombre) { $('vh-err').textContent = 'Escribe un nombre.'; return; }
+    if (!(x.velocidad >= 3)) { $('vh-err').textContent = 'La velocidad debe ser al menos 3 km/h.'; return; }
+    if (veh) Object.assign(veh, x); else { const nv = { ...x, id: `v${Date.now().toString(36)}` }; DS.vehiculos.push(nv); if (!DS.calculo.vehiculo || DS.vehiculos.length === 1) DS.calculo.vehiculo = nv.id; }
+    $('dlgVeh').close(); marcarDespSucio(true); pintarVehiculos(); pintarCostos(); dibujarZonas();
+  };
+  $('dlgVeh').showModal();
+}
+// ---- costos por tramo y propuestas ----
+function pintarCostos() {
+  const v = vehActual(), box = $('ds-costos');
+  if (!box) return;
+  $('ds-calcbtns').hidden = !v || DS.modo !== 'zonas';
+  if (!v) { box.innerHTML = '<p class="ayuda">Agrega un vehículo arriba para calcular cuánto cuesta cada despacho.</p>'; return; }
+  const fila = (etq, d, precio) => { const c = H.costoViaje(v, DS.calculo, d), sug = H.precioSugerido(c.total, DS.calculo), g = precio == null ? null : precio - c.total;
+    return `<tr><td>${etq}</td><td>${c.km.toLocaleString('es-CL', { maximumFractionDigits: 1 })} km<small>${Math.round(c.min)} min</small></td><td class="r">${clp(Math.round(c.total))}</td><td class="r">${clp(sug)}</td>
+      ${precio == null ? '' : `<td class="r">${clp(precio)}</td><td class="r ${g < 0 ? 'neg' : g < c.total * DS.calculo.margen / 100 ? 'mid' : 'pos'}">${g < 0 ? '−' : '+'}${clp(Math.abs(Math.round(g)))}</td>`}</tr>`; };
+  if (DS.modo === 'zonas') {
+    box.innerHTML = `<table class="ctabla"><tr><th>Tramo</th><th>Recorrido</th><th class="r">Costo</th><th class="r">Sugerido</th><th class="r">Cobras</th><th class="r">Queda</th></tr>
+      ${DS.tramos.map((t) => fila(`Hasta ${km(t.hasta)}`, t.hasta, t.costo)).join('')}</table>
+      <p class="ayuda">Calculado al borde de cada tramo (el viaje más largo del tramo), en ${esc(v.nombre.toLowerCase())}. "Sugerido" = costo + ${DS.calculo.margen}% de ganancia.</p>`;
+  } else {
+    const dist = [1000, 2000, 3000, 4000, 5000];
+    // Hasta dónde sale a cuenta el precio único: la mayor distancia cuyo costo no lo supera.
+    let lim = 0; for (let d = 100; d <= 15000; d += 100) if (H.costoViaje(v, DS.calculo, d).total <= DS.costo) lim = d;
+    box.innerHTML = `<table class="ctabla"><tr><th>Cliente a</th><th>Recorrido</th><th class="r">Costo</th><th class="r">Sugerido</th><th class="r">Cobras</th><th class="r">Queda</th></tr>
+      ${dist.map((d) => fila(km(d), d, DS.costo)).join('')}</table>
+      <p class="ayuda">${DS.costo ? (lim ? `Con ${clp(DS.costo)} el despacho cubre su costo hasta unos <b>${km(lim)}</b> del local.` : `Con ${clp(DS.costo)} ningún viaje cubre su costo.`) : 'Despacho gratis: el local paga todo el viaje.'}</p>`;
+  }
+}
+function usarSugeridos() {
+  const v = vehActual(); if (!v) return;
+  const nuevos = DS.tramos.map((t) => ({ ...t, costo: H.precioSugerido(H.costoViaje(v, DS.calculo, t.hasta).total, DS.calculo) }));
+  if (!confirm(`¿Cambiar los precios de los tramos?\n\n${nuevos.map((t, i) => `Hasta ${km(t.hasta)}: ${clp(DS.tramos[i].costo)} → ${clp(t.costo)}`).join('\n')}\n\nLos sectores con precio a mano no cambian.`)) return;
+  DS.tramos = nuevos; marcarDespSucio(true); pintarTramos(); pintarModoDesp();
+}
+// Tres tramos parejos hasta el borde del área que hoy se despacha (incluye los sectores a mano),
+// con el precio sugerido al borde de cada uno.
+function proponerTramos() {
+  const v = vehActual(); if (!v || !DS.ubicacion) return;
+  const z = H.hexesZona({ tam: DS.tam, tramos: DS.tramos, ajustes: DS.ajustes }, DS.ubicacion, 0).filter((h) => h.ok);
+  const max = Math.ceil((Math.max(1000, ...z.map((h) => h.distancia)) + 1) / 100) * 100;
+  const nuevos = [1, 2, 3].map((i) => { const hasta = Math.ceil((max * i) / 3 / 100) * 100; return { hasta, costo: H.precioSugerido(H.costoViaje(v, DS.calculo, hasta).total, DS.calculo) }; });
+  const conPrecio = Object.values(DS.ajustes).filter((x) => x !== null).length;
+  if (!confirm(`Propuesta para tu área actual (hasta ${km(max)}), con ${v.nombre.toLowerCase()}:\n\n${nuevos.map((t) => `Hasta ${km(t.hasta)}: ${clp(t.costo)}`).join('\n')}${conPrecio ? `\n\nLos ${conPrecio} sectores con precio a mano pasan a precio por distancia (los bloqueados se mantienen).` : ''}\n\n¿Usar estos tramos?`)) return;
+  DS.tramos = nuevos;
+  for (const [k, x] of Object.entries(DS.ajustes)) if (x !== null) delete DS.ajustes[k];
+  marcarDespSucio(true); pintarTramos(); pintarModoDesp();
+}
 async function guardarDespacho() {
   const q = (sel) => $('v-despacho').querySelector(sel);
   const horario = Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-dabre="${d}"]`).checked ? [q(`[data-ddesde="${d}"]`).value, q(`[data-dhasta="${d}"]`).value] : null]));
   $('ds-guardar').disabled = true; $('ds-err').textContent = '';
   try {
     const body = { despacho: { activo: DS.activo, costo: digitos($('ds-costo').value), minimo: digitos($('ds-minimo').value), zona: $('ds-zona').value, horario,
-      modo: DS.modo, tam: DS.tam, tramos: DS.tramos, ajustes: DS.ajustes } };
+      modo: DS.modo, tam: DS.tam, tramos: DS.tramos, ajustes: DS.ajustes, vehiculos: DS.vehiculos, calculo: DS.calculo } };
     const u = M.local.ubicacion;
     if (DS.ubicacion && (!u || u.lat !== DS.ubicacion.lat || u.lng !== DS.ubicacion.lng)) body.ubicacion = DS.ubicacion;
     await api('panel/local', { method: 'PATCH', body });
@@ -1329,6 +1481,8 @@ async function pintarResumen() {
       <div><span class="k">5 · Clientes que repitieron</span><b class="num">${s.repiten}</b><span class="sub">de ${s.clientes_web} clientes web</span></div>
       <div class="destacado"><span class="k">6 · Comisión ahorrada</span><b class="num">${clp(s.comision_ahorrada)}</b><span class="sub">${s.canal.web.pedidos} pedidos directos × ${s.comision_app}% que cobraría la app</span></div>
     </div>
+    ${s.despachos?.pedidos ? `<p class="extra-sug"><b>Despacho:</b> ${s.despachos.pedidos} pedido${s.despachos.pedidos > 1 ? 's' : ''} · cobrado <span class="num">${clp(s.despachos.cobrado)}</span>${s.despachos.con_costo
+      ? ` · costo estimado del viaje <span class="num">${clp(s.despachos.costo)}</span> · <b style="color:${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'var(--ok)' : 'var(--danger)'}">${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'quedan' : 'faltan'} ${clp(Math.abs(s.despachos.cobrado_con_costo - s.despachos.costo))}</b>` : ''}${s.despachos.km ? ` · ${s.despachos.km.toLocaleString('es-CL')} km en línea recta` : ''}.</p>` : ''}
     <p class="extra-sug"><b>Venta sugerida:</b> <span class="num">${clp(s.sugeridos.ventas)}</span> en ${s.sugeridos.unidades} producto${s.sugeridos.unidades === 1 ? '' : 's'} agregados desde las sugerencias (papas, bebidas…)${s.ventas ? ` · ${Math.round(s.sugeridos.ventas * 100 / s.ventas)}% de las ventas` : ''}.</p>
     <div class="charts">
       ${barras(s.por_dia, { titulo: 'Ventas por día', etiqueta: (d) => diaCorto(d.dia), valor: (d) => d.ventas, formato: clp })}

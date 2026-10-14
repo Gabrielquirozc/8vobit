@@ -611,6 +611,38 @@ test('despacho por zonas: hexágonos con precio por distancia, ajustes y bloqueo
   await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
 });
 
+test('vehículos: costo del viaje por pedido y resultado del despacho en el resumen', async () => {
+  await login();
+  const H = await import('../public/hex.js');
+  const o = (await menu()).local.ubicacion;
+  const dias = Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']]));
+  const moto = { id: 'moto1', nombre: 'Moto', tipo: 'moto', rendimiento: 35, precioLitro: 1300, mantencionKm: 15, velocidad: 25, pagoHora: 4500, pagoViaje: 0, minEntrega: 5 };
+  const calculo = { vehiculo: 'moto1', factor: 1.35, idaVuelta: true, margen: 15, redondeo: 100 };
+  const conf = { activo: true, minimo: 0, horario: dias, modo: 'zonas', tam: 450, tramos: [{ hasta: 3000, costo: 2000 }], ajustes: {}, vehiculos: [moto], calculo };
+  assert.equal((await req('PATCH', '/api/panel/local', { despacho: conf })).status, 200);
+  const d = (await menu()).local.despacho;
+  assert.equal(d.vehiculos[0].nombre, 'Moto'); assert.equal(d.calculo.vehiculo, 'moto1');
+  // valores fuera de rango se rechazan
+  assert.equal((await req('PATCH', '/api/panel/local', { despacho: { ...conf, vehiculos: [{ ...moto, velocidad: 0 }] } })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { despacho: { ...conf, calculo: { ...calculo, factor: 9 } } })).status, 400);
+  // el costo estimado del viaje queda en el pedido y el resumen lo compara con lo cobrado
+  const antes = (await req('GET', '/api/panel/resumen')).body.despachos;
+  const dest = H.centro(o, 450, 2, 0), ch = await prod('Chacarero');
+  const r = await pedir([{ producto_id: ch.id }], { modalidad: 'despacho', direccion: 'X 1', ubicacion: dest });
+  assert.equal(r.status, 201);
+  const det = (await req('GET', `/api/panel/pedidos/${r.body.id}`)).body;
+  const esperado = Math.round(H.costoViaje(moto, calculo, H.distancia(o, dest)).total);
+  assert.equal(det.costo_viaje, esperado);
+  const desp = (await req('GET', '/api/panel/resumen')).body.despachos;
+  assert.equal(desp.pedidos - antes.pedidos, 1);
+  assert.equal(desp.costo - antes.costo, esperado);
+  assert.equal(desp.cobrado - antes.cobrado, 2000);
+  // el cálculo compartido: más lejos cuesta más y el sugerido cubre costo + margen
+  const c1 = H.costoViaje(moto, calculo, 1000).total, c3 = H.costoViaje(moto, calculo, 3000).total;
+  assert.ok(c3 > c1 && H.precioSugerido(c3, calculo) >= c3 * 1.15 && H.precioSugerido(c3, calculo) % 100 === 0);
+  await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

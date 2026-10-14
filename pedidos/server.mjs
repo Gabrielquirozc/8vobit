@@ -69,6 +69,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   if (!cols.has('cobrado_en')) db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_en TEXT');
   // Dónde se entrega un despacho por zonas (para el repartidor y para recalcular el costo).
   if (!cols.has('lat')) { for (const c of ['lat REAL', 'lng REAL', 'distancia_m INTEGER']) db.exec(`ALTER TABLE pedidos ADD COLUMN ${c}`); }
+  // Costo estimado del viaje (vehículo + repartidor) para ver si el despacho sale a cuenta.
+  if (!cols.has('costo_viaje')) db.exec('ALTER TABLE pedidos ADD COLUMN costo_viaje INTEGER');
   if (!cols.has('costo_despacho')) db.exec('ALTER TABLE pedidos ADD COLUMN costo_despacho INTEGER NOT NULL DEFAULT 0');
   // Datos del local editables desde el panel.
   const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
@@ -178,7 +180,8 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 function despachoDe(local) {
   const d = local.despacho ? JSON.parse(local.despacho) : {};
   return { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {},
-    modo: d.modo === 'zonas' && local.lat != null ? 'zonas' : 'fijo', tam: d.tam || 450, tramos: d.tramos || [], ajustes: d.ajustes || {} };
+    modo: d.modo === 'zonas' && local.lat != null ? 'zonas' : 'fijo', tam: d.tam || 450, tramos: d.tramos || [], ajustes: d.ajustes || {},
+    vehiculos: d.vehiculos || [], calculo: { ...H.CALCULO_BASE, ...(d.calculo || {}) } };
 }
 const ubicacionDe = (local) => (local.lat == null ? null : { lat: local.lat, lng: local.lng });
 // Búsqueda de direcciones con Nominatim (OpenStreetMap), pasando por el servidor: se cachea,
@@ -488,6 +491,8 @@ function crearPedido(local, body) {
       const u = body.ubicacion || {}, c = cotizarDespacho(local, Number(u.lat), Number(u.lng));
       if (!c.ok) return { error: c.motivo === 'sin_ubicacion' ? 'Marca en el mapa dónde entregamos el pedido.' : 'Esa ubicación está fuera de la zona de despacho; elige retiro o llama al local.' };
       costo = c.costo; geo = { lat: Number(u.lat), lng: Number(u.lng), distancia_m: c.distancia };
+      const veh = desp.vehiculos.find((x) => x.id === desp.calculo.vehiculo);
+      if (veh) geo.costo_viaje = Math.round(H.costoViaje(veh, desp.calculo, c.distancia).total);
     }
   }
   return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo, geo }, { ...v, total: v.total + costo });
@@ -535,7 +540,7 @@ function guardarPedido(local, d, { items, total }) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
-    if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, pid);
+    if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, pid);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido) VALUES (?,?,?,?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0);
@@ -596,7 +601,18 @@ function actualizarLocal(local, b) {
     if (modo === 'zonas' && !tramos.length) return { error: 'Agrega al menos un tramo de distancia para despachar por zonas.' };
     const aj = d.ajustes && typeof d.ajustes === 'object' ? Object.entries(d.ajustes) : [];
     if (aj.length > 3000 || aj.some(([k, x]) => !/^-?\d{1,3},-?\d{1,3}$/.test(k) || !(x === null || (Number.isInteger(x) && x >= 0 && x <= 50000)))) return { error: 'Ajustes de zonas inválidos.' };
-    c.despacho = JSON.stringify({ activo: !!d.activo, costo, minimo, zona: txt(d.zona, 160), horario: h, modo, tam, tramos, ajustes: Object.fromEntries(aj) });
+    // Vehículos con los que se calcula el costo del viaje (ver hex.js: costoViaje).
+    const num = (x, min, max) => { const n = Number(x); return Number.isFinite(n) && n >= min && n <= max ? n : NaN; };
+    const vehiculos = (Array.isArray(d.vehiculos) ? d.vehiculos : []).slice(0, 10).map((v, i) => ({
+      id: String(v.id || `v${i + 1}`).replace(/[^\w-]/g, '').slice(0, 20) || `v${i + 1}`, nombre: txt(v.nombre, 40) || `Vehículo ${i + 1}`,
+      tipo: ['moto', 'auto', 'bici', 'otro'].includes(v.tipo) ? v.tipo : 'otro',
+      rendimiento: num(v.rendimiento, 0, 200), precioLitro: num(v.precioLitro, 0, 5000), mantencionKm: num(v.mantencionKm, 0, 2000),
+      velocidad: num(v.velocidad, 3, 90), pagoHora: num(v.pagoHora, 0, 50000), pagoViaje: num(v.pagoViaje, 0, 20000), minEntrega: num(v.minEntrega, 0, 60) }));
+    if (vehiculos.some((v) => Object.values(v).some((x) => Number.isNaN(x)))) return { error: 'Revisa los datos de los vehículos: hay un valor fuera de rango.' };
+    const k = d.calculo || {}, calculo = { vehiculo: vehiculos.some((v) => v.id === k.vehiculo) ? k.vehiculo : vehiculos[0]?.id || null,
+      factor: num(k.factor ?? 1.35, 1, 3), idaVuelta: k.idaVuelta !== false, margen: num(k.margen ?? 15, -50, 300), redondeo: [10, 50, 100, 500].includes(Number(k.redondeo)) ? Number(k.redondeo) : 100 };
+    if (Number.isNaN(calculo.factor) || Number.isNaN(calculo.margen)) return { error: 'Revisa el factor de calles (1 a 3) y el margen.' };
+    c.despacho = JSON.stringify({ activo: !!d.activo, costo, minimo, zona: txt(d.zona, 160), horario: h, modo, tam, tramos, ajustes: Object.fromEntries(aj), vehiculos, calculo });
   }
   if (b.ubicacion !== undefined) {
     const lat = Number(b.ubicacion?.lat), lng = Number(b.ubicacion?.lng);
@@ -679,6 +695,10 @@ function resumen(local, fecha) {
     por_hora: horas,
     platos: items,
     sugeridos: { unidades: sug.n, ventas: sug.monto },
+    despachos: (() => { const l = ps.filter((p) => p.modalidad === 'despacho'), conCosto = l.filter((p) => p.costo_viaje != null);
+      return { pedidos: l.length, cobrado: l.reduce((a, p) => a + (p.costo_despacho || 0), 0), con_costo: conCosto.length,
+        costo: conCosto.reduce((a, p) => a + p.costo_viaje, 0), cobrado_con_costo: conCosto.reduce((a, p) => a + (p.costo_despacho || 0), 0),
+        km: Math.round(l.reduce((a, p) => a + (p.distancia_m || 0), 0) / 100) / 10 }; })(),
   };
 }
 

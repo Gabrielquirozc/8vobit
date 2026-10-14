@@ -56,3 +56,29 @@ export function hexesZona(desp, o, extra = 1) {
   for (const id of Object.keys(desp.ajustes || {})) if (!out.has(id)) { const [q, r] = id.split(',').map(Number); out.set(id, { q, r, ...precioHex(desp, o, q, r) }); }
   return [...out.values()];
 }
+
+// ---------- costo del viaje según el vehículo ----------
+// El mapa mide en línea recta; las calles no: `factor` (≈1,35 en ciudad) pasa de línea recta a
+// recorrido real. Con `idaVuelta` se cuenta el regreso al local, que también se gasta.
+// Vehículo: { costoKm (bencina + mantención por km), velocidad (km/h en ciudad),
+//             pagoHora (repartidor, $/h), pagoViaje ($ fijo por despacho), minEntrega (min) }.
+export const CALCULO_BASE = { factor: 1.35, idaVuelta: true, margen: 15, redondeo: 100 };
+export function costoViaje(v, calc, distRecta) {
+  const c = { ...CALCULO_BASE, ...calc };
+  const kmIda = (distRecta / 1000) * c.factor, km = kmIda * (c.idaVuelta ? 2 : 1);
+  const min = (km / Math.max(1, v.velocidad)) * 60 + (v.minEntrega || 0);
+  const vehiculo = km * (v.costoKm ?? costoKmDe(v)), tiempo = (min / 60) * (v.pagoHora || 0) + (v.pagoViaje || 0);
+  return { km, min, vehiculo, tiempo, total: vehiculo + tiempo };
+}
+// Precio que cubre el costo más el margen, redondeado hacia arriba (ej. a $100).
+export function precioSugerido(costo, calc) {
+  const c = { ...CALCULO_BASE, ...calc }, r = Math.max(1, c.redondeo || 1);
+  return Math.ceil((costo * (1 + (c.margen || 0) / 100)) / r) * r;
+}
+// Gasto por km del vehículo: combustible (precio del litro / km por litro) + mantención por km.
+export const costoKmDe = (v) => (v.rendimiento > 0 ? (v.precioLitro || 0) / v.rendimiento : 0) + (v.mantencionKm || 0);
+export const VEHICULOS_BASE = [
+  { tipo: 'moto', nombre: 'Moto', rendimiento: 35, precioLitro: 1300, mantencionKm: 15, velocidad: 25, pagoHora: 4500, pagoViaje: 0, minEntrega: 5 },
+  { tipo: 'auto', nombre: 'Auto', rendimiento: 12, precioLitro: 1300, mantencionKm: 40, velocidad: 22, pagoHora: 4500, pagoViaje: 0, minEntrega: 6 },
+  { tipo: 'bici', nombre: 'Bicicleta', rendimiento: 0, precioLitro: 0, mantencionKm: 10, velocidad: 14, pagoHora: 4500, pagoViaje: 0, minEntrega: 4 },
+];

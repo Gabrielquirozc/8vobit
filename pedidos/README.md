@@ -57,6 +57,18 @@ propio por día** y cómo se cobra:
   hexágono** para darle otro precio o **bloquearlo**. El pin del local se arrastra si no está en su
   lugar, y "Probar una dirección" muestra cuánto pagaría un cliente.
 
+**Vehículos y costo del viaje** (misma pestaña): se crean los vehículos con que se despacha (moto,
+auto, bicicleta…) con su rendimiento (km/l), precio del litro, mantención por km, velocidad en ciudad,
+pago al repartidor (por hora y/o fijo por viaje) y minutos por entrega. El costo de un despacho se
+calcula con la distancia del mapa × un **factor de calles** (las calles no van en línea recta: ×1,25
+centro con cuadras, ×1,35 ciudad mixta, ×1,5 con cerros, puentes o ríos) y, si se marca, **ida y
+vuelta** al local. La tabla *¿Sale a cuenta?* muestra por tramo el recorrido, el costo, el precio
+**sugerido** (costo + % de ganancia, redondeado) y lo que queda con el precio actual; *Usar precios
+sugeridos* los aplica y *Proponer tramos para mi área* arma 3 tramos parejos hasta el borde del área
+que hoy se despacha. En el mapa, la vista *¿Sale a cuenta?* pinta cada sector en verde (gana lo
+pedido), amarillo (solo cubre el costo) o rojo (pierde). Cada pedido guarda su costo estimado y el
+Resumen semanal compara lo cobrado por despacho con lo que costaron los viajes.
+
 En la carta, con despacho por zonas, el cliente escribe su dirección y toca *Buscar* (o *Usar mi
 ubicación*), ajusta el pin moviendo el mapa y ve al tiro el costo o "No despachamos a este punto".
 El servidor recalcula el costo con la ubicación (no confía en el navegador) y guarda las coordenadas:
@@ -145,7 +157,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 43 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 44 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.
