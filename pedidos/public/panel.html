@@ -171,6 +171,120 @@
   .tabla table { box-shadow: none; margin-top: 6px; } .tabla td { padding: 4px 8px; }
   .tip { position: absolute; z-index: 50; background: var(--ink); color: var(--bg); font-size: .82rem; font-weight: 600; padding: 6px 10px; border-radius: 8px; pointer-events: none; opacity: 0; transition: opacity .12s; }
   .tip.on { opacity: 1; }
+  /* ---- Carta y precios ---- */
+  .ctools { position: sticky; top: var(--barh, 64px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 0; background: var(--surface-2); }
+  .ctools .search { flex: 1 1 260px; max-width: 380px; margin: 0; }
+  .ctools .primary.chico, .ghostb { min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700; font-size: .9rem; white-space: nowrap; }
+  .ctools .primary.chico { width: auto; flex: none; }
+  .ghostb { border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .ghostb.fuerte { border-color: var(--ink); }
+  .ghostb.peligro { color: var(--danger); border-color: #f2c4bf; }
+  .ghostb:disabled { opacity: .35; }
+  .ghostb .ico { width: 16px; height: 16px; }
+  .cfiltros { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cfiltros button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: .88rem; }
+  .cfiltros button .num { color: var(--ink-2); font-weight: 700; margin-left: 2px; }
+  .cfiltros button.alerta .num { color: var(--danger); }
+  .cfiltros button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); } .cfiltros button[aria-pressed="true"] .num { color: inherit; }
+  .cfiltros button:disabled { opacity: .45; }
+  .cjump { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; }
+  .cjump button { flex: none; border: 0; background: none; color: var(--ink-2); font-weight: 700; font-size: .9rem; padding: 6px 10px; border-radius: 8px; }
+  .cjump button:hover { background: var(--surface); color: var(--ink); }
+  .ccat { margin-top: 14px; scroll-margin-top: 140px; }
+  .ccat header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 2px 8px; }
+  .ccat h3 { margin: 0; display: flex; align-items: center; gap: 8px; } .ccat h3 .n { font: 600 .8rem var(--font-body); background: var(--surface); border-radius: 999px; padding: 1px 8px; color: var(--ink-2); }
+  .ccat .ghostb { min-height: 38px; padding: 0 12px; font-size: .85rem; }
+  .ck.mini { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--ink-2); font-weight: 600; } .ck.mini input { width: 18px; height: 18px; accent-color: var(--brand); }
+  .sp { flex: 1; }
+  .plist { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+  .prow { display: grid; grid-template-columns: 64px minmax(0, 1fr) 150px 92px 92px 44px; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .prow:last-child { border-bottom: 0; }
+  .prow.off .pthumb, .prow.off .pname { opacity: .5; }
+  .pthumb { width: 64px; height: 48px; border-radius: 10px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; cursor: pointer; position: relative; }
+  .pthumb img { width: 100%; height: 100%; object-fit: cover; }
+  .pthumb .emoji { font-size: 22px; } .pthumb small { position: absolute; bottom: 1px; font-size: .62rem; color: var(--ink-2); font-weight: 600; }
+  .pthumb.cargando { opacity: .4; }
+  .pthumb.grande { width: 140px; height: 105px; flex: none; } .pthumb.grande .emoji { font-size: 40px; } .pthumb.grande small { font-size: .72rem; bottom: 6px; }
+  .pname { text-align: left; background: none; border: 0; padding: 4px 0; min-width: 0; color: var(--ink); cursor: pointer; }
+  .pname b { font-size: .98rem; }
+  .pname .pdesc { display: block; color: var(--ink-2); font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badges { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
+  .bd { font-style: normal; font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
+  .bd.warn { background: #fdecea; color: var(--danger); } .bd.off { background: #eee; color: #666; }
+  .money { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); padding-left: 10px; }
+  .money:focus-within { border-color: var(--ink); }
+  .money span { color: var(--ink-2); font-weight: 600; }
+  .money input { border: 0 !important; outline: 0; min-height: 44px !important; padding: 0 10px 0 4px !important; width: 100%; font: 600 16px var(--font-body); background: transparent; font-variant-numeric: tabular-nums; }
+  .pprice { position: relative; } .pprice .ok { position: absolute; right: -16px; top: 50%; transform: translateY(-50%); color: var(--ok); font-weight: 800; }
+  .pprice.falta .money { border-color: var(--danger); background: #fff7f6; }
+  .psw { display: flex; flex-direction: column; align-items: center; gap: 2px; } .psw small { font-size: .7rem; color: var(--ink-2); font-weight: 600; }
+  .pedit { width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; display: grid; place-items: center; color: var(--ink-2); }
+  .pedit:hover { background: var(--surface-2); }
+  .sw { position: relative; display: inline-block; width: 46px; height: 28px; flex: none; cursor: pointer; }
+  .sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .sw span { position: absolute; inset: 0; border-radius: 999px; background: #cfc5b8; transition: background .15s; pointer-events: none; }
+  .sw span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0003; transition: transform .15s; }
+  .sw input:checked + span { background: var(--ok); } .sw input:checked + span::after { transform: translateX(18px); }
+  .sw input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+  @media (max-width: 860px) {
+    .prow { grid-template-columns: 56px 140px auto auto minmax(0, 1fr) 44px; grid-template-areas: "f n n n n e" "f p a s . ."; row-gap: 6px; column-gap: 14px; }
+    .prow .pthumb { grid-area: f; width: 56px; height: 56px; align-self: start; } .prow .pname { grid-area: n; } .prow .pedit { grid-area: e; align-self: start; }
+    .prow .pprice { grid-area: p; } .prow .psw-a { grid-area: a; } .prow .psw-s { grid-area: s; }
+    .prow .psw { flex-direction: row; gap: 8px; }
+    .pname .pdesc { white-space: normal; }
+  }
+  .agrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; margin-top: 18px; align-items: start; }
+  .agbox header { display: flex; align-items: center; gap: 8px; } .agbox h3 { margin: 0; }
+  .agbox .opts { margin-top: 10px; }
+  .agc { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--ok); background: #eef7ef; color: #1d5e21; font-weight: 600; cursor: pointer; }
+  .agc .ico { width: 15px; height: 15px; }
+  .agc.agotado { border-color: var(--line); background: var(--surface-2); color: var(--ink-2); text-decoration: line-through; }
+  .agc small { text-decoration: none; display: inline-block; font-size: .7rem; font-weight: 700; color: var(--danger); margin-left: 2px; }
+  .agc.ed { border-color: var(--line); background: var(--surface); color: var(--ink); padding: 0 4px 0 0; cursor: default; }
+  .agc.ed button { border: 0; background: none; min-height: 40px; padding: 0 6px 0 14px; font-weight: 600; color: inherit; }
+  .agc.ed .x { padding: 0 8px; color: var(--danger); }
+  .agnuevo { display: flex; gap: 8px; margin-top: 12px; }
+  .agnuevo input { flex: 1; min-height: 44px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  .hist { margin-top: 14px; } .hist summary { cursor: pointer; list-style: none; } .hist summary h3 { display: inline; } .hist summary::after { content: " ▸"; color: var(--ink-2); } .hist[open] summary::after { content: " ▾"; }
+  .hist table { box-shadow: none; margin-top: 10px; }
+  dialog.sheet.ancho { max-width: 640px; }
+  .fp-top { display: flex; gap: 14px; align-items: flex-start; }
+  .opc { font-weight: 400; color: var(--ink-2); }
+  .segn { display: flex; gap: 6px; flex-wrap: wrap; }
+  .segn button { min-height: 44px; min-width: 52px; padding: 0 14px; border-radius: var(--r-sm); border: 1.5px solid var(--line); background: var(--surface); font-weight: 700; }
+  .segn button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .fp-sw { display: grid; gap: 4px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .swl { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .swl label { cursor: pointer; } .swl b { display: block; } .swl small { display: block; color: var(--ink-2); font-size: .82rem; }
+  .swl.corto { padding: 0; }
+  .fp-mov { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .sh-foot .ghost { flex: 0 0 auto; }
+  @media (max-width: 560px) { .fp-top { flex-direction: column; } .pthumb.grande { width: 100%; height: 150px; } }
+  /* ---- Datos del local ---- */
+  .lwrap { display: grid; grid-template-columns: 210px minmax(0, 900px); gap: 18px; justify-content: center; padding-bottom: 90px; }
+  .lnav { position: sticky; top: calc(var(--barh, 64px) + 14px); align-self: start; display: flex; flex-direction: column; gap: 2px; }
+  .lnav a { padding: 10px 12px; border-radius: 10px; color: var(--ink-2); font-weight: 600; text-decoration: none; }
+  .lnav a:hover { background: var(--surface); color: var(--ink); }
+  .lform { display: grid; gap: 14px; }
+  .lform .cardf { scroll-margin-top: 90px; padding: 18px 20px; }
+  .lform h3 { margin: 0 0 4px; }
+  .ayuda.top { margin: 0 0 4px; }
+  .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .sh h3 { margin: 0; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .tres { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 0 16px; }
+  .field .money input { min-height: 46px !important; }
+  .cardf.apagado .dbody { opacity: .45; }
+  .lform .horario { max-width: 560px; } .lform .horario th { width: 40%; }
+  .lform .horario .hh td { font-size: .78rem; font-weight: 700; color: var(--ink-2); padding-bottom: 0; }
+  .lform .horario .ck { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; } .lform .horario .ck input { width: 22px; height: 22px; accent-color: var(--brand); }
+  .lbar { position: fixed; left: 50%; bottom: 14px; z-index: 20; transform: translate(-50%, 140%); transition: transform .25s var(--ease); width: min(calc(100% - 24px), 760px);
+    display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 18px; border-radius: 18px; background: var(--ink); color: var(--bg); box-shadow: 0 12px 34px #0005; }
+  .lbar.on { transform: translate(-50%, 0); }
+  .lbar > span { flex: 1; display: flex; flex-direction: column; } .lbar .formerr { color: #ffb4ab; margin: 0; }
+  .lbar .ghost { width: auto; flex: none; background: transparent; color: var(--bg); border-color: #ffffff44; }
+  .lbar .primary { width: auto; flex: none; min-width: 180px; }
+  @media (max-width: 1100px) { .lwrap { grid-template-columns: minmax(0, 1fr); } .lnav { display: none; } }
+  @media (max-width: 640px) { .dos, .tres { grid-template-columns: 1fr; } }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
@@ -286,13 +400,20 @@
     <div id="agSl"><div class="group-h" style="margin-top:16px"><h3 style="margin:0">Salsas</h3><span class="req done">Opcional</span></div><div class="opts" id="agSalsas"></div></div></div>
   <div class="sh-foot"><button class="primary" id="agOk" disabled>Agregar</button></div>
 </dialog>
+<dialog class="sheet ancho" id="dlgProducto" aria-labelledby="fpTitulo">
+  <div class="sh-head"><h2 id="fpTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body" id="fpBody"></div>
+  <div class="sh-foot"><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="fpOk"></button></div>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-import { api, clp, esc, BASE, emojiDe } from './comun.js';
+import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
+// Alto real de la barra superior (cambia al pasar a dos líneas): las barras fijas se ubican bajo ella.
+new ResizeObserver(([e]) => document.documentElement.style.setProperty('--barh', `${Math.round(e.target.offsetHeight)}px`)).observe(document.querySelector('.bar'));
 let D = null, M = null, conocidos = null, audio = null, vista = 'pedidos';
 const MEDIO = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', otro: 'Otro' };
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
@@ -560,26 +681,158 @@ $('v-cierre').onclick = async (e) => {
 };
 
 // ---------- carta y precios ----------
-const chipAg = (a) => `<button type="button" class="opt" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ''}${esc(a.nombre)}</button>`;
-async function pintarCarta() {
-  const [, h] = await Promise.all([cargarCarta(), api('panel/historial')]);
-  $('v-carta').innerHTML = `<p style="color:var(--ink-2);margin-top:0">Los cambios se guardan solos y se ven al instante en la carta pública. "Sugerir" ofrece el producto como acompañamiento al agregar un plato, en el carro y en el mostrador. <a href="carta-imprimible" target="_blank">Abrir carta imprimible</a> · <a href="cartel" target="_blank">Cartel y tarjetas con QR</a></p>` +
-    M.categorias.map((c) => `<h3>${esc(c.nombre)}</h3><table>${c.productos.map((p) => `<tr>
-      <td style="width:140px"><div class="foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="">` : '<span>Sin foto</span>'}</div>
-        <label class="mini-btn">${p.imagen ? 'Cambiar' : 'Subir foto'}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
-        ${p.imagen ? `<button class="link" data-quitar="${p.id}">Quitar</button>` : ''}</td>
-      <td><b>${esc(p.nombre)}</b>${p.descripcion ? `<div style="color:var(--ink-2);font-size:.85rem">${esc(p.descripcion)}</div>` : ''}</td>
-      <td><input type="number" min="0" step="10" value="${p.precio}" data-p="${p.id}" data-f="precio" aria-label="Precio de ${esc(p.nombre)}"></td>
-      <td><label class="ck"><input type="checkbox" ${p.activo ? 'checked' : ''} data-p="${p.id}" data-f="activo"> Disponible</label></td>
-      <td><label class="ck"><input type="checkbox" ${p.precio_pendiente ? 'checked' : ''} data-p="${p.id}" data-f="precio_pendiente"> Precio pendiente</label></td>
-      <td>${p.incluye ? '' : `<label class="ck" title="Se ofrece como acompañamiento en el carro y en el mostrador"><input type="checkbox" ${p.sugerir ? 'checked' : ''} data-p="${p.id}" data-f="sugerir"> Sugerir</label>`}</td>
-    </tr>`).join('')}</table>`).join('') +
-    `<h3>Ingredientes</h3><p style="color:var(--ink-2)">Toca un ingrediente agotado para dejar de ofrecerlo.</p><div class="opts">${M.agregados.filter((a) => a.tipo !== 'salsa').map(chipAg).join('')}</div>
-    <h3>Salsas</h3><p style="color:var(--ink-2)">Opcionales y sin costo; se ofrecen en todo menos bebidas y jugos.</p><div class="opts">${M.agregados.filter((a) => a.tipo === 'salsa').map(chipAg).join('')}</div>
-    <h3>Historial de precios</h3>` +
-    (h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th class="r">Antes</th><th class="r">Ahora</th></tr>${h.map((r) =>
-      `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p style="color:var(--ink-2)">Aún no hay cambios de precio.</p>');
+// Pensado para que el dueño ingrese y corrija datos rápido desde la tablet: buscador y
+// filtros arriba, una fila por producto con precio e interruptores, y una ficha para todo
+// lo demás. Cada cambio se guarda solo (y se avisa), sin volver a dibujar la página.
+const digitos = (v) => Number(String(v ?? '').replace(/\D/g, '')) || 0;
+const miles = (n) => (n ? Math.round(n).toLocaleString('es-CL') : '');
+// Campo de dinero: muestra "4.990" mientras se escribe; el valor real se lee con digitos().
+function dinero(id, val, extra = '') {
+  return `<div class="money"><span aria-hidden="true">$</span><input id="${id}" inputmode="numeric" autocomplete="off" value="${miles(val)}" ${extra}></div>`;
 }
+document.addEventListener('input', (e) => {
+  const t = e.target; if (!t.closest?.('.money')) return;
+  const fin = t.value.length - t.selectionStart, v = miles(digitos(t.value));
+  t.value = v; const pos = Math.max(0, v.length - fin); t.setSelectionRange(pos, pos);
+});
+let filtro = { q: '', ver: 'todos' };
+const FILTROS = [['todos', 'Todos'], ['sinprecio', 'Sin precio'], ['agotados', 'No disponibles'], ['sinfoto', 'Sin foto']];
+const pasa = (p) => {
+  const q = filtro.q.trim().toLowerCase();
+  if (q && !`${p.nombre} ${p.descripcion || ''}`.toLowerCase().includes(q)) return false;
+  return filtro.ver === 'sinprecio' ? p.precio_pendiente || !p.precio : filtro.ver === 'agotados' ? !p.activo : filtro.ver === 'sinfoto' ? !p.imagen : true;
+};
+const sw = (attrs, on, label) => `<label class="sw" title="${label}"><input type="checkbox" ${on ? 'checked' : ''} ${attrs} aria-label="${label}"><span></span></label>`;
+function filaProducto(p, c) {
+  const sinPrecio = p.precio_pendiente || !p.precio;
+  return `<div class="prow ${p.activo ? '' : 'off'}" data-row="${p.id}">
+    <label class="pthumb" title="Cambiar foto">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy">` : `<span class="emoji">${emojiDe(p.nombre, c.nombre)}</span><small>Foto</small>`}<input type="file" accept="image/*" hidden data-foto="${p.id}"></label>
+    <button type="button" class="pname" data-editar="${p.id}"><b>${esc(p.nombre)}</b>
+      <span class="badges">${sinPrecio ? '<i class="bd warn">Sin precio</i>' : ''}${p.incluye ? `<i class="bd">Elige ${p.incluye} ingr.</i>` : ''}${p.destacado ? '<i class="bd">★ Destacado</i>' : ''}${p.activo ? '' : '<i class="bd off">No disponible</i>'}</span>
+      ${p.descripcion ? `<span class="pdesc">${esc(p.descripcion)}</span>` : ''}</button>
+    <div class="pprice ${sinPrecio ? 'falta' : ''}"><div class="money"><span aria-hidden="true">$</span><input inputmode="numeric" autocomplete="off" value="${miles(p.precio)}" placeholder="Precio" data-precio="${p.id}" aria-label="Precio de ${esc(p.nombre)}"></div><span class="ok" aria-live="polite"></span></div>
+    <div class="psw psw-a"><small>Disponible</small>${sw(`data-p="${p.id}" data-f="activo"`, p.activo, `Disponible: ${esc(p.nombre)}`)}</div>
+    <div class="psw psw-s">${p.incluye ? '' : `<small>Sugerir</small>${sw(`data-p="${p.id}" data-f="sugerir"`, p.sugerir, `Sugerir como acompañamiento: ${esc(p.nombre)}`)}`}</div>
+    <button type="button" class="pedit" data-editar="${p.id}" aria-label="Editar ${esc(p.nombre)}">${ico('dots')}</button>
+  </div>`;
+}
+function pintarFiltros() {
+  const todos = M.categorias.flatMap((c) => c.productos);
+  const n = { todos: todos.length, sinprecio: todos.filter((p) => p.precio_pendiente || !p.precio).length, agotados: todos.filter((p) => !p.activo).length, sinfoto: todos.filter((p) => !p.imagen).length };
+  $('cfiltros').innerHTML = FILTROS.map(([k, t]) => `<button type="button" data-ver="${k}" aria-pressed="${filtro.ver === k}" ${k !== 'todos' && !n[k] && filtro.ver !== k ? 'disabled' : ''} class="${k === 'sinprecio' && n[k] ? 'alerta' : ''}">${t} <span class="num">${n[k]}</span></button>`).join('');
+}
+function pintarListaCarta() {
+  pintarFiltros();
+  const html = M.categorias.map((c, ci) => {
+    const ps = c.productos.filter(pasa);
+    if (!ps.length && (filtro.q || filtro.ver !== 'todos')) return '';
+    return `<section class="ccat" id="ccat-${c.id}"><header>
+        <h3>${esc(c.nombre)} <span class="n">${c.productos.length}</span></h3>
+        <label class="ck mini" title="Ofrecer mostaza, ketchup y demás salsas en esta categoría"><input type="checkbox" data-salsas="${c.id}" ${c.salsas ? 'checked' : ''}> Ofrece salsas</label>
+        <span class="sp"></span>
+        <button type="button" class="ghostb" data-cat-mover="${c.id}" data-d="-1" ${ci ? '' : 'disabled'} aria-label="Subir categoría">↑</button>
+        <button type="button" class="ghostb" data-cat-mover="${c.id}" data-d="1" ${ci < M.categorias.length - 1 ? '' : 'disabled'} aria-label="Bajar categoría">↓</button>
+        <button type="button" class="ghostb" data-cat-renombrar="${c.id}">Renombrar</button>
+        <button type="button" class="ghostb fuerte" data-nuevo="${c.id}">${ico('plus')}Producto</button>
+      </header>
+      <div class="plist">${ps.map((p) => filaProducto(p, c)).join('') || '<p class="vacio">Sin productos. Usa "+ Producto" para agregar el primero.</p>'}</div></section>`;
+  }).join('');
+  $('clista').innerHTML = html || `<p class="vacio">Nada coincide con "${esc(filtro.q)}".</p>`;
+}
+const chipAg = (a, editar) => editar
+  ? `<span class="agc ed"><button type="button" data-ag-renombrar="${a.id}">${esc(a.nombre)} ✎</button><button type="button" class="x" data-ag-quitar="${a.id}" aria-label="Quitar ${esc(a.nombre)}">${ico('x')}</button></span>`
+  : `<button type="button" class="agc ${a.disponible ? '' : 'agotado'}" data-a="${a.id}" aria-pressed="${!!a.disponible}">${a.disponible ? ico('check') : ico('ban')}${esc(a.nombre)}${a.disponible ? '' : '<small>Agotado</small>'}</button>`;
+let editarAg = false;
+function pintarAgregados() {
+  const caja = (tipo, titulo, ayuda) => `<section class="cardf agbox"><header><h3>${titulo}</h3><span class="sp"></span>
+      <button type="button" class="ghostb" data-ag-modo>${editarAg ? 'Listo' : 'Editar lista'}</button></header>
+    <p class="ayuda">${ayuda}</p>
+    <div class="opts">${M.agregados.filter((a) => (a.tipo === 'salsa') === (tipo === 'salsa')).map((a) => chipAg(a, editarAg)).join('')}</div>
+    <form class="agnuevo" data-ag-nuevo="${tipo}"><input placeholder="${tipo === 'salsa' ? 'Nueva salsa, ej: Mayonesa' : 'Nuevo ingrediente, ej: Pimentón'}" maxlength="40" aria-label="Nombre"><button class="ghostb fuerte">${ico('plus')}Agregar</button></form></section>`;
+  $('cags').innerHTML = caja('ingrediente', 'Ingredientes a elegir', 'Los que el cliente elige en los "+N ingr.". Toca uno para marcarlo agotado (deja de ofrecerse) y vuelve a tocarlo cuando llegue.')
+    + caja('salsa', 'Salsas', 'Opcionales y sin costo, en las categorías que tienen "Ofrece salsas".');
+}
+async function pintarCarta() {
+  const y = scrollY;
+  await cargarCarta();
+  if (!$('cbusca')) {
+    $('v-carta').innerHTML = `<div class="ctools">
+        <label class="search"><svg class="ico"><use href="#i-search"/></svg><span class="sr">Buscar producto</span><input id="cbusca" type="search" placeholder="Buscar producto…" autocomplete="off"></label>
+        <div class="cfiltros" id="cfiltros" role="group" aria-label="Mostrar"></div>
+        <span class="sp"></span>
+        <button type="button" class="primary chico" data-nuevo="">${ico('plus')}Nuevo producto</button>
+        <button type="button" class="ghostb" id="cnuevacat">${ico('plus')}Categoría</button>
+      </div>
+      <nav class="cjump" id="cjump" aria-label="Ir a categoría"></nav>
+      <div id="clista"></div>
+      <div class="agrid" id="cags"></div>
+      <details class="cardf hist" id="chist"><summary><h3>Historial de precios</h3></summary><div id="chistT"></div></details>
+      <p class="ayuda" style="margin:16px 4px">Los cambios se guardan solos y se ven al instante en la carta. Material para imprimir:
+        <a href="carta-imprimible" target="_blank">carta en PDF</a> · <a href="cartel" target="_blank">cartel y tarjetas con QR</a>.</p>`;
+    $('cbusca').oninput = (e) => { filtro.q = e.target.value; pintarListaCarta(); };
+  }
+  $('cjump').innerHTML = M.categorias.map((c) => `<button type="button" data-ir="${c.id}">${esc(c.nombre)}</button>`).join('');
+  pintarListaCarta(); pintarAgregados();
+  scrollTo({ top: y });
+}
+async function pintarHistorial() {
+  const h = await api('panel/historial');
+  $('chistT').innerHTML = h.length ? `<table><tr><th>Fecha</th><th>Producto</th><th class="r">Antes</th><th class="r">Ahora</th></tr>${h.map((r) =>
+    `<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td class="r">${clp(r.anterior)}</td><td class="r">${clp(r.nuevo)}</td></tr>`).join('')}</table>` : '<p class="ayuda">Aún no hay cambios de precio.</p>';
+}
+const prodPorId = (id) => M.categorias.flatMap((c) => c.productos).find((p) => p.id === Number(id));
+const guardado = (msg = 'Guardado') => toast(`✓ ${msg}`);
+// Precio: se guarda al salir del campo o con Enter; un cambio grande pide confirmación
+// (un cero de más o de menos es el error más común al tipear en la tablet).
+async function guardarPrecio(inp) {
+  const p = prodPorId(inp.dataset.precio), nuevo = digitos(inp.value);
+  if (nuevo === p.precio && !(p.precio_pendiente && nuevo)) return;
+  if (!nuevo) { inp.value = miles(p.precio); return; }
+  if (p.precio && (nuevo > p.precio * 1.8 || nuevo < p.precio * 0.55) && !confirm(`¿Cambiar ${p.nombre} de ${clp(p.precio)} a ${clp(nuevo)}?`)) { inp.value = miles(p.precio); return; }
+  try {
+    await api(`panel/productos/${p.id}`, { method: 'PATCH', body: { precio: nuevo } });
+    p.precio = nuevo; p.precio_pendiente = 0;
+    const ok = inp.closest('.pprice'); ok.classList.remove('falta'); ok.querySelector('.ok').textContent = '✓';
+    setTimeout(() => { ok.querySelector('.ok').textContent = ''; }, 1600);
+    inp.closest('.prow').querySelector('.bd.warn')?.remove();
+    pintarFiltros();
+  } catch (e) { alert(e.message); inp.value = miles(p.precio); }
+}
+$('v-carta').addEventListener('focusout', (e) => { if (e.target.dataset?.precio) guardarPrecio(e.target); });
+$('v-carta').addEventListener('keydown', (e) => {
+  if (!e.target.dataset?.precio) return;
+  if (e.key === 'Enter') { e.preventDefault(); const l = [...$('clista').querySelectorAll('[data-precio]')]; const i = l.indexOf(e.target); (l[i + 1] || e.target).focus(); if (!l[i + 1]) e.target.blur(); }
+  if (e.key === 'Escape') { e.target.value = miles(prodPorId(e.target.dataset.precio).precio); e.target.blur(); }
+});
+$('v-carta').addEventListener('focusin', (e) => { if (e.target.dataset?.precio) setTimeout(() => e.target.select(), 0); });
+$('v-carta').onclick = async (e) => {
+  const t = (s) => e.target.closest(s);
+  let b;
+  if ((b = t('[data-ver]'))) { filtro.ver = b.dataset.ver; pintarListaCarta(); return; }
+  if ((b = t('[data-ir]'))) { const el = $('ccat-' + b.dataset.ir); if (filtro.ver !== 'todos' || filtro.q) { filtro = { q: '', ver: 'todos' }; $('cbusca').value = ''; pintarListaCarta(); }
+    scrollTo({ top: $('ccat-' + b.dataset.ir).getBoundingClientRect().top + scrollY - $('v-carta').querySelector('.ctools').offsetHeight - document.querySelector('.bar').offsetHeight - 8, behavior: 'smooth' }); return; }
+  if ((b = t('[data-editar]'))) return abrirProducto(prodPorId(b.dataset.editar));
+  if ((b = t('[data-nuevo]'))) return abrirProducto(null, Number(b.dataset.nuevo) || M.categorias[0]?.id);
+  if ((b = t('#cnuevacat'))) { const n = prompt('Nombre de la nueva categoría (ej: Promociones):'); if (n?.trim()) { await api('panel/categorias', { method: 'POST', body: { nombre: n } }); guardado('Categoría creada'); pintarCarta(); } return; }
+  if ((b = t('[data-cat-renombrar]'))) { const c = M.categorias.find((x) => x.id === Number(b.dataset.catRenombrar)); const n = prompt('Nuevo nombre de la categoría:', c.nombre); if (n?.trim() && n !== c.nombre) { await api(`panel/categorias/${c.id}`, { method: 'PATCH', body: { nombre: n } }); guardado(); pintarCarta(); } return; }
+  if ((b = t('[data-cat-mover]'))) { await api(`panel/categorias/${b.dataset.catMover}`, { method: 'PATCH', body: { mover: Number(b.dataset.d) } }); pintarCarta(); return; }
+  if ((b = t('[data-ag-modo]'))) { editarAg = !editarAg; pintarAgregados(); return; }
+  if ((b = t('[data-ag-renombrar]'))) { const a = M.agregados.find((x) => x.id === Number(b.dataset.agRenombrar)); const n = prompt('Nuevo nombre:', a.nombre); if (n?.trim() && n !== a.nombre) { try { await api(`panel/agregados/${a.id}`, { method: 'PATCH', body: { nombre: n } }); a.nombre = n.trim(); pintarAgregados(); guardado(); } catch (err) { alert(err.message); } } return; }
+  if ((b = t('[data-ag-quitar]'))) { const a = M.agregados.find((x) => x.id === Number(b.dataset.agQuitar)); if (confirm(`¿Quitar "${a.nombre}" de la lista? Los pedidos anteriores no cambian.`)) { await api(`panel/agregados/${a.id}`, { method: 'PATCH', body: { archivado: true } }); M.agregados = M.agregados.filter((x) => x !== a); pintarAgregados(); guardado('Quitado'); } return; }
+  if ((b = t('[data-a]'))) {
+    const a = M.agregados.find((x) => x.id === Number(b.dataset.a)), on = !a.disponible;
+    await api(`panel/agregados/${a.id}`, { method: 'PATCH', body: { disponible: on } });
+    a.disponible = on ? 1 : 0; b.outerHTML = chipAg(a, false); guardado(on ? `${a.nombre}: disponible` : `${a.nombre}: agotado`);
+  }
+};
+$('v-carta').addEventListener('submit', async (e) => {
+  const f = e.target.closest('[data-ag-nuevo]'); if (!f) return;
+  e.preventDefault();
+  const inp = f.querySelector('input'); if (!inp.value.trim()) return inp.focus();
+  try { await api('panel/agregados', { method: 'POST', body: { nombre: inp.value, tipo: f.dataset.agNuevo } }); guardado('Agregado'); await cargarCarta(); pintarAgregados(); $('cags').querySelector(`[data-ag-nuevo="${f.dataset.agNuevo}"] input`).focus(); }
+  catch (err) { alert(err.message); }
+});
+$('v-carta').addEventListener('toggle', (e) => { if (e.target.id === 'chist' && e.target.open) pintarHistorial(); }, true);
 // Achica la foto en el navegador (4:3, 1000 px, WebP) antes de subirla: el
 // celular del dueño saca fotos de 4 MB y el servidor tiene poca memoria.
 // Con { contener: true } (logos) no recorta ni rellena: conserva proporción y transparencia.
@@ -596,36 +849,84 @@ async function aWebp(file, { contener = false } = {}) {
   }
   throw new Error('Este navegador no pudo convertir la foto. Prueba con Chrome.');
 }
-$('v-carta').onclick = async (e) => {
-  const a = e.target.closest('[data-a]');
-  if (a) {
-    const on = a.getAttribute('aria-pressed') !== 'true';
-    await api(`panel/agregados/${a.dataset.a}`, { method: 'PATCH', body: { disponible: on } });
-    a.setAttribute('aria-pressed', on); a.innerHTML = (on ? ico('check') : '') + esc(a.textContent);
-    return;
-  }
-  const q = e.target.closest('[data-quitar]'); if (!q) return;
-  if (!confirm('¿Quitar la foto de este producto?')) return;
-  await fetch(`${BASE}/api/panel/productos/${q.dataset.quitar}/imagen`, { method: 'DELETE' }); pintarCarta();
-};
+async function subirFoto(id, file) {
+  const r = await fetch(`${BASE}/api/panel/productos/${id}/imagen`, { method: 'PUT', headers: { 'Content-Type': 'image/webp' }, body: await aWebp(file) });
+  if (!r.ok) throw new Error((await r.json()).error);
+}
 $('v-carta').onchange = async (e) => {
   const t = e.target;
   if (t.dataset.foto) {
-    const lbl = t.closest('label'); lbl.firstChild.textContent = 'Subiendo…';
-    try {
-      const r = await fetch(`${BASE}/api/panel/productos/${t.dataset.foto}/imagen`, { method: 'PUT', headers: { 'Content-Type': 'image/webp' }, body: await aWebp(t.files[0]) });
-      if (!r.ok) throw new Error((await r.json()).error);
-      pintarCarta();
-    } catch (err) { alert(err.message); lbl.firstChild.textContent = 'Subir foto'; }
+    const th = t.closest('.pthumb'); th.classList.add('cargando');
+    try { await subirFoto(t.dataset.foto, t.files[0]); guardado('Foto actualizada'); pintarCarta(); }
+    catch (err) { alert(err.message); th.classList.remove('cargando'); }
     return;
   }
+  if (t.dataset.salsas) { await api(`panel/categorias/${t.dataset.salsas}`, { method: 'PATCH', body: { salsas: t.checked } }); guardado(t.checked ? 'Ofrece salsas' : 'Sin salsas'); return; }
   if (!t.dataset.p) return;
   try {
-    const v = t.type === 'checkbox' ? t.checked : Number(t.value);
-    await api(`panel/productos/${t.dataset.p}`, { method: 'PATCH', body: { [t.dataset.f]: v } });
-    t.style.outline = '2px solid var(--ok)'; setTimeout(() => t.style.outline = '', 800);
-    if (t.dataset.f === 'precio') pintarCarta();
-  } catch (err) { alert(err.message); }
+    await api(`panel/productos/${t.dataset.p}`, { method: 'PATCH', body: { [t.dataset.f]: t.checked } });
+    const p = prodPorId(t.dataset.p); p[t.dataset.f] = t.checked ? 1 : 0;
+    pintarFiltros();
+    if (t.dataset.f === 'activo') { t.closest('.prow').classList.toggle('off', !t.checked); guardado(t.checked ? `${p.nombre}: disponible` : `${p.nombre}: no disponible`); }
+    else guardado(t.checked ? `${p.nombre} se sugerirá` : `${p.nombre} ya no se sugiere`);
+  } catch (err) { alert(err.message); t.checked = !t.checked; }
+};
+
+// Ficha de producto: crear o editar todo (nombre, descripción, categoría, ingredientes…).
+let fp = null;
+function abrirProducto(p, cat) {
+  fp = p ? { ...p } : { id: null, categoria_id: cat, nombre: '', descripcion: '', precio: 0, activo: 1, incluye: 0, destacado: 0, sugerir: 0, precio_pendiente: 0, imagen: null };
+  $('fpTitulo').textContent = p ? 'Editar producto' : 'Nuevo producto';
+  const c = M.categorias.find((x) => x.id === fp.categoria_id);
+  const idx = c ? c.productos.findIndex((x) => x.id === fp.id) : -1;
+  $('fpBody').innerHTML = `
+    <div class="fp-top">
+      <label class="pthumb grande" title="Cambiar foto">${fp.imagen ? `<img src="${esc(fp.imagen)}" alt="">` : `<span class="emoji">${emojiDe(fp.nombre || 'x', c?.nombre)}</span><small>${p ? 'Subir foto' : 'Foto: después de crear'}</small>`}${p ? '<input type="file" accept="image/*" hidden id="fpFoto">' : ''}</label>
+      <div style="flex:1;min-width:0">
+        <div class="field" style="margin-top:0"><label for="fpNombre">Nombre</label><input id="fpNombre" maxlength="80" value="${esc(fp.nombre)}" placeholder="Ej: Italiano XL"></div>
+        <div class="dos"><div class="field"><label for="fpPrecio">Precio</label>${dinero('fpPrecio', fp.precio, 'placeholder="0"')}</div>
+          <div class="field"><label for="fpCat">Categoría</label><select id="fpCat">${M.categorias.map((x) => `<option value="${x.id}" ${x.id === fp.categoria_id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></div></div>
+      </div>
+    </div>
+    <div class="field"><label for="fpDesc">Descripción <span class="opc">(opcional)</span></label><textarea id="fpDesc" rows="2" maxlength="200" placeholder="Qué lleva, tamaño…">${esc(fp.descripcion || '')}</textarea></div>
+    <div class="field"><label>Ingredientes que el cliente elige</label>
+      <div class="segn" role="group" aria-label="Ingredientes a elegir">${[0, 1, 2, 3, 4].map((n) => `<button type="button" data-inc="${n}" aria-pressed="${fp.incluye === n}">${n ? n : 'Ninguno'}</button>`).join('')}</div>
+      <p class="ayuda">Para los "+2 ingr.": el cliente elige exactamente esa cantidad de la lista de ingredientes.</p></div>
+    <div class="fp-sw">
+      <div class="swl">${sw('id="fpActivo"', fp.activo, 'Disponible')}<label for="fpActivo"><b>Disponible</b><small>Apagado no se puede pedir (ej. se acabó por hoy).</small></label></div>
+      <div class="swl">${sw('id="fpDest"', fp.destacado, 'Destacado')}<label for="fpDest"><b>Destacado</b><small>Aparece en "Los más pedidos" mientras no haya ventas suficientes.</small></label></div>
+      <div class="swl" id="fpSugW">${sw('id="fpSug"', fp.sugerir, 'Sugerir')}<label for="fpSug"><b>Sugerir como acompañamiento</b><small>Se ofrece al agregar un plato, en el carro y en el mostrador.</small></label></div>
+    </div>
+    ${p ? `<div class="fp-mov">${idx > 0 ? '<button type="button" class="ghostb" data-fp-mover="-1">↑ Subir en la carta</button>' : ''}${idx >= 0 && idx < c.productos.length - 1 ? '<button type="button" class="ghostb" data-fp-mover="1">↓ Bajar en la carta</button>' : ''}<span class="sp"></span><button type="button" class="ghostb peligro" id="fpQuitar">Quitar de la carta</button></div>` : ''}
+    <div class="formerr" id="fpErr" role="alert"></div>`;
+  const segs = () => { $('fpBody').querySelectorAll('[data-inc]').forEach((b) => b.setAttribute('aria-pressed', Number(b.dataset.inc) === fp.incluye)); $('fpSugW').hidden = fp.incluye > 0; };
+  segs();
+  $('fpBody').querySelectorAll('[data-inc]').forEach((b) => b.onclick = () => { fp.incluye = Number(b.dataset.inc); segs(); });
+  $('fpBody').querySelectorAll('[data-fp-mover]').forEach((b) => b.onclick = async () => { await api(`panel/productos/${fp.id}`, { method: 'PATCH', body: { mover: Number(b.dataset.fpMover) } }); await pintarCarta(); abrirProducto(prodPorId(fp.id)); });
+  $('fpQuitar')?.addEventListener('click', async () => {
+    if (!confirm(`¿Quitar "${fp.nombre}" de la carta? Desaparece para los clientes; los pedidos y ventas anteriores no cambian.\n\nSi solo se acabó por hoy, mejor apaga "Disponible".`)) return;
+    await api(`panel/productos/${fp.id}`, { method: 'PATCH', body: { archivado: true } }); $('dlgProducto').close(); guardado('Quitado de la carta'); pintarCarta();
+  });
+  $('fpFoto')?.addEventListener('change', async (e) => {
+    try { await subirFoto(fp.id, e.target.files[0]); guardado('Foto actualizada'); await pintarCarta(); abrirProducto(prodPorId(fp.id)); } catch (err) { alert(err.message); }
+  });
+  $('fpOk').textContent = p ? 'Guardar cambios' : 'Crear producto';
+  $('dlgProducto').showModal();
+  if (!p) $('fpNombre').focus();
+}
+$('fpOk').onclick = async () => {
+  const precio = digitos($('fpPrecio').value);
+  const body = { nombre: $('fpNombre').value, descripcion: $('fpDesc').value, categoria_id: Number($('fpCat').value), precio, incluye: fp.incluye,
+    activo: $('fpActivo').checked, destacado: $('fpDest').checked, sugerir: fp.incluye ? false : $('fpSug').checked };
+  if (!body.nombre.trim()) { $('fpErr').textContent = 'Escribe el nombre del producto.'; return $('fpNombre').focus(); }
+  if (fp.id && fp.precio && precio && (precio > fp.precio * 1.8 || precio < fp.precio * 0.55) && !confirm(`¿Cambiar el precio de ${clp(fp.precio)} a ${clp(precio)}?`)) return;
+  $('fpOk').disabled = true; $('fpErr').textContent = '';
+  try {
+    if (fp.id) await api(`panel/productos/${fp.id}`, { method: 'PATCH', body: { ...body, precio_pendiente: !precio } });
+    else await api('panel/productos', { method: 'POST', body });
+    $('dlgProducto').close(); guardado(fp.id ? 'Producto guardado' : 'Producto creado'); pintarCarta();
+  } catch (e) { $('fpErr').textContent = e.message; }
+  $('fpOk').disabled = false;
 };
 
 // ---------- pausa de pedidos web ----------
@@ -642,105 +943,142 @@ $('pausa').onclick = async () => {
 };
 
 // ---------- datos del local ----------
+// Un formulario por secciones (con índice a la izquierda en pantallas anchas) y una sola
+// barra de "Guardar" que aparece apenas hay cambios y no deja salir sin avisar.
 const DIAS = [['1', 'Lunes'], ['2', 'Martes'], ['3', 'Miércoles'], ['4', 'Jueves'], ['5', 'Viernes'], ['6', 'Sábado'], ['0', 'Domingo']];
+const BANCOS = ['BancoEstado', 'Banco de Chile', 'Santander', 'BCI', 'Scotiabank', 'Itaú', 'Banco Security', 'Banco Falabella', 'Banco Ripley',
+  'Banco Consorcio', 'Banco Internacional', 'Banco BICE', 'Coopeuch', 'Tenpo', 'Mercado Pago', 'MACH', 'Copec Pay'];
+const TIPOS = ['Cuenta corriente', 'Cuenta vista', 'CuentaRUT', 'Cuenta de ahorro'];
+// RUT chileno: formato 12.345.678-9 y dígito verificador (módulo 11).
+function rutFormato(v) {
+  const s = String(v || '').toUpperCase().replace(/[^\dK]/g, ''); if (s.length < 2) return s;
+  return s.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + s.slice(-1);
+}
+function rutValido(v) {
+  const s = String(v || '').toUpperCase().replace(/[^\dK]/g, ''); if (s.length < 2) return false;
+  let suma = 0, m = 2; for (const d of s.slice(0, -1).split('').reverse()) { suma += Number(d) * m; m = m === 7 ? 2 : m + 1; }
+  const dv = 11 - (suma % 11);
+  return s.slice(-1) === (dv === 11 ? '0' : dv === 10 ? 'K' : String(dv));
+}
+let localSucio = false;
+const marcarSucio = (on) => { localSucio = on; $('lbar')?.classList.toggle('on', on); };
+function tablaHorario(pre, hor, base) {
+  return `<table class="horario"><tr class="hh"><th></th><td>${pre ? 'Desde' : 'Abre'}</td><td>${pre ? 'Hasta' : 'Cierra'}</td></tr>${DIAS.map(([d, n]) => { const h = hor[d], b = base?.[d] || ['10:00', '22:00'];
+    return `<tr><th><label class="ck"><input type="checkbox" data-${pre}abre="${d}" ${h ? 'checked' : ''}> ${n}</label></th>
+      <td><input type="time" data-${pre}desde="${d}" value="${h ? h[0] : b[0]}" ${h ? '' : 'disabled'} aria-label="${n} desde"></td>
+      <td><input type="time" data-${pre}hasta="${d}" value="${h ? h[1] : b[1]}" ${h ? '' : 'disabled'} aria-label="${n} hasta"></td></tr>`; }).join('')}</table>`;
+}
 async function pintarLocal() {
   await cargarCarta();
-  const L = M.local, t = L.transferencia || {}, D = L.despacho || { activo: false, costo: 0, minimo: 0, zona: '', horario: {} };
-  const campo = (id, label, val, extra = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}></div>`;
-  $('v-local').innerHTML = `<div class="local-grid">
-    <section class="cardf"><h3>Datos del local</h3>
-      ${campo('l-nombre', 'Nombre', L.nombre, 'maxlength="60" required')}
-      ${campo('l-whatsapp', 'WhatsApp para pedidos', L.whatsapp ? '+' + L.whatsapp : '', 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"')}
-      <p class="ayuda">Aparece en la carta como "Avisar al local por WhatsApp" y en el seguimiento.</p>
-      ${campo('l-telefono', 'Teléfono para llamadas', L.telefono ? '+' + L.telefono : '', 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"')}
-      <p class="ayuda">El cliente lo ve en la carta y en el seguimiento con un botón "Llamar". Déjalo vacío si no atienden llamadas.</p>
-      ${campo('l-instagram', 'Instagram', L.instagram ? '@' + L.instagram : '', 'placeholder="@tulocal"')}
-      ${campo('l-direccion', 'Dirección', L.direccion, 'maxlength="120" placeholder="Calle 123, Concepción"')}
-      ${campo('l-cupo', 'Pedidos web por franja de 30 minutos', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"')}
-      <p class="ayuda">Cuando una franja se llena, la carta la muestra como "completo" y el cliente elige otra.</p>
-      ${campo('l-comision', 'Comisión de la app de delivery (%)', L.comision_app, 'type="number" min="0" max="50" inputmode="numeric"')}
-      <p class="ayuda">Se usa para calcular la "comisión ahorrada" del resumen semanal. Uber Eats cobra entre 25% y 29%.</p>
-    </section>
-    <section class="cardf"><h3>Logo</h3>
+  const L = M.local, t = L.transferencia || {}, Dsp = L.despacho || { activo: false, costo: 0, minimo: 0, zona: '', horario: {} };
+  const campo = (id, label, val, extra = '', ayuda = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}<div class="err" id="${id}-err"></div></div>`;
+  const SEC = [['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-despacho', 'Despacho'], ['s-pagos', 'Transferencias'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
+  const tipoOk = !t.tipo || TIPOS.includes(t.tipo);
+  $('v-local').innerHTML = `<div class="lwrap">
+    <nav class="lnav" aria-label="Secciones">${SEC.map(([id, n]) => `<a href="#${id}" data-sec="${id}">${n}</a>`).join('')}</nav>
+    <div class="lform">
+    <section class="cardf" id="s-contacto"><h3>Contacto</h3><p class="ayuda top">Lo que el cliente ve en la portada de la carta y en el seguimiento de su pedido.</p>
+      <div class="dos">
+        ${campo('l-nombre', 'Nombre del local', L.nombre, 'maxlength="60" required')}
+        ${campo('l-direccion', 'Dirección', L.direccion, 'maxlength="120" placeholder="Calle 123, Concepción" autocomplete="street-address"')}
+        ${campo('l-whatsapp', 'WhatsApp para pedidos', fmtTel(L.whatsapp), 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"', 'Botón "Avisar por WhatsApp" al confirmar.')}
+        ${campo('l-telefono', 'Teléfono para llamadas', fmtTel(L.telefono), 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"', 'Botón "Llamar". Vacío si no atienden llamadas.')}
+        ${campo('l-instagram', 'Instagram', L.instagram ? '@' + L.instagram : '', 'placeholder="@tulocal" autocapitalize="off"')}
+      </div></section>
+    <section class="cardf" id="s-horario"><header class="sh"><h3>Horario de atención</h3><span class="sp"></span><button type="button" class="ghostb" id="h-copiar">Copiar el lunes a todos</button></header>
+      ${tablaHorario('', L.horario)}
+      <p class="ayuda">Si cierra después de medianoche (ej. 02:00) cuenta como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.</p></section>
+    <section class="cardf ${Dsp.activo ? '' : 'apagado'}" id="s-despacho"><header class="sh"><h3>Despacho</h3><span class="sp"></span>
+        <div class="swl corto"><label class="sw"><input type="checkbox" id="d-activo" ${Dsp.activo ? 'checked' : ''} aria-label="Ofrecer despacho"><span></span></label><label for="d-activo"><b id="d-estado">${Dsp.activo ? 'Ofreciendo despacho' : 'Solo retiro'}</b></label></div></header>
+      <div class="dbody">
+      <div class="tres">
+        <div class="field"><label for="d-costo">Costo de despacho</label>${dinero('d-costo', Dsp.costo, 'placeholder="0 = gratis"')}</div>
+        <div class="field"><label for="d-minimo">Pedido mínimo</label>${dinero('d-minimo', Dsp.minimo, 'placeholder="0 = sin mínimo"')}</div>
+        ${campo('d-zona', 'Zona', Dsp.zona, 'maxlength="160" placeholder="Ej: Concepción centro, hasta 3 km"')}
+      </div>
+      <header class="sh" style="margin-top:14px"><b>Días y horas de despacho</b><span class="sp"></span><button type="button" class="ghostb" id="d-copiar">Igual que el horario de atención</button></header>
+      ${tablaHorario('d', Dsp.horario, L.horario)}
+      <p class="ayuda">Fuera de estos horarios la carta ofrece solo retiro.</p></div></section>
+    <section class="cardf" id="s-pagos"><h3>Datos para transferencias</h3><p class="ayuda top">El cliente los ve al pagar y en el seguimiento, con un botón para copiar el número. Vacíos si no reciben transferencias.</p>
+      <div class="dos">
+        ${campo('t-titular', 'Titular de la cuenta', t.titular, 'maxlength="80" autocomplete="off"')}
+        ${campo('t-rut', 'RUT del titular', t.rut, 'maxlength="12" placeholder="12.345.678-9" autocomplete="off" autocapitalize="characters"')}
+        ${campo('t-banco', 'Banco', t.banco, 'maxlength="40" list="bancos" placeholder="Elige o escribe" autocomplete="off"')}
+        <div class="field"><label for="t-tipo">Tipo de cuenta</label><select id="t-tipo"><option value="">Elegir…</option>${TIPOS.map((x) => `<option ${t.tipo === x ? 'selected' : ''}>${x}</option>`).join('')}${tipoOk ? '' : `<option selected>${esc(t.tipo)}</option>`}</select></div>
+        ${campo('t-numero', 'Número de cuenta', t.numero, 'maxlength="30" inputmode="numeric" autocomplete="off"')}
+        ${campo('t-email', 'Correo para el comprobante', t.email, 'type="email" maxlength="80" autocomplete="off"')}
+      </div><datalist id="bancos">${BANCOS.map((b) => `<option value="${b}">`).join('')}</datalist></section>
+    <section class="cardf" id="s-pedidos"><h3>Pedidos en línea</h3>
+      <div class="dos">
+        ${campo('l-cupo', 'Pedidos web por franja de 30 min', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"', 'Al llenarse, la franja aparece como "completo".')}
+        ${campo('l-comision', 'Comisión de la app de delivery (%)', L.comision_app, 'type="number" min="0" max="50" inputmode="numeric"', 'Para calcular la "comisión ahorrada" del Resumen. Uber Eats: 25% a 29%.')}
+      </div></section>
+    <section class="cardf" id="s-logo"><h3>Logo</h3>
       <div class="logo-prev">${L.logo ? `<div class="lp oscuro"><img src="${esc(L.logo)}" alt="Logo sobre fondo oscuro"></div><div class="lp claro"><img src="${esc(L.logo)}" alt="Logo sobre fondo claro"></div>` : '<p class="ayuda" style="margin:0">Sin logo: la carta muestra la inicial del nombre.</p>'}</div>
-      <label class="mini-btn">${L.logo ? 'Cambiar logo' : 'Subir logo'}<input type="file" accept="image/*" hidden id="l-logo"></label>
-      ${L.logo ? '<button class="link" id="l-quitar-logo">Quitar</button>' : ''}
-      <p class="ayuda">Ideal: PNG con fondo transparente. Se ve sobre la portada de la carta, en este panel, en el seguimiento y en la carta imprimible.</p>
-    </section>
-    <section class="cardf"><h3>Horario de atención</h3>
-      <table class="horario">${DIAS.map(([d, n]) => { const h = L.horario[d];
-        return `<tr><th><label class="ck"><input type="checkbox" data-abre="${d}" ${h ? 'checked' : ''} aria-label="${n} abierto"> ${n}</label></th>
-          <td><input type="time" data-desde="${d}" value="${h ? h[0] : '10:00'}" ${h ? '' : 'disabled'} aria-label="${n} abre"></td>
-          <td><input type="time" data-hasta="${d}" value="${h ? h[1] : '22:00'}" ${h ? '' : 'disabled'} aria-label="${n} cierra"></td></tr>`; }).join('')}</table>
-      <p class="ayuda">Si cierra después de medianoche (ej. 02:00) se entiende como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.</p>
-    </section>
-    <section class="cardf"><h3>Despacho</h3>
-      <label class="ck" style="font-weight:700"><input type="checkbox" id="d-activo" ${D.activo ? 'checked' : ''}> Ofrecer despacho en la carta</label>
-      <p class="ayuda">Apagado, la carta solo ofrece retiro. Encendido, el cliente puede pedir despacho solo en los días y horas marcados abajo.</p>
-      <div class="dos">${campo('d-costo', 'Costo de despacho ($)', D.costo, 'type="number" min="0" step="100" inputmode="numeric"')}
-        ${campo('d-minimo', 'Pedido mínimo ($)', D.minimo, 'type="number" min="0" step="500" inputmode="numeric"')}</div>
-      ${campo('d-zona', 'Zona de despacho', D.zona, 'maxlength="160" placeholder="Ej: Concepción centro, hasta 3 km"')}
-      <table class="horario">${DIAS.map(([d, n]) => { const h = D.horario[d], base = L.horario[d] || ['19:00', '23:00'];
-        return `<tr><th><label class="ck"><input type="checkbox" data-dabre="${d}" ${h ? 'checked' : ''} aria-label="Despacho el ${n.toLowerCase()}"> ${n}</label></th>
-          <td><input type="time" data-ddesde="${d}" value="${h ? h[0] : base[0]}" ${h ? '' : 'disabled'} aria-label="${n} despacho desde"></td>
-          <td><input type="time" data-dhasta="${d}" value="${h ? h[1] : base[1]}" ${h ? '' : 'disabled'} aria-label="${n} despacho hasta"></td></tr>`; }).join('')}</table>
-      <button type="button" class="link" id="d-copiar">Usar el horario de atención</button>
-      <p class="ayuda">Las franjas fuera de este horario se ofrecen solo para retiro.</p>
-    </section>
-    <section class="cardf"><h3>Datos para transferencia</h3>
-      <p class="ayuda" style="margin-top:0">Se muestran al cliente al pagar y en el seguimiento de su pedido. Déjalos vacíos si no recibes transferencias.</p>
-      ${campo('t-titular', 'Titular', t.titular, 'maxlength="80"')}
-      ${campo('t-rut', 'RUT', t.rut, 'maxlength="12" placeholder="12.345.678-9"')}
-      ${campo('t-banco', 'Banco', t.banco, 'maxlength="40"')}
-      ${campo('t-tipo', 'Tipo de cuenta', t.tipo, 'maxlength="30" placeholder="Cuenta corriente, vista, RUT…"')}
-      ${campo('t-numero', 'Número de cuenta', t.numero, 'maxlength="30" inputmode="numeric"')}
-      ${campo('t-email', 'Correo para el comprobante', t.email, 'type="email" maxlength="80"')}
-    </section>
-  </div>
-  <div class="guardar"><span class="formerr" id="l-err" role="alert"></span><button class="primary" id="l-guardar" style="flex:0 0 auto;min-width:220px">Guardar cambios</button></div>`;
-  $('v-local').querySelectorAll('[data-abre]').forEach((c) => c.onchange = () => {
-    for (const k of ['desde', 'hasta']) $('v-local').querySelector(`[data-${k}="${c.dataset.abre}"]`).disabled = !c.checked;
-  });
-  const q = (sel) => $('v-local').querySelector(sel);
-  $('v-local').querySelectorAll('[data-dabre]').forEach((c) => c.onchange = () => {
-    for (const k of ['ddesde', 'dhasta']) q(`[data-${k}="${c.dataset.dabre}"]`).disabled = !c.checked;
-  });
-  $('d-copiar').onclick = () => DIAS.forEach(([d]) => {
+      <label class="ghostb fuerte">${L.logo ? 'Cambiar logo' : 'Subir logo'}<input type="file" accept="image/*" hidden id="l-logo"></label>
+      ${L.logo ? '<button type="button" class="link" id="l-quitar-logo">Quitar</button>' : ''}
+      <p class="ayuda">Ideal: PNG con fondo transparente. Se guarda al tiro, sin el botón Guardar.</p></section>
+    </div></div>
+    <div class="lbar" id="lbar" role="region" aria-label="Cambios sin guardar"><span><b>Tienes cambios sin guardar</b><span class="formerr" id="l-err" role="alert"></span></span>
+      <button type="button" class="ghost" id="l-descartar">Descartar</button><button class="primary" id="l-guardar">Guardar cambios</button></div>`;
+  marcarSucio(false);
+  const v = $('v-local'), q = (sel) => v.querySelector(sel);
+  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo') marcarSucio(true); };
+  const enlazar = (pre) => v.querySelectorAll(`[data-${pre}abre]`).forEach((c) => c.addEventListener('change', () => {
+    const d = c.dataset[`${pre}abre`]; for (const k of ['desde', 'hasta']) q(`[data-${pre}${k}="${d}"]`).disabled = !c.checked;
+  }));
+  enlazar(''); enlazar('d');
+  $('h-copiar').onclick = () => {
+    const a = q('[data-abre="1"]').checked, de = q('[data-desde="1"]').value, ha = q('[data-hasta="1"]').value;
+    DIAS.forEach(([d]) => { q(`[data-abre="${d}"]`).checked = a; q(`[data-desde="${d}"]`).value = de; q(`[data-hasta="${d}"]`).value = ha; q(`[data-desde="${d}"]`).disabled = q(`[data-hasta="${d}"]`).disabled = !a; });
+    marcarSucio(true); toast('Horario del lunes copiado a todos los días');
+  };
+  $('d-copiar').onclick = () => { DIAS.forEach(([d]) => {
     const abre = q(`[data-abre="${d}"]`).checked;
     q(`[data-dabre="${d}"]`).checked = abre;
     q(`[data-ddesde="${d}"]`).value = q(`[data-desde="${d}"]`).value; q(`[data-dhasta="${d}"]`).value = q(`[data-hasta="${d}"]`).value;
     q(`[data-ddesde="${d}"]`).disabled = q(`[data-dhasta="${d}"]`).disabled = !abre;
+  }); marcarSucio(true); };
+  $('d-activo').addEventListener('change', (e) => { $('s-despacho').classList.toggle('apagado', !e.target.checked); $('d-estado').textContent = e.target.checked ? 'Ofreciendo despacho' : 'Solo retiro'; });
+  // Teléfonos y RUT se ordenan solos al salir del campo.
+  for (const id of ['l-whatsapp', 'l-telefono']) $(id).addEventListener('blur', (e) => { const d = e.target.value.replace(/\D/g, ''); if (d) e.target.value = fmtTel(d.length === 9 && d[0] === '9' ? '56' + d : d); });
+  $('t-rut').addEventListener('blur', (e) => {
+    e.target.value = rutFormato(e.target.value);
+    $('t-rut-err').textContent = e.target.value && !rutValido(e.target.value) ? 'Revisa el RUT: el dígito verificador no coincide.' : '';
   });
+  v.querySelector('.lnav').onclick = (e) => { const a = e.target.closest('[data-sec]'); if (!a) return; e.preventDefault();
+    scrollTo({ top: $(a.dataset.sec).getBoundingClientRect().top + scrollY - document.querySelector('.bar').offsetHeight - 10, behavior: 'smooth' }); };
+  $('l-descartar').onclick = () => { if (confirm('¿Descartar los cambios?')) pintarLocal(); };
   $('l-logo').onchange = async (e) => {
     const lbl = e.target.closest('label'); lbl.firstChild.textContent = 'Subiendo…';
     try {
       const r = await fetch(`${BASE}/api/panel/local/logo`, { method: 'PUT', headers: { 'Content-Type': 'image/webp' }, body: await aWebp(e.target.files[0], { contener: true }) });
       if (!r.ok) throw new Error((await r.json()).error);
-      toast('Logo actualizado'); pintarLocal(); refrescar();
+      toast('✓ Logo actualizado'); if (!localSucio) pintarLocal(); refrescar();
     } catch (err) { alert(err.message); lbl.firstChild.textContent = 'Subir logo'; }
   };
   $('l-quitar-logo')?.addEventListener('click', async () => {
     if (!confirm('¿Quitar el logo?')) return;
-    await fetch(`${BASE}/api/panel/local/logo`, { method: 'DELETE' }); pintarLocal(); refrescar();
+    await fetch(`${BASE}/api/panel/local/logo`, { method: 'DELETE' }); if (!localSucio) pintarLocal(); refrescar();
   });
   $('l-guardar').onclick = async () => {
-    const v = (id) => $(id).value;
-    const horario = Object.fromEntries(DIAS.map(([d]) => [d, $('v-local').querySelector(`[data-abre="${d}"]`).checked
-      ? [$('v-local').querySelector(`[data-desde="${d}"]`).value, $('v-local').querySelector(`[data-hasta="${d}"]`).value] : null]));
-    const q = (sel) => $('v-local').querySelector(sel);
-    const despacho = { activo: $('d-activo').checked, costo: v('d-costo'), minimo: v('d-minimo'), zona: v('d-zona'),
-      horario: Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-dabre="${d}"]`).checked ? [q(`[data-ddesde="${d}"]`).value, q(`[data-dhasta="${d}"]`).value] : null])) };
+    const val = (id) => $(id).value;
+    const hor = (pre) => Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-${pre}abre="${d}"]`).checked ? [q(`[data-${pre}desde="${d}"]`).value, q(`[data-${pre}hasta="${d}"]`).value] : null]));
+    if (val('t-rut') && !rutValido(val('t-rut'))) { $('t-rut-err').textContent = 'Revisa el RUT: el dígito verificador no coincide.'; $('t-rut').focus(); return; }
     $('l-guardar').disabled = true; $('l-err').textContent = '';
     try {
       await api('panel/local', { method: 'PATCH', body: {
-        nombre: v('l-nombre'), whatsapp: v('l-whatsapp'), telefono: v('l-telefono'), instagram: v('l-instagram'), direccion: v('l-direccion'), cupo_franja: v('l-cupo'), comision_app: v('l-comision'), horario, despacho,
-        transferencia: { titular: v('t-titular'), rut: v('t-rut'), banco: v('t-banco'), tipo: v('t-tipo'), numero: v('t-numero'), email: v('t-email') },
+        nombre: val('l-nombre'), whatsapp: val('l-whatsapp'), telefono: val('l-telefono'), instagram: val('l-instagram'), direccion: val('l-direccion'),
+        cupo_franja: val('l-cupo'), comision_app: val('l-comision'), horario: hor(''),
+        despacho: { activo: $('d-activo').checked, costo: digitos(val('d-costo')), minimo: digitos(val('d-minimo')), zona: val('d-zona'), horario: hor('d') },
+        transferencia: { titular: val('t-titular'), rut: rutFormato(val('t-rut')), banco: val('t-banco'), tipo: val('t-tipo'), numero: val('t-numero'), email: val('t-email') },
       } });
-      toast('Datos del local guardados'); pintarLocal(); refrescar();
+      marcarSucio(false); toast('✓ Datos del local guardados'); pintarLocal(); refrescar();
     } catch (e) { $('l-err').textContent = e.message; }
     $('l-guardar').disabled = false;
   };
 }
+addEventListener('beforeunload', (e) => { if (localSucio && vista === 'local') e.preventDefault(); });
 
 // ---------- resumen semanal ----------
 let semana = null;
@@ -829,6 +1167,8 @@ for (const ev of ['mouseout', 'focusout']) document.addEventListener(ev, (e) => 
 
 // ---------- navegación ----------
 document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
+  if (vista === 'local' && b.dataset.v !== 'local' && localSucio && !confirm('Tienes cambios sin guardar en Datos del local. ¿Salir sin guardar?')) return;
+  if (b.dataset.v !== 'local') marcarSucio(false);
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan

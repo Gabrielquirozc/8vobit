@@ -34,7 +34,16 @@ con los pedidos web.
 (web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
 (con registro de folio) y detalle imprimible.
 
-**Datos del local**: nombre, WhatsApp, teléfono para llamadas (botón "Llamar" en la carta
+**Carta y precios** (pensada para cargar datos rápido en la tablet): buscador, filtros *Sin precio /
+No disponibles / Sin foto*, saltos por categoría y una fila por producto con foto (tocarla la
+cambia), precio con formato `$4.990` que se guarda al salir del campo o con Enter (un cambio
+grande, como un cero de más, pide confirmación), e interruptores *Disponible* y *Sugerir*. La ficha
+del producto (⋯ o el nombre) edita nombre, descripción, categoría, ingredientes a elegir, destacado,
+orden, y permite **crear productos y categorías** y quitarlos de la carta (se archivan: los pedidos
+anteriores no cambian). Ingredientes y salsas se agregan, renombran, quitan o marcan agotados ahí mismo.
+
+**Datos del local** (por secciones, con índice y una barra *Guardar* que aparece al haber cambios y
+avisa si se sale sin guardar; RUT con dígito verificador, banco y tipo de cuenta a elegir): nombre, WhatsApp, teléfono para llamadas (botón "Llamar" en la carta
 y el seguimiento), Instagram, dirección, horario por día (días
 cerrados; misma hora de apertura y cierre = 24 h), cupo de pedidos por franja y datos
 para transferencia, que el cliente ve al pagar y en el seguimiento.
@@ -123,7 +132,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 40 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 42 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

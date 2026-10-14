@@ -83,6 +83,8 @@ let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
   // Venta sugerida: productos que la carta ofrece como acompañamiento (papas, bebidas…).
+  // Productos y agregados que el local quitó de la carta: se archivan (los pedidos viejos los nombran).
+  if (!pcols.has('archivado')) db.exec('ALTER TABLE productos ADD COLUMN archivado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('sugerir')) { db.exec('ALTER TABLE productos ADD COLUMN sugerir INTEGER NOT NULL DEFAULT 0'); sugerirSeed = true; }
   // Observación por producto ("sin cebolla"), aparte del comentario general del pedido.
   const icols = new Set(db.prepare('PRAGMA table_info(pedido_items)').all().map((c) => c.name));
@@ -92,6 +94,7 @@ let contactoSeed = false, salsasSeed = false, sugerirSeed = false;
   if (!icols.has('sugerido')) db.exec('ALTER TABLE pedido_items ADD COLUMN sugerido INTEGER NOT NULL DEFAULT 0');
   if (!icols.has('salsas')) db.exec("ALTER TABLE pedido_items ADD COLUMN salsas TEXT NOT NULL DEFAULT '[]'");
   const acols = new Set(db.prepare('PRAGMA table_info(agregados)').all().map((c) => c.name));
+  if (!acols.has('archivado')) db.exec('ALTER TABLE agregados ADD COLUMN archivado INTEGER NOT NULL DEFAULT 0');
   if (!acols.has('tipo')) { db.exec("ALTER TABLE agregados ADD COLUMN tipo TEXT NOT NULL DEFAULT 'ingrediente'"); salsasSeed = true; }
   // Si la categoría ofrece salsas (no tiene sentido ofrecer ketchup con una bebida).
   const ccols = new Set(db.prepare('PRAGMA table_info(categorias)').all().map((c) => c.name));
@@ -338,7 +341,7 @@ function serveFile(res, file, versionado = false) {
 
 function menu(local) {
   const cats = db.prepare('SELECT id, nombre, salsas FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
-  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir FROM productos WHERE local_id=? ORDER BY orden').all(local.id)
+  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir FROM productos WHERE local_id=? AND archivado=0 ORDER BY orden, id').all(local.id)
     .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null }));
   // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
   // suficientes, se completa con los destacados elegidos a mano.
@@ -355,7 +358,7 @@ function menu(local) {
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null },
     mas_pedidos: mas,
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
-    agregados: db.prepare('SELECT id, nombre, disponible, tipo FROM agregados WHERE local_id=? ORDER BY id').all(local.id),
+    agregados: db.prepare('SELECT id, nombre, disponible, tipo FROM agregados WHERE local_id=? AND archivado=0 ORDER BY id').all(local.id),
   };
 }
 
@@ -368,6 +371,38 @@ function pedidoCompleto(id, localId) {
 }
 
 const clpTxt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+// Valida los datos de un producto (nuevo si `p` es null). Solo cambia lo que viene en `b`.
+function datosProducto(lid, b, p) {
+  const base = p || { categoria_id: null, nombre: '', descripcion: null, precio: 0, activo: 1, precio_pendiente: 0, incluye: 0, destacado: 0, sugerir: 0, archivado: 0 };
+  const flag = (k) => (b[k] === undefined ? base[k] : (b[k] ? 1 : 0));
+  const v = {
+    categoria_id: b.categoria_id === undefined ? base.categoria_id : Number(b.categoria_id),
+    nombre: b.nombre === undefined ? base.nombre : String(b.nombre).trim().slice(0, 80),
+    descripcion: b.descripcion === undefined ? base.descripcion : (String(b.descripcion).trim().slice(0, 200) || null),
+    precio: b.precio === undefined ? base.precio : Math.round(Number(b.precio)),
+    incluye: b.incluye === undefined ? base.incluye : Math.round(Number(b.incluye)),
+    activo: flag('activo'), precio_pendiente: flag('precio_pendiente'), destacado: flag('destacado'), sugerir: flag('sugerir'), archivado: flag('archivado'),
+  };
+  if (!v.nombre) return { error: 'Escribe el nombre del producto.' };
+  if (!db.prepare('SELECT 1 FROM categorias WHERE id=? AND local_id=?').get(v.categoria_id, lid)) return { error: 'Elige una categoría.' };
+  if (!Number.isFinite(v.precio) || v.precio < 0 || v.precio > 1e6) return { error: 'Precio inválido' };
+  if (!(v.incluye >= 0 && v.incluye <= 6)) return { error: 'Los ingredientes a elegir van de 0 a 6.' };
+  // Escribir un precio en un producto "sin precio" lo deja listo para vender.
+  if (b.precio !== undefined && b.precio_pendiente === undefined && v.precio > 0) v.precio_pendiente = 0;
+  if (!p && b.precio_pendiente === undefined) v.precio_pendiente = v.precio > 0 ? 0 : 1;
+  return v;
+}
+// Sube o baja un producto (dentro de su categoría) o una categoría: intercambia el orden con el vecino.
+function mover(tabla, fila, dir, grupo) {
+  const lista = db.prepare(`SELECT id, orden FROM ${tabla} WHERE ${grupo}=?${tabla === 'productos' ? ' AND archivado=0' : ''} ORDER BY orden, id`).all(fila[grupo]);
+  lista.forEach((r, i) => { r.orden = i; });
+  const i = lista.findIndex((r) => r.id === fila.id), j = i + (dir < 0 ? -1 : 1);
+  if (j < 0 || j >= lista.length) return;
+  [lista[i].orden, lista[j].orden] = [lista[j].orden, lista[i].orden];
+  db.exec('BEGIN');
+  for (const r of lista) db.prepare(`UPDATE ${tabla} SET orden=? WHERE id=?`).run(r.orden, r.id);
+  db.exec('COMMIT');
+}
 function crearPedido(local, body) {
   const nombre = String(body.cliente || '').trim().slice(0, 80);
   const tel = String(body.telefono || '').replace(/[^\d+]/g, '').slice(0, 16);
@@ -406,13 +441,13 @@ function limpiarNota(v, max) {
 // El precio siempre sale de la base: lo que mande el cliente se ignora.
 function validarItems(local, lista) {
   if (!Array.isArray(lista) || !lista.length || lista.length > 50) return { error: 'El carro está vacío.' };
-  const disp = (tipo) => new Map(db.prepare('SELECT id, nombre FROM agregados WHERE local_id=? AND disponible=1 AND tipo=?').all(local.id, tipo).map((a) => [a.id, a.nombre]));
+  const disp = (tipo) => new Map(db.prepare('SELECT id, nombre FROM agregados WHERE local_id=? AND disponible=1 AND archivado=0 AND tipo=?').all(local.id, tipo).map((a) => [a.id, a.nombre]));
   const agregadosOk = disp('ingrediente'), salsasOk = disp('salsa');
   const items = [];
   let total = 0;
   for (const it of lista) {
     const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(it.producto_id), local.id);
-    if (!p || !p.activo) return { error: 'Un producto ya no está disponible. Recarga la carta.' };
+    if (!p || !p.activo || p.archivado) return { error: 'Un producto ya no está disponible. Recarga la carta.' };
     if (p.precio_pendiente || p.precio <= 0) return { error: `${p.nombre} no tiene precio; consúltalo en el local.` };
     const cant = Math.max(1, Math.min(20, Number(it.cantidad) || 1));
     const ags = Array.isArray(it.agregados) ? it.agregados.map(Number) : [];
@@ -693,22 +728,43 @@ async function api(req, res, url) {
       }, v);
       return send(res, 201, { ...r, vuelto: recibido - v.total });
     }
+    if (m === 'POST' && parts[1] === 'productos' && !parts[2]) {
+      const v = datosProducto(lid, await readJson(req), null);
+      if (v.error) return send(res, 400, v);
+      const orden = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM productos WHERE categoria_id=?').get(v.categoria_id).n;
+      const { lastInsertRowid: id } = db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(lid, v.categoria_id, v.nombre, v.descripcion, v.precio, v.activo, v.precio_pendiente, v.incluye, orden, v.destacado, v.sugerir);
+      return send(res, 201, { id: Number(id) });
+    }
     if (m === 'PATCH' && parts[1] === 'productos' && parts[2]) {
       const b = await readJson(req);
       const p = db.prepare('SELECT * FROM productos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
       if (!p) return send(res, 404, { error: 'No existe' });
-      let precio = p.precio;
-      if (b.precio !== undefined) {
-        precio = Math.round(Number(b.precio));
-        if (!Number.isFinite(precio) || precio < 0 || precio > 1e6) return send(res, 400, { error: 'Precio inválido' });
-      }
-      const activo = b.activo === undefined ? p.activo : (b.activo ? 1 : 0);
-      const pend = b.precio_pendiente === undefined ? p.precio_pendiente : (b.precio_pendiente ? 1 : 0);
-      const sugerir = b.sugerir === undefined ? p.sugerir : (b.sugerir ? 1 : 0);
+      if (b.mover) { mover('productos', p, Number(b.mover), 'categoria_id'); return send(res, 200, { ok: true }); }
+      const v = datosProducto(lid, b, p);
+      if (v.error) return send(res, 400, v);
       db.exec('BEGIN');
-      db.prepare('UPDATE productos SET precio=?, activo=?, precio_pendiente=?, sugerir=? WHERE id=?').run(precio, activo, pend, sugerir, p.id);
-      if (precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, p.id, p.precio, precio);
+      db.prepare(`UPDATE productos SET categoria_id=?, nombre=?, descripcion=?, precio=?, activo=?, precio_pendiente=?, incluye=?, destacado=?, sugerir=?, archivado=? WHERE id=?`)
+        .run(v.categoria_id, v.nombre, v.descripcion, v.precio, v.activo, v.precio_pendiente, v.incluye, v.destacado, v.sugerir, v.archivado, p.id);
+      if (v.precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, p.id, p.precio, v.precio);
       db.exec('COMMIT');
+      return send(res, 200, { ok: true });
+    }
+    if (m === 'POST' && parts[1] === 'categorias' && !parts[2]) {
+      const nombre = String((await readJson(req)).nombre || '').trim().slice(0, 40);
+      if (!nombre) return send(res, 400, { error: 'Escribe el nombre de la categoría.' });
+      const orden = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM categorias WHERE local_id=?').get(lid).n;
+      const { lastInsertRowid: id } = db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, nombre, orden);
+      return send(res, 201, { id: Number(id) });
+    }
+    if (m === 'PATCH' && parts[1] === 'categorias' && parts[2]) {
+      const b = await readJson(req);
+      const c = db.prepare('SELECT * FROM categorias WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!c) return send(res, 404, { error: 'No existe' });
+      if (b.mover) { mover('categorias', c, Number(b.mover), 'local_id'); return send(res, 200, { ok: true }); }
+      const nombre = b.nombre === undefined ? c.nombre : String(b.nombre).trim().slice(0, 40);
+      if (!nombre) return send(res, 400, { error: 'El nombre no puede quedar vacío.' });
+      db.prepare('UPDATE categorias SET nombre=?, salsas=? WHERE id=?').run(nombre, b.salsas === undefined ? c.salsas : (b.salsas ? 1 : 0), c.id);
       return send(res, 200, { ok: true });
     }
     if (parts[1] === 'productos' && parts[2] && parts[3] === 'imagen' && (m === 'PUT' || m === 'DELETE')) {
@@ -726,9 +782,22 @@ async function api(req, res, url) {
       if (p.imagen !== nombre) borrarImagen(p.imagen);
       return send(res, 200, { imagen: nombre ? `${BASE}/img/${nombre}` : null });
     }
+    if (m === 'POST' && parts[1] === 'agregados' && !parts[2]) {
+      const b = await readJson(req);
+      const nombre = String(b.nombre || '').trim().slice(0, 40), tipo = b.tipo === 'salsa' ? 'salsa' : 'ingrediente';
+      if (!nombre) return send(res, 400, { error: 'Escribe el nombre.' });
+      if (db.prepare('SELECT 1 FROM agregados WHERE local_id=? AND tipo=? AND archivado=0 AND lower(nombre)=lower(?)').get(lid, tipo, nombre)) return send(res, 400, { error: `"${nombre}" ya está en la lista.` });
+      const { lastInsertRowid: id } = db.prepare('INSERT INTO agregados (local_id,nombre,tipo) VALUES (?,?,?)').run(lid, nombre, tipo);
+      return send(res, 201, { id: Number(id) });
+    }
     if (m === 'PATCH' && parts[1] === 'agregados' && parts[2]) {
       const b = await readJson(req);
-      db.prepare('UPDATE agregados SET disponible=? WHERE id=? AND local_id=?').run(b.disponible ? 1 : 0, Number(parts[2]), lid);
+      const a = db.prepare('SELECT * FROM agregados WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!a) return send(res, 404, { error: 'No existe' });
+      const nombre = b.nombre === undefined ? a.nombre : String(b.nombre).trim().slice(0, 40);
+      if (!nombre) return send(res, 400, { error: 'El nombre no puede quedar vacío.' });
+      db.prepare('UPDATE agregados SET disponible=?, nombre=?, archivado=? WHERE id=?').run(
+        b.disponible === undefined ? a.disponible : (b.disponible ? 1 : 0), nombre, b.archivado === undefined ? a.archivado : (b.archivado ? 1 : 0), a.id);
       return send(res, 200, { ok: true });
     }
     if (m === 'GET' && parts[1] === 'historial') {

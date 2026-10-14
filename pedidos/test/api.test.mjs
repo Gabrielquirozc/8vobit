@@ -513,6 +513,66 @@ test('material del local: cartel con QR y panel instalable en la tablet', async 
   assert.match(await (await fetch(B + '/panel')).text(), /rel="manifest"/);
 });
 
+test('editar la carta: categorías, productos nuevos, edición, orden y quitar', async () => {
+  cookie = '';
+  assert.equal((await req('POST', '/api/panel/productos', { nombre: 'X' })).status, 401);
+  await login();
+  const c = await req('POST', '/api/panel/categorias', { nombre: '  Promociones  ' });
+  assert.equal(c.status, 201);
+  assert.equal((await req('POST', '/api/panel/categorias', { nombre: '' })).status, 400);
+  // producto nuevo: sin precio queda "sin precio"; con precio se puede vender al tiro
+  assert.equal((await req('POST', '/api/panel/productos', { nombre: 'Sin cat' })).status, 400);
+  const p1 = await req('POST', '/api/panel/productos', { categoria_id: c.body.id, nombre: 'Promo dúo', precio: 6990, descripcion: '2 italianos' });
+  assert.equal(p1.status, 201);
+  const p2 = (await req('POST', '/api/panel/productos', { categoria_id: c.body.id, nombre: 'Promo familiar' })).body;
+  let cat = (await menu()).categorias.find((x) => x.id === c.body.id);
+  assert.equal(cat.nombre, 'Promociones');
+  assert.deepEqual(cat.productos.map((p) => [p.nombre, p.precio, p.precio_pendiente]), [['Promo dúo', 6990, 0], ['Promo familiar', 0, 1]]);
+  assert.equal((await pedir([{ producto_id: p1.body.id }])).status, 201);
+  assert.equal((await pedir([{ producto_id: p2.id }])).status, 400);
+  // escribir el precio lo deja vendible; editar nombre, ingredientes e incluir en otra categoría
+  assert.equal((await req('PATCH', `/api/panel/productos/${p2.id}`, { precio: 12990 })).status, 200);
+  assert.equal((await pedir([{ producto_id: p2.id }])).status, 201);
+  assert.equal((await req('PATCH', `/api/panel/productos/${p2.id}`, { nombre: '', })).status, 400);
+  assert.equal((await req('PATCH', `/api/panel/productos/${p2.id}`, { incluye: 9 })).status, 400);
+  assert.equal((await req('PATCH', `/api/panel/productos/${p2.id}`, { nombre: 'Promo familia', incluye: 2, destacado: true })).status, 200);
+  // ordenar: sube el segundo
+  assert.equal((await req('PATCH', `/api/panel/productos/${p2.id}`, { mover: -1 })).status, 200);
+  cat = (await menu()).categorias.find((x) => x.id === c.body.id);
+  assert.deepEqual(cat.productos.map((p) => [p.nombre, p.incluye, p.destacado]), [['Promo familia', 2, 1], ['Promo dúo', 0, 0]]);
+  // renombrar categoría y apagar salsas
+  assert.equal((await req('PATCH', `/api/panel/categorias/${c.body.id}`, { nombre: 'Promos', salsas: false })).status, 200);
+  cat = (await menu()).categorias.find((x) => x.id === c.body.id);
+  assert.equal(cat.nombre, 'Promos'); assert.equal(cat.salsas, 0);
+  // quitar de la carta: desaparece y ya no se vende, pero los pedidos anteriores siguen
+  assert.equal((await req('PATCH', `/api/panel/productos/${p1.body.id}`, { archivado: true })).status, 200);
+  assert.ok(!(await menu()).categorias.flatMap((x) => x.productos).some((p) => p.id === p1.body.id));
+  assert.equal((await pedir([{ producto_id: p1.body.id }])).status, 400);
+  // otra cuenta no puede tocar productos ajenos (id inexistente)
+  assert.equal((await req('PATCH', '/api/panel/productos/999999', { precio: 1 })).status, 404);
+});
+
+test('ingredientes y salsas: agregar, renombrar y quitar de la lista', async () => {
+  await login();
+  const r = await req('POST', '/api/panel/agregados', { nombre: 'Pimentón', tipo: 'ingrediente' });
+  assert.equal(r.status, 201);
+  assert.equal((await req('POST', '/api/panel/agregados', { nombre: 'pimentón' })).status, 400); // repetido
+  assert.equal((await req('POST', '/api/panel/agregados', { nombre: 'Mayonesa', tipo: 'salsa' })).status, 201);
+  let ag = (await menu()).agregados;
+  assert.equal(ag.find((a) => a.id === r.body.id).tipo, 'ingrediente');
+  assert.equal(ag.find((a) => a.nombre === 'Mayonesa').tipo, 'salsa');
+  assert.equal((await req('PATCH', `/api/panel/agregados/${r.body.id}`, { nombre: 'Pimentón asado' })).status, 200);
+  const mech = await prod('Carne mechada + 2 ingr.');
+  const okp = await pedir([{ producto_id: mech.id, agregados: [r.body.id, ag.find((a) => a.nombre === 'Palta').id] }]);
+  assert.equal(okp.status, 201);
+  await req('PATCH', `/api/panel/agregados/${r.body.id}`, { archivado: true });
+  ag = (await menu()).agregados;
+  assert.ok(!ag.some((a) => a.id === r.body.id));
+  assert.equal((await pedir([{ producto_id: mech.id, agregados: [r.body.id, ag.find((a) => a.nombre === 'Palta').id] }])).status, 400);
+  await login();
+  assert.deepEqual((await req('GET', `/api/panel/pedidos/${okp.body.id}`)).body.items[0].agregados, ['Pimentón asado', 'Palta']);
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();
