@@ -82,6 +82,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
 - [x] **Estrategia** (`ESTRATEGIA.md`): planes, formas de pago, piloto y facturación decididos el 2026-10-14.
+- [ ] **Viabilidad** (`VIABILIDAD.md`): la meta de $2M/mes a medio tiempo pide ~55 locales y bajar el
+      soporte a ≤ 0,5 h por local. Medir en Gassuso los pedidos web y las horas de soporte, y actualizar
+      los supuestos al mes 3. Hitos: mes 4 Gassuso paga; mes 6, 3 locales más; mes 12, ≥ 10 locales.
 - [ ] **Siguiente**: propuesta de una página para Gassuso (planes, piloto, puesta en marcha
       bonificada) e inicio de actividades en el SII (persona natural de primera categoría) antes del mes 4.
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
