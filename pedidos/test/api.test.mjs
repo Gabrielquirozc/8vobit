@@ -643,6 +643,46 @@ test('vehículos: costo del viaje por pedido y resultado del despacho en el resu
   await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
 });
 
+test('equipo: sueldo del repartidor según la ley, privado, ligado al vehículo y a sus entregas', async () => {
+  await login();
+  const LB = await import('../public/laboral.js'), H = await import('../public/hex.js');
+  // los números del análisis: opción B (sáb y dom 12:30–21:30, 1 h de colación) ≈ $331.000 de costo mensual
+  const B = { nombre: 'Juan Pérez', rut: '11.111.111-1', rol: 'repartidor', contrato: 'plazo_fijo', turno: LB.TURNOS_TIPO[1].turno, recargoDomingo: true, gratificacion: true, bonoEntrega: 0 };
+  const l = LB.liquidacion(B);
+  assert.equal(l.horasSemana, 16); assert.equal(Math.round(l.base), 210877);
+  assert.ok(Math.abs(l.costoEmpresa - 331000) < 1500, String(l.costoEmpresa));
+  // validaciones legales
+  const eq = (trabajadores) => req('PATCH', '/api/panel/local', { equipo: { trabajadores } });
+  assert.match((await eq([{ ...B, turno: { 6: ['10:00', '22:00', 30] } }])).body.error, /10 horas/);
+  assert.match((await eq([{ ...B, sueldoBase: 100000 }])).body.error, /mínimo/);
+  assert.match((await eq([{ ...B, nombre: '' }])).body.error, /nombre/);
+  assert.equal((await eq([{ ...B, id: 'juan', bonoEntrega: 500 }])).status, 200);
+  // privado: ni sueldos ni RUT en la carta pública; sí en el panel
+  const pub = JSON.stringify(await menu());
+  assert.ok(!pub.includes('11.111.111-1') && !pub.includes('Juan Pérez'));
+  assert.equal((await req('GET', '/api/panel/carta')).body.equipo.trabajadores[0].nombre, 'Juan Pérez');
+  // el vehículo con repartidor costea el viaje con su costo por hora + bono, y el pedido queda asignado a él
+  const o = (await menu()).local.ubicacion, dias = Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']]));
+  const moto = { id: 'm1', nombre: 'Moto', tipo: 'moto', rendimiento: 35, precioLitro: 1300, mantencionKm: 15, velocidad: 25, pagoHora: 0, pagoViaje: 0, minEntrega: 5, repartidorId: 'juan' };
+  const calculo = { vehiculo: 'm1', factor: 1.35, idaVuelta: true, margen: 15, redondeo: 100 };
+  assert.equal((await req('PATCH', '/api/panel/local', { despacho: { activo: true, minimo: 0, horario: dias, modo: 'zonas', tam: 450, tramos: [{ hasta: 3000, costo: 2500 }], ajustes: {}, vehiculos: [moto], calculo } })).status, 200);
+  const dest = H.centro(o, 450, 1, 0), ch = await prod('Chacarero');
+  const r = await pedir([{ producto_id: ch.id }], { modalidad: 'despacho', direccion: 'X 1', ubicacion: dest });
+  const det = (await req('GET', `/api/panel/pedidos/${r.body.id}`)).body;
+  const eqv = (await req('GET', '/api/panel/carta')).body.equipo;
+  const v = LB.vehiculoConRepartidor(moto, eqv.trabajadores, eqv.laboral);
+  assert.equal(det.repartidor_id, 'juan');
+  assert.equal(det.costo_viaje, Math.round(H.costoViaje(v, calculo, Math.round(H.distancia(o, dest))).total));
+  assert.ok(v.pagoHora > 4000 && v.pagoViaje > 500);
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${r.body.id}`, { repartidor_id: 'nadie' })).status, 400);
+  // el mes del equipo cuenta su entrega y el bono
+  const mes = (await req('GET', '/api/panel/equipo')).body;
+  const j = mes.trabajadores.find((t) => t.id === 'juan');
+  assert.equal(j.entregas, 1); assert.equal(Math.round(j.liquidacion.bonos), 500);
+  assert.ok(mes.despacho.costo_equipo > 330000 && mes.despacho.pedidos >= 1);
+  await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

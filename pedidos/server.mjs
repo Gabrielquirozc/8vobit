@@ -7,6 +7,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import * as H from './public/hex.js';
+import * as LB from './public/laboral.js';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -70,6 +71,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   // Dónde se entrega un despacho por zonas (para el repartidor y para recalcular el costo).
   if (!cols.has('lat')) { for (const c of ['lat REAL', 'lng REAL', 'distancia_m INTEGER']) db.exec(`ALTER TABLE pedidos ADD COLUMN ${c}`); }
   // Costo estimado del viaje (vehículo + repartidor) para ver si el despacho sale a cuenta.
+  // Quién entregó el despacho (id del trabajador): para el bono por entrega y sus kilómetros.
+  if (!cols.has('repartidor_id')) db.exec('ALTER TABLE pedidos ADD COLUMN repartidor_id TEXT');
   if (!cols.has('costo_viaje')) db.exec('ALTER TABLE pedidos ADD COLUMN costo_viaje INTEGER');
   if (!cols.has('costo_despacho')) db.exec('ALTER TABLE pedidos ADD COLUMN costo_despacho INTEGER NOT NULL DEFAULT 0');
   // Datos del local editables desde el panel.
@@ -84,6 +87,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   if (!lcols.has('telefono')) { db.exec('ALTER TABLE locales ADD COLUMN telefono TEXT'); contactoSeed = true; }
   // Despacho: { activo, costo, minimo, zona, horario: { día: [desde, hasta] | null } }.
   if (!lcols.has('despacho')) db.exec('ALTER TABLE locales ADD COLUMN despacho TEXT');
+  // Equipo (trabajadores y parámetros laborales) para costear el despacho y el sueldo del repartidor.
+  if (!lcols.has('equipo')) db.exec('ALTER TABLE locales ADD COLUMN equipo TEXT');
   // Ubicación del local: centro de las zonas de despacho (se ajusta en el panel).
   if (!lcols.has('lat')) { db.exec('ALTER TABLE locales ADD COLUMN lat REAL'); db.exec('ALTER TABLE locales ADD COLUMN lng REAL'); ubicacionSeed = true; }
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
@@ -182,6 +187,12 @@ function despachoDe(local) {
   return { activo: !!d.activo, costo: d.costo || 0, minimo: d.minimo || 0, zona: d.zona || '', horario: d.horario || {},
     modo: d.modo === 'zonas' && local.lat != null ? 'zonas' : 'fijo', tam: d.tam || 450, tramos: d.tramos || [], ajustes: d.ajustes || {},
     vehiculos: d.vehiculos || [], calculo: { ...H.CALCULO_BASE, ...(d.calculo || {}) } };
+}
+function equipoDe(local) {
+  const e = local.equipo ? JSON.parse(local.equipo) : {};
+  const lab = e.laboral || {};
+  return { trabajadores: e.trabajadores || [], laboral: { ...LB.LABORAL_BASE, ...lab,
+    empleador: { ...LB.LABORAL_BASE.empleador, ...(lab.empleador || {}) }, trabajador: { ...LB.LABORAL_BASE.trabajador, ...(lab.trabajador || {}) } } };
 }
 const ubicacionDe = (local) => (local.lat == null ? null : { lat: local.lat, lng: local.lng });
 // Búsqueda de direcciones con Nominatim (OpenStreetMap), pasando por el servidor: se cachea,
@@ -491,8 +502,9 @@ function crearPedido(local, body) {
       const u = body.ubicacion || {}, c = cotizarDespacho(local, Number(u.lat), Number(u.lng));
       if (!c.ok) return { error: c.motivo === 'sin_ubicacion' ? 'Marca en el mapa dónde entregamos el pedido.' : 'Esa ubicación está fuera de la zona de despacho; elige retiro o llama al local.' };
       costo = c.costo; geo = { lat: Number(u.lat), lng: Number(u.lng), distancia_m: c.distancia };
-      const veh = desp.vehiculos.find((x) => x.id === desp.calculo.vehiculo);
+      const eq = equipoDe(local), veh = LB.vehiculoConRepartidor(desp.vehiculos.find((x) => x.id === desp.calculo.vehiculo), eq.trabajadores, eq.laboral);
       if (veh) geo.costo_viaje = Math.round(H.costoViaje(veh, desp.calculo, c.distancia).total);
+      if (veh?.repartidor) geo.repartidor_id = veh.repartidor.id; // por defecto, el repartidor del vehículo con que se calcula
     }
   }
   return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo, geo }, { ...v, total: v.total + costo });
@@ -540,7 +552,7 @@ function guardarPedido(local, d, { items, total }) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
-    if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, pid);
+    if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=?, repartidor_id=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, d.geo.repartidor_id ?? null, pid);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido) VALUES (?,?,?,?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0);
@@ -607,12 +619,39 @@ function actualizarLocal(local, b) {
       id: String(v.id || `v${i + 1}`).replace(/[^\w-]/g, '').slice(0, 20) || `v${i + 1}`, nombre: txt(v.nombre, 40) || `Vehículo ${i + 1}`,
       tipo: ['moto', 'auto', 'bici', 'otro'].includes(v.tipo) ? v.tipo : 'otro',
       rendimiento: num(v.rendimiento, 0, 200), precioLitro: num(v.precioLitro, 0, 5000), mantencionKm: num(v.mantencionKm, 0, 2000),
-      velocidad: num(v.velocidad, 3, 90), pagoHora: num(v.pagoHora, 0, 50000), pagoViaje: num(v.pagoViaje, 0, 20000), minEntrega: num(v.minEntrega, 0, 60) }));
-    if (vehiculos.some((v) => Object.values(v).some((x) => Number.isNaN(x)))) return { error: 'Revisa los datos de los vehículos: hay un valor fuera de rango.' };
+      velocidad: num(v.velocidad, 3, 90), pagoHora: num(v.pagoHora, 0, 50000), pagoViaje: num(v.pagoViaje, 0, 20000), minEntrega: num(v.minEntrega, 0, 60),
+      repartidorId: v.repartidorId ? String(v.repartidorId).replace(/[^\w-]/g, '').slice(0, 20) : null }));
+    if (vehiculos.some((v) => Object.values(v).some((x) => typeof x === 'number' && Number.isNaN(x)))) return { error: 'Revisa los datos de los vehículos: hay un valor fuera de rango.' };
     const k = d.calculo || {}, calculo = { vehiculo: vehiculos.some((v) => v.id === k.vehiculo) ? k.vehiculo : vehiculos[0]?.id || null,
       factor: num(k.factor ?? 1.35, 1, 3), idaVuelta: k.idaVuelta !== false, margen: num(k.margen ?? 15, -50, 300), redondeo: [10, 50, 100, 500].includes(Number(k.redondeo)) ? Number(k.redondeo) : 100 };
     if (Number.isNaN(calculo.factor) || Number.isNaN(calculo.margen)) return { error: 'Revisa el factor de calles (1 a 3) y el margen.' };
     c.despacho = JSON.stringify({ activo: !!d.activo, costo, minimo, zona: txt(d.zona, 160), horario: h, modo, tam, tramos, ajustes: Object.fromEntries(aj), vehiculos, calculo });
+  }
+  if (b.equipo !== undefined) {
+    const e = b.equipo || {}, num = (x, min, max) => { const n = Number(x); return Number.isFinite(n) && n >= min && n <= max ? n : NaN; };
+    const hh = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const trabajadores = (Array.isArray(e.trabajadores) ? e.trabajadores : []).slice(0, 30).map((t, i) => {
+      const turno = {};
+      for (const [d] of LB.DIAS_SEM) { const x = t.turno?.[d]; if (Array.isArray(x) && hh.test(x[0]) && hh.test(x[1])) turno[d] = [x[0], x[1], Math.round(num(x[2] || 0, 0, 120))]; }
+      return { id: String(t.id || `t${i + 1}`).replace(/[^\w-]/g, '').slice(0, 20) || `t${i + 1}`, nombre: txt(t.nombre, 60), rut: txt(t.rut, 12),
+        rol: ['repartidor', 'cocina', 'caja', 'otro'].includes(t.rol) ? t.rol : 'repartidor', contrato: t.contrato === 'indefinido' ? 'indefinido' : 'plazo_fijo',
+        turno, sueldoBase: Math.round(num(t.sueldoBase || 0, 0, 10e6)), bonoEntrega: Math.round(num(t.bonoEntrega || 0, 0, 20000)),
+        recargoDomingo: t.recargoDomingo !== false, gratificacion: t.gratificacion !== false, vehiculoPropio: !!t.vehiculoPropio, activo: t.activo !== false };
+    });
+    if (trabajadores.some((t) => !t.nombre)) return { error: 'Cada trabajador necesita un nombre.' };
+    if (trabajadores.some((t) => [t.sueldoBase, t.bonoEntrega, ...Object.values(t.turno).map((x) => x[2])].some(Number.isNaN))) return { error: 'Revisa los montos y la colación de los trabajadores.' };
+    const lab = e.laboral || {}, L0 = LB.LABORAL_BASE;
+    const laboral = { imm: Math.round(num(lab.imm ?? L0.imm, 100000, 5e6)), jornadaMax: num(lab.jornadaMax ?? L0.jornadaMax, 30, 48), recargoDomingo: num(lab.recargoDomingo ?? L0.recargoDomingo, 0, 100),
+      vigencia: /^\d{4}-\d{2}-\d{2}$/.test(lab.vigencia) ? lab.vigencia : L0.vigencia,
+      empleador: Object.fromEntries(Object.keys(L0.empleador).map((k) => [k, num(lab.empleador?.[k] ?? L0.empleador[k], 0, 20)])),
+      trabajador: Object.fromEntries(Object.keys(L0.trabajador).map((k) => [k, num(lab.trabajador?.[k] ?? L0.trabajador[k], 0, 30)])) };
+    if ([laboral.imm, laboral.jornadaMax, laboral.recargoDomingo, ...Object.values(laboral.empleador), ...Object.values(laboral.trabajador)].some(Number.isNaN)) return { error: 'Revisa los parámetros laborales.' };
+    for (const t of trabajadores) {
+      const g = LB.avisosTurno(t, { ...L0, ...laboral }).find((a) => a.grave);
+      if (g) return { error: `${t.nombre}: ${g.txt}` };
+      if (LB.liquidacion(t, {}, { ...L0, ...laboral }).bajoMinimo) return { error: `${t.nombre}: el sueldo base es menor al mínimo proporcional a sus horas.` };
+    }
+    c.equipo = JSON.stringify({ trabajadores, laboral });
   }
   if (b.ubicacion !== undefined) {
     const lat = Number(b.ubicacion?.lat), lng = Number(b.ubicacion?.lng);
@@ -634,6 +673,22 @@ function actualizarLocal(local, b) {
 // menos vendido, hora peak y valle, clientes que repiten y comisión ahorrada.
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 function lunesDe(fecha) { const d = new Date(`${fecha}T12:00:00`); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+function equipoMes(local, mes) {
+  const eq = equipoDe(local), desp = despachoDe(local), p = eq.laboral;
+  const peds = db.prepare("SELECT * FROM pedidos WHERE local_id=? AND dia LIKE ? AND estado!='anulado' AND modalidad='despacho'").all(local.id, `${mes}-%`);
+  const kmDe = (l) => l.reduce((a, x) => a + (x.distancia_m || 0), 0) / 1000 * desp.calculo.factor * (desp.calculo.idaVuelta ? 2 : 1);
+  const trabajadores = eq.trabajadores.map((t) => {
+    const suyos = peds.filter((x) => x.repartidor_id === t.id), km = kmDe(suyos);
+    const veh = desp.vehiculos.find((v) => v.repartidorId === t.id);
+    const asignacion = t.vehiculoPropio && veh ? Math.round(km * H.costoKmDe(veh)) : 0;
+    const liq = LB.liquidacion(t, { entregas: suyos.length, asignacion }, p);
+    return { id: t.id, nombre: t.nombre, rol: t.rol, entregas: suyos.length, km: Math.round(km * 10) / 10, vehiculo: veh?.nombre || null,
+      cobrado: suyos.reduce((a, x) => a + (x.costo_despacho || 0), 0), liquidacion: liq, avisos: LB.avisosTurno(t, p) };
+  });
+  const activos = trabajadores.filter((t) => eq.trabajadores.find((x) => x.id === t.id).activo !== false);
+  return { mes, laboral: p, trabajadores, despacho: { pedidos: peds.length, sin_repartidor: peds.filter((x) => !x.repartidor_id).length,
+    cobrado: peds.reduce((a, x) => a + (x.costo_despacho || 0), 0), costo_equipo: Math.round(activos.filter((t) => t.rol === 'repartidor').reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) } };
+}
 function resumen(local, fecha) {
   const lun = lunesDe(fecha), dias = [...Array(7)].map((_, i) => { const d = new Date(lun); d.setDate(d.getDate() + i); return iso(d); });
   const prevLun = new Date(lun); prevLun.setDate(prevLun.getDate() - 7);
@@ -764,7 +819,12 @@ async function api(req, res, url) {
     const local = db.prepare('SELECT * FROM locales WHERE id=?').get(lid);
 
     if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=; Path=${BASE || '/'}; Max-Age=0` });
-    if (m === 'GET' && parts[1] === 'carta') return send(res, 200, menu(local));
+    if (m === 'GET' && parts[1] === 'carta') return send(res, 200, { ...menu(local), equipo: equipoDe(local) });
+    // Equipo del mes: entregas, km y liquidación estimada de cada trabajador, con el resultado del despacho.
+    if (m === 'GET' && parts[1] === 'equipo') {
+      const mes = /^\d{4}-\d{2}$/.test(url.searchParams.get('mes') || '') ? url.searchParams.get('mes') : franjas(local).dia.slice(0, 7);
+      return send(res, 200, equipoMes(local, mes));
+    }
     if (m === 'GET' && parts[1] === 'pedidos' && !parts[2]) {
       const dia = url.searchParams.get('dia') || franjas(local).dia;
       const ids = db.prepare('SELECT id FROM pedidos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia);
@@ -793,8 +853,13 @@ async function api(req, res, url) {
         cobrado_en = cobrado_en || new Date().toTimeString().slice(0, 5);
       }
       const pagadoFinal = medio_pago ? 1 : pagado;
-      db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, actualizado=? WHERE id=?')
-        .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, Date.now(), p.id);
+      let repartidor = p.repartidor_id;
+      if (b.repartidor_id !== undefined) {
+        repartidor = b.repartidor_id ? String(b.repartidor_id) : null;
+        if (repartidor && !equipoDe(local).trabajadores.some((t) => t.id === repartidor)) return send(res, 400, { error: 'Ese repartidor no existe' });
+      }
+      db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, repartidor_id=?, actualizado=? WHERE id=?')
+        .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, Date.now(), p.id);
       return send(res, 200, pedidoCompleto(p.id, lid));
     }
     if (m === 'GET' && parts[1] === 'resumen') {

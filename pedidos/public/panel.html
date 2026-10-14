@@ -331,6 +331,23 @@
   .vh-res table { box-shadow: none; background: transparent; margin: 6px 0; } .vh-res td { padding: 4px 0; border: 0; font-size: .9rem; } .vh-res small { color: var(--ink-2); }
   .sh-foot .peligro { color: var(--danger); margin-right: auto; }
   @media (max-width: 640px) { .tres-i, .calc-grid { grid-template-columns: 1fr; } }
+  .eqlista { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; margin-top: 4px; }
+  .eqcard h3 { margin: 0; } .eqcard header small { color: var(--ink-2); font-size: .85rem; } .eqcard.off { opacity: .55; }
+  .eqturno { margin: 6px 0 10px; color: var(--ink-2); font-size: .9rem; }
+  .eqnum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0; }
+  .eqnum div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; } .eqnum dt { font-size: .74rem; color: var(--ink-2); font-weight: 600; }
+  .eqnum dd { margin: 2px 0 0; font: 800 1.05rem var(--font-display); font-variant-numeric: tabular-nums; } .eqnum dd small { display: block; font: 600 .74rem var(--font-body); color: var(--ink-2); }
+  .eqavisos { margin: 10px 0 0; padding-left: 18px; color: #8a5a00; font-size: .85rem; } .eqavisos .grave { color: var(--danger); font-weight: 700; }
+  .ok-legal { color: var(--ok); font-weight: 600; font-size: .88rem; margin: 8px 0 0; }
+  .kpis .alerta { border: 1.5px solid #f5c6c1; }
+  .turnot .ck { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-weight: 600; } .turnot .ck input { width: 22px; height: 22px; accent-color: var(--brand); }
+  .turnot input[type=time] { width: 100%; min-width: 0; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
+  .turnot td .kmin.mini { min-width: 90px; } .turnot td .kmin.mini input { min-height: 44px; }
+  .liq { box-shadow: none; background: transparent; } .liq td { padding: 5px 0; border: 0; font-size: .92rem; }
+  .liq tr.sub td { border-top: 1px solid var(--line); font-weight: 700; } .liq tr.tot td { border-top: 2px solid var(--ink); font-weight: 800; font-size: 1rem; }
+  .prep { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .88rem; font-weight: 600; color: var(--ink-2); }
+  .prep select { flex: 1; min-height: 40px; border: 1.5px solid var(--line); border-radius: var(--r-sm); padding: 0 10px; font-size: 15px; background: var(--surface); color: var(--ink); }
+  @media (max-width: 640px) { .eqnum { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 980px) { .dgrid { grid-template-columns: 1fr; } .dmapwrap { position: static; order: -1; } .dmapcard { height: 60dvh; } }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
@@ -364,6 +381,7 @@
   <symbol id="i-trend" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
   <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
   <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
 </svg>
 
@@ -384,6 +402,7 @@
       <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
       <button class="tab" role="tab" data-v="despacho" aria-selected="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
+      <button class="tab" role="tab" data-v="equipo" aria-selected="false"><svg class="ico"><use href="#i-users"/></svg>Equipo</button>
       <button class="tab" role="tab" data-v="local" aria-selected="false"><svg class="ico"><use href="#i-store"/></svg>Datos del local</button>
     </nav>
     <span class="sp"></span>
@@ -414,6 +433,7 @@
     <div id="v-carta" hidden></div>
     <div id="v-local" hidden></div>
     <div id="v-despacho" hidden></div>
+    <div id="v-equipo" hidden></div>
     <div id="v-resumen" hidden></div>
   </main>
 </div>
@@ -459,12 +479,18 @@
   <div class="sh-body" id="vhBody"></div>
   <div class="sh-foot"><button class="ghost peligro" type="button" id="vhQuitar">Quitar</button><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="vhOk">Listo</button></div>
 </dialog>
+<dialog class="sheet ancho" id="dlgTrab" aria-labelledby="trTitulo">
+  <div class="sh-head"><h2 id="trTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body" id="trBody"></div>
+  <div class="sh-foot"><button class="ghost peligro" type="button" id="trQuitar">Quitar</button><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="trOk">Guardar</button></div>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="leaflet.js"></script>
 <script type="module">
 import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
 import * as H from './hex.js';
+import * as LB from './laboral.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -514,6 +540,7 @@ function tarjeta(p) {
     ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}${p.lat != null ? ` · <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener">Ver en el mapa (${(p.distancia_m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km)</a>` : ''}</div>` : ''}
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
+    ${p.modalidad === 'despacho' && reparts().length ? `<label class="prep">🛵 Repartidor <select data-rep="${p.id}"><option value="">Sin asignar</option>${reparts().map((t) => `<option value="${t.id}" ${p.repartidor_id === t.id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></label>` : ''}
     <div class="pie"><span>${p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : ''}</span><span class="total num">${clp(p.total)}</span></div>
     ${pasos[p.estado] || ''}
     <div class="acc">
@@ -548,6 +575,11 @@ async function refrescar() {
 }
 const DD = () => D;
 const patch = (id, body) => api(`panel/pedidos/${id}`, { method: 'PATCH', body });
+const reparts = () => (M?.equipo?.trabajadores || []).filter((t) => t.rol === 'repartidor' && t.activo !== false);
+$('v-pedidos').addEventListener('change', async (e) => {
+  const s = e.target.closest('[data-rep]'); if (!s) return;
+  try { await patch(s.dataset.rep, { repartidor_id: s.value || null }); toast(s.value ? `✓ Asignado a ${s.selectedOptions[0].text}` : 'Sin repartidor'); } catch (err) { alert(err.message); }
+});
 const comanda = (id) => window.open(`comanda?id=${id}&auto`, '_blank', 'width=420,height=640');
 $('v-pedidos').onclick = async (e) => {
   const b = e.target.closest('button[data-acc]'); if (!b) return;
@@ -1157,7 +1189,8 @@ const TAMS = [[300, 'Chicos', '≈ 500 m de lado a lado'], [450, 'Medianos', '�
 const km = (m) => `${(m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km`;
 let DS = null, dmapa = null, dcapa = null, dpin = null, dprueba = null, despSucio = false, vistaMapa = 'precio';
 const EMOJI_VEH = { moto: '🛵', auto: '🚗', bici: '🚲', otro: '🚚' };
-const vehActual = () => DS.vehiculos.find((v) => v.id === DS.calculo.vehiculo) || DS.vehiculos[0] || null;
+const conRep = (v) => LB.vehiculoConRepartidor(v, M.equipo?.trabajadores || [], eqLab());
+const vehActual = () => conRep(DS.vehiculos.find((v) => v.id === DS.calculo.vehiculo) || DS.vehiculos[0] || null);
 // Costo de llegar a `dist` metros (línea recta) con el vehículo elegido; null si no hay vehículos.
 const costoA = (dist) => { const v = vehActual(); return v ? H.costoViaje(v, DS.calculo, dist) : null; };
 const marcarDespSucio = (on) => { despSucio = on; $('dbar')?.classList.toggle('on', on); };
@@ -1361,12 +1394,12 @@ function probarEn(lat, lng, nombre) {
 // ---- vehículos ----
 function pintarVehiculos() {
   const act = vehActual();
-  $('ds-vlista').innerHTML = DS.vehiculos.length ? DS.vehiculos.map((x) => `<div class="vrow ${x === act ? 'act' : ''}">
+  $('ds-vlista').innerHTML = DS.vehiculos.length ? DS.vehiculos.map((x0) => { const x = conRep(x0); return `<div class="vrow ${x0.id === act?.id ? 'act' : ''}">
       <span class="ve">${EMOJI_VEH[x.tipo] || '🚚'}</span>
-      <div><b>${esc(x.nombre)}</b><small>${clp(Math.round(H.costoKmDe(x)))}/km · ${x.velocidad} km/h${x.pagoHora ? ` · repartidor ${clp(x.pagoHora)}/h` : ''}${x.pagoViaje ? ` · ${clp(x.pagoViaje)} por viaje` : ''}</small></div>
-      <button type="button" class="ghostb" data-veditar="${x.id}">Editar</button></div>`).join('')
+      <div><b>${esc(x.nombre)}</b><small>${clp(Math.round(H.costoKmDe(x)))}/km · ${x.velocidad} km/h${x.repartidor ? ` · 👤 ${esc(x.repartidor.nombre)} (${clp(x.pagoHora)}/h de turno${x.pagoViaje ? ` + ${clp(x.pagoViaje)} por entrega` : ''})` : `${x.pagoHora ? ` · repartidor ${clp(x.pagoHora)}/h` : ''}${x.pagoViaje ? ` · ${clp(x.pagoViaje)} por viaje` : ''}`}</small></div>
+      <button type="button" class="ghostb" data-veditar="${x.id}">Editar</button></div>`; }).join('')
     : '<p class="vacio" style="padding:14px">Aún no hay vehículos. Agrega el que usan para despachar.</p>';
-  $('dc-veh').innerHTML = DS.vehiculos.map((x) => `<option value="${x.id}" ${x === act ? 'selected' : ''}>${EMOJI_VEH[x.tipo] || ''} ${esc(x.nombre)}</option>`).join('') || '<option value="">Sin vehículos</option>';
+  $('dc-veh').innerHTML = DS.vehiculos.map((x) => `<option value="${x.id}" ${x.id === act?.id ? 'selected' : ''}>${EMOJI_VEH[x.tipo] || ''} ${esc(x.nombre)}</option>`).join('') || '<option value="">Sin vehículos</option>';
   $('dc-veh').disabled = !DS.vehiculos.length;
   $('ds-vlista').querySelectorAll('[data-veditar]').forEach((b) => b.onclick = () => abrirVehiculo(DS.vehiculos.find((x) => x.id === b.dataset.veditar)));
 }
@@ -1380,14 +1413,20 @@ function abrirVehiculo(veh, tipo) {
     <h4 class="vh-sec">Gasto del vehículo</h4>
     <div class="tres-i">${f('vh-rend', 'Rendimiento', base.rendimiento, 'km/l', '0 si no usa bencina')}${f('vh-litro', 'Precio del litro', base.precioLitro, '$')}${f('vh-mant', 'Mantención por km', base.mantencionKm, '$/km', 'Aceite, neumáticos, repuestos')}</div>
     <h4 class="vh-sec">Tiempo y repartidor</h4>
-    <div class="dos">${f('vh-vel', 'Velocidad promedio en ciudad', base.velocidad, 'km/h')}${f('vh-min', 'Minutos por entrega', base.minEntrega, 'min', 'Estacionar, subir, entregar')}
-      ${f('vh-hora', 'Pago al repartidor por hora', base.pagoHora, '$/h', '0 si es alguien del local ya pagado')}${f('vh-viaje', 'Pago fijo por viaje', base.pagoViaje, '$', 'Si se le paga por despacho')}</div>
+    <div class="dos">${f('vh-vel', 'Velocidad promedio en ciudad', base.velocidad, 'km/h')}${f('vh-min', 'Minutos por entrega', base.minEntrega, 'min', 'Estacionar, subir, entregar')}</div>
+    <div class="field"><label for="vh-rep">Repartidor</label><select id="vh-rep"><option value="">Sin repartidor contratado (pago por hora o por viaje)</option>
+      ${(M.equipo?.trabajadores || []).filter((t) => t.rol === 'repartidor' && t.activo !== false).map((t) => `<option value="${t.id}" ${base.repartidorId === t.id ? 'selected' : ''}>👤 ${esc(t.nombre)}</option>`).join('')}</select>
+      <p class="ayuda" id="vh-repayuda"></p></div>
+    <div class="dos" id="vh-pagos">${f('vh-hora', 'Pago al repartidor por hora', base.pagoHora, '$/h', '0 si es alguien del local ya pagado')}${f('vh-viaje', 'Pago fijo por viaje', base.pagoViaje, '$', 'Si se le paga por despacho')}</div>
     <div class="vh-res" id="vh-res" aria-live="polite"></div>
     <div class="formerr" id="vh-err" role="alert"></div>`;
   const leer = () => { const n = (id) => Number(String($(id).value).replace(/\./g, '').replace(',', '.')) || 0;
     return { nombre: $('vh-nombre').value.trim(), tipo: $('vh-tipo').value, rendimiento: n('vh-rend'), precioLitro: n('vh-litro'), mantencionKm: n('vh-mant'),
-      velocidad: n('vh-vel'), minEntrega: n('vh-min'), pagoHora: n('vh-hora'), pagoViaje: n('vh-viaje') }; };
-  const calc = () => { const x = leer(), ej = [1000, 2000, 3000].map((d) => [d, H.costoViaje(x, DS.calculo, d)]);
+      velocidad: n('vh-vel'), minEntrega: n('vh-min'), pagoHora: n('vh-hora'), pagoViaje: n('vh-viaje'), repartidorId: $('vh-rep').value || null }; };
+  const calc = () => { const x = conRep(leer()), ej = [1000, 2000, 3000].map((d) => [d, H.costoViaje(x, DS.calculo, d)]);
+    $('vh-pagos').hidden = !!x.repartidor;
+    $('vh-repayuda').innerHTML = x.repartidor ? `Su tiempo se calcula a ${clp(x.pagoHora)} por hora de turno (sueldo + cargas)${x.pagoViaje ? ` y ${clp(x.pagoViaje)} de bono por entrega` : ''}, según su contrato en la pestaña <b>Equipo</b>.`
+      : (M.equipo?.trabajadores || []).some((t) => t.rol === 'repartidor') ? '' : 'Agrega al repartidor en la pestaña <b>Equipo</b> para calcular con su sueldo real.';
     $('vh-res').innerHTML = `<b>Gasto por km: ${clp(Math.round(H.costoKmDe(x)))}</b><table>${ej.map(([d, c]) => `<tr><td>Cliente a ${km(d)}</td><td>${c.km.toLocaleString('es-CL', { maximumFractionDigits: 1 })} km · ${Math.round(c.min)} min</td><td class="r"><b>${clp(Math.round(c.total))}</b></td></tr>`).join('')}</table>
       <small>${DS.calculo.idaVuelta ? 'Ida y vuelta' : 'Solo ida'}, con calles ×${String(DS.calculo.factor).replace('.', ',')}.</small>`; };
   $('vhBody').oninput = calc; calc();
@@ -1457,6 +1496,172 @@ async function guardarDespacho() {
     marcarDespSucio(false); toast('✓ Despacho guardado'); await cargarCarta(); pintarDespacho();
   } catch (e) { $('ds-err').textContent = e.message; }
   $('ds-guardar').disabled = false;
+}
+
+// ---------- equipo ----------
+// Trabajadores (por ahora, sobre todo repartidores) con su contrato, turno y una liquidación
+// ESTIMADA según la ley chilena (laboral.js). Su costo entra al costeo del despacho.
+const ROLES = { repartidor: '🛵 Repartidor', cocina: '🍳 Cocina', caja: '💵 Caja', otro: '👤 Otro' };
+let EQ = null, eqMes = null;
+const eqLab = () => M.equipo?.laboral || LB.LABORAL_BASE;
+const mesLargo = (m) => new Date(`${m}-15T12:00:00`).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+const otroMes = (m, n) => { const d = new Date(`${m}-15T12:00:00`); d.setMonth(d.getMonth() + n); return d.toISOString().slice(0, 7); };
+function resumenTurno(turno) {
+  const dias = LB.DIAS_SEM.filter(([d]) => turno?.[d]);
+  if (!dias.length) return 'Sin turno';
+  const grupos = new Map();
+  for (const [d, n] of dias) { const t = turno[d], k = `${t[0]}–${t[1]}${t[2] ? ` (${t[2]}′ colación)` : ''}`; grupos.set(k, [...(grupos.get(k) || []), n.slice(0, 3).toLowerCase()]); }
+  return [...grupos].map(([k, ds]) => `${ds.join(', ')} ${k}`).join(' · ');
+}
+async function guardarEquipo(trabajadores, laboral = eqLab()) {
+  await api('panel/local', { method: 'PATCH', body: { equipo: { trabajadores, laboral } } });
+  await cargarCarta();
+}
+async function pintarEquipo() {
+  await cargarCarta();
+  eqMes = eqMes || null;
+  EQ = await api(`panel/equipo${eqMes ? `?mes=${eqMes}` : ''}`);
+  eqMes = EQ.mes;
+  const ts = M.equipo.trabajadores, lab = eqLab(), d = EQ.despacho;
+  const reps = EQ.trabajadores.filter((t) => t.rol === 'repartidor' && ts.find((x) => x.id === t.id)?.activo !== false);
+  // Despachos para cubrir el costo fijo del reparto: lo que deja cada viaje (precio promedio − bencina − bono).
+  const desp = M.local.despacho || {}, v0 = (desp.vehiculos || []).find((x) => x.id === desp.calculo?.vehiculo) || desp.vehiculos?.[0];
+  const precioProm = d.pedidos ? d.cobrado / d.pedidos : (desp.tramos?.length ? desp.tramos.reduce((a, t) => a + t.costo, 0) / desp.tramos.length : desp.costo || 0);
+  const kmViaje = 1.5 * (desp.calculo?.factor || 1.35) * (desp.calculo?.idaVuelta === false ? 1 : 2);
+  const bono = reps.length ? reps.reduce((a, t) => a + (ts.find((x) => x.id === t.id).bonoEntrega || 0), 0) / reps.length : 0;
+  const dejaViaje = precioProm - (v0 ? kmViaje * H.costoKmDe(v0) : 0) - bono * (1 + (reps[0]?.liquidacion.tasaEmp || 0) / 100);
+  const necesarios = LB.despachosParaCubrir(d.costo_equipo, dejaViaje);
+  $('v-equipo').innerHTML = `
+    <div class="res-head"><div style="display:flex;align-items:center;gap:8px">
+        <button class="ghost ico-b" data-eqmes="-1" aria-label="Mes anterior">${ico('left')}</button>
+        <h2 class="t" style="margin:0">Equipo · ${esc(mesLargo(eqMes))}</h2>
+        <button class="ghost ico-b" data-eqmes="1" aria-label="Mes siguiente">${ico('right')}</button></div>
+      <button class="primary chico" data-trab-nuevo style="width:auto;flex:none;padding:0 18px">${ico('plus')}Agregar trabajador</button></div>
+    <div class="kpis">
+      <div>Costo del reparto al mes<b class="num">${clp(d.costo_equipo)}</b><span class="sub">${reps.length} repartidor${reps.length === 1 ? '' : 'es'} · sueldo, cargas y bonos</span></div>
+      <div>Despachos del mes<b class="num">${d.pedidos}</b><span class="sub">${d.sin_repartidor ? `${d.sin_repartidor} sin repartidor asignado` : 'todos con repartidor'}</span></div>
+      <div>Cobrado por despacho<b class="num">${clp(d.cobrado)}</b><span class="sub">${d.pedidos ? `promedio ${clp(precioProm)}` : 'aún sin despachos'}</span></div>
+      <div class="${d.cobrado >= d.costo_equipo ? '' : 'alerta'}">Para cubrir el reparto<b class="num">${necesarios ?? '—'}</b><span class="sub">${necesarios ? `despachos al mes (cada uno deja ≈ ${clp(dejaViaje)} tras bencina y bono)` : 'con estos precios cada viaje no deja margen'}</span></div>
+    </div>
+    <div class="eqlista">${EQ.trabajadores.map((t) => { const x = ts.find((y) => y.id === t.id), l = t.liquidacion;
+      return `<article class="cardf eqcard ${x.activo === false ? 'off' : ''}">
+        <header class="sh"><div><h3>${esc(t.nombre)}</h3><small>${ROLES[t.rol]} · ${x.contrato === 'indefinido' ? 'Indefinido' : 'Plazo fijo'} · ${l.horasSemana.toLocaleString('es-CL')} h/semana${x.activo === false ? ' · inactivo' : ''}</small></div>
+          <span class="sp"></span><button class="ghostb" data-trab="${t.id}">Editar</button></header>
+        <p class="eqturno">${esc(resumenTurno(x.turno))}${t.vehiculo ? ` · ${esc(t.vehiculo)}${x.vehiculoPropio ? ' (propio)' : ''}` : ''}</p>
+        <dl class="eqnum"><div><dt>Costo empresa</dt><dd>${clp(l.costoEmpresa)}</dd></div><div><dt>Líquido estimado</dt><dd>${clp(l.liquido)}</dd></div>
+          <div><dt>Entregas del mes</dt><dd>${t.entregas}${t.km ? `<small>${t.km.toLocaleString('es-CL')} km</small>` : ''}</dd></div><div><dt>Costo por hora</dt><dd>${clp(l.costoHora)}</dd></div></dl>
+        ${t.avisos.length ? `<ul class="eqavisos">${t.avisos.map((a) => `<li class="${a.grave ? 'grave' : ''}">${esc(a.txt)}</li>`).join('')}</ul>` : ''}
+      </article>`; }).join('') || `<div class="cardf vacio" style="padding:28px">Aún no hay trabajadores. Agrega al repartidor para calcular su sueldo y el costo real del despacho.</div>`}</div>
+    <details class="cardf hist" id="eqparams"><summary><h3>Parámetros laborales (vigentes desde ${esc(new Date(`${lab.vigencia}T12:00:00`).toLocaleDateString('es-CL'))})</h3></summary>
+      <p class="ayuda">Se actualizan cuando cambia la ley (el ingreso mínimo sube cada año). ⚠️ = por confirmar con el contador.</p>
+      <div class="tres-i">
+        <div class="field"><label for="lb-imm">Ingreso mínimo mensual</label>${dinero('lb-imm', lab.imm)}</div>
+        <div class="field"><label for="lb-vig">Vigente desde</label><input id="lb-vig" type="date" value="${lab.vigencia}"></div>
+        <div class="field"><label for="lb-jor">Jornada máxima</label><div class="kmin"><input id="lb-jor" inputmode="numeric" value="${lab.jornadaMax}"><span>h/sem</span></div></div>
+        <div class="field"><label for="lb-dom">Recargo dominical ⚠️</label><div class="kmin"><input id="lb-dom" inputmode="numeric" value="${lab.recargoDomingo}"><span>%</span></div></div>
+        ${[['sis', 'Seguro invalidez (SIS)'], ['mutual', 'Mutual'], ['aporte', 'Aporte Ley 21.735 ⚠️'], ['cesIndef', 'Cesantía, indefinido'], ['cesPlazo', 'Cesantía, plazo fijo']].map(([k, n]) =>
+          `<div class="field"><label for="lb-e-${k}">${n}</label><div class="kmin"><input id="lb-e-${k}" inputmode="decimal" value="${String(lab.empleador[k]).replace('.', ',')}"><span>%</span></div></div>`).join('')}
+        ${[['afp', 'AFP (descuento)'], ['salud', 'Salud (descuento)'], ['cesIndef', 'Cesantía trabajador']].map(([k, n]) =>
+          `<div class="field"><label for="lb-t-${k}">${n}</label><div class="kmin"><input id="lb-t-${k}" inputmode="decimal" value="${String(lab.trabajador[k]).replace('.', ',')}"><span>%</span></div></div>`).join('')}
+      </div>
+      <button class="primary chico" id="lb-guardar" style="width:auto;margin-top:12px">Guardar parámetros</button></details>
+    <p class="ayuda" style="margin:14px 4px">Estimación para presupuestar y fijar precios de despacho; la liquidación oficial la prepara el contador. Base legal: Ley 21.830, Código del Trabajo arts. 38, 40 bis, 41 y 50, Ley 21.735.</p>`;
+  $('v-equipo').querySelector('[data-trab-nuevo]').onclick = () => abrirTrabajador(null);
+  $('v-equipo').querySelectorAll('[data-trab]').forEach((b) => b.onclick = () => abrirTrabajador(ts.find((x) => x.id === b.dataset.trab)));
+  $('v-equipo').querySelectorAll('[data-eqmes]').forEach((b) => b.onclick = () => { eqMes = otroMes(eqMes, Number(b.dataset.eqmes)); pintarEquipo(); });
+  $('lb-guardar').onclick = async () => {
+    const n = (id) => Number(String($(id).value).replace(/\./g, '').replace(',', '.'));
+    const laboral = { imm: digitos($('lb-imm').value), vigencia: $('lb-vig').value, jornadaMax: n('lb-jor'), recargoDomingo: n('lb-dom'),
+      empleador: Object.fromEntries(Object.keys(lab.empleador).map((k) => [k, n(`lb-e-${k}`)])), trabajador: Object.fromEntries(Object.keys(lab.trabajador).map((k) => [k, n(`lb-t-${k}`)])) };
+    try { await guardarEquipo(ts, laboral); toast('✓ Parámetros guardados'); pintarEquipo(); } catch (e) { alert(e.message); }
+  };
+}
+function abrirTrabajador(t) {
+  const lab = eqLab();
+  const T = t ? JSON.parse(JSON.stringify(t)) : { id: null, nombre: '', rut: '', rol: 'repartidor', contrato: 'plazo_fijo', turno: { ...LB.TURNOS_TIPO[1].turno }, sueldoBase: 0, bonoEntrega: 0, recargoDomingo: true, gratificacion: true, vehiculoPropio: false, activo: true };
+  $('trTitulo').textContent = t ? `Editar a ${t.nombre}` : 'Nuevo trabajador';
+  let entregas = 60;
+  const pintar = () => {
+    const l = LB.liquidacion(T, { entregas: T.rol === 'repartidor' ? entregas : 0 }, lab), av = LB.avisosTurno(T, lab);
+    $('trRes').innerHTML = `<table class="liq">
+      <tr><td>Sueldo base${T.sueldoBase ? '' : ' (mínimo proporcional)'}</td><td class="r">${clp(l.base)}</td></tr>
+      ${l.recargo ? `<tr><td>Recargo dominical ${lab.recargoDomingo}%</td><td class="r">${clp(l.recargo)}</td></tr>` : ''}
+      ${l.bonos ? `<tr><td>Bonos por entrega (${entregas})</td><td class="r">${clp(l.bonos)}</td></tr>` : ''}
+      ${l.gratificacion ? `<tr><td>Gratificación art. 50 (25%)</td><td class="r">${clp(l.gratificacion)}</td></tr>` : ''}
+      <tr class="sub"><td>Total imponible</td><td class="r">${clp(l.imponible)}</td></tr>
+      <tr><td>Cargas del empleador (${l.tasaEmp.toLocaleString('es-CL')}%)</td><td class="r">${clp(l.cargas)}</td></tr>
+      <tr class="tot"><td>Costo para el local</td><td class="r">${clp(l.costoEmpresa)}</td></tr>
+      <tr><td>Descuentos del trabajador (${l.tasaTrab.toLocaleString('es-CL')}%)</td><td class="r">−${clp(l.descuentos)}</td></tr>
+      <tr class="sub"><td>Líquido estimado para el trabajador</td><td class="r">${clp(l.liquido)}</td></tr></table>
+      <p class="ayuda">${l.horasSemana.toLocaleString('es-CL')} h/semana · ${Math.round(l.horasMes)} h/mes · hora ordinaria ${clp(l.valorHora)} · mínimo legal ${clp(l.minimo)}.${T.vehiculoPropio ? ' Más la asignación de bencina y desgaste por los km recorridos (no imponible).' : ''}</p>
+      ${av.length ? `<ul class="eqavisos">${av.map((a) => `<li class="${a.grave ? 'grave' : ''}">${esc(a.txt)}</li>`).join('')}</ul>` : '<p class="ok-legal">✓ Turno dentro de la ley: jornada continua, máximo 10 h diarias.</p>'}`;
+    $('tr-min').textContent = `Mínimo legal para ${l.horasSemana.toLocaleString('es-CL')} h: ${clp(l.minimo)}`;
+    $('trOk').disabled = av.some((a) => a.grave) || l.bajoMinimo;
+    $('trErr').textContent = l.bajoMinimo ? 'El sueldo base no puede ser menor al mínimo proporcional a sus horas.' : '';
+  };
+  const filaDia = ([d, n]) => { const x = T.turno[d];
+    return `<tr><th><label class="ck"><input type="checkbox" data-tdia="${d}" ${x ? 'checked' : ''}> ${n}</label></th>
+      <td><input type="time" data-tdesde="${d}" value="${x ? x[0] : '19:00'}" ${x ? '' : 'disabled'} aria-label="${n} entra"></td>
+      <td><input type="time" data-thasta="${d}" value="${x ? x[1] : '23:00'}" ${x ? '' : 'disabled'} aria-label="${n} sale"></td>
+      <td><div class="kmin mini"><input data-tcol="${d}" inputmode="numeric" value="${x ? x[2] || 0 : 0}" ${x ? '' : 'disabled'} aria-label="${n} colación en minutos"><span>min</span></div></td></tr>`; };
+  $('trBody').innerHTML = `
+    <div class="dos"><div class="field"><label for="tr-nombre">Nombre</label><input id="tr-nombre" maxlength="60" value="${esc(T.nombre)}" placeholder="Ej: Juan Pérez"></div>
+      <div class="field"><label for="tr-rut">RUT <span class="opc">(opcional)</span></label><input id="tr-rut" maxlength="12" value="${esc(T.rut || '')}" placeholder="12.345.678-9"></div></div>
+    <div class="dos"><div class="field"><label for="tr-rol">Rol</label><select id="tr-rol">${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${T.rol === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="field"><label>Contrato</label><div class="segn ancho"><button type="button" data-contrato="plazo_fijo">Plazo fijo</button><button type="button" data-contrato="indefinido">Indefinido</button></div></div></div>
+    <h4 class="vh-sec">Turno</h4>
+    <p class="ayuda">Jornada continua (sin turno partido), máximo 10 h al día; colación de 30 a 60 min si corresponde. Turnos del análisis:</p>
+    <div class="vpresets">${LB.TURNOS_TIPO.map((x) => `<button type="button" class="ghostb" data-ttipo="${x.id}">${x.id}. ${x.nombre}</button>`).join('')}</div>
+    <table class="horario turnot"><tr class="hh"><th></th><td>Entra</td><td>Sale</td><td>Colación</td></tr>${LB.DIAS_SEM.map(filaDia).join('')}</table>
+    <h4 class="vh-sec">Sueldo</h4>
+    <div class="dos"><div class="field"><label for="tr-base">Sueldo base mensual</label>${dinero('tr-base', T.sueldoBase, 'placeholder="Mínimo legal"')}<p class="ayuda" id="tr-min"></p></div>
+      <div class="field"><label for="tr-bono">Bono por entrega <span class="opc">(imponible)</span></label>${dinero('tr-bono', T.bonoEntrega, 'placeholder="0"')}<p class="ayuda">No cuenta para llegar al mínimo.</p></div></div>
+    <div class="fp-sw">
+      <div class="swl"><label class="sw"><input type="checkbox" id="tr-dom" ${T.recargoDomingo ? 'checked' : ''}><span></span></label><label for="tr-dom"><b>Recargo dominical ${lab.recargoDomingo}%</b><small>Comercio que atiende público (art. 38). ⚠️ Confirmar si el local es N°7 o N°2; por prudencia, presupuestarlo.</small></label></div>
+      <div class="swl"><label class="sw"><input type="checkbox" id="tr-grat" ${T.gratificacion ? 'checked' : ''}><span></span></label><label for="tr-grat"><b>Gratificación mensual art. 50</b><small>25% de lo imponible, con tope de 4,75 ingresos mínimos al año.</small></label></div>
+      <div class="swl"><label class="sw"><input type="checkbox" id="tr-propio" ${T.vehiculoPropio ? 'checked' : ''}><span></span></label><label for="tr-propio"><b>Usa su propio vehículo</b><small>Se le reembolsa bencina y desgaste por km (asignación art. 41, no imponible).</small></label></div>
+      <div class="swl"><label class="sw"><input type="checkbox" id="tr-activo" ${T.activo !== false ? 'checked' : ''}><span></span></label><label for="tr-activo"><b>Activo</b><small>Apagado no cuenta en los costos ni aparece para asignar pedidos.</small></label></div>
+    </div>
+    <h4 class="vh-sec">Liquidación estimada del mes</h4>
+    <div class="field" id="tr-entw"><label for="tr-ent">Entregas estimadas al mes (para el bono)</label><div class="kmin" style="max-width:200px"><input id="tr-ent" inputmode="numeric" value="${entregas}"><span>despachos</span></div></div>
+    <div id="trRes" class="vh-res"></div>
+    <div class="formerr" id="trErr" role="alert"></div>`;
+  const q = (s) => $('trBody').querySelector(s);
+  const leerTurno = () => { T.turno = {}; for (const [d] of LB.DIAS_SEM) if (q(`[data-tdia="${d}"]`).checked) T.turno[d] = [q(`[data-tdesde="${d}"]`).value, q(`[data-thasta="${d}"]`).value, digitos(q(`[data-tcol="${d}"]`).value)]; };
+  const segs = () => $('trBody').querySelectorAll('[data-contrato]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.contrato === T.contrato));
+  segs();
+  $('trBody').querySelectorAll('[data-contrato]').forEach((b) => b.onclick = () => { T.contrato = b.dataset.contrato; segs(); pintar(); });
+  $('trBody').querySelectorAll('[data-ttipo]').forEach((b) => b.onclick = () => {
+    const x = LB.TURNOS_TIPO.find((y) => y.id === b.dataset.ttipo);
+    for (const [d] of LB.DIAS_SEM) { const v = x.turno[d]; q(`[data-tdia="${d}"]`).checked = !!v;
+      for (const k of ['desde', 'hasta', 'col']) q(`[data-t${k}="${d}"]`).disabled = !v;
+      if (v) { q(`[data-tdesde="${d}"]`).value = v[0]; q(`[data-thasta="${d}"]`).value = v[1]; q(`[data-tcol="${d}"]`).value = v[2]; } }
+    leerTurno(); pintar();
+  });
+  $('trBody').oninput = $('trBody').onchange = (e) => {
+    if (e.target.dataset.tdia) for (const k of ['desde', 'hasta', 'col']) q(`[data-t${k}="${e.target.dataset.tdia}"]`).disabled = !e.target.checked;
+    leerTurno();
+    T.nombre = q('#tr-nombre').value; T.rut = q('#tr-rut').value; T.rol = q('#tr-rol').value;
+    T.sueldoBase = digitos(q('#tr-base').value); T.bonoEntrega = digitos(q('#tr-bono').value);
+    T.recargoDomingo = q('#tr-dom').checked; T.gratificacion = q('#tr-grat').checked; T.vehiculoPropio = q('#tr-propio').checked; T.activo = q('#tr-activo').checked;
+    entregas = digitos(q('#tr-ent').value); q('#tr-entw').hidden = T.rol !== 'repartidor';
+    pintar();
+  };
+  pintar();
+  $('trQuitar').hidden = !t;
+  $('trQuitar').onclick = async () => {
+    if (!confirm(`¿Quitar a ${t.nombre} del equipo? Los pedidos que entregó no cambian.`)) return;
+    try { await guardarEquipo(M.equipo.trabajadores.filter((x) => x.id !== t.id)); $('dlgTrab').close(); toast('Quitado del equipo'); pintarEquipo(); } catch (e) { alert(e.message); }
+  };
+  $('trOk').onclick = async () => {
+    if (!T.nombre.trim()) { $('trErr').textContent = 'Escribe el nombre.'; return q('#tr-nombre').focus(); }
+    const lista = M.equipo.trabajadores.map((x) => ({ ...x }));
+    if (t) lista[lista.findIndex((x) => x.id === t.id)] = { ...T, id: t.id }; else lista.push({ ...T, id: `t${Date.now().toString(36)}` });
+    $('trOk').disabled = true;
+    try { await guardarEquipo(lista); $('dlgTrab').close(); toast('✓ Equipo guardado'); if (vista === 'equipo') pintarEquipo(); } catch (e) { $('trErr').textContent = e.message; }
+    $('trOk').disabled = false;
+  };
+  $('dlgTrab').showModal();
 }
 
 // ---------- resumen semanal ----------
@@ -1555,11 +1760,12 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
-  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen', 'despacho']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
   if (vista === 'carta') pintarCarta();
   else if (vista === 'resumen') pintarResumen();
   else if (vista === 'local') pintarLocal();
   else if (vista === 'despacho') { await cargarCarta(); pintarDespacho(); }
+  else if (vista === 'equipo') pintarEquipo();
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else { if (vista === 'cierre') { cajaDia = null; cajaD = null; } refrescar(); }
 });
@@ -1575,7 +1781,7 @@ async function despierta() {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) despierta(); });
 async function iniciar() {
-  try { await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
+  try { await cargarCarta(); await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
   $('app').hidden = false;
   despierta();
   setInterval(() => !['carta', 'local', 'resumen'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);

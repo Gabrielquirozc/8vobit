@@ -69,6 +69,20 @@ que hoy se despacha. En el mapa, la vista *¿Sale a cuenta?* pinta cada sector e
 pedido), amarillo (solo cubre el costo) o rojo (pierde). Cada pedido guarda su costo estimado y el
 Resumen semanal compara lo cobrado por despacho con lo que costaron los viajes.
 
+**Equipo** (pestaña propia): trabajadores (repartidor, cocina, caja) con contrato (plazo fijo o
+indefinido), turno por día con colación, sueldo base, bono por entrega y si usan vehículo propio. El
+cálculo (`public/laboral.js`, compartido con el servidor) es una **estimación** según la ley chilena:
+mínimo proporcional a las horas (IMM $553.553 × horas / 42, Ley 21.830), valor hora ordinaria, recargo
+dominical 30 % (art. 38), gratificación art. 50 (25 %, tope 4,75 IMM al año), cargas del empleador (SIS,
+mutual, cesantía, aporte Ley 21.735) y descuentos del trabajador para estimar el líquido. Avisa si el
+turno pasa de 10 h diarias, si sin colación pasa de 6 h, si deja de ser jornada parcial (más de 28 h) y
+**no deja guardar** un sueldo bajo el mínimo o una jornada sobre la máxima. Los parámetros (IMM, tasas)
+se editan al cambiar la ley. Cada vehículo puede tener su repartidor: entonces el viaje se costea con
+su costo real por hora de turno más el bono, cada despacho queda asignado a quien lo entregó (se
+puede cambiar en la tarjeta del pedido) y la pestaña muestra por mes entregas, km, costo empresa,
+líquido estimado y **cuántos despachos al mes cubren el costo del reparto**. Los sueldos y RUT solo
+se ven en el panel (no en la carta pública).
+
 En la carta, con despacho por zonas, el cliente escribe su dirección y toca *Buscar* (o *Usar mi
 ubicación*), ajusta el pin moviendo el mapa y ve al tiro el costo o "No despachamos a este punto".
 El servidor recalcula el costo con la ubicación (no confía en el navegador) y guarda las coordenadas:
@@ -157,7 +171,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 44 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 45 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.
