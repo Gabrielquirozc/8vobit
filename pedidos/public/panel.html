@@ -104,6 +104,31 @@
   td, th { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: .93rem; }
   td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
   h3 { font: 800 1.05rem var(--font-display); margin: 22px 0 8px; }
+  /* caja: efectivo esperado, arqueo y movimientos */
+  .cj { margin-bottom: 8px; } .cj table { box-shadow: none; }
+  .cj-acc { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cj-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .cj-grid { grid-template-columns: 1fr; } }
+  .cj-cuenta td { padding: 7px 4px; }
+  .cj-tot { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 4px 0; border-top: 2px solid var(--ink); font-weight: 800; }
+  .cj-tot b { font: 800 1.25rem var(--font-display); } .cj-scroll { overflow-x: auto; } .cj-scroll table { min-width: 560px; }
+  .cj-res { border-radius: var(--r-sm); padding: 14px; color: var(--ink-2); font-size: .9rem; }
+  .cj-res b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); } .cj-res .sub { display: block; font-size: .82rem; margin-top: 2px; }
+  .cj-res.ok { background: #e6f4e7; } .cj-res.ok b { color: #1d5e21; } .cj-res.mal { background: #fff3cd; } .cj-res.mal b { color: #7a5200; }
+  @media (prefers-color-scheme: dark) {
+    .cj-res.ok { background: #1d3320; } .cj-res.ok b { color: #9fdaa3; } .cj-res.mal { background: #3a2e14; } .cj-res.mal b { color: #f5cf7a; }
+    .cj-dif.ok { color: #9fdaa3; } .cj-dif.mal { color: #f3a59b; }
+  }
+  .cj-dif { font: 800 1.2rem var(--font-display); min-height: 1.4em; margin-top: 8px; } .cj-dif.ok { color: #1d5e21; } .cj-dif.mal { color: var(--danger); }
+  .cj-bill { margin-top: 8px; } .cj-bill summary { cursor: pointer; color: var(--ink-2); font-size: .9rem; min-height: 32px; }
+  .cj-bills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+  .cj-bills label { display: flex; align-items: center; gap: 6px; font-size: .85rem; } .cj-bills label span { flex: 0 0 58px; text-align: right; color: var(--ink-2); }
+  .cj-bills input { width: 100%; min-height: 40px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  button.link { border: 0; background: none; padding: 4px 2px; color: var(--brand); font-weight: 600; text-decoration: underline; cursor: pointer; font-size: .88rem; }
+  button.link.peligro { color: var(--danger); }
+  tr.anulada td { text-decoration: line-through; color: var(--ink-2); } tr.anulada td:last-child { text-decoration: none; }
+  .lbl { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
+  .g-barra { width: 34%; } .g-barra span { display: block; height: 10px; border-radius: 999px; background: var(--brand); min-width: 2px; }
   .foto { width: 112px; aspect-ratio: 4 / 3; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--ink-2); font-size: .8rem; }
   .foto img { width: 100%; height: 100%; object-fit: cover; }
   .mini-btn { display: inline-flex; align-items: center; min-height: 36px; margin-top: 6px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: .85rem; font-weight: 600; background: var(--surface); color: var(--ink); }
@@ -393,6 +418,7 @@
   <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
   <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 2v20l3-2 2 2 2-2 2 2 2-2 3 2V2l-3 2-2-2-2 2-2-2-2 2Z"/><path d="M9 8h6M9 12h6M9 16h4"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
 </svg>
 
@@ -410,6 +436,7 @@
       <button class="tab" role="tab" data-v="pedidos" aria-selected="true"><svg class="ico"><use href="#i-list"/></svg>Pedidos<span class="badge" id="bNuevos" hidden></span></button>
       <button class="tab" role="tab" data-v="venta" aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
       <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
+      <button class="tab" role="tab" data-v="gastos" aria-selected="false"><svg class="ico"><use href="#i-receipt"/></svg>Gastos</button>
       <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
       <button class="tab" role="tab" data-v="despacho" aria-selected="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
@@ -441,6 +468,7 @@
       </aside>
     </div>
     <div id="v-cierre" hidden></div>
+    <div id="v-gastos" hidden></div>
     <div id="v-carta" hidden></div>
     <div id="v-local" hidden></div>
     <div id="v-despacho" hidden></div>
@@ -502,6 +530,7 @@
 import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
 import * as H from './hex.js';
 import * as LB from './laboral.js';
+import { crearCajaUI } from './panel-caja.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -568,8 +597,9 @@ function pintarPedidos() {
     return `<section><h2 class="t">${t}<span class="n num">${ps.length}</span></h2>${ps.map(tarjeta).join('') || '<div class="vacio">Nada por aquí</div>'}</section>`;
   }).join('');
 }
+async function refrescarSolo() { D = await api('panel/pedidos'); }
 async function refrescar() {
-  D = await api('panel/pedidos');
+  await refrescarSolo();
   if (D.logo) { if ($('nomLocal').dataset.logo !== D.logo) { $('nomLocal').innerHTML = `<img src="${esc(D.logo)}" alt="${esc(D.local)}" style="height:36px;width:auto;display:block">`; $('nomLocal').dataset.logo = D.logo; } }
   else { $('nomLocal').textContent = D.local; delete $('nomLocal').dataset.logo; }
   marcarPausa(D.pausa);
@@ -582,7 +612,11 @@ async function refrescar() {
   if (conocidos && D.pedidos.some((p) => !conocidos.has(p.id) && p.canal !== 'mostrador')) beep();
   conocidos = ids;
   if (vista === 'pedidos' && !document.querySelector('dialog[open]')) pintarPedidos();
-  if (vista === 'cierre' && !cajaDia && !$('v-cierre').contains(document.activeElement)) pintarCierre();
+  // La caja se vuelve a dibujar solo si algo cambió: así no se cierra el conteo de billetes mientras se usa.
+  if (vista === 'cierre' && !cajaDia && !$('dlgMov').open) {
+    await cargarCaja();
+    if (JSON.stringify([D, CJ]) !== cierreFirma && !$('v-cierre').contains(document.activeElement)) pintarCierre();
+  }
 }
 const DD = () => D;
 const patch = (id, body) => api(`panel/pedidos/${id}`, { method: 'PATCH', body });
@@ -743,16 +777,28 @@ $('vcobrar').onclick = () => {
 
 // ---------- caja del día ----------
 // Hoy se actualiza solo con el resto del panel; con ‹ › se revisa la caja de días anteriores.
-let cajaDia = null, cajaD = null;
+let cajaDia = null, cajaD = null, CJ = null, cierreFirma = '';
 const fechaLarga = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
 const otroDia = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 async function irCaja(dia) {
   cajaDia = dia && dia !== D.dia ? dia : null;
   cajaD = cajaDia ? await api(`panel/pedidos?dia=${cajaDia}`) : null;
+  await cargarCaja();
   pintarCierre();
+}
+// Movimientos, efectivo esperado y arqueo del día que se está mirando.
+async function cargarCaja() { CJ = await api(`panel/caja?dia=${(cajaD || DD()).dia}`); }
+async function recargarCaja() {
+  if (cajaDia) cajaD = await api(`panel/pedidos?dia=${cajaDia}`); else await refrescarSolo();
+  await cargarCaja(); pintarCierre();
 }
 function pintarCierre() {
   const D = cajaD || DD();
+  const C = CJ && CJ.dia === D.dia ? CJ : null;
+  // Lo que se esté escribiendo en el arqueo no se pierde cuando el panel se actualiza solo.
+  const guardado = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, [data-bill]')].map((i) => i.value);
+  const billetesAbierto = $('v-cierre').querySelector('.cj-bill')?.open;
+  cierreFirma = JSON.stringify([cajaD || DD(), CJ]);
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
   const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado);
   const suma = (l) => l.reduce((s, p) => s + p.total, 0), total = suma(cobrados);
@@ -770,12 +816,13 @@ function pintarCierre() {
       <button class="ghost noprint" data-print style="display:inline-flex;align-items:center;gap:6px;width:auto">${ico('printer')}Imprimir cierre</button></div>
     <div class="kpis">
       <div>Cobrado<b class="num">${clp(total)}</b></div>
-      <div>Efectivo en caja<b class="num">${clp(suma(efectivo))}</b></div>
+      <div>Efectivo en caja<b class="num">${clp(C ? C.esperado.total : suma(efectivo))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Debería haber (sin cerrar)'}</span>` : ''}</div>
       <div>Ventas<b class="num">${cobrados.length}</b></div>
       <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
       <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b><span class="sub">${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos</span></div>
       <div>Anulados<b class="num">${D.pedidos.length - ok.length}</b></div>
     </div>
+    ${C ? CAJA.bloqueCaja(C) : ''}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
       <div><h3>Por medio de pago</h3>${tabla(porMedio)}</div>
       <div><h3>Por canal</h3>${tabla(porCanal)}</div>
@@ -790,6 +837,9 @@ function pintarCierre() {
     <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
     ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
+  const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, [data-bill]')];
+  if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); CAJA.difTxt(C); }
+  if (billetesAbierto && $('v-cierre').querySelector('.cj-bill')) $('v-cierre').querySelector('.cj-bill').open = true;
 }
 $('v-cierre').onclick = (e) => {
   const b = e.target.closest('[data-caja]'); if (!b) return;
@@ -804,7 +854,7 @@ $('v-cierre').addEventListener('submit', async (e) => {
     await patch(f.dataset.folio, { folio_boleta: v }); toast(`✓ Folio ${v} guardado`);
     const sig = f.closest('tr').nextElementSibling?.querySelector('input')?.getAttribute('aria-label');
     document.activeElement?.blur();
-    if (cajaDia) await irCaja(cajaDia); else { await refrescar(); pintarCierre(); }
+    if (cajaDia) await irCaja(cajaDia); else { await refrescar(); await cargarCaja(); pintarCierre(); }
     if (sig) $('v-cierre').querySelector(`[aria-label="${sig}"]`)?.focus();
   } catch (err) { alert(err.message); }
 });
@@ -824,6 +874,10 @@ document.addEventListener('input', (e) => {
   const fin = t.value.length - t.selectionStart, v = miles(digitos(t.value));
   t.value = v; const pos = Math.max(0, v.length - fin); t.setSelectionRange(pos, pos);
 });
+// Gastos, movimientos de caja y arqueo (public/panel-caja.js).
+const CAJA = crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga });
+CAJA.conectar($('v-cierre'), () => CJ, () => recargarCaja().catch((e) => alert(e.message)));
+CAJA.conectarGastos($('v-gastos'));
 let filtro = { q: '', ver: 'todos' };
 const FILTROS = [['todos', 'Todos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo'], ['agotados', 'No disponibles'], ['sinfoto', 'Sin foto']];
 const pasa = (p) => {
@@ -1861,12 +1915,13 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
-  for (const v of ['pedidos', 'venta', 'cierre', 'carta', 'local', 'resumen', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
   if (vista === 'carta') pintarCarta();
   else if (vista === 'resumen') pintarResumen();
   else if (vista === 'local') pintarLocal();
   else if (vista === 'despacho') { await cargarCarta(); pintarDespacho(); }
   else if (vista === 'equipo') pintarEquipo();
+  else if (vista === 'gastos') CAJA.pintarGastos($('v-gastos'), null).catch((e) => alert(e.message));
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else { if (vista === 'cierre') { cajaDia = null; cajaD = null; } refrescar(); }
 });
@@ -1885,7 +1940,7 @@ async function iniciar() {
   try { await cargarCarta(); await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
   $('app').hidden = false;
   despierta();
-  setInterval(() => !['carta', 'local', 'resumen'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  setInterval(() => !['carta', 'local', 'resumen', 'gastos'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
 $('entrar').onclick = async () => {
   try { await api('panel/login', { method: 'POST', body: { password: $('clave').value } }); $('login').hidden = true; iniciar(); }

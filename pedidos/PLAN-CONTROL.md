@@ -28,14 +28,15 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 | Despacho por zonas, costo por vehículo, mínimo y horario | ✅ | Fudo no lo tiene. |
 | Venta de mostrador, comanda 80 mm, medios de pago | ✅ | |
 | Pedidos en vivo para cocina (equivale al Monitor de cocina) | ✅ | Fudo lo cobra aparte (9.500). |
-| Caja del día con folios de boleta | ✅ parcial | Falta arqueo (efectivo contado vs. esperado) y movimientos de caja. |
+| Caja del día con folios de boleta, arqueo y movimientos de caja | ✅ | Arqueo con conteo por billetes, fondo, ingresos, retiros (2026-10-14). |
 | Categorías, ingredientes, agregados, salsas | ✅ | |
 | Costo de productos y margen | ✅ parcial | Costo a mano o %; sin recetas ni inventario. |
 | Resumen semanal | ✅ parcial | Falta exportar a Excel/CSV y reportes por rango. |
 | Equipo: turnos, cobertura, sueldo legal estimado, costo por área | ✅ | Fudo no calcula sueldos. |
 | Términos, privacidad, borrado de datos | ✅ | |
 | Usuarios con PIN y roles | ❌ | Hoy hay una sola clave del panel. |
-| Gastos y estado de resultados | ❌ | Fudo: gastos en Inicial, resultados en Pro. |
+| Gastos por categoría | ✅ | Pestaña Gastos con comparación mensual (2026-10-14). |
+| Estado de resultados | ❌ | Fudo lo da en Pro. Siguiente etapa: ya están las ventas, los costos, el personal y los gastos. |
 | Inventario, recetas, proveedores, compras | ❌ | Fudo Avanzado. |
 | Combos, descuentos, promociones | ❌ | Fudo Inicial. |
 | Boleta electrónica directa con el SII | ❌ | Hoy modo asistido (el local emite en el SII y anota el folio). Requiere integrarse con un proveedor de DTE (costo por documento). |

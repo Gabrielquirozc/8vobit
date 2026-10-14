@@ -34,6 +34,19 @@ con los pedidos web.
 (web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
 (con registro de folio) y detalle imprimible.
 
+**Efectivo en caja y arqueo** (dentro de Caja del día): fondo inicial (sugiere lo contado en el cierre
+anterior), ingresos y retiros de efectivo con motivo, y gastos. El panel calcula cuánto *debería haber*
+(fondo + ventas en efectivo + ingresos − retiros − gastos pagados en efectivo). Al cerrar se escribe lo
+contado (o se cuenta por billetes y monedas) y queda la diferencia (cuadra, sobra o falta) con una nota.
+Una caja cerrada no acepta movimientos en efectivo; se puede reabrir y el cierre anterior queda
+registrado. Nada se borra: los movimientos se anulan. La caja se puede corregir hasta 7 días atrás.
+
+**Gastos** (pestaña propia): gastos por mes con categoría (insumos, envases, sueldos, arriendo,
+servicios, bencina, mantención, contador, publicidad, impuestos, otros), cómo se pagaron, N° de
+documento y fecha (se pueden anotar con atraso). Muestra el total por categoría comparado con el mes
+anterior. Solo los pagados en efectivo descuentan de la caja del día. Código: `lib/caja.mjs` (servidor)
+y `public/panel-caja.js` (panel).
+
 **Carta y precios** (pensada para cargar datos rápido en la tablet): buscador, filtros *Sin precio /
 No disponibles / Sin foto*, saltos por categoría y una fila por producto con foto (tocarla la
 cambia), precio con formato `$4.990` que se guarda al salir del campo o con Enter (un cambio

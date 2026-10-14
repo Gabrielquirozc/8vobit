@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pedidos",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--disable-warning=ExperimentalWarning", "pedidos/server.mjs"],
+      "env": { "PANEL_PASSWORD": "demo", "DATA_DIR": "pedidos/data" },
+      "port": 8099
+    }
+  ]
+}

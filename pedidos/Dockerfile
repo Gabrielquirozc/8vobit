@@ -4,6 +4,7 @@ RUN apk add --no-cache tzdata
 ENV TZ=America/Santiago NODE_ENV=production HOST=0.0.0.0 PORT=8099 DATA_DIR=/data
 WORKDIR /app
 COPY server.mjs ./
+COPY lib ./lib
 COPY public ./public
 COPY seed ./seed
 # El volumen nombrado hereda este dueño: sin esto, node no puede escribir en /data.

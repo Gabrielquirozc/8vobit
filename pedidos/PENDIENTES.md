@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-14 (estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-14 (etapa 1 de control: gastos y arqueo; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -49,6 +49,7 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `public/panel.html` | Panel del local: Pedidos, Venta rápida, Caja del día, Resumen, Carta y precios, Despacho, Equipo, Datos del local |
 | `public/hex.js` | Zonas de despacho en hexágonos y costo del viaje por vehículo (compartido servidor/navegador) |
 | `public/laboral.js` | Sueldo estimado del repartidor según la ley chilena (compartido servidor/navegador) |
+| `lib/caja.mjs` + `public/panel-caja.js` | Gastos, movimientos de caja y arqueo (servidor y panel) |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |
 | `public/seguimiento.html`, `comanda.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, carta PDF, cartel/tarjetas con QR |
 | `test/api.test.mjs` | Pruebas contra el servidor real con una base temporal |
@@ -83,8 +84,10 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [x] **Estrategia** (`ESTRATEGIA.md`): planes, formas de pago, piloto y facturación decididos el 2026-10-14.
 - [ ] **Siguiente**: propuesta de una página para Gassuso (planes, piloto, puesta en marcha
       bonificada) e inicio de actividades en el SII (persona natural de primera categoría) antes del mes 4.
-- [ ] Producto de entrada v1.0 = lo hecho + gastos/arqueo + exportar CSV + monitoreo + prueba en el
-      local. Luego multi-local (L3) y gestor de licencias (L4).
+- [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
+      arqueo al cierre. Pestaña Gastos y bloque "Efectivo en caja" en Caja del día.
+- [ ] Producto de entrada v1.0: falta exportar CSV, monitoreo de caída, probar la restauración de un
+      respaldo y la prueba en el local. Luego multi-local (L3) y gestor de licencias (L4).
 - [ ] **Sistema de control propio**: plan por etapas en `PLAN-CONTROL.md` (comparado con Fudo). Siguiente:
       etapa 1, gastos y movimientos de caja con arqueo; luego estado de resultados y usuarios con PIN
       (incluye registro de turnos reales para el sueldo).

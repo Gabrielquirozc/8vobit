@@ -820,3 +820,109 @@ test('logo: viene del seed, se reemplaza desde el panel y se puede quitar', asyn
   assert.equal((await req('DELETE', '/api/panel/local/logo')).body.logo, null);
   assert.equal((await menu()).local.logo, null);
 });
+
+// ---------- caja: movimientos, gastos y arqueo ----------
+test('caja: el efectivo esperado suma fondo, ventas e ingresos y resta retiros y gastos en efectivo', async () => {
+  cookie = '';
+  assert.equal((await req('GET', '/api/panel/caja')).status, 401);
+  await login();
+  const a = await prod('Barros Luco');
+  await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'efectivo', recibido: 10000 });
+  let c = (await req('GET', '/api/panel/caja')).body;
+  const hoy = c.hoy;
+  const ayer = new Date(`${hoy}T12:00:00`); ayer.setDate(ayer.getDate() - 1);
+  const diaAyer = ayer.toISOString().slice(0, 10);
+  // Las ventas en efectivo del día cuadran con los pedidos.
+  const peds = (await req('GET', '/api/panel/pedidos')).body.pedidos.filter((p) => p.estado !== 'anulado' && p.medio_pago === 'efectivo');
+  assert.equal(c.esperado.ventas, peds.reduce((s, p) => s + p.total, 0));
+  assert.ok(c.esperado.ventas >= a.precio);
+
+  // Cierre de ayer: su conteo es el fondo sugerido para hoy.
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { dia: diaAyer, contado: 12345 })).status, 200);
+  c = (await req('GET', '/api/panel/caja')).body;
+  assert.deepEqual(c.fondo_sugerido, { dia: diaAyer, monto: 12345 });
+
+  const mov = (b) => req('POST', '/api/panel/caja/movimientos', b);
+  assert.equal((await mov({ tipo: 'fondo', monto: 15000 })).status, 201);
+  assert.equal((await mov({ tipo: 'fondo', monto: 20000 })).status, 201); // reemplaza al anterior
+  assert.equal((await mov({ tipo: 'ingreso', monto: 5000, descripcion: 'Sencillo' })).status, 201);
+  assert.equal((await mov({ tipo: 'retiro', monto: 10000, descripcion: 'Retiro del dueño' })).status, 201);
+  const gEf = (await mov({ tipo: 'gasto', monto: 3000, categoria: 'insumos', descripcion: 'Palta', medio: 'efectivo' })).body.id;
+  assert.equal((await mov({ tipo: 'gasto', monto: 50000, categoria: 'servicios', descripcion: 'Luz', medio: 'transferencia', documento: 'F-123' })).status, 201);
+  c = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(c.esperado.fondo, 20000);
+  assert.equal(c.esperado.gastos, 3000); // la luz se pagó por transferencia: no sale de la caja
+  assert.equal(c.esperado.total, 20000 + c.esperado.ventas + 5000 - 10000 - 3000);
+  assert.equal(c.movimientos.filter((x) => x.tipo === 'fondo' && !x.anulado).length, 1);
+
+  // Anular un gasto lo saca de la cuenta, pero queda registrado.
+  assert.equal((await req('DELETE', `/api/panel/caja/movimientos/${gEf}`)).status, 200);
+  c = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(c.esperado.gastos, 0);
+  assert.ok(c.movimientos.find((x) => x.id === gEf).anulado);
+
+  // Arqueo: faltan $500.
+  const esp = c.esperado.total;
+  const k = await req('POST', '/api/panel/caja/cierre', { contado: esp - 500, nota: 'Faltó sencillo' });
+  assert.equal(k.status, 200);
+  assert.equal(k.body.cierre.esperado, esp);
+  assert.equal(k.body.cierre.diferencia, -500);
+  assert.equal(k.body.cierre.nota, 'Faltó sencillo');
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp })).status, 409);
+
+  // Caja cerrada: no se mueve el efectivo, pero sí se anotan gastos por transferencia.
+  assert.equal((await mov({ tipo: 'retiro', monto: 1000, descripcion: 'x' })).status, 409);
+  assert.equal((await mov({ tipo: 'gasto', monto: 2000, categoria: 'envases', medio: 'tarjeta' })).status, 201);
+  const ing = c.movimientos.find((x) => x.tipo === 'ingreso').id;
+  assert.equal((await req('DELETE', `/api/panel/caja/movimientos/${ing}`)).status, 409);
+
+  // Reabrir y volver a cerrar: el cierre anterior queda anulado y el nuevo cuadra.
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 409);
+  const k2 = await req('POST', '/api/panel/caja/cierre', { contado: esp });
+  assert.equal(k2.body.cierre.diferencia, 0);
+});
+
+test('caja: validaciones de movimientos y cierre', async () => {
+  await login();
+  const hoy = (await req('GET', '/api/panel/caja')).body.hoy;
+  const mov = (b) => req('POST', '/api/panel/caja/movimientos', b);
+  for (const b of [
+    { tipo: 'robo', monto: 100 },
+    { tipo: 'gasto', monto: -5, categoria: 'insumos' },
+    { tipo: 'gasto', monto: 10.5, categoria: 'insumos' },
+    { tipo: 'gasto', monto: 1000, categoria: 'caprichos' },
+    { tipo: 'gasto', monto: 1000, categoria: 'insumos', medio: 'cheque' },
+    { tipo: 'retiro', monto: 1000 }, // sin motivo
+    { tipo: 'gasto', monto: 1000, categoria: 'insumos', dia: '2999-01-01' },
+    { tipo: 'gasto', monto: 1000, categoria: 'insumos', dia: 'ayer' },
+    { tipo: 'ingreso', monto: 1000, descripcion: 'x', dia: '2020-01-01' }, // la caja solo se corrige 7 días atrás
+  ]) assert.equal((await mov(b)).status, 400, JSON.stringify(b));
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { dia: hoy, contado: -1 })).status, 400);
+  assert.equal((await req('GET', '/api/panel/caja?dia=hoy')).status, 400);
+  assert.equal((await req('DELETE', '/api/panel/caja/movimientos/999999')).status, 404);
+  // Un gasto antiguo (la factura que llegó tarde) sí se puede anotar.
+  const viejo = new Date(`${hoy}T12:00:00`); viejo.setDate(viejo.getDate() - 40);
+  assert.equal((await mov({ tipo: 'gasto', monto: 1000, categoria: 'contador', dia: viejo.toISOString().slice(0, 10) })).status, 201);
+  // El texto se limpia.
+  const id = (await mov({ tipo: 'gasto', monto: 700, categoria: 'otros', descripcion: '  Hielo\n\n para   bebidas ', medio: 'transferencia' })).body.id;
+  const g = (await req('GET', '/api/panel/caja')).body.movimientos.find((x) => x.id === id);
+  assert.equal(g.descripcion, 'Hielo para bebidas');
+});
+
+test('gastos del mes: por categoría y comparados con el mes anterior', async () => {
+  await login();
+  const hoy = (await req('GET', '/api/panel/caja')).body.hoy;
+  const mes = hoy.slice(0, 7);
+  const r = (await req('GET', `/api/panel/gastos?mes=${mes}`)).body;
+  assert.equal(r.mes, mes);
+  assert.equal(r.total, r.gastos.reduce((s, g) => s + g.monto, 0));
+  assert.equal(r.total, Object.values(r.por_categoria).reduce((s, v) => s + v, 0));
+  assert.ok(r.por_categoria.servicios >= 50000);
+  assert.ok(!r.gastos.some((g) => g.monto === 3000 && g.descripcion === 'Palta')); // el anulado no cuenta
+  assert.match(r.anterior.mes, /^\d{4}-\d{2}$/);
+  assert.equal((await req('GET', '/api/panel/gastos?mes=2026-13')).status, 400);
+  // Datos de otro local o sin sesión: nada.
+  cookie = '';
+  assert.equal((await req('GET', `/api/panel/gastos?mes=${mes}`)).status, 401);
+});

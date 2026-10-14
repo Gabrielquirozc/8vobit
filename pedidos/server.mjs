@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import * as H from './public/hex.js';
 import * as LB from './public/laboral.js';
+import { crearCaja } from './lib/caja.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -824,6 +825,7 @@ function resumen(local, fecha) {
 
 const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
 const MEDIOS = ['efectivo', 'transferencia', 'tarjeta', 'otro'];
+const CAJA = crearCaja(db, { hoy: (local) => franjas(local).dia, MEDIOS });
 
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1); // sin "api"
@@ -938,6 +940,24 @@ async function api(req, res, url) {
       const f = url.searchParams.get('semana') || franjas(local).dia;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || isNaN(new Date(f))) return send(res, 400, { error: 'Fecha inválida' });
       return send(res, 200, resumen(local, f));
+    }
+    // Caja: movimientos (fondo, ingresos, retiros, gastos), arqueo al cierre y gastos del mes.
+    if (parts[1] === 'caja') {
+      const r = (x) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, 200, x));
+      const dia = url.searchParams.get('dia') || franjas(local).dia;
+      if (m === 'GET' && !parts[2]) return CAJA.esDia(dia) ? send(res, 200, CAJA.caja(local, dia)) : send(res, 400, { error: 'Fecha inválida' });
+      if (m === 'POST' && parts[2] === 'movimientos' && !parts[3]) {
+        const x = CAJA.nuevoMovimiento(local, await readJson(req));
+        return x.error ? send(res, x.cerrado ? 409 : 400, { error: x.error }) : send(res, 201, x);
+      }
+      if (m === 'DELETE' && parts[2] === 'movimientos' && parts[3]) return r(CAJA.anularMovimiento(local, Number(parts[3])));
+      if (m === 'POST' && parts[2] === 'cierre') return r(CAJA.cerrar(local, await readJson(req)));
+      if (m === 'DELETE' && parts[2] === 'cierre') return r(CAJA.reabrir(local, dia));
+    }
+    if (m === 'GET' && parts[1] === 'gastos') {
+      const mes = url.searchParams.get('mes') || franjas(local).dia.slice(0, 7);
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return send(res, 400, { error: 'Mes inválido' });
+      return send(res, 200, CAJA.gastosMes(local, mes));
     }
     // Logo del local: mismo control que las fotos (WebP, tamaño máximo), con transparencia.
     if (parts[1] === 'local' && parts[2] === 'logo' && (m === 'PUT' || m === 'DELETE')) {
