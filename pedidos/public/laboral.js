@@ -84,7 +84,7 @@ export const TURNOS_TIPO = [
 // Vehículo con su repartidor: si tiene uno contratado, el tiempo del viaje se valora al costo por
 // hora del repartidor y el bono por entrega (más cargas) va como pago por viaje.
 export function vehiculoConRepartidor(v, trabajadores = [], p = LABORAL_BASE) {
-  const t = v && trabajadores.find((x) => x.id === v.repartidorId && x.activo !== false);
+  const t = v && trabajadores.find((x) => x.id === v.repartidorId && x.activo !== false && x.rol === 'repartidor');
   if (!t) return v;
   const l = liquidacion(t, {}, p);
   return { ...v, pagoHora: Math.round(l.costoHora), pagoViaje: Math.round((Number(t.bonoEntrega) || 0) * (1 + l.tasaEmp / 100)), repartidor: t };

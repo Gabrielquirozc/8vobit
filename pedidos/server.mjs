@@ -637,7 +637,7 @@ function actualizarLocal(local, b) {
         rol: ['repartidor', 'cocina', 'caja', 'otro'].includes(t.rol) ? t.rol : 'repartidor', contrato: t.contrato === 'indefinido' ? 'indefinido' : 'plazo_fijo',
         turno, sueldoBase: Math.round(num(t.sueldoBase || 0, 0, 10e6)), bonoEntrega: Math.round(num(t.bonoEntrega || 0, 0, 20000)),
         recargoDomingo: t.recargoDomingo !== false, gratificacion: t.gratificacion !== false, vehiculoPropio: !!t.vehiculoPropio, activo: t.activo !== false };
-    });
+    }).map((t) => (t.rol === 'repartidor' ? t : { ...t, bonoEntrega: 0, vehiculoPropio: false })); // vehículo y bono: solo reparto
     if (trabajadores.some((t) => !t.nombre)) return { error: 'Cada trabajador necesita un nombre.' };
     if (trabajadores.some((t) => [t.sueldoBase, t.bonoEntrega, ...Object.values(t.turno).map((x) => x[2])].some(Number.isNaN))) return { error: 'Revisa los montos y la colación de los trabajadores.' };
     const lab = e.laboral || {}, L0 = LB.LABORAL_BASE;
@@ -679,7 +679,7 @@ function equipoMes(local, mes) {
   const kmDe = (l) => l.reduce((a, x) => a + (x.distancia_m || 0), 0) / 1000 * desp.calculo.factor * (desp.calculo.idaVuelta ? 2 : 1);
   const trabajadores = eq.trabajadores.map((t) => {
     const suyos = peds.filter((x) => x.repartidor_id === t.id), km = kmDe(suyos);
-    const veh = desp.vehiculos.find((v) => v.repartidorId === t.id);
+    const veh = t.rol === 'repartidor' ? desp.vehiculos.find((v) => v.repartidorId === t.id) : null;
     const asignacion = t.vehiculoPropio && veh ? Math.round(km * H.costoKmDe(veh)) : 0;
     const liq = LB.liquidacion(t, { entregas: suyos.length, asignacion }, p);
     return { id: t.id, nombre: t.nombre, rol: t.rol, entregas: suyos.length, km: Math.round(km * 10) / 10, vehiculo: veh?.nombre || null,

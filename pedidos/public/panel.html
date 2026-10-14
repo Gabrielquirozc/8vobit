@@ -1547,9 +1547,9 @@ async function pintarEquipo() {
       return `<article class="cardf eqcard ${x.activo === false ? 'off' : ''}">
         <header class="sh"><div><h3>${esc(t.nombre)}</h3><small>${ROLES[t.rol]} · ${x.contrato === 'indefinido' ? 'Indefinido' : 'Plazo fijo'} · ${l.horasSemana.toLocaleString('es-CL')} h/semana${x.activo === false ? ' · inactivo' : ''}</small></div>
           <span class="sp"></span><button class="ghostb" data-trab="${t.id}">Editar</button></header>
-        <p class="eqturno">${esc(resumenTurno(x.turno))}${t.vehiculo ? ` · ${esc(t.vehiculo)}${x.vehiculoPropio ? ' (propio)' : ''}` : ''}</p>
+        <p class="eqturno">${esc(resumenTurno(x.turno))}${t.rol === 'repartidor' && t.vehiculo ? ` · ${esc(t.vehiculo)}${x.vehiculoPropio ? ' (propio)' : ''}` : ''}</p>
         <dl class="eqnum"><div><dt>Costo empresa</dt><dd>${clp(l.costoEmpresa)}</dd></div><div><dt>Líquido estimado</dt><dd>${clp(l.liquido)}</dd></div>
-          <div><dt>Entregas del mes</dt><dd>${t.entregas}${t.km ? `<small>${t.km.toLocaleString('es-CL')} km</small>` : ''}</dd></div><div><dt>Costo por hora</dt><dd>${clp(l.costoHora)}</dd></div></dl>
+          ${t.rol === 'repartidor' ? `<div><dt>Entregas del mes</dt><dd>${t.entregas}${t.km ? `<small>${t.km.toLocaleString('es-CL')} km</small>` : ''}</dd></div>` : `<div><dt>Horas al mes</dt><dd>${Math.round(l.horasMes)}</dd></div>`}<div><dt>Costo por hora</dt><dd>${clp(l.costoHora)}</dd></div></dl>
         ${t.avisos.length ? `<ul class="eqavisos">${t.avisos.map((a) => `<li class="${a.grave ? 'grave' : ''}">${esc(a.txt)}</li>`).join('')}</ul>` : ''}
       </article>`; }).join('') || `<div class="cardf vacio" style="padding:28px">Aún no hay trabajadores. Agrega al repartidor para calcular su sueldo y el costo real del despacho.</div>`}</div>
     <details class="cardf hist" id="eqparams"><summary><h3>Parámetros laborales (vigentes desde ${esc(new Date(`${lab.vigencia}T12:00:00`).toLocaleDateString('es-CL'))})</h3></summary>
@@ -1582,7 +1582,11 @@ function abrirTrabajador(t) {
   $('trTitulo').textContent = t ? `Editar a ${t.nombre}` : 'Nuevo trabajador';
   let entregas = 60;
   const pintar = () => {
-    const l = LB.liquidacion(T, { entregas: T.rol === 'repartidor' ? entregas : 0 }, lab), av = LB.avisosTurno(T, lab);
+    // Vehículo propio, bono por entrega y entregas estimadas son cosas del reparto: en cocina o caja no aplican.
+    const rep = T.rol === 'repartidor';
+    if (!rep) { T.vehiculoPropio = false; T.bonoEntrega = 0; }
+    for (const id of ['tr-bonow', 'tr-propiow', 'tr-entw']) { const el = $(id); if (el) el.hidden = !rep; }
+    const l = LB.liquidacion(T, { entregas: rep ? entregas : 0 }, lab), av = LB.avisosTurno(T, lab);
     $('trRes').innerHTML = `<table class="liq">
       <tr><td>Sueldo base${T.sueldoBase ? '' : ' (mínimo proporcional)'}</td><td class="r">${clp(l.base)}</td></tr>
       ${l.recargo ? `<tr><td>Recargo dominical ${lab.recargoDomingo}%</td><td class="r">${clp(l.recargo)}</td></tr>` : ''}
@@ -1615,11 +1619,11 @@ function abrirTrabajador(t) {
     <table class="horario turnot"><tr class="hh"><th></th><td>Entra</td><td>Sale</td><td>Colación</td></tr>${LB.DIAS_SEM.map(filaDia).join('')}</table>
     <h4 class="vh-sec">Sueldo</h4>
     <div class="dos"><div class="field"><label for="tr-base">Sueldo base mensual</label>${dinero('tr-base', T.sueldoBase, 'placeholder="Mínimo legal"')}<p class="ayuda" id="tr-min"></p></div>
-      <div class="field"><label for="tr-bono">Bono por entrega <span class="opc">(imponible)</span></label>${dinero('tr-bono', T.bonoEntrega, 'placeholder="0"')}<p class="ayuda">No cuenta para llegar al mínimo.</p></div></div>
+      <div class="field" id="tr-bonow"><label for="tr-bono">Bono por entrega <span class="opc">(imponible)</span></label>${dinero('tr-bono', T.bonoEntrega, 'placeholder="0"')}<p class="ayuda">No cuenta para llegar al mínimo.</p></div></div>
     <div class="fp-sw">
       <div class="swl"><label class="sw"><input type="checkbox" id="tr-dom" ${T.recargoDomingo ? 'checked' : ''}><span></span></label><label for="tr-dom"><b>Recargo dominical ${lab.recargoDomingo}%</b><small>Comercio que atiende público (art. 38). ⚠️ Confirmar si el local es N°7 o N°2; por prudencia, presupuestarlo.</small></label></div>
       <div class="swl"><label class="sw"><input type="checkbox" id="tr-grat" ${T.gratificacion ? 'checked' : ''}><span></span></label><label for="tr-grat"><b>Gratificación mensual art. 50</b><small>25% de lo imponible, con tope de 4,75 ingresos mínimos al año.</small></label></div>
-      <div class="swl"><label class="sw"><input type="checkbox" id="tr-propio" ${T.vehiculoPropio ? 'checked' : ''}><span></span></label><label for="tr-propio"><b>Usa su propio vehículo</b><small>Se le reembolsa bencina y desgaste por km (asignación art. 41, no imponible).</small></label></div>
+      <div class="swl" id="tr-propiow"><label class="sw"><input type="checkbox" id="tr-propio" ${T.vehiculoPropio ? 'checked' : ''}><span></span></label><label for="tr-propio"><b>Usa su propio vehículo</b><small>Se le reembolsa bencina y desgaste por km (asignación art. 41, no imponible).</small></label></div>
       <div class="swl"><label class="sw"><input type="checkbox" id="tr-activo" ${T.activo !== false ? 'checked' : ''}><span></span></label><label for="tr-activo"><b>Activo</b><small>Apagado no cuenta en los costos ni aparece para asignar pedidos.</small></label></div>
     </div>
     <h4 class="vh-sec">Liquidación estimada del mes</h4>
@@ -1644,7 +1648,8 @@ function abrirTrabajador(t) {
     T.nombre = q('#tr-nombre').value; T.rut = q('#tr-rut').value; T.rol = q('#tr-rol').value;
     T.sueldoBase = digitos(q('#tr-base').value); T.bonoEntrega = digitos(q('#tr-bono').value);
     T.recargoDomingo = q('#tr-dom').checked; T.gratificacion = q('#tr-grat').checked; T.vehiculoPropio = q('#tr-propio').checked; T.activo = q('#tr-activo').checked;
-    entregas = digitos(q('#tr-ent').value); q('#tr-entw').hidden = T.rol !== 'repartidor';
+    entregas = digitos(q('#tr-ent').value);
+    if (T.rol !== 'repartidor') { q('#tr-propio').checked = false; q('#tr-bono').value = ''; }
     pintar();
   };
   pintar();

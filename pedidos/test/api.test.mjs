@@ -680,6 +680,13 @@ test('equipo: sueldo del repartidor según la ley, privado, ligado al vehículo 
   const j = mes.trabajadores.find((t) => t.id === 'juan');
   assert.equal(j.entregas, 1); assert.equal(Math.round(j.liquidacion.bonos), 500);
   assert.ok(mes.despacho.costo_equipo > 330000 && mes.despacho.pedidos >= 1);
+  // vehículo y bono son solo para repartidores: en cocina se descartan y no costean viajes
+  const cocina = { ...B, id: 'ana', nombre: 'Ana Cocina', rol: 'cocina', vehiculoPropio: true, bonoEntrega: 900 };
+  assert.equal((await eq([{ ...B, id: 'juan', bonoEntrega: 500 }, cocina])).status, 200);
+  const ana = (await req('GET', '/api/panel/carta')).body.equipo.trabajadores.find((t) => t.id === 'ana');
+  assert.equal(ana.vehiculoPropio, false); assert.equal(ana.bonoEntrega, 0);
+  const eq2 = (await req('GET', '/api/panel/carta')).body.equipo;
+  assert.equal(LB.vehiculoConRepartidor({ ...moto, repartidorId: 'ana' }, eq2.trabajadores, eq2.laboral).repartidor, undefined);
   await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
 });
 
