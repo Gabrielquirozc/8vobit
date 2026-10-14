@@ -333,6 +333,15 @@
   .vh-res table { box-shadow: none; background: transparent; margin: 6px 0; } .vh-res td { padding: 4px 0; border: 0; font-size: .9rem; } .vh-res small { color: var(--ink-2); }
   .sh-foot .peligro { color: var(--danger); margin-right: auto; }
   @media (max-width: 640px) { .tres-i, .calc-grid { grid-template-columns: 1fr; } }
+  .cobert .sh small { color: var(--ink-2); font-size: .8rem; }
+  .cobwrap { overflow-x: auto; } .cob { box-shadow: none; border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
+  .cob th { font-size: .7rem; color: var(--ink-2); padding: 2px 4px; text-align: center; font-weight: 600; } .cob tr th:first-child { text-align: left; padding-right: 8px; }
+  .cob td { min-width: 26px; height: 26px; text-align: center; font-size: .75rem; font-weight: 700; border-radius: 5px; padding: 0; border: 0; }
+  .cob .cerr { background: var(--surface-2); } .cob .cero, .cobl.cero { background: #fdecea; color: var(--danger); }
+  .cob .n1 { background: #d3f0d6; color: #1d5e21; } .cob .n2 { background: #a8dfae; color: #1d5e21; } .cob .n3 { background: #6cc475; color: #fff; }
+  .cobl { display: inline-block; min-width: 20px; text-align: center; border-radius: 4px; font-weight: 700; }
+  .porrol { line-height: 1.7; font-size: .9rem !important; margin-top: 6px !important; } .porrol strong { color: var(--ink); }
+  .eqrep { margin-top: 14px; } .eqrep .kpis { margin: 8px 0 0; } .eqrep h3 { margin: 0; }
   .eqlista { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; margin-top: 4px; }
   .eqcard h3 { margin: 0; } .eqcard header small { color: var(--ink-2); font-size: .85rem; } .eqcard.off { opacity: .55; }
   .eqturno { margin: 6px 0 10px; color: var(--ink-2); font-size: .9rem; }
@@ -1541,6 +1550,36 @@ async function guardarEquipo(trabajadores, laboral = eqLab()) {
   await api('panel/local', { method: 'PATCH', body: { equipo: { trabajadores, laboral } } });
   await cargarCarta();
 }
+// Cobertura: por día y hora del horario de atención, cuántas personas activas están de turno.
+function cobertura() {
+  const ts = (M.equipo?.trabajadores || []).filter((t) => t.activo !== false), hor = M.local.horario || {};
+  const rango = (t) => { if (!t) return null; const a = toMinH(t[0]); let b = toMinH(t[1]); if (b <= a) b += 1440; return [a, b]; };
+  const dias = LB.DIAS_SEM.map(([d, n]) => { const r = rango(hor[d]); return { d, n, r }; });
+  const ini = Math.min(...dias.filter((x) => x.r).map((x) => Math.floor(x.r[0] / 60))), fin = Math.max(...dias.filter((x) => x.r).map((x) => Math.ceil(x.r[1] / 60)));
+  let huecos = 0; const filas = [];
+  for (const x of dias) {
+    const celdas = [];
+    for (let h = ini; h < fin; h++) {
+      const a = h * 60, b = a + 60, abierto = x.r && a < x.r[1] && b > x.r[0];
+      // De turno si cubre la mitad de la hora (los turnos de otros días que cruzan medianoche no se cuentan aquí).
+      const quien = abierto ? ts.filter((t) => { const r = rango(t.turno?.[x.d]); return r && Math.min(b, r[1]) - Math.max(a, r[0]) >= 30; }) : [];
+      if (abierto && !quien.length) huecos++;
+      celdas.push({ h, abierto, quien });
+    }
+    filas.push({ ...x, celdas });
+  }
+  return { ini, fin, filas, huecos: Number.isFinite(ini) ? huecos : 0 };
+}
+const toMinH = (s) => { const [a, b] = String(s).split(':').map(Number); return a * 60 + b; };
+function pintarCobertura() {
+  const c = cobertura(); if (!Number.isFinite(c.ini)) return '';
+  const hs = []; for (let h = c.ini; h < c.fin; h++) hs.push(h);
+  return `<section class="cardf cobert"><header class="sh"><h3>Cobertura de turnos</h3><span class="sp"></span><small>Personas de turno en cada hora del horario de atención</small></header>
+    <div class="cobwrap"><table class="cob"><tr><th></th>${hs.map((h) => `<th>${String(h % 24).padStart(2, '0')}</th>`).join('')}</tr>
+    ${c.filas.map((f) => `<tr><th>${f.n.slice(0, 3)}</th>${f.celdas.map((x) => !x.abierto ? '<td class="cerr"></td>'
+      : `<td class="${x.quien.length ? `n${Math.min(3, x.quien.length)}` : 'cero'}" title="${esc(x.quien.map((t) => `${t.nombre} (${ROLES[t.rol].split(' ').pop()})`).join(', ') || 'Abierto sin personal de turno')}">${x.quien.length}</td>`).join('')}</tr>`).join('')}</table></div>
+    <p class="ayuda">Gris: cerrado. <span class="cobl cero">0</span> abierto sin nadie de turno. Pasa el dedo o el mouse sobre una hora para ver quiénes están.</p></section>`;
+}
 async function pintarEquipo() {
   await cargarCarta();
   eqMes = eqMes || null;
@@ -1562,14 +1601,16 @@ async function pintarEquipo() {
         <button class="ghost ico-b" data-eqmes="-1" aria-label="Mes anterior">${ico('left')}</button>
         <h2 class="t" style="margin:0">Equipo · ${esc(mesLargo(eqMes))}</h2>
         <button class="ghost ico-b" data-eqmes="1" aria-label="Mes siguiente">${ico('right')}</button></div>
-      <button class="primary chico" data-trab-nuevo style="width:auto;flex:none;padding:0 18px">${ico('plus')}Agregar trabajador</button></div>
-    <div class="kpis">
-      <div>Costo del reparto al mes<b class="num">${clp(d.costo_equipo)}</b><span class="sub">${reps.length} repartidor${reps.length === 1 ? '' : 'es'} · sueldo, cargas y bonos</span></div>
-      <div>Despachos del mes<b class="num">${d.pedidos}</b><span class="sub">${d.sin_repartidor ? `${d.sin_repartidor} sin repartidor asignado` : 'todos con repartidor'}</span></div>
-      <div>Cobrado por despacho<b class="num">${clp(d.cobrado)}</b><span class="sub">${d.pedidos ? `promedio ${clp(precioProm)}` : 'aún sin despachos'}</span></div>
-      <div class="${!d.costo_equipo || d.cobrado + (d.margen_comida || 0) >= d.costo_equipo ? '' : 'alerta'}">Para cubrir el reparto<b class="num">${d.costo_equipo ? necesarios ?? '—' : '—'}</b><span class="sub">${!d.costo_equipo ? 'Sin repartidores contratados: agrega uno para ver cuántos despachos lo pagan.' : necesarios ? `despachos al mes (cada uno deja ≈ ${clp(dejaViaje)}: ${d.pedidos ? `comida ${clp(comidaProm)} + ` : ''}tarifa, menos bencina y bono)` : 'con estos precios cada viaje no deja margen'}${d.costo_equipo && !d.pedidos ? '<br>Sin despachos aún: solo cuenta la tarifa.' : ''}</span></div>
-    </div>
-    <div class="eqlista">${EQ.trabajadores.map((t) => { const x = ts.find((y) => y.id === t.id), l = t.liquidacion;
+      <button class="primary chico" data-trab-nuevo style="width:auto;flex:none;padding:0 18px">${ico('plus')}Agregar persona</button></div>
+    ${(() => { const P = EQ.personal, v = EQ.ventas, pct = v.total ? Math.round((P.costo / v.total) * 100) : null, hueco = cobertura().huecos;
+      return `<div class="kpis">
+      <div>Costo de personal del mes<b class="num">${clp(P.costo)}</b><span class="sub">${P.personas} persona${P.personas === 1 ? '' : 's'} · ${P.horasSemana.toLocaleString('es-CL')} h/semana contratadas</span></div>
+      <div class="${pct > 35 ? 'alerta' : ''}">Peso sobre las ventas<b class="num">${pct == null ? '—' : `${pct}%`}</b><span class="sub">${v.total ? `ventas del mes ${clp(v.total)} · ${v.pedidos} pedidos${pct > 35 ? ' · alto: en restaurantes suele ir entre 25% y 35%' : ''}` : 'aún sin ventas este mes'}</span></div>
+      <div class="${hueco ? 'alerta' : ''}">Horas abiertas sin personal<b class="num">${hueco}</b><span class="sub">${hueco ? 'por semana: revisa la cobertura abajo' : P.personas ? 'el horario de atención está cubierto' : 'carga al personal para ver la cobertura'}</span></div>
+      <div>Por área<span class="sub porrol">${Object.entries(P.porRol).filter(([, x]) => x.personas).map(([r, x]) => `${ROLES[r]}: <strong>${x.personas}</strong> · ${clp(x.costo)}`).join('<br>') || 'Sin personal cargado'}</span></div>
+    </div>`; })()}
+    ${pintarCobertura()}
+    <div class="eqlista">${['cocina', 'caja', 'repartidor', 'otro'].flatMap((rol) => EQ.trabajadores.filter((t) => t.rol === rol)).map((t) => { const x = ts.find((y) => y.id === t.id), l = t.liquidacion;
       return `<article class="cardf eqcard ${x.activo === false ? 'off' : ''}">
         <header class="sh"><div><h3>${esc(t.nombre)}</h3><small>${ROLES[t.rol]} · ${x.contrato === 'indefinido' ? 'Indefinido' : 'Plazo fijo'} · ${l.horasSemana.toLocaleString('es-CL')} h/semana${x.activo === false ? ' · inactivo' : ''}</small></div>
           <span class="sp"></span><button class="ghostb" data-trab="${t.id}">Editar</button></header>
@@ -1577,7 +1618,14 @@ async function pintarEquipo() {
         <dl class="eqnum"><div><dt>Costo empresa</dt><dd>${clp(l.costoEmpresa)}</dd></div><div><dt>Líquido estimado</dt><dd>${clp(l.liquido)}</dd></div>
           ${t.rol === 'repartidor' ? `<div><dt>Entregas del mes</dt><dd>${t.entregas}${t.km ? `<small>${t.km.toLocaleString('es-CL')} km</small>` : ''}</dd></div>` : `<div><dt>Horas al mes</dt><dd>${Math.round(l.horasMes)}</dd></div>`}<div><dt>Costo por hora</dt><dd>${clp(l.costoHora)}</dd></div></dl>
         ${t.avisos.length ? `<ul class="eqavisos">${t.avisos.map((a) => `<li class="${a.grave ? 'grave' : ''}">${esc(a.txt)}</li>`).join('')}</ul>` : ''}
-      </article>`; }).join('') || `<div class="cardf vacio" style="padding:28px">Aún no hay trabajadores. Agrega al repartidor para calcular su sueldo y el costo real del despacho.</div>`}</div>
+      </article>`; }).join('') || `<div class="cardf vacio" style="padding:28px;grid-column:1/-1">Aún no hay personal cargado. Agrega a quienes trabajan en el local (cocina, caja, reparto) para ver el costo de personal, su peso sobre las ventas y si los turnos cubren el horario de atención.</div>`}</div>
+    ${desp.activo || reps.length ? `<section class="cardf eqrep"><h3>Reparto</h3>
+    <div class="kpis">
+      <div>Costo del reparto al mes<b class="num">${clp(d.costo_equipo)}</b><span class="sub">${reps.length} repartidor${reps.length === 1 ? '' : 'es'} · sueldo, cargas y bonos</span></div>
+      <div>Despachos del mes<b class="num">${d.pedidos}</b><span class="sub">${d.pedidos ? (d.sin_repartidor ? `${d.sin_repartidor} sin repartidor asignado` : 'todos con repartidor') : 'aún sin despachos'}</span></div>
+      <div>Cobrado por despacho<b class="num">${clp(d.cobrado)}</b><span class="sub">${d.pedidos ? `promedio ${clp(precioProm)}` : 'aún sin despachos'}</span></div>
+      <div class="${!d.costo_equipo || d.cobrado + (d.margen_comida || 0) >= d.costo_equipo ? '' : 'alerta'}">Para cubrir el reparto<b class="num">${d.costo_equipo ? necesarios ?? '—' : '—'}</b><span class="sub">${!d.costo_equipo ? 'Sin repartidor contratado: el despacho no tiene costo fijo de personal.' : necesarios ? `despachos al mes (cada uno deja ≈ ${clp(dejaViaje)}: ${d.pedidos ? `comida ${clp(comidaProm)} + ` : ''}tarifa, menos bencina y bono)` : 'con estos precios cada viaje no deja margen'}${d.costo_equipo && !d.pedidos ? '<br>Sin despachos aún: solo cuenta la tarifa.' : ''}</span></div>
+    </div></section>` : ''}
     <details class="cardf hist" id="eqparams"><summary><h3>Parámetros laborales (vigentes desde ${esc(new Date(`${lab.vigencia}T12:00:00`).toLocaleDateString('es-CL'))})</h3></summary>
       <p class="ayuda">Se actualizan cuando cambia la ley (el ingreso mínimo sube cada año). ⚠️ = por confirmar con el contador.</p>
       <div class="tres-i">
@@ -1604,8 +1652,8 @@ async function pintarEquipo() {
 }
 function abrirTrabajador(t) {
   const lab = eqLab();
-  const T = t ? JSON.parse(JSON.stringify(t)) : { id: null, nombre: '', rut: '', rol: 'repartidor', contrato: 'plazo_fijo', turno: { ...LB.TURNOS_TIPO[1].turno }, sueldoBase: 0, bonoEntrega: 0, recargoDomingo: true, gratificacion: true, vehiculoPropio: false, activo: true };
-  $('trTitulo').textContent = t ? `Editar a ${t.nombre}` : 'Nuevo trabajador';
+  const T = t ? JSON.parse(JSON.stringify(t)) : { id: null, nombre: '', rut: '', rol: 'cocina', contrato: 'plazo_fijo', turno: { ...LB.TURNOS_TIPO[1].turno }, sueldoBase: 0, bonoEntrega: 0, recargoDomingo: true, gratificacion: true, vehiculoPropio: false, activo: true };
+  $('trTitulo').textContent = t ? `Editar a ${t.nombre}` : 'Nueva persona en el equipo';
   let entregas = 60;
   const pintar = () => {
     // Vehículo propio, bono por entrega y entregas estimadas son cosas del reparto: en cocina o caja no aplican.
@@ -1640,7 +1688,7 @@ function abrirTrabajador(t) {
     <div class="dos"><div class="field"><label for="tr-rol">Rol</label><select id="tr-rol">${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${T.rol === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="field"><label>Contrato</label><div class="segn ancho"><button type="button" data-contrato="plazo_fijo">Plazo fijo</button><button type="button" data-contrato="indefinido">Indefinido</button></div></div></div>
     <h4 class="vh-sec">Turno</h4>
-    <p class="ayuda">Jornada continua (sin turno partido), máximo 10 h al día; colación de 30 a 60 min si corresponde. Turnos del análisis:</p>
+    <p class="ayuda">Jornada continua (sin turno partido), máximo 10 h al día; colación de 30 a 60 min si corresponde. Turnos tipo:</p>
     <div class="vpresets">${LB.TURNOS_TIPO.map((x) => `<button type="button" class="ghostb" data-ttipo="${x.id}">${x.id}. ${x.nombre}</button>`).join('')}</div>
     <table class="horario turnot"><tr class="hh"><th></th><td>Entra</td><td>Sale</td><td>Colación</td></tr>${LB.DIAS_SEM.map(filaDia).join('')}</table>
     <h4 class="vh-sec">Sueldo</h4>

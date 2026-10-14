@@ -76,7 +76,11 @@ que hoy se despacha. En el mapa, la vista *¿Sale a cuenta?* pinta cada sector e
 pedido), amarillo (solo cubre el costo) o rojo (pierde). Cada pedido guarda su costo estimado y el
 Resumen semanal compara lo cobrado por despacho con lo que costaron los viajes.
 
-**Equipo** (pestaña propia): trabajadores (repartidor, cocina, caja) con contrato (plazo fijo o
+**Equipo** (pestaña propia, vista de gestión del local): arriba el **costo de personal del mes**, su
+**peso sobre las ventas** (alerta sobre 35 %), las **horas abiertas sin personal** y el costo por área
+(cocina, caja, reparto); luego la **cobertura de turnos** (cuadro día × hora del horario de atención con
+cuántas personas hay de turno, en rojo las horas abiertas sin nadie), el equipo agrupado por área y
+una sección **Reparto** con sus números. Cada persona: (repartidor, cocina, caja) con contrato (plazo fijo o
 indefinido), turno por día con colación, sueldo base, bono por entrega y si usan vehículo propio. El
 cálculo (`public/laboral.js`, compartido con el servidor) es una **estimación** según la ley chilena:
 mínimo proporcional a las horas (IMM $553.553 × horas / 42, Ley 21.830), valor hora ordinaria, recargo

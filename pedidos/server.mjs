@@ -701,7 +701,12 @@ function equipoMes(local, mes) {
   const activos = trabajadores.filter((t) => eq.trabajadores.find((x) => x.id === t.id).activo !== false);
   const itD = peds.length ? db.prepare(`SELECT cantidad, precio_unitario, costo_unitario FROM pedido_items WHERE pedido_id IN (${peds.map(() => '?').join(',')})`).all(...peds.map((x) => x.id)) : [];
   const margenComida = itD.reduce((a, x) => a + x.cantidad * (x.precio_unitario - (x.costo_unitario ?? Math.round(x.precio_unitario * (local.costo_pct ?? 35) / 100))), 0);
-  return { mes, laboral: p, trabajadores, despacho: { pedidos: peds.length, margen_comida: margenComida, sin_repartidor: peds.filter((x) => !x.repartidor_id).length,
+  // Para la gestión del local: ventas del mes y costo de todo el personal activo (no solo reparto).
+  const ventasMes = db.prepare("SELECT COALESCE(SUM(total),0) v, COUNT(*) n FROM pedidos WHERE local_id=? AND dia LIKE ? AND estado!='anulado'").get(local.id, `${mes}-%`);
+  const personal = { costo: Math.round(activos.reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)), personas: activos.length,
+    horasSemana: activos.reduce((a, t) => a + t.liquidacion.horasSemana, 0),
+    porRol: Object.fromEntries(['cocina', 'caja', 'repartidor', 'otro'].map((r) => { const l = activos.filter((t) => t.rol === r); return [r, { personas: l.length, costo: Math.round(l.reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) }]; })) };
+  return { mes, laboral: p, trabajadores, ventas: { total: ventasMes.v, pedidos: ventasMes.n }, personal, despacho: { pedidos: peds.length, margen_comida: margenComida, sin_repartidor: peds.filter((x) => !x.repartidor_id).length,
     cobrado: peds.reduce((a, x) => a + (x.costo_despacho || 0), 0), costo_equipo: Math.round(activos.filter((t) => t.rol === 'repartidor').reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) } };
 }
 function resumen(local, fecha) {
