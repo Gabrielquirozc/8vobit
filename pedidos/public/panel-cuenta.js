@@ -90,7 +90,7 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
     for (const [v, [perm]] of Object.entries(TABS)) {
       const b = document.querySelector(`[data-v="${v}"]`); if (!b) continue;
       b.hidden = !puede(perm);
-      const f = TABS[v][1], bloq = f && !tiene(f);
+      const f = TABS[v][1], bloq = !!f && !tiene(f);
       b.classList.toggle('bloq', bloq);
       b.title = bloq ? `Disponible en el plan ${PLAN_NOMBRE[PLAN_DE[f]]}` : '';
     }

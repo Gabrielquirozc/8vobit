@@ -405,6 +405,38 @@
   .pin-turno { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
   .quien { border: 1px solid #ffffff33; background: transparent; color: inherit; border-radius: 999px; padding: 4px 12px; text-align: left; line-height: 1.15; cursor: pointer; }
   .quien small { display: block; font-size: .72rem; opacity: .75; } .quien:empty { display: none; }
+  /* Primeros pasos, ayudas por pestaña e importar planilla (panel-inicio.js). */
+  #inicio, #ayudaTab { max-width: 1100px; margin: 0 auto 12px; }
+  .ini h3 { margin: 0; display: flex; align-items: center; gap: 8px; } .ini .sh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .ini .sp { flex: 1; }
+  .ini-n { font-weight: 700; color: var(--ink-2); }
+  .ini-barra { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: 10px 0 4px; }
+  .ini-barra span { display: block; height: 100%; background: var(--ok); border-radius: 999px; transition: width .3s; }
+  .ini-pasos { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  .ini-pasos li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .ini-pasos li.sig { border-color: var(--ink); } .ini-pasos li.ok .ini-t b, .ini-pasos li.omit .ini-t b { color: var(--ink-2); }
+  .ini-ico { flex: none; width: 28px; height: 28px; border-radius: 999px; border: 2px solid var(--line); display: grid; place-items: center; color: var(--ink-2); font-weight: 700; }
+  .ini-pasos li.ok .ini-ico { background: var(--ok); border-color: var(--ok); color: #fff; } .ini-ico .ico { width: 16px; height: 16px; }
+  .ini-t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ini-t small { color: var(--ink-2); font-size: .82rem; }
+  .ini-pasos .primary.chico { width: auto; flex: none; min-height: 44px; padding: 0 16px; border-radius: 999px; }
+  .ini.mini { display: flex; align-items: center; gap: 12px; padding: 10px 16px; } .ini.mini .ini-barra { flex: 1; margin: 0; }
+  .ini.listo .ini-acc { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; } .ini.listo .ini-acc a { text-decoration: none; }
+  .ini.listo .primary.chico { width: auto; flex: none; min-height: 44px; padding: 0 18px; border-radius: 999px; }
+  .ayudatab { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 14px; font-size: .9rem; }
+  .ayudatab summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink-2); }
+  .ayudatab ul { margin: 0 0 12px; padding-left: 20px; color: var(--ink); } .ayudatab li { margin: 4px 0; } .ayudatab p { margin: 0 0 12px; }
+  .im-arch { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 10px 0 0; }
+  .im-modo { border: 1px solid var(--line); border-radius: var(--r-sm); margin: 12px 0 0; padding: 8px 12px 10px; } .im-modo legend { font-weight: 600; font-size: .9rem; padding: 0 4px; }
+  .im-modo label { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-size: .88rem; } .im-modo input { margin-top: 3px; }
+  .im-res { margin: 14px 0 8px; padding: 10px 12px; border-radius: var(--r-sm); background: #e6f4ea; color: #1e4620; font-size: .9rem; }
+  .im-res.mal { background: #fde2df; color: #8a1c12; }
+  @media (prefers-color-scheme: dark) { .im-res { background: #1d3322; color: #a6dbb0; } .im-res.mal { background: #3a1d1a; color: #f3a59b; } }
+  .im-tabla { max-height: 46vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .im-tabla table { width: 100%; border-collapse: collapse; } .im-tabla th { position: sticky; top: 0; background: var(--surface); font-size: .8rem; }
+  .im-tabla td, .im-tabla th { padding: 6px 8px; font-size: .85rem; vertical-align: top; } .im-tabla .r { text-align: right; }
+  .im-tabla td small { display: block; color: var(--ink-2); font-size: .78rem; } .im-tabla tr.mal td { background: color-mix(in srgb, var(--danger) 9%, transparent); }
+  .im-mal { color: var(--danger); font-weight: 600; } .im-aviso { color: #8a5a00 !important; }
+  @media (prefers-color-scheme: dark) { .im-mal { color: #f3a59b; } .im-aviso { color: #f5cf7a !important; } }
+  #imTexto { font-family: ui-monospace, Consolas, monospace; font-size: 14px; }
   .banner { padding: 10px 16px; font-weight: 600; font-size: .92rem; text-align: center; }
   .banner.mal { background: #fde2df; color: #8a1c12; } .banner.aviso { background: #fff3cd; color: #6b4a00; }
   @media (prefers-color-scheme: dark) { .banner.mal { background: #3a1d1a; color: #f3a59b; } .banner.aviso { background: #3a2e14; color: #f5cf7a; } }
@@ -474,6 +506,8 @@
   </header>
   <div id="banner" class="banner" role="status" hidden></div>
   <main>
+    <div id="inicio" hidden></div>
+    <div id="ayudaTab" hidden></div>
     <div id="v-pedidos" class="cols"></div>
     <div id="v-venta" class="venta" hidden>
       <section>
@@ -548,6 +582,16 @@
   <div class="sh-body" id="trBody"></div>
   <div class="sh-foot"><button class="ghost peligro" type="button" id="trQuitar">Quitar</button><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="trOk">Guardar</button></div>
 </dialog>
+<dialog class="sheet ancho" id="dlgInicio" aria-labelledby="inTitulo">
+  <div class="sh-head"><h2 id="inTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body" id="inBody"></div>
+  <div class="sh-foot"><button class="ghost" type="button" id="inOmitir"></button><span style="flex:1"></span><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="inOk"></button></div>
+</dialog>
+<dialog class="sheet ancho" id="dlgImportar" aria-labelledby="imTitulo">
+  <div class="sh-head"><h2 id="imTitulo">Importar la carta desde una planilla</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body" id="imBody"></div>
+  <div class="sh-foot"><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="imOk">Revisar</button></div>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="leaflet.js"></script>
@@ -557,6 +601,7 @@ import * as H from './hex.js';
 import * as LB from './laboral.js';
 import { crearCajaUI } from './panel-caja.js';
 import { crearCuentaUI } from './panel-cuenta.js';
+import { crearInicioUI } from './panel-inicio.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -982,6 +1027,7 @@ async function pintarCarta() {
         <span class="sp"></span>
         <button type="button" class="primary chico" data-nuevo="">${ico('plus')}Nuevo producto</button>
         <button type="button" class="ghostb" id="cnuevacat">${ico('plus')}Categoría</button>
+        <button type="button" class="ghostb" id="cimportar">${ico('note')}Importar planilla</button>
         <button type="button" class="ghostb" id="cpct" title="Costo de insumos que se supone para los productos sin costo cargado"></button>
       </div>
       <nav class="cjump" id="cjump" aria-label="Ir a categoría"></nav>
@@ -991,6 +1037,7 @@ async function pintarCarta() {
       <p class="ayuda" style="margin:16px 4px">Los cambios se guardan solos y se ven al instante en la carta. Material para imprimir:
         <a href="carta-imprimible" target="_blank">carta en PDF</a> · <a href="cartel" target="_blank">cartel y tarjetas con QR</a>.</p>`;
     $('cbusca').oninput = (e) => { filtro.q = e.target.value; pintarListaCarta(); };
+    $('cimportar').onclick = () => INICIO.abrirImportar();
   }
   $('cpct').textContent = `Costo estimado ${pctCosto()}%`;
   $('cjump').innerHTML = M.categorias.map((c) => `<button type="button" data-ir="${c.id}">${esc(c.nombre)}</button>`).join('');
@@ -1194,6 +1241,10 @@ function rutValido(v) {
   const dv = 11 - (suma % 11);
   return s.slice(-1) === (dv === 11 ? '0' : dv === 10 ? 'K' : String(dv));
 }
+// Primeros pasos, importar planilla y ayudas por pestaña (public/panel-inicio.js).
+const INICIO = crearInicioUI({ $, ico, toast, api, clp, esc, fmtTel, BASE, aWebp, tablaHorario, DIAS, BANCOS, TIPOS, rutFormato, rutValido,
+  carta: () => M, puede: (x) => CUENTA.puede(x),
+  alCambiar: async () => { await cargarCarta(); if (vista === 'carta') await pintarCarta(); else if (vista === 'local' && !localSucio) await pintarLocal(); refrescar().catch(() => {}); } });
 let localSucio = false;
 const marcarSucio = (on) => { localSucio = on; $('lbar')?.classList.toggle('on', on); };
 function tablaHorario(pre, hor, base) {
@@ -1952,6 +2003,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
   for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'resultados', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
+  INICIO.ayuda(vista);
   const bloq = CUENTA.bloqueada(vista);
   if (bloq) { $('v-' + vista).innerHTML = CUENTA.vistaBloqueada(bloq); return; }
   if (vista === 'carta') pintarCarta();
@@ -1981,6 +2033,7 @@ async function iniciar() {
   CUENTA.aplicar();
   await cargarCarta(); await refrescar();
   $('app').hidden = false;
+  INICIO.ayuda(vista); INICIO.cargar().catch(() => {});
   // Si el rol no ve la pestaña actual, se abre la primera que sí ve.
   if (document.querySelector(`[data-v="${vista}"]`).hidden) document.querySelector('[data-v]:not([hidden])')?.click();
   despierta();

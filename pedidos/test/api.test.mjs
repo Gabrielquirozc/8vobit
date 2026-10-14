@@ -328,7 +328,7 @@ test('datos del local: se editan desde el panel, se validan y se ven en la carta
   await login();
   const r = await req('PATCH', '/api/panel/local', {
     whatsapp: '9 8765 4321', instagram: '@gassuso', direccion: 'Freire 145, Concepción', cupo_franja: 12,
-    transferencia: { titular: 'Gassuso SpA', rut: '76.123.456-7', banco: 'Banco Estado', tipo: 'Cuenta vista', numero: '123-456-78', email: 'pagos@gassuso.cl' },
+    transferencia: { titular: 'Gassuso SpA', rut: '76.123.456-0', banco: 'Banco Estado', tipo: 'Cuenta vista', numero: '123-456-78', email: 'pagos@gassuso.cl' },
   });
   assert.equal(r.status, 200);
   assert.equal(r.body.whatsapp, '56987654321'); // celular chileno sin código → con 56
@@ -1219,4 +1219,142 @@ test('resultados: ventas − comida − personal − gastos, sin contar dos vece
   assert.equal(r.resultado, r.margen_bruto - r.personal.monto - r.total_operacion);
   assert.match(r.anterior.mes, /^\d{4}-\d{2}$/);
   assert.equal((await req('GET', '/api/panel/resultados?mes=2026-13')).status, 400);
+});
+
+// ---------- autoservicio: primeros pasos e importar la carta ----------
+test('planilla: separadores, comillas, títulos y precios a la chilena', async () => {
+  const { leerPlanilla, leerPrecio, filasDeTexto } = await import('../lib/autoservicio.mjs');
+  assert.deepEqual(leerPlanilla('a\tb\tc\n\nd\te\tf').map((f) => f.celdas), [['a', 'b', 'c'], ['d', 'e', 'f']]);
+  assert.deepEqual(leerPlanilla('﻿a;"b; con ""comillas""";c\r\nx;y;z').map((f) => f.celdas), [['a', 'b; con "comillas"', 'c'], ['x', 'y', 'z']]);
+  assert.deepEqual(leerPlanilla('a,"dos\nlíneas",c\nd,e,f').map((f) => [f.linea, f.celdas[1]]), [[1, 'dos\nlíneas'], [3, 'e']]);
+  for (const [v, n] of [['$4.500', 4500], ['4500', 4500], ['4.500', 4500], ['4500,00', 4500], ['$ 12.990', 12990], ['1.234.567', 1234567], ['', null]]) assert.equal(leerPrecio(v), n, v);
+  assert.ok(Number.isNaN(leerPrecio('cuatro mil')));
+  const t = filasDeTexto('Nombre;Precio;Categoría\nLomito;6000;Sándwiches');
+  assert.ok(t.con_titulos);
+  assert.deepEqual(t.filas[0], { linea: 2, categoria: 'Sándwiches', nombre: 'Lomito', precio: '6000', descripcion: '' });
+  assert.match(filasDeTexto('').error, /Pega/);
+  assert.match(filasDeTexto('C\tP\t1\n'.repeat(501)).error, /máximo/);
+});
+
+const rincon = {};
+test('primeros pasos: un local nuevo ve su avance hasta completarlo; Gassuso no', async () => {
+  const ad = cliente();
+  await ad('POST', '/api/admin/login', { password: 'admin-de-prueba' });
+  const n = await ad('POST', '/api/admin/locales', { slug: 'el-rincon', nombre: 'El Rincón', plan: 'gestion' });
+  assert.equal(n.status, 201);
+  const dueno = cliente();
+  assert.equal((await dueno('POST', '/api/panel/login', { slug: 'el-rincon', password: n.body.clave })).status, 200);
+  const e0 = (await dueno('GET', '/api/panel/inicio')).body;
+  assert.equal(e0.cerrado, false);
+  assert.equal(e0.listos, 0);
+  assert.deepEqual(e0.pasos.map((p) => p.id), ['contacto', 'horario', 'logo', 'transferencias', 'producto']);
+  // La consola muestra el avance de cada local.
+  assert.deepEqual((await ad('GET', '/api/admin/resumen')).body.locales.find((l) => l.slug === 'el-rincon').inicio, { listos: 0, total: 5, cerrado: false });
+  // Gassuso se armó antes del asistente: no lo ve.
+  await login();
+  assert.equal((await req('GET', '/api/panel/inicio')).body.cerrado, true);
+
+  // Contacto: con WhatsApp y dirección queda listo.
+  assert.equal((await dueno('PATCH', '/api/panel/local', { whatsapp: '912345678' })).status, 200);
+  assert.equal((await dueno('GET', '/api/panel/inicio')).body.pasos[0].hecho, false); // falta la dirección
+  await dueno('PATCH', '/api/panel/local', { direccion: 'Janequeo 123, Concepción' });
+  // Horario: listo al guardarlo (aunque sea el mismo que venía).
+  const hor = Object.fromEntries([...'0123456'].map((d) => [d, d === '0' ? null : ['12:00', '23:00']]));
+  assert.equal((await dueno('PATCH', '/api/panel/local', { horario: hor })).status, 200);
+  // Transferencias: el servidor revisa el RUT y el correo.
+  assert.equal((await dueno('PATCH', '/api/panel/local', { transferencia: { titular: 'Ana', rut: '76.123.456-7', banco: 'BCI', numero: '123' } })).status, 400);
+  assert.equal((await dueno('PATCH', '/api/panel/local', { transferencia: { titular: 'Ana', banco: 'BCI', numero: '123', email: 'malo' } })).status, 400);
+  assert.equal((await dueno('PATCH', '/api/panel/local', { transferencia: { titular: 'Ana Pérez', rut: '76.123.456-0', banco: 'BCI', tipo: 'Cuenta vista', numero: '123-45' } })).status, 200);
+  // Logo: se puede omitir; un paso obligatorio no.
+  assert.equal((await dueno('PATCH', '/api/panel/inicio', { omitir: 'contacto' })).status, 400);
+  let e = (await dueno('PATCH', '/api/panel/inicio', { omitir: 'logo' })).body;
+  assert.deepEqual(e.pasos.map((p) => [p.id, p.hecho || p.omitido]), [['contacto', true], ['horario', true], ['logo', true], ['transferencias', true], ['producto', false]]);
+  assert.equal(e.listos, 4);
+  assert.equal(e.completo, false);
+  // Primer producto (desde el asistente): un producto "sin precio" no cuenta.
+  const uno = (precio) => dueno('POST', '/api/panel/importar', { modo: 'agregar', confirmar: true, filas: [{ categoria: 'Sándwiches', nombre: 'Lomito', precio }] });
+  assert.equal((await uno('')).status, 201);
+  assert.equal((await dueno('GET', '/api/panel/inicio')).body.completo, false);
+  assert.equal((await uno('$6.500')).status, 201); // misma categoría y nombre: actualiza el precio
+  e = (await dueno('GET', '/api/panel/inicio')).body;
+  assert.equal(e.completo, true);
+  const m = (await req('GET', '/api/locales/el-rincon')).body;
+  assert.deepEqual(m.categorias.filter((c) => c.productos.length).map((c) => [c.nombre, c.productos.map((p) => [p.nombre, p.precio, p.precio_pendiente])]), [['Sándwiches', [['Lomito', 6500, 0]]]]);
+  // Cerrar el asistente; se puede volver a abrir.
+  assert.equal((await dueno('PATCH', '/api/panel/inicio', { cerrado: true })).body.cerrado, true);
+  assert.equal((await dueno('PATCH', '/api/panel/inicio', { cerrado: false })).body.cerrado, false);
+  Object.assign(rincon, { dueno, ad });
+});
+
+test('importar carta: vista previa, errores por fila, agregar y reemplazar sin perder pedidos', async () => {
+  const { dueno } = rincon;
+  const imp = (texto, extra = {}) => dueno('POST', '/api/panel/importar', { texto, ...extra });
+  // Vista previa con errores: no guarda nada.
+  const mala = [
+    'Categoría\tProducto\tPrecio\tDescripción',
+    'Sándwiches\tLomito\t$7.000\tCon palta',
+    '\tChacarero\t6.900\t', // categoría vacía = la de arriba
+    'Bebidas\t\t1500\t', // sin nombre
+    'Bebidas\tJugo\tcuatro mil\t', // precio raro
+    'Bebidas\tBebida lata\t\t', // sin precio: aviso, no error
+    'Sándwiches\tchacarero\t1\t', // repetido (sin importar mayúsculas)
+  ].join('\n');
+  const p = await imp(mala);
+  assert.equal(p.status, 200);
+  assert.equal(p.body.errores, 3);
+  assert.ok(p.body.con_titulos);
+  assert.deepEqual(p.body.filas.map((f) => [f.linea, f.categoria, f.accion ?? null, !!f.error]), [
+    [2, 'Sándwiches', 'actualiza', false], [3, 'Sándwiches', 'nuevo', false], [4, 'Bebidas', null, true], [5, 'Bebidas', null, true], [6, 'Bebidas', 'nuevo', false], [7, 'Sándwiches', null, true]]);
+  assert.match(p.body.filas[3].error, /cuatro mil/);
+  assert.match(p.body.filas[4].avisos[0], /Sin precio/);
+  assert.deepEqual(p.body.categorias_nuevas, ['Bebidas']);
+  const conf = await imp(mala, { confirmar: true });
+  assert.equal(conf.status, 400);
+  assert.match(conf.body.error, /3 filas con problemas/);
+  assert.equal((await req('GET', '/api/locales/el-rincon')).body.categorias.flatMap((c) => c.productos).length, 1);
+
+  // Agregar (CSV con ";" como lo guarda Excel en español): crea, actualiza y deja historial.
+  const ok = await imp('Sándwiches;Lomito;$7.000;Con palta\n;Chacarero;6.900;\nBebidas;Bebida lata;;\nBebidas;"Jugo; natural";2.500;"De la ""casa"""', { confirmar: true });
+  assert.equal(ok.status, 201);
+  assert.deepEqual([ok.body.nuevos, ok.body.actualizados, ok.body.categorias_nuevas], [3, 1, ['Bebidas']]);
+  const c = (await dueno('GET', '/api/panel/carta')).body;
+  const ps = c.categorias.flatMap((x) => x.productos);
+  assert.deepEqual(ps.map((x) => [x.nombre, x.precio, x.precio_pendiente]), [['Lomito', 7000, 0], ['Chacarero', 6900, 0], ['Bebida lata', 0, 1], ['Jugo; natural', 2500, 0]]);
+  assert.equal(ps.find((x) => x.nombre === 'Jugo; natural').descripcion, 'De la "casa"');
+  assert.ok((await dueno('GET', '/api/panel/historial')).body.some((h) => h.nombre === 'Lomito' && h.anterior === 6500 && h.nuevo === 7000));
+
+  // Un pedido con el Chacarero; luego se reemplaza la carta sin él.
+  const chac = ps.find((x) => x.nombre === 'Chacarero');
+  assert.equal((await req('POST', '/api/locales/el-rincon/pedidos', { cliente: 'Ana', telefono: '+56 9 1111 2222', franja: 'Lo antes posible', items: [{ producto_id: chac.id }] })).status, 201);
+  const prev = await imp('Sándwiches\tLomito\t7200\nPostres\tKuchen\t2500', { modo: 'reemplazar' });
+  assert.deepEqual(prev.body.archivados.sort(), ['Bebida lata', 'Chacarero', 'Jugo; natural']);
+  const rep = await imp('Sándwiches\tLomito\t7200\nPostres\tKuchen\t2500', { modo: 'reemplazar', confirmar: true });
+  assert.equal(rep.status, 201);
+  assert.equal(rep.body.archivados, 3);
+  const c2 = (await dueno('GET', '/api/panel/carta')).body;
+  // Se borran las categorías sin ningún producto ("Carta", vacía desde el alta); "Bebidas" queda porque guarda los archivados.
+  assert.deepEqual(c2.categorias.map((x) => [x.nombre, x.productos.map((q) => q.nombre)]), [['Sándwiches', ['Lomito']], ['Bebidas', []], ['Postres', ['Kuchen']]]);
+  assert.equal(c2.categorias[0].productos[0].id, ps[0].id); // el Lomito es el mismo: conserva foto y costo
+  // El pedido antiguo sigue nombrando al Chacarero.
+  const ped = (await dueno('GET', '/api/panel/pedidos')).body.pedidos;
+  assert.equal(ped[0].items[0].nombre, 'Chacarero');
+});
+
+test('importar carta y primeros pasos: permisos y límites', async () => {
+  const { dueno } = rincon;
+  assert.equal((await dueno('POST', '/api/panel/usuarios', { nombre: 'Eli', rol: 'encargado', pin: '5827' })).status, 201);
+  assert.equal((await dueno('POST', '/api/panel/usuarios', { nombre: 'Fran', rol: 'cocina', pin: '6938' })).status, 201);
+  assert.equal((await dueno('POST', '/api/panel/pin', { pin: '6938' })).status, 200);
+  assert.equal((await dueno('POST', '/api/panel/importar', { texto: 'A\tB\t1' })).status, 403); // cocina no toca la carta
+  assert.equal((await dueno('GET', '/api/panel/inicio')).status, 403);
+  assert.equal((await dueno('POST', '/api/panel/pin', { pin: '5827' })).status, 200);
+  assert.equal((await dueno('POST', '/api/panel/importar', { texto: 'Postres\tKuchen\t2600' })).status, 200); // encargado sí
+  assert.equal((await dueno('PATCH', '/api/panel/inicio', { cerrado: true })).status, 403); // pero los primeros pasos son del dueño
+  // Planilla gigante: 413 con un mensaje claro.
+  const r = await dueno('POST', '/api/panel/importar', { texto: 'x'.repeat(310e3) });
+  assert.equal(r.status, 413);
+  assert.match(r.body.error, /demasiado grande/);
+  assert.equal((await dueno('POST', '/api/panel/importar', { filas: Array.from({ length: 501 }, (_, i) => ({ categoria: 'A', nombre: `P${i}`, precio: 1 })) })).status, 400);
+  // Sin sesión no hay nada.
+  assert.equal((await cliente()('POST', '/api/panel/importar', { texto: 'A\tB\t1' })).status, 401);
 });

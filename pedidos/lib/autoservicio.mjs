@@ -1,0 +1,213 @@
+// Autoservicio del local: primeros pasos de un local recién creado (con su avance) e importación
+// de la carta desde una planilla (CSV o celdas copiadas de Excel). La meta es que el dueño deje
+// el local andando sin ayuda (VIABILIDAD.md §4–5: soporte ≤ 0,5 h por local al mes).
+const texto = (v, max) => String(v ?? '').replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+// Pasos del asistente, en orden. `omitible`: el dueño puede decir "no aplica" (sin logo, sin transferencias).
+export const PASOS = [
+  { id: 'contacto', titulo: 'Datos de contacto', detalle: 'WhatsApp o teléfono y la dirección del local.' },
+  { id: 'horario', titulo: 'Horario de atención', detalle: 'Los días y horas en que se pueden pedir.' },
+  { id: 'logo', titulo: 'Logo', detalle: 'Aparece en la carta, el seguimiento y el cartel con QR.', omitible: true },
+  { id: 'transferencias', titulo: 'Datos para transferencias', detalle: 'El cliente los ve al pagar.', omitible: true },
+  { id: 'producto', titulo: 'Primer producto con precio', detalle: 'Uno a mano o la carta entera desde una planilla.' },
+];
+export const MAX_FILAS = 500;
+export const MAX_TEXTO = 200e3;
+
+// ---------- planilla ----------
+// Separa un CSV o lo pegado desde Excel (tabulaciones). Acepta comillas con "" adentro y saltos
+// de línea dentro de una celda. El separador se deduce de la primera línea: tab, ";" (Excel en
+// español) o ",".
+export function leerPlanilla(txt) {
+  const s = String(txt ?? '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const primera = s.split('\n').find((l) => l.trim()) || '';
+  const cuenta = (c) => primera.split(c).length - 1;
+  const sep = cuenta('\t') ? '\t' : cuenta(';') >= cuenta(',') && cuenta(';') ? ';' : ',';
+  const filas = [];
+  let fila = [], celda = '', comillas = false, linea = 1, inicio = 1;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (comillas) {
+      if (c === '"' && s[i + 1] === '"') { celda += '"'; i++; }
+      else if (c === '"') comillas = false;
+      else { if (c === '\n') linea++; celda += c; }
+    } else if (c === '"' && !celda.trim()) { comillas = true; celda = ''; }
+    else if (c === sep) { fila.push(celda); celda = ''; }
+    else if (c === '\n') { fila.push(celda); filas.push({ linea: inicio, celdas: fila }); fila = []; celda = ''; linea++; inicio = linea; }
+    else celda += c;
+  }
+  if (celda || fila.length) { fila.push(celda); filas.push({ linea: inicio, celdas: fila }); }
+  return filas.map((f) => ({ ...f, celdas: f.celdas.map((x) => x.trim()) })).filter((f) => f.celdas.some(Boolean));
+}
+
+// "$4.500", "4.500", "4500", "4500,00" → 4500. Vacío → null (sin precio). Inválido → NaN.
+export function leerPrecio(v) {
+  const t = String(v ?? '').replace(/[$\s]|clp/gi, '');
+  if (!t) return null;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) return Math.round(Number(t.replace(/\./g, '').replace(',', '.')));
+  if (/^\d+(,\d{1,2})?$/.test(t)) return Math.round(Number(t.replace(',', '.')));
+  if (/^\d{1,3}(,\d{3})+$/.test(t)) return Number(t.replace(/,/g, '')); // 4,500 al estilo inglés
+  if (/^\d+\.\d{1,2}$/.test(t)) return Math.round(Number(t));
+  return NaN;
+}
+
+const COLUMNAS = [
+  ['categoria', /^(categoria|seccion|tipo|grupo)/],
+  ['nombre', /^(producto|nombre|plato|item|articulo)/],
+  ['precio', /^(precio|valor|monto)/],
+  ['descripcion', /^(descripcion|detalle|ingredientes|desc)/],
+];
+// Filas de la planilla → [{linea, categoria, nombre, precio, descripcion}] o { error }. Si la primera
+// fila trae títulos (Producto, Precio…) se usan; si no, el orden es categoría, producto, precio, descripción.
+export function filasDeTexto(txt) {
+  if (String(txt ?? '').length > MAX_TEXTO) return { error: 'La planilla es demasiado grande: divídela en partes de hasta 500 productos.' };
+  const filas = leerPlanilla(txt);
+  if (!filas.length) return { error: 'Pega la planilla o elige un archivo CSV.' };
+  let mapa = { categoria: 0, nombre: 1, precio: 2, descripcion: 3 };
+  const titulos = filas[0].celdas.map(norm);
+  const conTitulos = titulos.some((t) => COLUMNAS[1][1].test(t)) && titulos.some((t) => COLUMNAS[2][1].test(t));
+  if (conTitulos) {
+    mapa = {};
+    for (const [k, re] of COLUMNAS) { const i = titulos.findIndex((t) => re.test(t)); if (i >= 0) mapa[k] = i; }
+    filas.shift();
+  }
+  if (filas.length > MAX_FILAS) return { error: `La planilla tiene ${filas.length} filas; el máximo es ${MAX_FILAS} por vez.` };
+  const de = (f, k) => (mapa[k] === undefined ? '' : f.celdas[mapa[k]] ?? '');
+  return { filas: filas.map((f) => ({ linea: f.linea, categoria: de(f, 'categoria'), nombre: de(f, 'nombre'), precio: de(f, 'precio'), descripcion: de(f, 'descripcion') })), con_titulos: conTitulos };
+}
+
+export function crearAutoservicio(db) {
+  // Estado del asistente por local: { hechos: ['horario'], omitidos: ['logo'], cerrado: true }.
+  // Los locales que ya existían al crear la columna se armaron a mano: no ven el asistente.
+  if (!db.prepare('PRAGMA table_info(locales)').all().some((c) => c.name === 'inicio')) {
+    db.exec('ALTER TABLE locales ADD COLUMN inicio TEXT');
+    db.exec(`UPDATE locales SET inicio='{"cerrado":true}'`);
+  }
+  const leer = (lid) => { try { return { hechos: [], omitidos: [], cerrado: false, ...JSON.parse(db.prepare('SELECT inicio FROM locales WHERE id=?').get(lid)?.inicio || '{}') }; } catch { return { hechos: [], omitidos: [], cerrado: false }; } };
+  const guardar = (lid, e) => db.prepare('UPDATE locales SET inicio=? WHERE id=?').run(JSON.stringify(e), lid);
+
+  function estado(lid) {
+    const l = db.prepare('SELECT whatsapp, telefono, direccion, logo, transferencia FROM locales WHERE id=?').get(lid);
+    const e = leer(lid);
+    let t = {}; try { t = JSON.parse(l.transferencia || '{}') || {}; } catch {}
+    const hecho = {
+      contacto: !!((l.whatsapp || l.telefono) && l.direccion),
+      horario: e.hechos.includes('horario'),
+      logo: !!l.logo,
+      transferencias: !!(t.numero && t.banco && t.titular),
+      producto: !!db.prepare('SELECT 1 FROM productos WHERE local_id=? AND archivado=0 AND activo=1 AND precio>0 AND precio_pendiente=0').get(lid),
+    };
+    const pasos = PASOS.map((p) => ({ ...p, hecho: hecho[p.id], omitido: !hecho[p.id] && !!p.omitible && e.omitidos.includes(p.id) }));
+    const listos = pasos.filter((p) => p.hecho || p.omitido).length;
+    return { pasos, listos, total: pasos.length, completo: listos === pasos.length, cerrado: !!e.cerrado };
+  }
+  // Avance corto para la consola de administración.
+  const corto = (lid) => { const e = estado(lid); return { listos: e.listos, total: e.total, cerrado: e.cerrado }; };
+
+  function marcar(lid, id) {
+    const e = leer(lid);
+    if (!e.hechos.includes(id)) { e.hechos.push(id); guardar(lid, e); }
+  }
+  // PATCH del asistente: omitir o retomar un paso, cerrar o volver a abrir el asistente.
+  function actualizar(lid, b) {
+    const e = leer(lid);
+    for (const [k, on] of [['omitir', true], ['retomar', false]]) {
+      if (b[k] === undefined) continue;
+      const p = PASOS.find((x) => x.id === b[k]);
+      if (!p?.omitible) return { error: 'Ese paso no se puede omitir.' };
+      e.omitidos = e.omitidos.filter((x) => x !== p.id).concat(on ? [p.id] : []);
+    }
+    if (b.horario_ok) e.hechos = [...new Set([...e.hechos, 'horario'])];
+    if (b.cerrado !== undefined) e.cerrado = !!b.cerrado;
+    guardar(lid, e);
+    return estado(lid);
+  }
+
+  // ---------- importar la carta ----------
+  // Revisa cada fila y dice qué se hará con ella. Nada se guarda aquí.
+  function analizar(lid, entrada, modo) {
+    const r = Array.isArray(entrada.filas)
+      ? { filas: entrada.filas.slice(0, MAX_FILAS + 1).map((f, i) => ({ linea: i + 1, categoria: f?.categoria, nombre: f?.nombre, precio: f?.precio, descripcion: f?.descripcion })) }
+      : filasDeTexto(entrada.texto);
+    if (r.error) return { error: r.error };
+    if (r.filas.length > MAX_FILAS) return { error: `El máximo es ${MAX_FILAS} productos por vez.` };
+    const cats = db.prepare('SELECT id, nombre FROM categorias WHERE local_id=?').all(lid);
+    const catDe = new Map(cats.map((c) => [norm(c.nombre), c]));
+    const existentes = db.prepare('SELECT id, categoria_id, nombre, precio, descripcion FROM productos WHERE local_id=? AND archivado=0').all(lid);
+    const prodDe = new Map(existentes.map((p) => [`${p.categoria_id}|${norm(p.nombre)}`, p]));
+    const vistos = new Set(), nuevasCats = new Map(), usados = new Set();
+    let anterior = '';
+    const filas = r.filas.map((f) => {
+      // Celda de categoría vacía = la misma de la fila anterior (planillas con celdas combinadas).
+      const categoria = texto(f.categoria, 41) || anterior;
+      anterior = categoria;
+      const nombre = texto(f.nombre, 81), descripcion = texto(f.descripcion, 201), precio = typeof f.precio === 'number' ? Math.round(f.precio) : leerPrecio(f.precio);
+      const o = { linea: f.linea, categoria: categoria.slice(0, 40), nombre: nombre.slice(0, 80), precio, descripcion: descripcion.slice(0, 200) || null, avisos: [] };
+      if (!nombre) o.error = 'Falta el nombre del producto.';
+      else if (!categoria) o.error = 'Falta la categoría.';
+      else if (nombre.length > 80) o.error = 'El nombre es muy largo (máximo 80 letras).';
+      else if (categoria.length > 40) o.error = 'La categoría es muy larga (máximo 40 letras).';
+      else if (Number.isNaN(precio)) o.error = `Precio "${texto(f.precio, 20)}" no se entiende. Escríbelo como 4500 o $4.500.`;
+      else if (precio != null && !(precio >= 0 && precio <= 1e6)) o.error = 'El precio debe estar entre $0 y $1.000.000.';
+      if (o.error) return o;
+      if (descripcion.length > 200) o.avisos.push('La descripción se corta en 200 letras.');
+      const clave = `${norm(o.categoria)}|${norm(o.nombre)}`;
+      if (vistos.has(clave)) { o.error = 'Está repetido en la planilla.'; return o; }
+      vistos.add(clave);
+      const cat = catDe.get(norm(o.categoria));
+      if (!cat) nuevasCats.set(norm(o.categoria), o.categoria);
+      const actual = cat && prodDe.get(`${cat.id}|${norm(o.nombre)}`);
+      o.accion = actual ? 'actualiza' : 'nuevo';
+      if (actual) {
+        usados.add(actual.id);
+        o.id = actual.id; o.precio_anterior = actual.precio;
+        if (o.precio == null) o.avisos.push('Sin precio en la planilla: se mantiene el actual.');
+      } else if (!o.precio) o.avisos.push('Sin precio: queda "sin precio" y no se vende hasta que se lo pongas.');
+      return o;
+    });
+    const errores = filas.filter((f) => f.error).length;
+    const archivados = modo === 'reemplazar' ? existentes.filter((p) => !usados.has(p.id)).map((p) => p.nombre) : [];
+    return { modo, filas, errores, nuevos: filas.filter((f) => f.accion === 'nuevo').length, actualizados: filas.filter((f) => f.accion === 'actualiza').length,
+      categorias_nuevas: [...nuevasCats.values()], archivados, con_titulos: !!r.con_titulos };
+  }
+
+  // Guarda lo analizado. Los productos que salen de la carta (reemplazar) se archivan: los pedidos
+  // antiguos los siguen nombrando. Los que coinciden por categoría y nombre conservan foto y costo.
+  function importar(lid, entrada, modo) {
+    const a = analizar(lid, entrada, modo);
+    if (a.error || a.errores) return a;
+    if (!a.filas.length) return { error: 'La planilla no trae productos.' };
+    db.exec('BEGIN');
+    try {
+      const catId = new Map(db.prepare('SELECT id, nombre FROM categorias WHERE local_id=?').all(lid).map((c) => [norm(c.nombre), c.id]));
+      let ordenCat = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM categorias WHERE local_id=?').get(lid).n;
+      for (const nombre of a.categorias_nuevas)
+        catId.set(norm(nombre), Number(db.prepare('INSERT INTO categorias (local_id,nombre,orden) VALUES (?,?,?)').run(lid, nombre, ordenCat++).lastInsertRowid));
+      if (modo === 'reemplazar') {
+        const quedan = a.filas.filter((f) => f.id).map((f) => f.id);
+        db.prepare(`UPDATE productos SET archivado=1 WHERE local_id=? AND archivado=0${quedan.length ? ` AND id NOT IN (${quedan.map(() => '?').join(',')})` : ''}`).run(lid, ...quedan);
+      }
+      const orden = new Map();
+      const sigOrden = (cid) => { const n = orden.has(cid) ? orden.get(cid) : db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM productos WHERE categoria_id=?').get(cid).n; orden.set(cid, n + 1); return n; };
+      for (const f of a.filas) {
+        const cid = catId.get(norm(f.categoria));
+        if (f.id) {
+          const p = db.prepare('SELECT precio, descripcion, precio_pendiente FROM productos WHERE id=?').get(f.id);
+          const precio = f.precio ?? p.precio;
+          db.prepare('UPDATE productos SET precio=?, descripcion=?, precio_pendiente=? WHERE id=?').run(precio, f.descripcion ?? p.descripcion, precio > 0 ? 0 : p.precio_pendiente, f.id);
+          if (precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, f.id, p.precio, precio);
+        } else {
+          db.prepare('INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,precio_pendiente,orden) VALUES (?,?,?,?,?,?,?)')
+            .run(lid, cid, f.nombre, f.descripcion, f.precio || 0, f.precio ? 0 : 1, sigOrden(cid));
+        }
+      }
+      // Al reemplazar, las categorías que quedaron sin ningún producto (ni archivado) sobran.
+      if (modo === 'reemplazar') db.prepare('DELETE FROM categorias WHERE local_id=? AND NOT EXISTS (SELECT 1 FROM productos WHERE categoria_id=categorias.id)').run(lid);
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return { ok: true, nuevos: a.nuevos, actualizados: a.actualizados, categorias_nuevas: a.categorias_nuevas, archivados: a.archivados.length };
+  }
+
+  return { estado, corto, marcar, actualizar, analizar, importar };
+}

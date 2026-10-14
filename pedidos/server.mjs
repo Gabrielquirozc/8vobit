@@ -14,6 +14,7 @@ import { crearLicencias, PLANES, PLAN_DE } from './lib/licencias.mjs';
 import { crearUsuarios, ROLES, PERMISOS, puedeRol, verificar } from './lib/usuarios.mjs';
 import { crearAdmin } from './lib/admin.mjs';
 import { crearResultados } from './lib/resultados.mjs';
+import { crearAutoservicio } from './lib/autoservicio.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -450,10 +451,10 @@ async function readBytes(req, max) {
 const esWebp = (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
 function borrarImagen(nombre) { if (nombre) fs.rmSync(path.join(IMG_DIR, path.basename(nombre)), { force: true }); }
 
-async function readJson(req) {
-  if (Number(req.headers['content-length']) > 64e3) throw demasiado(req);
+async function readJson(req, max = 64e3) {
+  if (Number(req.headers['content-length']) > max) throw demasiado(req);
   let raw = '';
-  for await (const chunk of req) { raw += chunk; if (raw.length > 64e3) throw demasiado(req); }
+  for await (const chunk of req) { raw += chunk; if (raw.length > max) throw demasiado(req); }
   return raw ? JSON.parse(raw) : {};
 }
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.webmanifest': 'application/manifest+json' };
@@ -738,6 +739,8 @@ function actualizarLocal(local, b) {
   if (b.transferencia !== undefined) {
     const t = b.transferencia || {};
     const v = { titular: txt(t.titular, 80), rut: txt(t.rut, 12), banco: txt(t.banco, 40), tipo: txt(t.tipo, 30), numero: txt(t.numero, 30).replace(/[^\d-]/g, ''), email: txt(t.email, 80) };
+    if (v.rut && !rutValido(v.rut)) return { error: 'RUT del titular inválido: revisa el dígito verificador.' };
+    if (v.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) return { error: 'Correo para el comprobante inválido.' };
     c.transferencia = Object.values(v).some(Boolean) ? JSON.stringify(v) : null;
   }
   if (b.legal !== undefined) {
@@ -863,6 +866,7 @@ const LIC = crearLicencias(db, { hoy: today });
 const USU = crearUsuarios(db);
 const ADMIN = crearAdmin(db, { LIC, USU, crearLocal, hoy: today });
 const resultados = crearResultados(db, { equipoMes: (local, mes) => equipoMes(local, mes) });
+const AUTO = crearAutoservicio(db);
 // Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
 {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
@@ -883,7 +887,8 @@ function permisoRuta(m, parts) {
   if (a === 'resumen') return 'resumen';
   if (a === 'resultados') return 'resultados';
   if (a === 'equipo' || a === 'turnos') return 'equipo';
-  if (['productos', 'categorias', 'historial'].includes(a)) return 'carta';
+  if (['productos', 'categorias', 'historial', 'importar'].includes(a)) return 'carta';
+  if (a === 'inicio') return 'local';
   if (a === 'agregados') return m === 'POST' ? 'carta' : null;
   if (a === 'local') return b === 'logo' ? 'local' : m === 'PATCH' ? null : 'local';
   if (a === 'privacidad') return 'local';
@@ -946,7 +951,11 @@ async function api(req, res, url) {
     }
     if (!leerFirmada(req, 'admin', 'a', 1)) return send(res, 401, { error: 'Sesión expirada' });
     if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': cookie(req, 'admin', '', 0) });
-    if (m === 'GET' && parts[1] === 'resumen') return send(res, 200, ADMIN.resumen());
+    if (m === 'GET' && parts[1] === 'resumen') {
+      const r = ADMIN.resumen();
+      for (const l of r.locales) l.inicio = AUTO.corto(l.id); // avance de los primeros pasos de cada local
+      return send(res, 200, r);
+    }
     if (parts[1] === 'locales') {
       if (m === 'POST' && !parts[2]) { const r = ADMIN.alta(await readJson(req)); return send(res, r.error ? 400 : 201, r); }
       const id = Number(parts[2]);
@@ -1162,6 +1171,7 @@ async function api(req, res, url) {
       if ((b.equipo !== undefined && !conPlan('equipo'))) return sinPlan('equipo');
       if (b.costo_pct !== undefined && !conPlan('costos')) return sinPlan('costos');
       const r = actualizarLocal(local, b);
+      if (!r.error && b.horario !== undefined) AUTO.marcar(lid, 'horario');
       return r.error ? send(res, 400, r) : send(res, 200, menu(db.prepare('SELECT * FROM locales WHERE id=?').get(lid)).local);
     }
     // Venta de mostrador: se cobra al momento; opcionalmente pasa a cocina con comanda.
@@ -1256,6 +1266,20 @@ async function api(req, res, url) {
       db.prepare('UPDATE agregados SET disponible=?, nombre=?, archivado=? WHERE id=?').run(
         b.disponible === undefined ? a.disponible : (b.disponible ? 1 : 0), nombre, b.archivado === undefined ? a.archivado : (b.archivado ? 1 : 0), a.id);
       return send(res, 200, { ok: true });
+    }
+    // Primeros pasos del local (solo el dueño): avance, omitir un paso, cerrar el asistente.
+    if (parts[1] === 'inicio' && !parts[2]) {
+      if (m === 'GET') return send(res, 200, AUTO.estado(lid));
+      if (m === 'PATCH') { const r = AUTO.actualizar(lid, await readJson(req)); return send(res, r.error ? 400 : 200, r); }
+    }
+    // Importar la carta desde una planilla: sin `confirmar` solo devuelve la vista previa.
+    if (m === 'POST' && parts[1] === 'importar' && !parts[2]) {
+      let b;
+      try { b = await readJson(req, 300e3); } catch (e) { if (e.tooBig) return send(res, 413, { error: 'La planilla es demasiado grande: divídela en partes de hasta 500 productos.' }); throw e; }
+      const modo = b.modo === 'reemplazar' ? 'reemplazar' : 'agregar';
+      if (!b.confirmar) { const r = AUTO.analizar(lid, b, modo); return send(res, r.error ? 400 : 200, r); }
+      const r = AUTO.importar(lid, b, modo);
+      return send(res, r.ok ? 201 : 400, r.ok ? r : r.error ? r : { ...r, error: `Hay ${r.errores} fila${r.errores > 1 ? 's' : ''} con problemas: corrígelas y vuelve a revisar.` });
     }
     if (m === 'GET' && parts[1] === 'historial') {
       return send(res, 200, db.prepare(

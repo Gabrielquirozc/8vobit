@@ -195,6 +195,31 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
   con plan, estado, ingreso mensual, pedidos y tarifa del mes. Desde ahí se crea un local (con carta
   vacía o importada en JSON; la clave se muestra una sola vez), se edita la licencia, se registran pagos
   (extienden el plazo desde donde termina lo pagado), se genera una clave nueva y se ve el historial.
+  La columna *Primeros pasos* muestra cuánto le falta a cada local nuevo para quedar andando.
+
+## Autoservicio: el local se pone en marcha solo
+
+Para que cada local nuevo necesite poca ayuda (meta: ≤ 0,5 h de soporte al mes, `VIABILIDAD.md` §4–5).
+Código: `lib/autoservicio.mjs` (servidor) y `public/panel-inicio.js` (panel).
+
+- **Primeros pasos**: un local creado desde `/admin` ve, arriba del panel, una lista con su avance
+  (*2 de 5*): datos de contacto (WhatsApp o teléfono + dirección), horario, logo, datos para
+  transferencias y primer producto con precio. Cada paso abre un formulario corto; el logo y las
+  transferencias se pueden omitir ("No tengo logo", "No recibo transferencias"). El avance se calcula
+  de los datos reales (completarlo en *Datos del local* también cuenta); el horario cuenta al guardarlo.
+  Al terminar ofrece ver la carta y el cartel con QR, y *Terminar* lo cierra (se reabre desde la ayuda
+  de *Datos del local*). Solo lo ve el dueño. Los locales que existían antes (Gassuso) no lo ven.
+- **Importar la carta desde una planilla** (*Carta y precios → Importar planilla*, o desde el paso
+  "Primer producto"): se pegan las celdas copiadas de Excel o Google Sheets, o se elige un CSV (`;` o `,`).
+  Columnas *Categoría · Producto · Precio · Descripción*, en ese orden o con títulos en la primera fila;
+  una categoría vacía repite la de arriba. Precios como `4500`, `4.500` o `$4.500`; sin precio queda
+  "sin precio". Primero se **revisa** (vista previa con lo que pasará en cada fila y los errores por
+  número de fila) y solo sin errores se importa. *Agregar*: los productos que ya existen (misma categoría
+  y nombre) solo cambian precio y descripción, conservando foto y costo, y el cambio queda en el
+  historial de precios. *Reemplazar*: lo que no está en la planilla se archiva (los pedidos antiguos no
+  cambian). Hasta 500 filas por vez. Un `.xlsx` no se lee directo: se copian sus celdas o se guarda como CSV.
+- **Ayudas por pestaña**: cada pestaña del panel abre con un recuadro "Cómo funciona esta pestaña" de
+  2–3 líneas; al cerrarlo queda cerrado en esa tablet.
 
 ## Rutas
 
@@ -233,7 +258,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 46 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 63 pruebas de punta a punta, sin dependencias, ~3 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

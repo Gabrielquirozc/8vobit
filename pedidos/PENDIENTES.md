@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-14 (multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-14 (autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -24,7 +24,7 @@ cd D:\8vobit
 git pull origin claude/compassionate-maxwell-hb826m
 cd pedidos
 $env:PANEL_PASSWORD="demo"; node server.mjs        # http://127.0.0.1:8099/gassuso y /panel (clave demo)
-npm test                                           # 45+ pruebas de punta a punta, ~1-2 s
+npm test                                           # 63 pruebas de punta a punta, ~1-2 s
 ```
 
 Requisitos: Node 22 (usa `node:sqlite`, sin dependencias npm). Los datos locales quedan en
@@ -53,6 +53,7 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `lib/exportar.mjs`, `lib/resultados.mjs` | CSV para el contador y estado de resultados |
 | `lib/licencias.mjs`, `lib/usuarios.mjs`, `lib/admin.mjs` | Planes y licencias, usuarios con PIN y roles, consola de administración |
 | `public/panel-cuenta.js`, `public/admin.html` | Entrada con clave o PIN, permisos en el panel, Tu plan, Usuarios; consola `/admin` |
+| `lib/autoservicio.mjs` + `public/panel-inicio.js` | Primeros pasos del local nuevo, importar la carta desde planilla, ayudas por pestaña |
 | `deploy/probar-respaldo.mjs`, `deploy/MONITOREO.md` | Prueba de restauración de respaldos y guía de monitoreo |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |
 | `public/seguimiento.html`, `comanda.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, carta PDF, cartel/tarjetas con QR |
@@ -107,6 +108,11 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       una vez (anotarla). La licencia de Gassuso se crea sola: Gestión, prueba de 90 días desde ese día,
       50 % y sin tarifa por pedido el primer año pagado. Ajustar las fechas en `/admin` si el piloto
       partió otro día. Las sesiones abiertas se cierran (hay que volver a entrar).
+- [x] **Autoservicio** (2026-10-14, palanca 1 de `VIABILIDAD.md`): primeros pasos con avance para cada
+      local nuevo, importar la carta desde Excel/CSV con vista previa, ayudas en cada pestaña y avance de
+      cada local en `/admin` (`lib/autoservicio.mjs`, `public/panel-inicio.js`). Medir con el 2º local
+      cuánto soporte pide la puesta en marcha. Faltan: importar desde foto de la carta, videos cortos,
+      grupo de WhatsApp de clientes y avisos automáticos cuando algo falla.
 - [ ] Siguientes etapas del control: combos y promociones (etapa 6), inventario simple (5), SII directo (7).
       Cobro automático de licencias con Flow o Mercado Pago (fase 2), cuando haya ~10 locales.
 - [ ] Combos/promociones (necesita precios del dueño).

@@ -173,7 +173,7 @@ Los puntos 1 a 8 de §2. Entregable: Gassuso operando con el canal propio y la c
 Etapas de `PLAN-CONTROL.md`: 1 gastos y arqueo → 4 exportar → 3 usuarios con PIN → 2 estado de
 resultados → 6 combos → 5 inventario → 7 SII. Es el contenido de los planes Gestión y Pro.
 
-### L3. Plataforma multi-local. Antes del 2º cliente — ✅ hecho el 2026-10-14 (falta el autoservicio)
+### L3. Plataforma multi-local. Antes del 2º cliente — ✅ hecho el 2026-10-14 (autoservicio v1 también: primeros pasos, importar planilla, ayudas)
 Hoy la base ya separa por `local_id`, pero el sistema funciona como si hubiera un solo local:
 - La clave del panel es **una sola, global** (`PANEL_PASSWORD`), y el login asume `gassuso` por defecto.
 - Los locales solo se crean desde el seed, cuando la base está vacía. No hay forma de dar de alta otro.

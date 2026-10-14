@@ -57,7 +57,7 @@
 <div class="wrap" id="app" hidden>
   <div class="top"><h1>Locales y licencias</h1><button class="btn pri" id="nuevo">+ Nuevo local</button><button class="btn" id="salir">Salir</button></div>
   <div class="kpis" id="kpis"></div>
-  <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th></tr></thead><tbody id="filas"></tbody></table></div>
+  <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th><th>Primeros pasos</th></tr></thead><tbody id="filas"></tbody></table></div>
   <p class="opc" style="margin-top:10px">Ingreso mensual = lo que paga cada local por mes según su ciclo y descuento (solo cuentas activas o con pago pendiente). La tarifa por pedido se cobra a mes vencido.</p>
 </div>
 <dialog id="dlg"><div class="dh"><h2 id="dTitulo"></h2><button class="btn" id="dCerrar" aria-label="Cerrar">✕</button></div><div class="db" id="dBody"></div></dialog>
@@ -83,7 +83,7 @@ async function pintar() {
     <td>${esc(l.plan_nombre || '—')}${l.descuento ? ` <span class="opc">−${l.descuento.pct}%</span>` : ''}</td><td><span class="chip ${l.estado}">${ESTADO[l.estado] || '—'}</span></td>
     <td>${fecha(l.hasta)}${l.dias != null ? `<br><span class="opc">${l.dias >= 0 ? `en ${l.dias} días` : `hace ${-l.dias} días`}</span>` : ''}</td>
     <td class="r">${clp(l.mrr)}</td><td class="r">${l.pedidos30} <span class="opc">(${l.web30})</span></td><td class="r">${clp(l.tarifa_mes)}</td>
-    <td>${fecha(l.ultimo_pedido)}</td><td class="r">${l.usuarios}</td></tr>`).join('') || '<tr><td colspan="9" class="opc">Sin locales.</td></tr>';
+    <td>${fecha(l.ultimo_pedido)}</td><td class="r">${l.usuarios}</td><td>${!l.inicio ? '' : l.inicio.listos === l.inicio.total ? 'Listo' : l.inicio.cerrado ? '—' : `${l.inicio.listos} de ${l.inicio.total}`}</td></tr>`).join('') || '<tr><td colspan="10" class="opc">Sin locales.</td></tr>';
 }
 $('filas').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) detalle(Number(tr.dataset.id)); };
 
