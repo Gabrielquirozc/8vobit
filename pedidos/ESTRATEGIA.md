@@ -98,10 +98,17 @@ comisión ahorrada acumulada, caja cuadrada todos los días y el dueño usándol
 
 ---
 
-## 3. Planes (propuesta para discutir)
+## 3. Planes (decididos el 2026-10-14)
 
-Precios en CLP + IVA, mensuales, sin comisión por venta, con un **10 % de descuento** si se pagan 12 meses.
-Se reajustan una vez al año por IPC.
+Precios en CLP + IVA, sin comisión por venta. Se reajustan una vez al año por IPC.
+
+**Formas de pago** (siempre por adelantado): mensual, **semestral −10 %** o **anual −15 %**.
+
+| + IVA | Mensual | Semestral (6 meses) | Anual (12 meses) |
+|---|---|---|---|
+| Canal | $19.900 | $107.460 (≈ $17.910/mes) | $202.980 (≈ $16.915/mes) |
+| Gestión | $34.900 | $188.460 (≈ $31.410/mes) | $355.980 (≈ $29.665/mes) |
+| Pro | $54.900 | $296.460 (≈ $49.410/mes) | $559.980 (≈ $46.665/mes) |
 
 | | **Canal** | **Gestión** | **Pro** |
 |---|---|---|---|
@@ -130,9 +137,18 @@ Se reajustan una vez al año por IPC.
 - **Boleta SII directa**: se traspasa el costo por documento del proveedor de DTE, más un margen chico.
 - **Dominio propio** (pide.gassuso.cl): $2.900/mes.
 
-**Gassuso (cliente fundador):** 3 meses de piloto sin costo con el plan **Gestión** completo. Después,
-**precio fundador del 50 % de por vida** mientras siga activo, a cambio de testimonio, uso de marca y
-fotos en nuestro material, y feedback mensual.
+**Gassuso (cliente fundador):**
+
+| Período | Condición | Gestión + IVA |
+|---|---|---|
+| Meses 1–3 | Piloto sin costo, plan **Gestión** completo | $0 |
+| Meses 4–15 | **50 % de descuento durante el primer año pagado**, con cualquier forma de pago | $17.450/mes · $94.230 semestral · $177.990 anual |
+| Mes 16 en adelante | Precio normal | $34.900/mes · $188.460 semestral · $355.980 anual |
+
+- A cambio: testimonio, uso de marca y fotos en nuestro material, y feedback mensual.
+- **Puesta en marcha**: aparece en la propuesta con su valor ($49.900), *bonificada 100 % por ser
+  cliente fundador*. Así queda claro que tiene precio para los próximos clientes.
+- Avisar con 30 días de anticipación que termina el descuento.
 
 **Cuentas de referencia** (con la UF a ~$40.000): un local que vende $3.000.000 al mes por canal propio paga
 $34.900 + IVA con nosotros, contra ~$600.000 en Justo Plus o ~$92.000 en Fudo Avanzado + Tu Delivery.
@@ -171,8 +187,10 @@ Pago online (Mercado Pago o Flow, con la cuenta del local) → boleta SII direct
 WhatsApp (avisos automáticos de estado; la IA no por ahora).
 
 ### L6. Comercial y empresa. En paralelo, sin código
-- **8vobit como empresa**: razón social, inicio de actividades en el SII, facturación electrónica propia
-  y cuenta bancaria. Sin esto no podemos cobrarle a nadie con factura.
+- **Facturación** (decidido): inicio de actividades como **persona natural de primera categoría**
+  (giro de servicios informáticos/software) y factura electrónica con el sistema gratuito del SII.
+  Pasar a **SpA** al llegar a 3–5 clientes. Confirmarlo con un contador. Tiene que estar listo antes de
+  que termine el piloto de Gassuso (mes 4).
 - Contrato de servicio (SaaS) con disponibilidad, soporte, propiedad y devolución de los datos, plazo y término.
 - Política de soporte: horario, canal (WhatsApp), tiempo de respuesta y qué cubre cada plan.
 - **Local de demostración** (`/demo`) con datos ficticios para mostrar sin tocar Gassuso.
@@ -205,7 +223,8 @@ planes        id, codigo ('canal'|'gestion'|'pro'), nombre, precio_mes, precio_a
               'exportar','inventario','combos','multilocal']),
               limites JSON ({usuarios: 2, locales: 1}), activo, creado
 licencias     id, local_id UNIQUE, plan_id, estado ('prueba'|'activa'|'gracia'|'suspendida'|'cancelada'),
-              ciclo ('mensual'|'anual'), precio_pactado (precio fundador o descuentos),
+              ciclo ('mensual'|'semestral'|'anual'), descuento_pct, descuento_hasta
+              (precio fundador: 50 % hasta completar 12 meses pagados),
               inicio, vence, prueba_hasta, notas, creado, actualizado
 licencia_extras  licencia_id, codigo ('dominio'|'sii'|...), precio, desde, hasta
 pagos         id, licencia_id, periodo_desde, periodo_hasta, monto, medio ('transferencia'|'flow'|...),
@@ -215,7 +234,12 @@ licencia_eventos  id, licencia_id, fecha, tipo ('alta'|'cambio_plan'|'pago'|'gra
 ```
 
 Los planes tienen **versión**: si mañana se cambia el precio de Gestión, los clientes actuales mantienen
-su `precio_pactado`. Las funciones se leen del plan vigente.
+el precio que pactaron hasta el reajuste anual. Las funciones se leen del plan vigente.
+
+El precio de cada cobro se calcula así: `precio del plan según el ciclo` (mensual, semestral −10 %,
+anual −15 %) × (1 − `descuento_pct`, si el período cae antes de `descuento_hasta`). Cada pago cubre
+1, 6 o 12 meses (`periodo_desde`/`periodo_hasta`). Si un pago semestral o anual cruza
+`descuento_hasta`, se prorratea por mes.
 
 ### Cómo se aplica
 
@@ -235,6 +259,7 @@ prueba (14 días) ──pago──▶ activa ──vence sin pago──▶ graci
                               └──────── pago ────────────┴────────────────────┘
 ```
 
+- **Aviso** 30 días antes de que termine un descuento (fundador u otro).
 - **Aviso** 7 días y 1 día antes de vencer: banner en el panel y, más adelante, correo o WhatsApp.
 - **Gracia**: todo funciona, pero con un banner rojo.
 - **Suspendida**: el panel queda **en solo lectura** y la carta pública muestra "pedidos en pausa"
@@ -273,10 +298,16 @@ local trae la pública. Por ahora **no se hace**: hoy no hay ningún caso que lo
 
 ---
 
-## Decisiones abiertas (para conversar antes de construir)
+## Decisiones tomadas (2026-10-14)
 
-1. Nombres y precios de los planes (§3). ¿Conviene un plan Canal tan barato, o empezar en Gestión?
-2. Condiciones del piloto de Gassuso: plazo, precio fundador y qué entrega el dueño a cambio.
-3. ¿Quién factura: 8vobit como empresa, o una persona natural con boleta de honorarios mientras tanto?
-4. ¿Cobramos la puesta en marcha a Gassuso o se la regalamos como fundador?
-5. Pasarela para la fase 2: Flow (chilena, buena para suscripciones) o Mercado Pago (ya conocido por los locales).
+1. **Planes**: Canal $19.900, Gestión $34.900 y Pro $54.900 + IVA al mes (§3).
+2. **Formas de pago**: mensual, semestral −10 % o anual −15 %, por adelantado.
+3. **Piloto de Gassuso**: 3 meses gratis con Gestión, después 50 % solo durante el primer año pagado,
+   a cambio de testimonio, marca, fotos y feedback.
+4. **Puesta en marcha**: bonificada a Gassuso, pero mostrada con su valor ($49.900).
+5. **Facturación**: persona natural de primera categoría con factura del SII; SpA al tener 3–5 clientes.
+
+## Decisiones abiertas
+
+1. Pasarela para el cobro automático (fase 2): Flow (chilena, buena para suscripciones) o Mercado Pago
+   (ya conocido por los locales). No hace falta decidirlo antes del segundo local.
