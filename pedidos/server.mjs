@@ -88,6 +88,7 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   // Despacho: { activo, costo, minimo, zona, horario: { día: [desde, hasta] | null } }.
   if (!lcols.has('despacho')) db.exec('ALTER TABLE locales ADD COLUMN despacho TEXT');
   // Equipo (trabajadores y parámetros laborales) para costear el despacho y el sueldo del repartidor.
+  if (!lcols.has('costo_pct')) db.exec('ALTER TABLE locales ADD COLUMN costo_pct INTEGER NOT NULL DEFAULT 35');
   if (!lcols.has('equipo')) db.exec('ALTER TABLE locales ADD COLUMN equipo TEXT');
   // Ubicación del local: centro de las zonas de despacho (se ajusta en el panel).
   if (!lcols.has('lat')) { db.exec('ALTER TABLE locales ADD COLUMN lat REAL'); db.exec('ALTER TABLE locales ADD COLUMN lng REAL'); ubicacionSeed = true; }
@@ -97,6 +98,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
   // Venta sugerida: productos que la carta ofrece como acompañamiento (papas, bebidas…).
   // Productos y agregados que el local quitó de la carta: se archivan (los pedidos viejos los nombran).
+  // Costo de insumos por unidad (null = sin dato: se estima con locales.costo_pct).
+  if (!pcols.has('costo')) db.exec('ALTER TABLE productos ADD COLUMN costo INTEGER');
   if (!pcols.has('archivado')) db.exec('ALTER TABLE productos ADD COLUMN archivado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('sugerir')) { db.exec('ALTER TABLE productos ADD COLUMN sugerir INTEGER NOT NULL DEFAULT 0'); sugerirSeed = true; }
   // Observación por producto ("sin cebolla"), aparte del comentario general del pedido.
@@ -105,6 +108,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   // Salsas (mostaza, ketchup…): opcionales y sin costo, aparte de los ingredientes que se eligen.
   // Línea agregada desde una sugerencia: mide cuánto vende la venta sugerida.
   if (!icols.has('sugerido')) db.exec('ALTER TABLE pedido_items ADD COLUMN sugerido INTEGER NOT NULL DEFAULT 0');
+  // Costo de insumos al momento de la venta (si cambia después, los pedidos viejos no se alteran).
+  if (!icols.has('costo_unitario')) db.exec('ALTER TABLE pedido_items ADD COLUMN costo_unitario INTEGER');
   if (!icols.has('salsas')) db.exec("ALTER TABLE pedido_items ADD COLUMN salsas TEXT NOT NULL DEFAULT '[]'");
   const acols = new Set(db.prepare('PRAGMA table_info(agregados)').all().map((c) => c.name));
   if (!acols.has('archivado')) db.exec('ALTER TABLE agregados ADD COLUMN archivado INTEGER NOT NULL DEFAULT 0');
@@ -442,6 +447,8 @@ function pedidoCompleto(id, localId) {
   return p;
 }
 
+// Costo de insumos de una unidad: el cargado, o el % estimado del precio si falta.
+const costoDe = (local, p) => (p.costo != null ? p.costo : Math.round((p.precio * (local.costo_pct ?? 35)) / 100));
 const clpTxt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
 // Valida los datos de un producto (nuevo si `p` es null). Solo cambia lo que viene en `b`.
 function datosProducto(lid, b, p) {
@@ -453,12 +460,14 @@ function datosProducto(lid, b, p) {
     descripcion: b.descripcion === undefined ? base.descripcion : (String(b.descripcion).trim().slice(0, 200) || null),
     precio: b.precio === undefined ? base.precio : Math.round(Number(b.precio)),
     incluye: b.incluye === undefined ? base.incluye : Math.round(Number(b.incluye)),
+    costo: b.costo === undefined ? (base.costo ?? null) : b.costo === null || b.costo === '' ? null : Math.round(Number(b.costo)),
     activo: flag('activo'), precio_pendiente: flag('precio_pendiente'), destacado: flag('destacado'), sugerir: flag('sugerir'), archivado: flag('archivado'),
   };
   if (!v.nombre) return { error: 'Escribe el nombre del producto.' };
   if (!db.prepare('SELECT 1 FROM categorias WHERE id=? AND local_id=?').get(v.categoria_id, lid)) return { error: 'Elige una categoría.' };
   if (!Number.isFinite(v.precio) || v.precio < 0 || v.precio > 1e6) return { error: 'Precio inválido' };
   if (!(v.incluye >= 0 && v.incluye <= 6)) return { error: 'Los ingredientes a elegir van de 0 a 6.' };
+  if (v.costo != null && !(v.costo >= 0 && v.costo <= 1e6)) return { error: 'Costo de insumos inválido.' };
   // Escribir un precio en un producto "sin precio" lo deja listo para vender.
   if (b.precio !== undefined && b.precio_pendiente === undefined && v.precio > 0) v.precio_pendiente = 0;
   if (!p && b.precio_pendiente === undefined) v.precio_pendiente = v.precio > 0 ? 0 : 1;
@@ -554,8 +563,8 @@ function guardarPedido(local, d, { items, total }) {
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
     if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=?, repartidor_id=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, d.geo.repartidor_id ?? null, pid);
     for (const i of items) db.prepare(
-      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido) VALUES (?,?,?,?,?,?,?,?,?)'
-    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0);
+      'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido,costo_unitario) VALUES (?,?,?,?,?,?,?,?,?,?)'
+    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0, costoDe(local, i.p));
     db.exec('COMMIT');
     return { id: Number(pid), numero, total, franja: d.franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -579,6 +588,10 @@ function actualizarLocal(local, b) {
     if (!(c.cupo_franja >= 1 && c.cupo_franja <= 200)) return { error: 'El cupo por franja debe estar entre 1 y 200.' };
   }
   if (b.pausa !== undefined) c.pausa = b.pausa ? 1 : 0;
+  if (b.costo_pct !== undefined) {
+    c.costo_pct = Math.round(Number(b.costo_pct));
+    if (!(c.costo_pct >= 0 && c.costo_pct <= 90)) return { error: 'El costo estimado debe estar entre 0 y 90 %.' };
+  }
   if (b.comision_app !== undefined) {
     c.comision_app = Math.round(Number(b.comision_app));
     if (!(c.comision_app >= 0 && c.comision_app <= 50)) return { error: 'La comisión de la app debe estar entre 0 y 50 %.' };
@@ -686,7 +699,9 @@ function equipoMes(local, mes) {
       cobrado: suyos.reduce((a, x) => a + (x.costo_despacho || 0), 0), liquidacion: liq, avisos: LB.avisosTurno(t, p) };
   });
   const activos = trabajadores.filter((t) => eq.trabajadores.find((x) => x.id === t.id).activo !== false);
-  return { mes, laboral: p, trabajadores, despacho: { pedidos: peds.length, sin_repartidor: peds.filter((x) => !x.repartidor_id).length,
+  const itD = peds.length ? db.prepare(`SELECT cantidad, precio_unitario, costo_unitario FROM pedido_items WHERE pedido_id IN (${peds.map(() => '?').join(',')})`).all(...peds.map((x) => x.id)) : [];
+  const margenComida = itD.reduce((a, x) => a + x.cantidad * (x.precio_unitario - (x.costo_unitario ?? Math.round(x.precio_unitario * (local.costo_pct ?? 35) / 100))), 0);
+  return { mes, laboral: p, trabajadores, despacho: { pedidos: peds.length, margen_comida: margenComida, sin_repartidor: peds.filter((x) => !x.repartidor_id).length,
     cobrado: peds.reduce((a, x) => a + (x.costo_despacho || 0), 0), costo_equipo: Math.round(activos.filter((t) => t.rol === 'repartidor').reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) } };
 }
 function resumen(local, fecha) {
@@ -750,6 +765,13 @@ function resumen(local, fecha) {
     por_hora: horas,
     platos: items,
     sugeridos: { unidades: sug.n, ventas: sug.monto },
+    margen: (() => {
+      if (!ps.length) return { ventas: 0, costo: 0, margen: 0, estimados: 0 };
+      const it = db.prepare(`SELECT cantidad, precio_unitario, costo_unitario FROM pedido_items WHERE pedido_id IN (${ps.map(() => '?').join(',')})`).all(...ps.map((p) => p.id));
+      const v = it.reduce((a, x) => a + x.cantidad * x.precio_unitario, 0);
+      const c = it.reduce((a, x) => a + x.cantidad * (x.costo_unitario ?? Math.round(x.precio_unitario * (local.costo_pct ?? 35) / 100)), 0);
+      return { ventas: v, costo: c, margen: v - c, estimados: it.filter((x) => x.costo_unitario == null).length };
+    })(),
     despachos: (() => { const l = ps.filter((p) => p.modalidad === 'despacho'), conCosto = l.filter((p) => p.costo_viaje != null);
       return { pedidos: l.length, cobrado: l.reduce((a, p) => a + (p.costo_despacho || 0), 0), con_costo: conCosto.length,
         costo: conCosto.reduce((a, p) => a + p.costo_viaje, 0), cobrado_con_costo: conCosto.reduce((a, p) => a + (p.costo_despacho || 0), 0),
@@ -819,7 +841,14 @@ async function api(req, res, url) {
     const local = db.prepare('SELECT * FROM locales WHERE id=?').get(lid);
 
     if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': `panel=; Path=${BASE || '/'}; Max-Age=0` });
-    if (m === 'GET' && parts[1] === 'carta') return send(res, 200, { ...menu(local), equipo: equipoDe(local) });
+    if (m === 'GET' && parts[1] === 'carta') {
+      // Costos de insumos: solo para el panel (nunca en la carta pública).
+      const costos = new Map(db.prepare('SELECT id, costo FROM productos WHERE local_id=?').all(lid).map((r) => [r.id, r.costo]));
+      const mm = menu(local);
+      mm.categorias = mm.categorias.map((c) => ({ ...c, productos: c.productos.map((p) => ({ ...p, costo: costos.get(p.id) ?? null })) }));
+      mm.local = { ...mm.local, costo_pct: local.costo_pct };
+      return send(res, 200, { ...mm, equipo: equipoDe(local) });
+    }
     // Equipo del mes: entregas, km y liquidación estimada de cada trabajador, con el resultado del despacho.
     if (m === 'GET' && parts[1] === 'equipo') {
       const mes = /^\d{4}-\d{2}$/.test(url.searchParams.get('mes') || '') ? url.searchParams.get('mes') : franjas(local).dia.slice(0, 7);
@@ -905,8 +934,8 @@ async function api(req, res, url) {
       const v = datosProducto(lid, await readJson(req), null);
       if (v.error) return send(res, 400, v);
       const orden = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM productos WHERE categoria_id=?').get(v.categoria_id).n;
-      const { lastInsertRowid: id } = db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(lid, v.categoria_id, v.nombre, v.descripcion, v.precio, v.activo, v.precio_pendiente, v.incluye, orden, v.destacado, v.sugerir);
+      const { lastInsertRowid: id } = db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir,costo)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(lid, v.categoria_id, v.nombre, v.descripcion, v.precio, v.activo, v.precio_pendiente, v.incluye, orden, v.destacado, v.sugerir, v.costo);
       return send(res, 201, { id: Number(id) });
     }
     if (m === 'PATCH' && parts[1] === 'productos' && parts[2]) {
@@ -917,8 +946,8 @@ async function api(req, res, url) {
       const v = datosProducto(lid, b, p);
       if (v.error) return send(res, 400, v);
       db.exec('BEGIN');
-      db.prepare(`UPDATE productos SET categoria_id=?, nombre=?, descripcion=?, precio=?, activo=?, precio_pendiente=?, incluye=?, destacado=?, sugerir=?, archivado=? WHERE id=?`)
-        .run(v.categoria_id, v.nombre, v.descripcion, v.precio, v.activo, v.precio_pendiente, v.incluye, v.destacado, v.sugerir, v.archivado, p.id);
+      db.prepare(`UPDATE productos SET categoria_id=?, nombre=?, descripcion=?, precio=?, activo=?, precio_pendiente=?, incluye=?, destacado=?, sugerir=?, archivado=?, costo=? WHERE id=?`)
+        .run(v.categoria_id, v.nombre, v.descripcion, v.precio, v.activo, v.precio_pendiente, v.incluye, v.destacado, v.sugerir, v.archivado, v.costo, p.id);
       if (v.precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, p.id, p.precio, v.precio);
       db.exec('COMMIT');
       return send(res, 200, { ok: true });

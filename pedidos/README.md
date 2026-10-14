@@ -42,6 +42,13 @@ del producto (⋯ o el nombre) edita nombre, descripción, categoría, ingredien
 orden, y permite **crear productos y categorías** y quitarlos de la carta (se archivan: los pedidos
 anteriores no cambian). Ingredientes y salsas se agregan, renombran, quitan o marcan agotados ahí mismo.
 
+**Costo de productos**: cada producto puede tener su **costo de insumos** por unidad (ficha del
+producto, con el margen en vivo: "deja $3.190 · 64%"); si falta, se estima con un % del precio
+(*Costo estimado 35%* en Carta y precios, filtro *Sin costo*). Cada venta guarda el costo del momento
+(si después cambia, las ventas viejas no se alteran). El Resumen muestra el **margen de la comida**
+(ventas − insumos) y en Equipo, "Para cubrir el reparto" usa lo que deja cada despacho de verdad:
+margen de la comida + tarifa − bencina − bono. Los costos solo se ven en el panel.
+
 **Datos del local** (por secciones, con índice y una barra *Guardar* que aparece al haber cambios y
 avisa si se sale sin guardar; RUT con dígito verificador, banco y tipo de cuenta a elegir): nombre, WhatsApp, teléfono para llamadas (botón "Llamar" en la carta
 y el seguimiento), Instagram, dirección, horario por día (días
@@ -171,7 +178,7 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
 ## Pruebas
 
 ```bash
-npm test   # 45 pruebas de punta a punta, sin dependencias, ~1 s
+npm test   # 46 pruebas de punta a punta, sin dependencias, ~1 s
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

@@ -67,7 +67,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
    (tramos 1 km $1.500 · 1,8 km $2.000 · 2,3 km $2.500, 6 sectores bloqueados al S/SE y 4 al E a
    $2.000 a mano; uno de esos 4 pierde plata según el costeo con moto).
 4. **Vehículo y repartidor reales** (km/l, bencina, cómo se le paga) → pestañas Despacho y Equipo.
-5. **Costo de insumos por producto** → Carta y precios (ver abajo).
+5. **Costo de insumos por producto** → Carta y precios, filtro *Sin costo* (mientras tanto se estima 35 %).
 6. Confirmar con el contador: si el local cae en el art. 38 N°7 o N°2 (recargo dominical 30 %) y la
    tasa del aporte patronal Ley 21.735 (marcados ⚠️ en Equipo → Parámetros laborales).
 7. **Prueba en el local**: tablet con el panel instalado, impresora 80 mm, pedido completo (retiro y
@@ -77,8 +77,8 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 
 ## Pendiente técnico / próximos pasos sugeridos
 
-- [ ] Costo de productos y margen por pedido (en curso el 2026-10-14; si no quedó terminado, ver el
-      último commit y `README.md`).
+- [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
+      costos reales de insumos (filtro *Sin costo* en Carta y precios).
 - [ ] Gastos fijos del local (arriendo, luz, gas, contador) para un estado de resultados mensual.
 - [ ] Registro de turnos realmente trabajados (hoy el sueldo sale del turno pactado).
 - [ ] Combos/promociones (necesita precios del dueño).

@@ -690,6 +690,33 @@ test('equipo: sueldo del repartidor según la ley, privado, ligado al vehículo 
   await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
 });
 
+test('costo de productos: privado, se congela en cada venta y da el margen de la comida', async () => {
+  await login();
+  const it = await prod('Italiano');
+  assert.equal((await req('PATCH', `/api/panel/productos/${it.id}`, { costo: 1100 })).status, 200);
+  assert.equal((await req('PATCH', `/api/panel/productos/${it.id}`, { costo: -5 })).status, 400);
+  // privado: el costo está en el panel, nunca en la carta pública
+  assert.equal((await req('GET', '/api/panel/carta')).body.categorias.flatMap((c) => c.productos).find((p) => p.id === it.id).costo, 1100);
+  assert.equal((await prod('Italiano')).costo, undefined);
+  const antes = (await req('GET', '/api/panel/resumen')).body.margen;
+  const r = await pedir([{ producto_id: it.id, cantidad: 2 }]);
+  assert.equal(r.status, 201);
+  // cambiar el costo después no altera la venta ya hecha
+  await req('PATCH', `/api/panel/productos/${it.id}`, { costo: 2000 });
+  const m = (await req('GET', '/api/panel/resumen')).body.margen;
+  assert.equal(m.ventas - antes.ventas, it.precio * 2);
+  assert.equal(m.costo - antes.costo, 2200);
+  // sin costo cargado se estima con el % del local
+  assert.equal((await req('PATCH', '/api/panel/local', { costo_pct: 95 })).status, 400);
+  assert.equal((await req('PATCH', '/api/panel/local', { costo_pct: 40 })).status, 200);
+  const ch = await prod('Chacarero');
+  await pedir([{ producto_id: ch.id }]);
+  const m2 = (await req('GET', '/api/panel/resumen')).body.margen;
+  assert.equal(m2.costo - m.costo, Math.round(ch.precio * 0.4));
+  await req('PATCH', `/api/panel/productos/${it.id}`, { costo: null });
+  await req('PATCH', '/api/panel/local', { costo_pct: 35 });
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();

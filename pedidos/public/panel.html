@@ -219,6 +219,8 @@
   .money:focus-within { border-color: var(--ink); }
   .money span { color: var(--ink-2); font-weight: 600; }
   .money input { border: 0 !important; outline: 0; min-height: 44px !important; padding: 0 10px 0 4px !important; width: 100%; font: 600 16px var(--font-body); background: transparent; font-variant-numeric: tabular-nums; }
+  .pmarg { display: block; font-size: .74rem; color: var(--ok); font-weight: 600; margin-top: 3px; } .pmarg.bajo { color: #b07b00; } .pmarg.est { color: var(--ink-2); font-weight: 500; }
+  .fp-marg { margin: 0; min-height: 46px; display: flex; flex-direction: column; justify-content: center; } .fp-marg b { color: var(--ok); } .fp-marg b.bajo { color: #b07b00; } .fp-marg small { color: var(--ink-2); }
   .pprice { position: relative; } .pprice .ok { position: absolute; right: -16px; top: 50%; transform: translateY(-50%); color: var(--ok); font-weight: 800; }
   .pprice.falta .money { border-color: var(--danger); background: #fff7f6; }
   .psw { display: flex; flex-direction: column; align-items: center; gap: 2px; } .psw small { font-size: .7rem; color: var(--ink-2); font-weight: 600; }
@@ -814,13 +816,21 @@ document.addEventListener('input', (e) => {
   t.value = v; const pos = Math.max(0, v.length - fin); t.setSelectionRange(pos, pos);
 });
 let filtro = { q: '', ver: 'todos' };
-const FILTROS = [['todos', 'Todos'], ['sinprecio', 'Sin precio'], ['agotados', 'No disponibles'], ['sinfoto', 'Sin foto']];
+const FILTROS = [['todos', 'Todos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo'], ['agotados', 'No disponibles'], ['sinfoto', 'Sin foto']];
 const pasa = (p) => {
   const q = filtro.q.trim().toLowerCase();
   if (q && !`${p.nombre} ${p.descripcion || ''}`.toLowerCase().includes(q)) return false;
-  return filtro.ver === 'sinprecio' ? p.precio_pendiente || !p.precio : filtro.ver === 'agotados' ? !p.activo : filtro.ver === 'sinfoto' ? !p.imagen : true;
+  return filtro.ver === 'sinprecio' ? p.precio_pendiente || !p.precio : filtro.ver === 'sincosto' ? p.costo == null : filtro.ver === 'agotados' ? !p.activo : filtro.ver === 'sinfoto' ? !p.imagen : true;
 };
 const sw = (attrs, on, label) => `<label class="sw" title="${label}"><input type="checkbox" ${on ? 'checked' : ''} ${attrs} aria-label="${label}"><span></span></label>`;
+// "deja $3.100 · 62%" con el costo cargado; si falta, el % estimado del local.
+const pctCosto = () => M.local.costo_pct ?? 35;
+function margenTxt(p) {
+  if (!p.precio) return '';
+  if (p.costo == null) return `<small class="pmarg est" title="Sin costo de insumos: se estima ${pctCosto()}% del precio">costo ≈ ${pctCosto()}% (estimado)</small>`;
+  const m = p.precio - p.costo, pc = Math.round((m / p.precio) * 100);
+  return `<small class="pmarg ${pc < 50 ? 'bajo' : ''}">deja ${clp(m)} · ${pc}%</small>`;
+}
 function filaProducto(p, c) {
   const sinPrecio = p.precio_pendiente || !p.precio;
   return `<div class="prow ${p.activo ? '' : 'off'}" data-row="${p.id}">
@@ -828,7 +838,7 @@ function filaProducto(p, c) {
     <button type="button" class="pname" data-editar="${p.id}"><b>${esc(p.nombre)}</b>
       <span class="badges">${sinPrecio ? '<i class="bd warn">Sin precio</i>' : ''}${p.incluye ? `<i class="bd">Elige ${p.incluye} ingr.</i>` : ''}${p.destacado ? '<i class="bd">★ Destacado</i>' : ''}${p.activo ? '' : '<i class="bd off">No disponible</i>'}</span>
       ${p.descripcion ? `<span class="pdesc">${esc(p.descripcion)}</span>` : ''}</button>
-    <div class="pprice ${sinPrecio ? 'falta' : ''}"><div class="money"><span aria-hidden="true">$</span><input inputmode="numeric" autocomplete="off" value="${miles(p.precio)}" placeholder="Precio" data-precio="${p.id}" aria-label="Precio de ${esc(p.nombre)}"></div><span class="ok" aria-live="polite"></span></div>
+    <div class="pprice ${sinPrecio ? 'falta' : ''}"><div class="money"><span aria-hidden="true">$</span><input inputmode="numeric" autocomplete="off" value="${miles(p.precio)}" placeholder="Precio" data-precio="${p.id}" aria-label="Precio de ${esc(p.nombre)}"></div><span class="ok" aria-live="polite"></span>${margenTxt(p)}</div>
     <div class="psw psw-a"><small>Disponible</small>${sw(`data-p="${p.id}" data-f="activo"`, p.activo, `Disponible: ${esc(p.nombre)}`)}</div>
     <div class="psw psw-s">${p.incluye ? '' : `<small>Sugerir</small>${sw(`data-p="${p.id}" data-f="sugerir"`, p.sugerir, `Sugerir como acompañamiento: ${esc(p.nombre)}`)}`}</div>
     <button type="button" class="pedit" data-editar="${p.id}" aria-label="Editar ${esc(p.nombre)}">${ico('dots')}</button>
@@ -836,7 +846,7 @@ function filaProducto(p, c) {
 }
 function pintarFiltros() {
   const todos = M.categorias.flatMap((c) => c.productos);
-  const n = { todos: todos.length, sinprecio: todos.filter((p) => p.precio_pendiente || !p.precio).length, agotados: todos.filter((p) => !p.activo).length, sinfoto: todos.filter((p) => !p.imagen).length };
+  const n = { todos: todos.length, sincosto: todos.filter((p) => p.costo == null).length, sinprecio: todos.filter((p) => p.precio_pendiente || !p.precio).length, agotados: todos.filter((p) => !p.activo).length, sinfoto: todos.filter((p) => !p.imagen).length };
   $('cfiltros').innerHTML = FILTROS.map(([k, t]) => `<button type="button" data-ver="${k}" aria-pressed="${filtro.ver === k}" ${k !== 'todos' && !n[k] && filtro.ver !== k ? 'disabled' : ''} class="${k === 'sinprecio' && n[k] ? 'alerta' : ''}">${t} <span class="num">${n[k]}</span></button>`).join('');
 }
 function pintarListaCarta() {
@@ -880,6 +890,7 @@ async function pintarCarta() {
         <span class="sp"></span>
         <button type="button" class="primary chico" data-nuevo="">${ico('plus')}Nuevo producto</button>
         <button type="button" class="ghostb" id="cnuevacat">${ico('plus')}Categoría</button>
+        <button type="button" class="ghostb" id="cpct" title="Costo de insumos que se supone para los productos sin costo cargado"></button>
       </div>
       <nav class="cjump" id="cjump" aria-label="Ir a categoría"></nav>
       <div id="clista"></div>
@@ -889,6 +900,7 @@ async function pintarCarta() {
         <a href="carta-imprimible" target="_blank">carta en PDF</a> · <a href="cartel" target="_blank">cartel y tarjetas con QR</a>.</p>`;
     $('cbusca').oninput = (e) => { filtro.q = e.target.value; pintarListaCarta(); };
   }
+  $('cpct').textContent = `Costo estimado ${pctCosto()}%`;
   $('cjump').innerHTML = M.categorias.map((c) => `<button type="button" data-ir="${c.id}">${esc(c.nombre)}</button>`).join('');
   pintarListaCarta(); pintarAgregados();
   scrollTo({ top: y });
@@ -913,6 +925,7 @@ async function guardarPrecio(inp) {
     const ok = inp.closest('.pprice'); ok.classList.remove('falta'); ok.querySelector('.ok').textContent = '✓';
     setTimeout(() => { ok.querySelector('.ok').textContent = ''; }, 1600);
     inp.closest('.prow').querySelector('.bd.warn')?.remove();
+    inp.closest('.pprice').querySelector('.pmarg')?.remove(); inp.closest('.pprice').insertAdjacentHTML('beforeend', margenTxt(p));
     pintarFiltros();
   } catch (e) { alert(e.message); inp.value = miles(p.precio); }
 }
@@ -931,6 +944,8 @@ $('v-carta').onclick = async (e) => {
     scrollTo({ top: $('ccat-' + b.dataset.ir).getBoundingClientRect().top + scrollY - $('v-carta').querySelector('.ctools').offsetHeight - document.querySelector('.bar').offsetHeight - 8, behavior: 'smooth' }); return; }
   if ((b = t('[data-editar]'))) return abrirProducto(prodPorId(b.dataset.editar));
   if ((b = t('[data-nuevo]'))) return abrirProducto(null, Number(b.dataset.nuevo) || M.categorias[0]?.id);
+  if ((b = t('#cpct'))) { const n = prompt('Costo de insumos estimado, como % del precio, para los productos que aún no tienen su costo cargado (ej. 35):', pctCosto());
+    if (n !== null && n.trim()) { try { await api('panel/local', { method: 'PATCH', body: { costo_pct: Number(n.replace(/\D/g, '')) } }); guardado('Costo estimado actualizado'); pintarCarta(); } catch (err) { alert(err.message); } } return; }
   if ((b = t('#cnuevacat'))) { const n = prompt('Nombre de la nueva categoría (ej: Promociones):'); if (n?.trim()) { await api('panel/categorias', { method: 'POST', body: { nombre: n } }); guardado('Categoría creada'); pintarCarta(); } return; }
   if ((b = t('[data-cat-renombrar]'))) { const c = M.categorias.find((x) => x.id === Number(b.dataset.catRenombrar)); const n = prompt('Nuevo nombre de la categoría:', c.nombre); if (n?.trim() && n !== c.nombre) { await api(`panel/categorias/${c.id}`, { method: 'PATCH', body: { nombre: n } }); guardado(); pintarCarta(); } return; }
   if ((b = t('[data-cat-mover]'))) { await api(`panel/categorias/${b.dataset.catMover}`, { method: 'PATCH', body: { mover: Number(b.dataset.d) } }); pintarCarta(); return; }
@@ -1006,6 +1021,8 @@ function abrirProducto(p, cat) {
           <div class="field"><label for="fpCat">Categoría</label><select id="fpCat">${M.categorias.map((x) => `<option value="${x.id}" ${x.id === fp.categoria_id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></div></div>
       </div>
     </div>
+    <div class="dos"><div class="field"><label for="fpCosto">Costo de insumos <span class="opc">(por unidad)</span></label>${dinero('fpCosto', fp.costo, `placeholder="Sin dato: ≈ ${pctCosto()}% del precio"`)}</div>
+      <div class="field"><label>Margen</label><p class="fp-marg" id="fpMarg"></p></div></div>
     <div class="field"><label for="fpDesc">Descripción <span class="opc">(opcional)</span></label><textarea id="fpDesc" rows="2" maxlength="200" placeholder="Qué lleva, tamaño…">${esc(fp.descripcion || '')}</textarea></div>
     <div class="field"><label>Ingredientes que el cliente elige</label>
       <div class="segn" role="group" aria-label="Ingredientes a elegir">${[0, 1, 2, 3, 4].map((n) => `<button type="button" data-inc="${n}" aria-pressed="${fp.incluye === n}">${n ? n : 'Ninguno'}</button>`).join('')}</div>
@@ -1017,6 +1034,11 @@ function abrirProducto(p, cat) {
     </div>
     ${p ? `<div class="fp-mov">${idx > 0 ? '<button type="button" class="ghostb" data-fp-mover="-1">↑ Subir en la carta</button>' : ''}${idx >= 0 && idx < c.productos.length - 1 ? '<button type="button" class="ghostb" data-fp-mover="1">↓ Bajar en la carta</button>' : ''}<span class="sp"></span><button type="button" class="ghostb peligro" id="fpQuitar">Quitar de la carta</button></div>` : ''}
     <div class="formerr" id="fpErr" role="alert"></div>`;
+  const marg = () => { const pr = digitos($('fpPrecio').value), co = $('fpCosto').value.trim() === '' ? null : digitos($('fpCosto').value);
+    if (!pr) { $('fpMarg').textContent = 'Escribe el precio'; return; }
+    const c = co ?? Math.round(pr * pctCosto() / 100), m = pr - c;
+    $('fpMarg').innerHTML = `<b class="${m / pr < 0.5 ? 'bajo' : ''}">Deja ${clp(m)} · ${Math.round((m / pr) * 100)}%</b>${co == null ? `<small>estimado con ${pctCosto()}% de costo</small>` : ''}`; };
+  $('fpPrecio').addEventListener('input', marg); $('fpCosto').addEventListener('input', marg); marg();
   const segs = () => { $('fpBody').querySelectorAll('[data-inc]').forEach((b) => b.setAttribute('aria-pressed', Number(b.dataset.inc) === fp.incluye)); $('fpSugW').hidden = fp.incluye > 0; };
   segs();
   $('fpBody').querySelectorAll('[data-inc]').forEach((b) => b.onclick = () => { fp.incluye = Number(b.dataset.inc); segs(); });
@@ -1035,7 +1057,9 @@ function abrirProducto(p, cat) {
 $('fpOk').onclick = async () => {
   const precio = digitos($('fpPrecio').value);
   const body = { nombre: $('fpNombre').value, descripcion: $('fpDesc').value, categoria_id: Number($('fpCat').value), precio, incluye: fp.incluye,
-    activo: $('fpActivo').checked, destacado: $('fpDest').checked, sugerir: fp.incluye ? false : $('fpSug').checked };
+    activo: $('fpActivo').checked, destacado: $('fpDest').checked, sugerir: fp.incluye ? false : $('fpSug').checked,
+    costo: $('fpCosto').value.trim() === '' ? null : digitos($('fpCosto').value) };
+  if (body.costo != null && precio && body.costo >= precio && !confirm(`El costo (${clp(body.costo)}) es igual o mayor al precio (${clp(precio)}): ese producto no deja margen. ¿Guardar igual?`)) return;
   if (!body.nombre.trim()) { $('fpErr').textContent = 'Escribe el nombre del producto.'; return $('fpNombre').focus(); }
   if (fp.id && fp.precio && precio && (precio > fp.precio * 1.8 || precio < fp.precio * 0.55) && !confirm(`¿Cambiar el precio de ${clp(fp.precio)} a ${clp(precio)}?`)) return;
   $('fpOk').disabled = true; $('fpErr').textContent = '';
@@ -1529,7 +1553,9 @@ async function pintarEquipo() {
   const precioProm = d.pedidos ? d.cobrado / d.pedidos : (desp.tramos?.length ? desp.tramos.reduce((a, t) => a + t.costo, 0) / desp.tramos.length : desp.costo || 0);
   const kmViaje = 1.5 * (desp.calculo?.factor || 1.35) * (desp.calculo?.idaVuelta === false ? 1 : 2);
   const bono = reps.length ? reps.reduce((a, t) => a + (ts.find((x) => x.id === t.id).bonoEntrega || 0), 0) / reps.length : 0;
-  const dejaViaje = precioProm - (v0 ? kmViaje * H.costoKmDe(v0) : 0) - bono * (1 + (reps[0]?.liquidacion.tasaEmp || 0) / 100);
+  // Lo que deja un despacho: margen de la comida + tarifa − bencina − bono. Es la comida la que paga al repartidor.
+  const comidaProm = d.pedidos ? d.margen_comida / d.pedidos : 0;
+  const dejaViaje = comidaProm + precioProm - (v0 ? kmViaje * H.costoKmDe(v0) : 0) - bono * (1 + (reps[0]?.liquidacion.tasaEmp || 0) / 100);
   const necesarios = LB.despachosParaCubrir(d.costo_equipo, dejaViaje);
   $('v-equipo').innerHTML = `
     <div class="res-head"><div style="display:flex;align-items:center;gap:8px">
@@ -1541,7 +1567,7 @@ async function pintarEquipo() {
       <div>Costo del reparto al mes<b class="num">${clp(d.costo_equipo)}</b><span class="sub">${reps.length} repartidor${reps.length === 1 ? '' : 'es'} · sueldo, cargas y bonos</span></div>
       <div>Despachos del mes<b class="num">${d.pedidos}</b><span class="sub">${d.sin_repartidor ? `${d.sin_repartidor} sin repartidor asignado` : 'todos con repartidor'}</span></div>
       <div>Cobrado por despacho<b class="num">${clp(d.cobrado)}</b><span class="sub">${d.pedidos ? `promedio ${clp(precioProm)}` : 'aún sin despachos'}</span></div>
-      <div class="${d.cobrado >= d.costo_equipo ? '' : 'alerta'}">Para cubrir el reparto<b class="num">${necesarios ?? '—'}</b><span class="sub">${necesarios ? `despachos al mes (cada uno deja ≈ ${clp(dejaViaje)} tras bencina y bono)` : 'con estos precios cada viaje no deja margen'}</span></div>
+      <div class="${!d.costo_equipo || d.cobrado + (d.margen_comida || 0) >= d.costo_equipo ? '' : 'alerta'}">Para cubrir el reparto<b class="num">${d.costo_equipo ? necesarios ?? '—' : '—'}</b><span class="sub">${!d.costo_equipo ? 'Sin repartidores contratados: agrega uno para ver cuántos despachos lo pagan.' : necesarios ? `despachos al mes (cada uno deja ≈ ${clp(dejaViaje)}: ${d.pedidos ? `comida ${clp(comidaProm)} + ` : ''}tarifa, menos bencina y bono)` : 'con estos precios cada viaje no deja margen'}${d.costo_equipo && !d.pedidos ? '<br>Sin despachos aún: solo cuenta la tarifa.' : ''}</span></div>
     </div>
     <div class="eqlista">${EQ.trabajadores.map((t) => { const x = ts.find((y) => y.id === t.id), l = t.liquidacion;
       return `<article class="cardf eqcard ${x.activo === false ? 'off' : ''}">
@@ -1724,6 +1750,7 @@ async function pintarResumen() {
       <div><span class="k">5 · Clientes que repitieron</span><b class="num">${s.repiten}</b><span class="sub">de ${s.clientes_web} clientes web</span></div>
       <div class="destacado"><span class="k">6 · Comisión ahorrada</span><b class="num">${clp(s.comision_ahorrada)}</b><span class="sub">${s.canal.web.pedidos} pedidos directos × ${s.comision_app}% que cobraría la app</span></div>
     </div>
+    ${s.margen?.ventas ? `<p class="extra-sug"><b>Margen de la comida:</b> ventas <span class="num">${clp(s.margen.ventas)}</span> − insumos <span class="num">${clp(s.margen.costo)}</span> = <b style="color:var(--ok)">${clp(s.margen.margen)}</b> (${Math.round(s.margen.margen * 100 / s.margen.ventas)}%)${s.margen.estimados ? ` · <span class="noprint">${s.margen.estimados} línea${s.margen.estimados > 1 ? 's' : ''} con costo estimado; carga los costos en Carta y precios para afinarlo.</span>` : ''}</p>` : ''}
     ${s.despachos?.pedidos ? `<p class="extra-sug"><b>Despacho:</b> ${s.despachos.pedidos} pedido${s.despachos.pedidos > 1 ? 's' : ''} · cobrado <span class="num">${clp(s.despachos.cobrado)}</span>${s.despachos.con_costo
       ? ` · costo estimado del viaje <span class="num">${clp(s.despachos.costo)}</span> · <b style="color:${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'var(--ok)' : 'var(--danger)'}">${s.despachos.cobrado_con_costo - s.despachos.costo >= 0 ? 'quedan' : 'faltan'} ${clp(Math.abs(s.despachos.cobrado_con_costo - s.despachos.costo))}</b>` : ''}${s.despachos.km ? ` · ${s.despachos.km.toLocaleString('es-CL')} km en línea recta` : ''}.${s.despachos.con_costo ? '' : ' <span class="noprint">Agrega un vehículo en la pestaña Despacho para ver si sale a cuenta.</span>'}</p>` : ''}
     <p class="extra-sug"><b>Venta sugerida:</b> <span class="num">${clp(s.sugeridos.ventas)}</span> en ${s.sugeridos.unidades} producto${s.sugeridos.unidades === 1 ? '' : 's'} agregados desde las sugerencias (papas, bebidas…)${s.ventas ? ` · ${Math.round(s.sugeridos.ventas * 100 / s.ventas)}% de las ventas` : ''}.</p>
