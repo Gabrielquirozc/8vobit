@@ -926,3 +926,42 @@ test('gastos del mes: por categoría y comparados con el mes anterior', async ()
   cookie = '';
   assert.equal((await req('GET', `/api/panel/gastos?mes=${mes}`)).status, 401);
 });
+
+// ---------- exportar para el contador ----------
+test('exportar: CSV de ventas, productos, caja y gastos, sin datos de contacto y a prueba de fórmulas', async () => {
+  await login();
+  const hoy = (await req('GET', '/api/panel/caja')).body.hoy;
+  const a = await prod('Barros Luco');
+  await pedir([{ producto_id: a.id }], { cliente: '=HYPERLINK("x")', telefono: '+56 9 7777 8888' });
+  await req('POST', '/api/panel/caja/movimientos', { tipo: 'gasto', monto: 1234, categoria: 'publicidad', descripcion: 'Volantes; "ofertas"', medio: 'transferencia' });
+  const bajar = (tipo, desde = hoy, hasta = hoy) => fetch(`${B}/api/panel/exportar?tipo=${tipo}&desde=${desde}&hasta=${hasta}`, { headers: { Cookie: cookie } });
+
+  const r = await bajar('ventas');
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /^text\/csv/);
+  assert.match(r.headers.get('content-disposition'), new RegExp(`attachment; filename="gassuso-ventas-${hoy}_${hoy}\.csv"`));
+  const buf = new Uint8Array(await r.arrayBuffer());
+  assert.deepEqual([...buf.slice(0, 3)], [0xef, 0xbb, 0xbf]); // BOM: Excel abre bien las tildes
+  const ventas = new TextDecoder().decode(buf);
+  const lineas = ventas.trim().split('\r\n');
+  assert.equal(lineas[0].replace('﻿', '').split(';')[0], 'Fecha');
+  assert.ok(lineas.length > 2);
+  assert.ok(!ventas.includes('7777'), 'sin teléfonos');
+  assert.ok(ventas.includes(`'=HYPERLINK(""x"")`), 'el nombre no queda como fórmula');
+
+  const productos = await (await bajar('productos')).text();
+  assert.match(productos, /Barros Luco;\d+;5790;/);
+
+  const gastos = await (await bajar('gastos')).text();
+  assert.ok(gastos.includes('Publicidad;"Volantes; ""ofertas""";Transferencia;;1234'));
+
+  const caja = await (await bajar('caja')).text();
+  const fila = caja.trim().split('\r\n').find((l) => l.startsWith(hoy)).split(';');
+  const c = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(Number(fila[7]), c.esperado.total);
+
+  for (const [t, d, h] of [['clientes', hoy, hoy], ['ventas', 'hoy', hoy], ['ventas', hoy, '2020-01-01'], ['ventas', '2024-01-01', '2025-06-01']])
+    assert.equal((await bajar(t, d, h)).status, 400, `${t} ${d} ${h}`);
+  cookie = '';
+  assert.equal((await bajar('ventas')).status, 401);
+});

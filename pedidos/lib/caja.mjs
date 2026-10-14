@@ -139,5 +139,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       anterior: { mes: ant, total: anterior.reduce((s, g) => s + g.monto, 0), por_categoria: porCat(anterior) } };
   }
 
-  return { caja, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
+  return { caja, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
 }

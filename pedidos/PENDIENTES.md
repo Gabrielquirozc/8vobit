@@ -86,7 +86,8 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       bonificada) e inicio de actividades en el SII (persona natural de primera categoría) antes del mes 4.
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
       arqueo al cierre. Pestaña Gastos y bloque "Efectivo en caja" en Caja del día.
-- [ ] Producto de entrada v1.0: falta exportar CSV, monitoreo de caída, probar la restauración de un
+- [x] Exportar a CSV para el contador (2026-10-14): ventas, productos, caja diaria y gastos.
+- [ ] Producto de entrada v1.0: falta monitoreo de caída, probar la restauración de un
       respaldo y la prueba en el local. Luego multi-local (L3) y gestor de licencias (L4).
 - [ ] **Sistema de control propio**: plan por etapas en `PLAN-CONTROL.md` (comparado con Fudo). Siguiente:
       etapa 1, gastos y movimientos de caja con arqueo; luego estado de resultados y usuarios con PIN

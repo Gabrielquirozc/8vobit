@@ -9,6 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
 import * as H from './public/hex.js';
 import * as LB from './public/laboral.js';
 import { crearCaja } from './lib/caja.mjs';
+import { crearExportar } from './lib/exportar.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -826,6 +827,7 @@ function resumen(local, fecha) {
 const ESTADOS = ['nuevo', 'preparacion', 'listo', 'entregado', 'anulado'];
 const MEDIOS = ['efectivo', 'transferencia', 'tarjeta', 'otro'];
 const CAJA = crearCaja(db, { hoy: (local) => franjas(local).dia, MEDIOS });
+const exportar = crearExportar(db, { caja: CAJA });
 
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1); // sin "api"
@@ -953,6 +955,13 @@ async function api(req, res, url) {
       if (m === 'DELETE' && parts[2] === 'movimientos' && parts[3]) return r(CAJA.anularMovimiento(local, Number(parts[3])));
       if (m === 'POST' && parts[2] === 'cierre') return r(CAJA.cerrar(local, await readJson(req)));
       if (m === 'DELETE' && parts[2] === 'cierre') return r(CAJA.reabrir(local, dia));
+    }
+    // CSV para el contador (se descarga desde el Resumen).
+    if (m === 'GET' && parts[1] === 'exportar') {
+      const q = (k) => url.searchParams.get(k) || '';
+      const r = exportar(local, q('tipo'), q('desde'), q('hasta'));
+      if (r.error) return send(res, 400, { error: r.error });
+      return send(res, 200, r.csv, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${r.nombre}"` });
     }
     if (m === 'GET' && parts[1] === 'gastos') {
       const mes = url.searchParams.get('mes') || franjas(local).dia.slice(0, 7);

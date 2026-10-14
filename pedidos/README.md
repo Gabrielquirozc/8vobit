@@ -47,6 +47,11 @@ documento y fecha (se pueden anotar con atraso). Muestra el total por categoría
 anterior. Solo los pagados en efectivo descuentan de la caja del día. Código: `lib/caja.mjs` (servidor)
 y `public/panel-caja.js` (panel).
 
+**Exportar para el contador** (al final del Resumen): rango de fechas (atajos "Este mes" y "Mes
+anterior", máximo un año) y cuatro CSV que abren en Excel (separador `;`, con BOM): ventas, productos
+vendidos (con costo), caja diaria (esperado, contado, diferencia) y gastos. No incluyen teléfonos ni
+direcciones, y los textos van protegidos contra fórmulas. Código: `lib/exportar.mjs`.
+
 **Carta y precios** (pensada para cargar datos rápido en la tablet): buscador, filtros *Sin precio /
 No disponibles / Sin foto*, saltos por categoría y una fila por producto con foto (tocarla la
 cambia), precio con formato `$4.990` que se guarda al salir del campo o con Enter (un cambio

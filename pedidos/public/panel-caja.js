@@ -1,6 +1,6 @@
 // Panel: movimientos de caja (fondo, ingresos, retiros, gastos), arqueo al cierre y la pestaña Gastos.
 // Las utilidades llegan desde el panel (ctx) para no cargar comun.js dos veces.
-export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga }) {
+export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE }) {
   const TIPO = { fondo: 'Fondo inicial', ingreso: 'Ingreso', retiro: 'Retiro', gasto: 'Gasto' };
   const MEDIOS = { efectivo: ['Efectivo', 'cash'], transferencia: ['Transferencia', 'bank'], tarjeta: ['Tarjeta', 'card'], otro: ['Otro', 'dots'] };
   const BILLETES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
@@ -185,5 +185,42 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     });
   }
 
-  return { bloqueCaja, conectar, difTxt, pintarGastos, conectarGastos };
+  // ---------- exportar para el contador (va al final del Resumen) ----------
+  const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const EXPORTS = [['ventas', 'Ventas', 'Cada pedido: fecha, canal, medio de pago, total y folio de boleta.'],
+    ['productos', 'Productos vendidos', 'Cada línea vendida con su precio y costo de insumos.'],
+    ['caja', 'Caja diaria', 'Por día: efectivo esperado, contado y diferencia.'],
+    ['gastos', 'Gastos', 'Cada gasto con categoría, medio de pago y N° de documento.']];
+  function bloqueExportar() {
+    const h = new Date(), ini = new Date(h.getFullYear(), h.getMonth(), 1);
+    return `<section class="cardf noprint" id="exp" style="margin-top:18px"><h3>Exportar para el contador</h3>
+      <p class="ayuda" style="margin-top:-4px">Archivos CSV que abren en Excel. No incluyen teléfonos ni direcciones de clientes.</p>
+      <div class="exp-rango"><div class="field"><label for="expDesde">Desde</label><input type="date" id="expDesde" value="${isoLocal(ini)}" max="${isoLocal(h)}"></div>
+        <div class="field"><label for="expHasta">Hasta</label><input type="date" id="expHasta" value="${isoLocal(h)}" max="${isoLocal(h)}"></div>
+        <div class="exp-rap"><button type="button" class="ghostb" data-exp-mes="0">Este mes</button><button type="button" class="ghostb" data-exp-mes="-1">Mes anterior</button></div></div>
+      <div class="exp-lista">${EXPORTS.map(([k, n, d]) => `<a class="exp-item" data-exp="${k}" download href="#">${ico('note')}<span><b>${n}</b><span>${d}</span></span></a>`).join('')}</div>
+      <div class="formerr" id="expErr" role="alert"></div></section>`;
+  }
+  function conectarExportar(el) {
+    const enlaces = () => {
+      const d = $('expDesde')?.value, h = $('expHasta')?.value; if (!d) return;
+      const mal = !d || !h || d > h;
+      $('expErr').textContent = mal ? 'Revisa las fechas: el inicio debe ser anterior al término.' : '';
+      el.querySelectorAll('[data-exp]').forEach((a) => { a.href = mal ? '#' : `${BASE}/api/panel/exportar?tipo=${a.dataset.exp}&desde=${d}&hasta=${h}`; a.toggleAttribute('aria-disabled', mal); });
+    };
+    el.addEventListener('change', (e) => { if (e.target.closest('#exp')) enlaces(); });
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-exp-mes]');
+      if (b) {
+        const h = new Date(), n = Number(b.dataset.expMes), ini = new Date(h.getFullYear(), h.getMonth() + n, 1);
+        const fin = n === 0 ? h : new Date(h.getFullYear(), h.getMonth() + n + 1, 0);
+        $('expDesde').value = isoLocal(ini); $('expHasta').value = isoLocal(fin); return enlaces();
+      }
+      const a = e.target.closest('[data-exp]');
+      if (a?.hasAttribute('aria-disabled') || (a && a.getAttribute('href') === '#')) { e.preventDefault(); enlaces(); }
+    });
+    return enlaces;
+  }
+
+  return { bloqueCaja, conectar, difTxt, pintarGastos, conectarGastos, bloqueExportar, conectarExportar };
 }

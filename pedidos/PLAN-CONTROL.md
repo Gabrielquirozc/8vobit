@@ -31,7 +31,7 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 | Caja del día con folios de boleta, arqueo y movimientos de caja | ✅ | Arqueo con conteo por billetes, fondo, ingresos, retiros (2026-10-14). |
 | Categorías, ingredientes, agregados, salsas | ✅ | |
 | Costo de productos y margen | ✅ parcial | Costo a mano o %; sin recetas ni inventario. |
-| Resumen semanal | ✅ parcial | Falta exportar a Excel/CSV y reportes por rango. |
+| Resumen semanal y exportar CSV por rango | ✅ | Ventas, productos, caja y gastos para el contador (2026-10-14). |
 | Equipo: turnos, cobertura, sueldo legal estimado, costo por área | ✅ | Fudo no calcula sueldos. |
 | Términos, privacidad, borrado de datos | ✅ | |
 | Usuarios con PIN y roles | ❌ | Hoy hay una sola clave del panel. |

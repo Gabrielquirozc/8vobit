@@ -128,6 +128,13 @@
   button.link.peligro { color: var(--danger); }
   tr.anulada td { text-decoration: line-through; color: var(--ink-2); } tr.anulada td:last-child { text-decoration: none; }
   .lbl { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
+  .exp-rango { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; } .exp-rango .field { margin-top: 0; }
+  .exp-rango input { min-height: 44px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  .exp-rap { display: flex; gap: 6px; }
+  .exp-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 12px; }
+  .exp-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--ink); text-decoration: none; background: var(--surface); }
+  .exp-item:hover { border-color: var(--ink); } .exp-item > span { display: flex; flex-direction: column; gap: 2px; } .exp-item > span span { color: var(--ink-2); font-size: .82rem; }
+  .exp-item[aria-disabled] { opacity: .4; pointer-events: none; }
   .g-barra { width: 34%; } .g-barra span { display: block; height: 10px; border-radius: 999px; background: var(--brand); min-width: 2px; }
   .foto { width: 112px; aspect-ratio: 4 / 3; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--ink-2); font-size: .8rem; }
   .foto img { width: 100%; height: 100%; object-fit: cover; }
@@ -875,9 +882,10 @@ document.addEventListener('input', (e) => {
   t.value = v; const pos = Math.max(0, v.length - fin); t.setSelectionRange(pos, pos);
 });
 // Gastos, movimientos de caja y arqueo (public/panel-caja.js).
-const CAJA = crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga });
+const CAJA = crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE });
 CAJA.conectar($('v-cierre'), () => CJ, () => recargarCaja().catch((e) => alert(e.message)));
 CAJA.conectarGastos($('v-gastos'));
+const exportarLinks = CAJA.conectarExportar($('v-resumen'));
 let filtro = { q: '', ver: 'todos' };
 const FILTROS = [['todos', 'Todos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo'], ['agotados', 'No disponibles'], ['sinfoto', 'Sin foto']];
 const pasa = (p) => {
@@ -1888,7 +1896,9 @@ async function pintarResumen() {
       <div><h3>Platos de la semana</h3>${s.platos.length ? `<table><tr><th>Plato</th><th class="r">Unidades</th><th class="r">Ventas</th></tr>${s.platos.slice(0, 10).map((x) =>
         `<tr><td>${esc(x.nombre)}</td><td class="r">${x.n}</td><td class="r">${clp(x.monto)}</td></tr>`).join('')}</table>` : '<p class="vacio">Sin ventas.</p>'}</div>
     </div>
-    <p class="ayuda">La comisión ahorrada usa ${s.comision_app}% (se ajusta en Datos del local). Las ventas de mostrador no cuentan porque no pasarían por la app.</p>`;
+    <p class="ayuda">La comisión ahorrada usa ${s.comision_app}% (se ajusta en Datos del local). Las ventas de mostrador no cuentan porque no pasarían por la app.</p>
+    ${CAJA.bloqueExportar()}`;
+  exportarLinks();
   $('v-resumen').querySelectorAll('[data-sem]').forEach((b) => b.onclick = () => {
     const d = new Date(`${semana}T12:00:00`); d.setDate(d.getDate() + Number(b.dataset.sem));
     semana = d.toISOString().slice(0, 10); pintarResumen();
