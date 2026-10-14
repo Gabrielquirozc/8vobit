@@ -135,6 +135,9 @@
   .exp-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--ink); text-decoration: none; background: var(--surface); }
   .exp-item:hover { border-color: var(--ink); } .exp-item > span { display: flex; flex-direction: column; gap: 2px; } .exp-item > span span { color: var(--ink-2); font-size: .82rem; }
   .exp-item[aria-disabled] { opacity: .4; pointer-events: none; }
+  .res-tabla { max-width: 760px; } .res-tabla tr.sub td { font-weight: 700; border-top: 1px solid var(--ink-2); }
+  .res-tabla tr.tot td { font: 800 1.1rem var(--font-display); border-top: 2px solid var(--ink); }
+  .kpis .cj-res { box-shadow: var(--shadow); }
   .g-barra { width: 34%; } .g-barra span { display: block; height: 10px; border-radius: 999px; background: var(--brand); min-width: 2px; }
   .foto { width: 112px; aspect-ratio: 4 / 3; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--ink-2); font-size: .8rem; }
   .foto img { width: 100%; height: 100%; object-fit: cover; }
@@ -456,6 +459,7 @@
       <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
       <button class="tab" role="tab" data-v="gastos" aria-selected="false"><svg class="ico"><use href="#i-receipt"/></svg>Gastos</button>
       <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
+      <button class="tab" role="tab" data-v="resultados" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Resultados</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
       <button class="tab" role="tab" data-v="despacho" aria-selected="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
       <button class="tab" role="tab" data-v="equipo" aria-selected="false"><svg class="ico"><use href="#i-users"/></svg>Equipo</button>
@@ -494,6 +498,7 @@
     <div id="v-despacho" hidden></div>
     <div id="v-equipo" hidden></div>
     <div id="v-resumen" hidden></div>
+    <div id="v-resultados" hidden></div>
   </main>
 </div>
 
@@ -1946,7 +1951,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
-  for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'resultados', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
   const bloq = CUENTA.bloqueada(vista);
   if (bloq) { $('v-' + vista).innerHTML = CUENTA.vistaBloqueada(bloq); return; }
   if (vista === 'carta') pintarCarta();
@@ -1955,6 +1960,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   else if (vista === 'despacho') { await cargarCarta(); pintarDespacho(); }
   else if (vista === 'equipo') pintarEquipo();
   else if (vista === 'gastos') CAJA.pintarGastos($('v-gastos'), null).catch((e) => alert(e.message));
+  else if (vista === 'resultados') CAJA.pintarResultados($('v-resultados'), null).catch((e) => alert(e.message));
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else { if (vista === 'cierre') { cajaDia = null; cajaD = null; } refrescar(); }
 });
@@ -1978,7 +1984,7 @@ async function iniciar() {
   // Si el rol no ve la pestaña actual, se abre la primera que sí ve.
   if (document.querySelector(`[data-v="${vista}"]`).hidden) document.querySelector('[data-v]:not([hidden])')?.click();
   despierta();
-  latido = latido || setInterval(() => !['carta', 'local', 'resumen', 'gastos'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  latido = latido || setInterval(() => !['carta', 'local', 'resumen', 'resultados', 'gastos'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
 // Cambiar de usuario: cierra la sesión y vuelve al teclado de PIN de la tablet.
 $('quien').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };

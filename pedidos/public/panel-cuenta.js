@@ -5,7 +5,7 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
   let YO = null;
   // Pestaña → permiso del rol y función del plan.
   const TABS = { pedidos: ['ver_pedidos'], venta: ['venta'], cierre: ['caja'], gastos: ['gastos'], resumen: ['resumen'],
-    carta: ['carta'], despacho: ['despacho'], equipo: ['equipo', 'equipo'], local: ['local'] };
+    resultados: ['resultados', 'resultados'], carta: ['carta'], despacho: ['despacho'], equipo: ['equipo', 'equipo'], local: ['local'] };
   const PLAN_NOMBRE = { canal: 'Canal', gestion: 'Gestión', pro: 'Pro' };
   const PLAN_DE = { costos: 'gestion', equipo: 'gestion', exportar: 'gestion', resultados: 'gestion' };
   const ESTADO = { prueba: 'Prueba', activa: 'Activa', gracia: 'Pago pendiente', suspendida: 'Suspendida', cancelada: 'Cancelada' };

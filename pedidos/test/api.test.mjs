@@ -1191,3 +1191,32 @@ test('tarifa por pedido: 0,5 % con tope de $100, solo web y respetando la exenci
   assert.equal(l.tarifa_mes.exentos, l.tarifa_mes.pedidos);
   assert.equal(l.descuento.pct, 50);
 });
+
+// ---------- estado de resultados ----------
+test('resultados: ventas − comida − personal − gastos, sin contar dos veces insumos ni sueldos', async () => {
+  cookie = '';
+  await req('POST', '/api/panel/login', { slug: 'gassuso', password: 'clave-de-prueba' });
+  const mes = (await req('GET', '/api/panel/caja')).body.hoy.slice(0, 7);
+  const r0 = (await req('GET', `/api/panel/resultados?mes=${mes}`)).body;
+  assert.equal(r0.mes, mes);
+  // Las cuentas cuadran.
+  assert.equal(r0.margen_bruto, r0.ventas - r0.costo_comida);
+  assert.equal(r0.resultado, r0.margen_bruto - r0.personal.monto - r0.total_operacion);
+  assert.equal(r0.total_operacion, r0.operacion.reduce((s, g) => s + g.monto, 0));
+  // Insumos: aparte, como referencia (ya están en el costo de la comida).
+  const antes = r0.compras_insumos;
+  await req('POST', '/api/panel/caja/movimientos', { tipo: 'gasto', monto: 7000, categoria: 'insumos', medio: 'transferencia' });
+  await req('POST', '/api/panel/caja/movimientos', { tipo: 'gasto', monto: 300000, categoria: 'arriendo', medio: 'transferencia' });
+  let r = (await req('GET', `/api/panel/resultados?mes=${mes}`)).body;
+  assert.equal(r.compras_insumos, antes + 7000);
+  assert.equal(r.total_operacion, r0.total_operacion + 300000);
+  assert.ok(!r.operacion.some((g) => g.categoria === 'insumos'));
+  // Sueldos anotados reemplazan la estimación de Equipo.
+  await req('POST', '/api/panel/caja/movimientos', { tipo: 'gasto', monto: 550000, categoria: 'sueldos', medio: 'transferencia' });
+  r = (await req('GET', `/api/panel/resultados?mes=${mes}`)).body;
+  assert.equal(r.personal.fuente, 'gastos');
+  assert.ok(r.personal.monto >= 550000);
+  assert.equal(r.resultado, r.margen_bruto - r.personal.monto - r.total_operacion);
+  assert.match(r.anterior.mes, /^\d{4}-\d{2}$/);
+  assert.equal((await req('GET', '/api/panel/resultados?mes=2026-13')).status, 400);
+});

@@ -34,9 +34,9 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 | Resumen semanal y exportar CSV por rango | ✅ | Ventas, productos, caja y gastos para el contador (2026-10-14). |
 | Equipo: turnos, cobertura, sueldo legal estimado, costo por área | ✅ | Fudo no calcula sueldos. |
 | Términos, privacidad, borrado de datos | ✅ | |
-| Usuarios con PIN y roles | ❌ | Hoy hay una sola clave del panel. |
+| Usuarios con PIN y roles | ✅ | Cocina, caja, encargado y dueño; entrada y salida con PIN (2026-10-14). |
 | Gastos por categoría | ✅ | Pestaña Gastos con comparación mensual (2026-10-14). |
-| Estado de resultados | ❌ | Fudo lo da en Pro. Siguiente etapa: ya están las ventas, los costos, el personal y los gastos. |
+| Estado de resultados | ✅ | Pestaña Resultados, con el mes anterior (2026-10-14). Fudo lo da en Pro. |
 | Inventario, recetas, proveedores, compras | ❌ | Fudo Avanzado. |
 | Combos, descuentos, promociones | ❌ | Fudo Inicial. |
 | Boleta electrónica directa con el SII | ❌ | Hoy modo asistido (el local emite en el SII y anota el folio). Requiere integrarse con un proveedor de DTE (costo por documento). |

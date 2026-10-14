@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-14 (etapa 1 de control: gastos y arqueo; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-14 (multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -49,7 +49,11 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `public/panel.html` | Panel del local: Pedidos, Venta rápida, Caja del día, Resumen, Carta y precios, Despacho, Equipo, Datos del local |
 | `public/hex.js` | Zonas de despacho en hexágonos y costo del viaje por vehículo (compartido servidor/navegador) |
 | `public/laboral.js` | Sueldo estimado del repartidor según la ley chilena (compartido servidor/navegador) |
-| `lib/caja.mjs` + `public/panel-caja.js` | Gastos, movimientos de caja y arqueo (servidor y panel) |
+| `lib/caja.mjs` + `public/panel-caja.js` | Gastos, movimientos de caja, arqueo, exportar y resultados (panel) |
+| `lib/exportar.mjs`, `lib/resultados.mjs` | CSV para el contador y estado de resultados |
+| `lib/licencias.mjs`, `lib/usuarios.mjs`, `lib/admin.mjs` | Planes y licencias, usuarios con PIN y roles, consola de administración |
+| `public/panel-cuenta.js`, `public/admin.html` | Entrada con clave o PIN, permisos en el panel, Tu plan, Usuarios; consola `/admin` |
+| `deploy/probar-respaldo.mjs`, `deploy/MONITOREO.md` | Prueba de restauración de respaldos y guía de monitoreo |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |
 | `public/seguimiento.html`, `comanda.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, carta PDF, cartel/tarjetas con QR |
 | `test/api.test.mjs` | Pruebas contra el servidor real con una base temporal |
@@ -94,10 +98,17 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       `deploy/MONITOREO.md`. **Falta que el dueño cree el monitor** (5 min).
 - [x] Prueba de restauración: `deploy/probar-respaldo.mjs`; `respaldo.ps1` la corre después de cada
       descarga y `npm test` la corre siempre.
-- [ ] Producto de entrada v1.0: solo falta la prueba en el local. Luego multi-local (L3) y gestor de licencias (L4).
-- [ ] **Sistema de control propio**: plan por etapas en `PLAN-CONTROL.md` (comparado con Fudo). Siguiente:
-      etapa 1, gastos y movimientos de caja con arqueo; luego estado de resultados y usuarios con PIN
-      (incluye registro de turnos reales para el sueldo).
+- [ ] Producto de entrada v1.0: solo falta la prueba en el local.
+- [x] Multi-local (L3) y gestor de licencias (L4) (2026-10-14): clave por local, usuarios con PIN y roles,
+      licencias con prueba/gracia/suspensión, tarifa por pedido, consola `/admin`.
+- [x] Etapas 2 y 3 del control (2026-10-14): estado de resultados mensual (pestaña Resultados) y usuarios
+      con PIN, con marcas de entrada y salida.
+- [ ] **Al desplegar esto por primera vez**: el despliegue agrega `ADMIN_PASSWORD` al `.env` y la muestra
+      una vez (anotarla). La licencia de Gassuso se crea sola: Gestión, prueba de 90 días desde ese día,
+      50 % y sin tarifa por pedido el primer año pagado. Ajustar las fechas en `/admin` si el piloto
+      partió otro día. Las sesiones abiertas se cierran (hay que volver a entrar).
+- [ ] Siguientes etapas del control: combos y promociones (etapa 6), inventario simple (5), SII directo (7).
+      Cobro automático de licencias con Flow o Mercado Pago (fase 2), cuando haya ~10 locales.
 - [ ] Combos/promociones (necesita precios del dueño).
 - [ ] Al lanzar: `INDEXAR=1` en el `.env` del servidor y desplegar.
 - [x] Borradores de Términos y Privacidad (`public/legal.html`, rutas `/terminos` y `/privacidad`,

@@ -52,6 +52,25 @@ anterior", máximo un año) y cuatro CSV que abren en Excel (separador `;`, con 
 vendidos (con costo), caja diaria (esperado, contado, diferencia) y gastos. No incluyen teléfonos ni
 direcciones, y los textos van protegidos contra fórmulas. Código: `lib/exportar.mjs`.
 
+**Resultados** (pestaña propia, dueño, plan Gestión o superior): estado de resultados del mes con el
+mes anterior al lado: ventas cobradas − costo de la comida = margen; − personal (los sueldos anotados
+en Gastos o, si no hay, la estimación de Equipo); − gastos de operación por categoría = resultado. Las
+compras de insumos se muestran aparte (no se restan dos veces) y la comisión que el local no pagó a
+las apps queda como referencia. Código: `lib/resultados.mjs`.
+
+**Usuarios con PIN y roles** (Datos del local → *Usuarios y PIN*): el dueño entra con la **clave del
+local**, y con eso la tablet queda asociada al local por un año. Desde ahí el equipo entra con su
+**PIN** (4 a 6 números, no repetido, no obvio): **Cocina** (pedidos y agotados), **Caja** (además
+vende, cobra, caja y gastos), **Encargado** (además carta, despacho, resumen y reabrir la caja). El
+dueño ve todo: sueldos, costos, resultados, datos del local, usuarios y plan. Las pestañas y botones se
+ajustan al rol, y el servidor revisa el permiso en cada ruta. Queda registrado quién cobró, anuló,
+movió la caja o la cerró. En el teclado de PIN también se **marca entrada y salida**: las horas reales
+del mes aparecen en Equipo. Botón con el nombre arriba a la derecha = cambiar de usuario.
+
+**Tu plan** (Datos del local, solo el dueño): plan, estado (prueba, activa, pago pendiente,
+suspendida), precio, descuento vigente, tarifa por pedido del mes (0,5 % con tope de $100, con los
+pedidos exentos aparte) y pagos registrados. Las pestañas que el plan no incluye se ven con 🔒.
+
 **Carta y precios** (pensada para cargar datos rápido en la tablet): buscador, filtros *Sin precio /
 No disponibles / Sin foto*, saltos por categoría y una fila por producto con foto (tocarla la
 cambia), precio con formato `$4.990` que se guarda al salir del campo o con Enter (un cambio
@@ -162,6 +181,20 @@ agregar `INDEXAR=1` al `.env` del servidor y volver a desplegar.
 
 **Seguimiento**: cada pedido web tiene un link `/seguimiento?p=…` que el cliente
 recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
+
+## Varios locales, licencias y administración
+
+- Cada local tiene su código (`/codigo` es su carta), su **clave propia** (scrypt) y sus datos
+  separados por `local_id`. Gassuso, anterior a esto, sigue entrando con `PANEL_PASSWORD`.
+- **Licencias** (`lib/licencias.mjs`): plan (Canal, Gestión, Pro), ciclo (mensual, semestral −10 %,
+  anual −15 %), prueba, vencimiento, descuento con fecha de término y exención de la tarifa por
+  pedido. El estado sale de las fechas: *prueba* → *activa* → *pago pendiente* (7 días, todo
+  funciona) → *suspendida* (panel en solo lectura, la carta no recibe pedidos, **exportar sí**) →
+  *cancelada* (90 días). Nada se borra.
+- **Consola `/admin`** (solo nosotros, con `ADMIN_PASSWORD` en el `.env`; sin ella no existe): locales
+  con plan, estado, ingreso mensual, pedidos y tarifa del mes. Desde ahí se crea un local (con carta
+  vacía o importada en JSON; la clave se muestra una sola vez), se edita la licencia, se registran pagos
+  (extienden el plazo desde donde termina lo pagado), se genera una clave nueva y se ve el historial.
 
 ## Rutas
 

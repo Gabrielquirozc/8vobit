@@ -13,6 +13,7 @@ import { crearExportar } from './lib/exportar.mjs';
 import { crearLicencias, PLANES, PLAN_DE } from './lib/licencias.mjs';
 import { crearUsuarios, ROLES, PERMISOS, puedeRol, verificar } from './lib/usuarios.mjs';
 import { crearAdmin } from './lib/admin.mjs';
+import { crearResultados } from './lib/resultados.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -861,6 +862,7 @@ const exportar = crearExportar(db, { caja: CAJA });
 const LIC = crearLicencias(db, { hoy: today });
 const USU = crearUsuarios(db);
 const ADMIN = crearAdmin(db, { LIC, USU, crearLocal, hoy: today });
+const resultados = crearResultados(db, { equipoMes: (local, mes) => equipoMes(local, mes) });
 // Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
 {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
@@ -1098,6 +1100,12 @@ async function api(req, res, url) {
       const mes = franjas(local).dia.slice(0, 7);
       return send(res, 200, { ...lic, tarifa_mes: LIC.tarifaMes(lid, mes), pagos: LIC.pagos(lid).map(({ fecha, desde, hasta, monto, tarifa, medio, factura }) => ({ fecha, desde, hasta, monto, tarifa, medio, factura })),
         planes: Object.fromEntries(Object.entries(PLANES).map(([k, v]) => [k, { nombre: v.nombre, mes: v.mes, funciones: v.funciones, usuarios: v.usuarios === Infinity ? null : v.usuarios }])) });
+    }
+    // Estado de resultados del mes (plan Gestión o superior, solo el dueño).
+    if (m === 'GET' && parts[1] === 'resultados') {
+      const mes = url.searchParams.get('mes') || franjas(local).dia.slice(0, 7);
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return send(res, 400, { error: 'Mes inválido' });
+      return send(res, 200, resultados(local, mes));
     }
     // Horas trabajadas del mes según las marcas de entrada y salida.
     if (m === 'GET' && parts[1] === 'turnos') {

@@ -173,7 +173,7 @@ Los puntos 1 a 8 de §2. Entregable: Gassuso operando con el canal propio y la c
 Etapas de `PLAN-CONTROL.md`: 1 gastos y arqueo → 4 exportar → 3 usuarios con PIN → 2 estado de
 resultados → 6 combos → 5 inventario → 7 SII. Es el contenido de los planes Gestión y Pro.
 
-### L3. Plataforma multi-local. Antes del 2º cliente
+### L3. Plataforma multi-local. Antes del 2º cliente — ✅ hecho el 2026-10-14 (falta el autoservicio)
 Hoy la base ya separa por `local_id`, pero el sistema funciona como si hubiera un solo local:
 - La clave del panel es **una sola, global** (`PANEL_PASSWORD`), y el login asume `gassuso` por defecto.
 - Los locales solo se crean desde el seed, cuando la base está vacía. No hay forma de dar de alta otro.
@@ -187,7 +187,7 @@ Hay que hacer:
 - Separar `server.mjs` (1.100 líneas) en módulos: `lib/db.mjs`, `lib/panel.mjs`, `lib/licencias.mjs`, etc.
   Así ninguna pieza nueva crece dentro del archivo gigante.
 
-### L4. Gestor de licencias y cobro. Junto con L3 (ver §5)
+### L4. Gestor de licencias y cobro. Junto con L3 (ver §5) — ✅ fase 1 hecha el 2026-10-14 (cobro manual)
 
 ### L5. Integraciones. Después de la v1.0, según demanda
 Pago online (Mercado Pago o Flow, con la cuenta del local) → boleta SII directa (proveedor de DTE) →

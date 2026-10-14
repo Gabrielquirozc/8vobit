@@ -222,5 +222,39 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     return enlaces;
   }
 
-  return { bloqueCaja, conectar, difTxt, pintarGastos, conectarGastos, bloqueExportar, conectarExportar };
+  // ---------- estado de resultados (pestaña Resultados) ----------
+  let rMes = null;
+  async function pintarResultados(el, mes = rMes) {
+    const R = await api(`panel/resultados${mes ? `?mes=${mes}` : ''}`);
+    rMes = R.mes;
+    const A = R.anterior, hoyMes = isoLocal(new Date()).slice(0, 7);
+    const var_ = (a, b) => (b ? `<span class="opc">${a >= b ? '▲' : '▼'} ${clp(Math.abs(a - b))}</span>` : '');
+    const fila = (n, v, ant, cls = '') => `<tr class="${cls}"><td>${n}</td><td class="r">${v < 0 ? '−' : ''}${clp(Math.abs(v))}</td><td class="r opc">${ant == null ? '' : `${ant < 0 ? '−' : ''}${clp(Math.abs(ant))}`}</td></tr>`;
+    const P = R.personal;
+    el.innerHTML = `
+      <div class="res-head"><div style="display:flex;align-items:center;gap:8px">
+        <button class="ghost ico-b" data-rm="-1" aria-label="Mes anterior">${ico('left')}</button>
+        <h2 class="t" style="margin:0">Resultados de ${esc(nombreMes(R.mes))}</h2>
+        <button class="ghost ico-b" data-rm="1" aria-label="Mes siguiente" ${R.mes >= hoyMes ? 'disabled' : ''}>${ico('right')}</button></div>
+        <button class="ghost" data-print style="display:inline-flex;align-items:center;gap:6px;width:auto">${ico('printer')}Imprimir</button></div>
+      <div class="kpis">
+        <div>Ventas cobradas<b class="num">${clp(R.ventas)}</b><span class="sub">${R.pedidos} pedidos ${var_(R.ventas, A.ventas)}</span></div>
+        <div>Margen de la comida<b class="num">${clp(R.margen_bruto)}</b><span class="sub">${R.ventas ? Math.round((R.margen_bruto / R.ventas) * 100) : 0}% de las ventas</span></div>
+        <div class="${R.resultado >= 0 ? 'cj-res ok' : 'cj-res mal'}">Resultado del mes<b class="num">${R.resultado < 0 ? '−' : ''}${clp(Math.abs(R.resultado))}</b><span class="sub">${R.margen_pct == null ? '' : `${R.margen_pct}% de las ventas`} ${var_(R.resultado, A.resultado)}</span></div>
+        <div>Comisión que no pagaste<b class="num">${clp(R.comision_app)}</b><span class="sub">${R.comision_app_pct}% de las ventas web, si fueran por app</span></div>
+      </div>
+      <table class="res-tabla"><tr><th></th><th class="r">${esc(nombreMes(R.mes))}</th><th class="r">Mes anterior</th></tr>
+        ${fila('Ventas cobradas', R.ventas, A.ventas)}
+        ${fila(`− Costo de la comida${R.lineas_estimadas ? ` <span class="opc">(${R.lineas_estimadas} línea${R.lineas_estimadas === 1 ? '' : 's'} estimada${R.lineas_estimadas === 1 ? '' : 's'} con ${R.costo_pct}%)</span>` : ''}`, -R.costo_comida, null)}
+        ${fila('= Margen de la comida', R.margen_bruto, A.margen_bruto, 'sub')}
+        ${fila(`− Personal <span class="opc">(${P.fuente === 'gastos' ? 'sueldos anotados en Gastos' : P.fuente === 'equipo' ? `estimado en Equipo, ${P.personas} persona${P.personas === 1 ? '' : 's'}` : 'sin datos: carga el equipo o anota los sueldos'})</span>`, -P.monto, -A.personal)}
+        ${R.operacion.map((g) => fila(`− ${esc(g.nombre)}`, -g.monto, null)).join('')}
+        ${fila('= Resultado', R.resultado, A.resultado, 'tot')}
+      </table>
+      <p class="ayuda">Compras de insumos anotadas este mes: <b>${clp(R.compras_insumos)}</b> (no se restan: el costo de la comida ya las considera; sirven para ver si el costo estimado está bien).
+        Despacho cobrado incluido en las ventas: ${clp(R.despacho_cobrado)}. Sin IVA ni impuestos: es una guía para la gestión; el balance lo hace el contador.</p>`;
+    el.querySelectorAll('[data-rm]').forEach((b) => b.onclick = () => pintarResultados(el, otroMes(R.mes, Number(b.dataset.rm))));
+  }
+
+  return { bloqueCaja, conectar, difTxt, pintarGastos, conectarGastos, bloqueExportar, conectarExportar, pintarResultados };
 }

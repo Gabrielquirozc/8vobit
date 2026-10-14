@@ -46,6 +46,12 @@ if [ ! -f "$DEST/.env" ]; then
 else
   echo ".env existente conservado"
 fi
+# Consola de administración (/admin): se agrega una sola vez a un .env que no la tenga.
+if ! grep -q '^ADMIN_PASSWORD=' "$DEST/.env"; then
+  ADM=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-20)
+  printf 'ADMIN_PASSWORD=%s\n' "$ADM" >> "$DEST/.env"
+  echo ">>> Clave de administracion para /admin (anotala, no se vuelve a mostrar): $ADM"
+fi
 
 paso "6/7 Construir y levantar"
 cd "$DEST"
@@ -55,6 +61,7 @@ paso "7/7 Verificaciones"
 for i in $(seq 1 20); do curl -fsS "http://127.0.0.1:$PORT/salud" >/dev/null 2>&1 && break; sleep 1; done
 echo "salud: $(curl -sS http://127.0.0.1:$PORT/salud)"
 echo "carta: HTTP $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/gassuso)"
+echo "salud completa: $(curl -sS http://127.0.0.1:$PORT/salud/completo)"
 echo "fotos en el volumen: $(docker exec pedidos sh -c 'ls /data/img | wc -l')"
 echo "hora del contenedor: $(docker exec pedidos date '+%H:%M %Z')  (debe ser hora de Chile)"
 echo "escritura en /data: $(docker exec pedidos sh -c 'touch /data/.w && rm /data/.w && echo ok')"
