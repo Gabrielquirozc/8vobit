@@ -10,7 +10,8 @@ Antes de trabajar en `pedidos/`, lee en este orden:
 
 1. `pedidos/PENDIENTES.md`: estado, cómo correr, probar y desplegar, mapa del código, pendientes con el dueño y decisiones tomadas.
 2. `pedidos/PLAN-CONTROL.md`: comparativa con Fudo (planes y precios) y plan por etapas del **sistema de control propio** (gastos, estado de resultados, usuarios con PIN, inventario…).
-3. `pedidos/README.md`: detalle de cada función.
+3. `pedidos/ESTRATEGIA.md`: competencia (Fudo, Justo), producto de entrada, planes, líneas de trabajo y diseño del gestor de licencias.
+4. `pedidos/README.md`: detalle de cada función.
 
 ## Reglas de trabajo
 

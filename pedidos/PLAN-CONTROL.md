@@ -16,14 +16,15 @@ Módulos aparte ($/mes + IVA): Ventas por comensal 4.500 · Gestión de mesas 4.
 Multi-sucursal: a cotizar.
 
 Un local de delivery como Gassuso con Fudo pagaría al menos Avanzado + Delivery Apps + Monitor de cocina
-= **$53.500 + IVA ≈ $63.665/mes**, y aun así **no tendría canal de venta propio con despacho**: Fudo
-ordena los pedidos de las apps, pero las apps siguen cobrando su comisión (~25–30 %).
+= **$53.500 + IVA ≈ $63.665/mes**. Fudo ordena los pedidos de las apps, pero las apps siguen cobrando
+su comisión (~25–30 %). **Corrección:** Fudo *sí* tiene canal propio ("Tu Delivery": tienda online,
+pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver `ESTRATEGIA.md`.
 
 ## Dónde estamos frente a Fudo
 
 | Función | Nosotros | Nota |
 |---|---|---|
-| Canal propio: carta web, pedido, seguimiento | ✅ | Fudo no lo tiene (su QR es para la mesa). **Es el argumento principal.** |
+| Canal propio: carta web, pedido, seguimiento | ✅ | Fudo lo tiene ("Tu Delivery", 1,9 % por venta); Justo cobra 10–13 %. Nuestro argumento: **0 % de comisión**. |
 | Despacho por zonas, costo por vehículo, mínimo y horario | ✅ | Fudo no lo tiene. |
 | Venta de mostrador, comanda 80 mm, medios de pago | ✅ | |
 | Pedidos en vivo para cocina (equivale al Monitor de cocina) | ✅ | Fudo lo cobra aparte (9.500). |
@@ -67,7 +68,7 @@ Cada etapa se puede desplegar sola.
 
 ## Cómo cobrarlo (propuesta para discutir)
 
-Referencia: Fudo cobra $34.500–52.500 + IVA sin canal propio, y Uber se lleva ~25–30 % de cada venta.
+Propuesta vigente de planes y precios en `ESTRATEGIA.md` §3. Referencia: Fudo cobra $34.500–52.500 + IVA (+1,9 % en su tienda online), y Uber se lleva ~25–30 % de cada venta.
 
 - **Pedidos** (carta web, despacho por zonas, panel de pedidos y caja): debajo de Fudo Inicial.
 - **Control** (Pedidos + gastos, estado de resultados, usuarios con PIN, exportar, equipo): a la altura

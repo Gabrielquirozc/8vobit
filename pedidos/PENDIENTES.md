@@ -1,6 +1,7 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-14 (comparativa Fudo y plan de control). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
+Última actualización: 2026-10-14 (estrategia: competencia Fudo/Justo, producto de entrada, planes,
+líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
 decirle "lee pedidos/PENDIENTES.md y sigamos".
@@ -79,6 +80,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
+- [ ] **Estrategia** (`ESTRATEGIA.md`): cerrar las "decisiones abiertas" (precios, piloto, quién
+      factura) antes de construir. Producto de entrada v1.0 = lo hecho + gastos/arqueo + exportar CSV +
+      monitoreo + prueba en el local. Luego multi-local (L3) y gestor de licencias (L4).
 - [ ] **Sistema de control propio**: plan por etapas en `PLAN-CONTROL.md` (comparado con Fudo). Siguiente:
       etapa 1, gastos y movimientos de caja con arqueo; luego estado de resultados y usuarios con PIN
       (incluye registro de turnos reales para el sueldo).
