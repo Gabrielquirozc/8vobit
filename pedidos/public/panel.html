@@ -1534,7 +1534,9 @@ async function guardarDespacho() {
 // ---------- equipo ----------
 // Trabajadores (por ahora, sobre todo repartidores) con su contrato, turno y una liquidación
 // ESTIMADA según la ley chilena (laboral.js). Su costo entra al costeo del despacho.
-const ROLES = { repartidor: '🛵 Repartidor', cocina: '🍳 Cocina', caja: '💵 Caja', otro: '👤 Otro' };
+// "Cocina y caja": en locales chicos es una sola persona. Cuenta en ambas áreas para la cobertura.
+const ROLES = { cocina_caja: '🍳💵 Cocina y caja', cocina: '🍳 Cocina', caja: '💵 Caja', repartidor: '🛵 Repartidor', otro: '👤 Otro' };
+const ROL_TXT = { cocina_caja: 'cocina y caja', cocina: 'cocina', caja: 'caja', repartidor: 'reparto', otro: 'otro' };
 let EQ = null, eqMes = null;
 const eqLab = () => M.equipo?.laboral || LB.LABORAL_BASE;
 const mesLargo = (m) => new Date(`${m}-15T12:00:00`).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
@@ -1577,7 +1579,7 @@ function pintarCobertura() {
   return `<section class="cardf cobert"><header class="sh"><h3>Cobertura de turnos</h3><span class="sp"></span><small>Personas de turno en cada hora del horario de atención</small></header>
     <div class="cobwrap"><table class="cob"><tr><th></th>${hs.map((h) => `<th>${String(h % 24).padStart(2, '0')}</th>`).join('')}</tr>
     ${c.filas.map((f) => `<tr><th>${f.n.slice(0, 3)}</th>${f.celdas.map((x) => !x.abierto ? '<td class="cerr"></td>'
-      : `<td class="${x.quien.length ? `n${Math.min(3, x.quien.length)}` : 'cero'}" title="${esc(x.quien.map((t) => `${t.nombre} (${ROLES[t.rol].split(' ').pop()})`).join(', ') || 'Abierto sin personal de turno')}">${x.quien.length}</td>`).join('')}</tr>`).join('')}</table></div>
+      : `<td class="${x.quien.length ? `n${Math.min(3, x.quien.length)}` : 'cero'}" title="${esc(x.quien.map((t) => `${t.nombre} (${ROL_TXT[t.rol]})`).join(', ') || 'Abierto sin personal de turno')}">${x.quien.length}</td>`).join('')}</tr>`).join('')}</table></div>
     <p class="ayuda">Gris: cerrado. <span class="cobl cero">0</span> abierto sin nadie de turno. Pasa el dedo o el mouse sobre una hora para ver quiénes están.</p></section>`;
 }
 async function pintarEquipo() {
@@ -1610,7 +1612,7 @@ async function pintarEquipo() {
       <div>Por área<span class="sub porrol">${Object.entries(P.porRol).filter(([, x]) => x.personas).map(([r, x]) => `${ROLES[r]}: <strong>${x.personas}</strong> · ${clp(x.costo)}`).join('<br>') || 'Sin personal cargado'}</span></div>
     </div>`; })()}
     ${pintarCobertura()}
-    <div class="eqlista">${['cocina', 'caja', 'repartidor', 'otro'].flatMap((rol) => EQ.trabajadores.filter((t) => t.rol === rol)).map((t) => { const x = ts.find((y) => y.id === t.id), l = t.liquidacion;
+    <div class="eqlista">${['cocina_caja', 'cocina', 'caja', 'repartidor', 'otro'].flatMap((rol) => EQ.trabajadores.filter((t) => t.rol === rol)).map((t) => { const x = ts.find((y) => y.id === t.id), l = t.liquidacion;
       return `<article class="cardf eqcard ${x.activo === false ? 'off' : ''}">
         <header class="sh"><div><h3>${esc(t.nombre)}</h3><small>${ROLES[t.rol]} · ${x.contrato === 'indefinido' ? 'Indefinido' : 'Plazo fijo'} · ${l.horasSemana.toLocaleString('es-CL')} h/semana${x.activo === false ? ' · inactivo' : ''}</small></div>
           <span class="sp"></span><button class="ghostb" data-trab="${t.id}">Editar</button></header>

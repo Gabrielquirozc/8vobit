@@ -647,7 +647,7 @@ function actualizarLocal(local, b) {
       const turno = {};
       for (const [d] of LB.DIAS_SEM) { const x = t.turno?.[d]; if (Array.isArray(x) && hh.test(x[0]) && hh.test(x[1])) turno[d] = [x[0], x[1], Math.round(num(x[2] || 0, 0, 120))]; }
       return { id: String(t.id || `t${i + 1}`).replace(/[^\w-]/g, '').slice(0, 20) || `t${i + 1}`, nombre: txt(t.nombre, 60), rut: txt(t.rut, 12),
-        rol: ['repartidor', 'cocina', 'caja', 'otro'].includes(t.rol) ? t.rol : 'repartidor', contrato: t.contrato === 'indefinido' ? 'indefinido' : 'plazo_fijo',
+        rol: ['repartidor', 'cocina', 'caja', 'cocina_caja', 'otro'].includes(t.rol) ? t.rol : 'repartidor', contrato: t.contrato === 'indefinido' ? 'indefinido' : 'plazo_fijo',
         turno, sueldoBase: Math.round(num(t.sueldoBase || 0, 0, 10e6)), bonoEntrega: Math.round(num(t.bonoEntrega || 0, 0, 20000)),
         recargoDomingo: t.recargoDomingo !== false, gratificacion: t.gratificacion !== false, vehiculoPropio: !!t.vehiculoPropio, activo: t.activo !== false };
     }).map((t) => (t.rol === 'repartidor' ? t : { ...t, bonoEntrega: 0, vehiculoPropio: false })); // vehículo y bono: solo reparto
@@ -705,7 +705,7 @@ function equipoMes(local, mes) {
   const ventasMes = db.prepare("SELECT COALESCE(SUM(total),0) v, COUNT(*) n FROM pedidos WHERE local_id=? AND dia LIKE ? AND estado!='anulado'").get(local.id, `${mes}-%`);
   const personal = { costo: Math.round(activos.reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)), personas: activos.length,
     horasSemana: activos.reduce((a, t) => a + t.liquidacion.horasSemana, 0),
-    porRol: Object.fromEntries(['cocina', 'caja', 'repartidor', 'otro'].map((r) => { const l = activos.filter((t) => t.rol === r); return [r, { personas: l.length, costo: Math.round(l.reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) }]; })) };
+    porRol: Object.fromEntries(['cocina_caja', 'cocina', 'caja', 'repartidor', 'otro'].map((r) => { const l = activos.filter((t) => t.rol === r); return [r, { personas: l.length, costo: Math.round(l.reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) }]; })) };
   return { mes, laboral: p, trabajadores, ventas: { total: ventasMes.v, pedidos: ventasMes.n }, personal, despacho: { pedidos: peds.length, margen_comida: margenComida, sin_repartidor: peds.filter((x) => !x.repartidor_id).length,
     cobrado: peds.reduce((a, x) => a + (x.costo_despacho || 0), 0), costo_equipo: Math.round(activos.filter((t) => t.rol === 'repartidor').reduce((a, t) => a + t.liquidacion.costoEmpresa, 0)) } };
 }

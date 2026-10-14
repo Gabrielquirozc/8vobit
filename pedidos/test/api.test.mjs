@@ -687,6 +687,10 @@ test('equipo: sueldo del repartidor según la ley, privado, ligado al vehículo 
   assert.equal(ana.vehiculoPropio, false); assert.equal(ana.bonoEntrega, 0);
   const eq2 = (await req('GET', '/api/panel/carta')).body.equipo;
   assert.equal(LB.vehiculoConRepartidor({ ...moto, repartidorId: 'ana' }, eq2.trabajadores, eq2.laboral).repartidor, undefined);
+  // una sola persona en cocina y caja (lo común en locales chicos)
+  assert.equal((await eq([{ ...B, id: 'juan' }, { ...cocina, rol: 'cocina_caja' }])).status, 200);
+  const mesCC = (await req('GET', '/api/panel/equipo')).body.personal;
+  assert.equal(mesCC.porRol.cocina_caja.personas, 1); assert.equal(mesCC.personas, 2);
   await req('PATCH', '/api/panel/local', { despacho: { activo: true, costo: 0, minimo: 0, horario: dias } });
 });
 
