@@ -5,7 +5,7 @@
       "name": "pedidos",
       "runtimeExecutable": "node",
       "runtimeArgs": ["--disable-warning=ExperimentalWarning", "pedidos/server.mjs"],
-      "env": { "PANEL_PASSWORD": "demo", "DATA_DIR": "pedidos/data" },
+      "env": { "PANEL_PASSWORD": "demo", "ADMIN_PASSWORD": "admin-local", "DATA_DIR": "pedidos/data" },
       "port": 8099
     }
   ]

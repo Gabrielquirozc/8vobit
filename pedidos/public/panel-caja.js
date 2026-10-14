@@ -1,6 +1,6 @@
 // Panel: movimientos de caja (fondo, ingresos, retiros, gastos), arqueo al cierre y la pestaña Gastos.
 // Las utilidades llegan desde el panel (ctx) para no cargar comun.js dos veces.
-export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE }) {
+export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE, puede = () => true }) {
   const TIPO = { fondo: 'Fondo inicial', ingreso: 'Ingreso', retiro: 'Retiro', gasto: 'Gasto' };
   const MEDIOS = { efectivo: ['Efectivo', 'cash'], transferencia: ['Transferencia', 'bank'], tarjeta: ['Tarjeta', 'card'], otro: ['Otro', 'dots'] };
   const BILLETES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
@@ -72,11 +72,11 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <div class="cj-tot"><span>Debería haber</span><b class="num">${clp(E.total)}</b></div>
         <div class="cj-arqueo">${K ? `
           <div class="cj-res ${dif === 0 ? 'ok' : 'mal'}"><span>${dif === 0 ? 'Caja cuadrada' : dif > 0 ? 'Sobra' : 'Falta'}</span><b class="num">${dif === 0 ? clp(K.contado) : clp(Math.abs(dif))}</b>
-            <span class="sub">Contado ${clp(K.contado)} · esperado ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}</span></div>
+            <span class="sub">Contado ${clp(K.contado)} · esperado ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
           ${K.nota ? `<p class="nota" style="margin-top:8px">${ico('note')}<span>${esc(K.nota)}</span></p>` : ''}
           ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Hoy debería haber ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
           ${K.detalle.por_cobrar ? `<p class="ayuda">Al cerrar quedaban ${K.detalle.por_cobrar} pedido(s) por cobrar.</p>` : ''}
-          <button class="ghostb noprint" data-cj="reabrir" style="margin-top:10px">Reabrir caja</button>` : `
+          ${puede('reabrir_caja') ? '<button class="ghostb noprint" data-cj="reabrir" style="margin-top:10px">Reabrir caja</button>' : ''}` : `
           <form id="cjForm"><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
           <details class="cj-bill"><summary>Contar por billetes y monedas</summary><div class="cj-bills">${BILLETES.map((b) =>
             `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
@@ -86,10 +86,10 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <button class="primary" style="width:100%;margin-top:10px">Cerrar caja</button></form>`}
         </div></div>
       ${C.movimientos.length ? `<h3>Movimientos</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Tipo</th><th>Detalle</th><th>Medio</th><th class="r">Monto</th><th class="noprint"></th></tr>
-        ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(CATS[m.categoria] || m.categoria)}` : ''}</td>
+        ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}${m.usuario ? `<br><span class="opc">${esc(m.usuario)}</span>` : ''}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(CATS[m.categoria] || m.categoria)}` : ''}</td>
           <td>${esc(m.descripcion || '')}${m.documento ? ` <span class="opc">(${esc(m.documento)})</span>` : ''}</td><td>${MEDIOS[m.medio]?.[0] || ''}</td>
           <td class="r">${['retiro', 'gasto'].includes(m.tipo) ? '−' : ''}${clp(m.monto)}</td>
-          <td class="noprint r">${m.anulado ? 'Anulado' : (K && m.medio === 'efectivo') ? '' : `<button class="link peligro" data-cj="anular" data-id="${m.id}">Anular</button>`}</td></tr>`).join('')}</table></div>` : ''}
+          <td class="noprint r">${m.anulado ? `Anulado${m.anulado_por ? ` por ${esc(m.anulado_por)}` : ''}` : (K && m.medio === 'efectivo') ? '' : `<button class="link peligro" data-cj="anular" data-id="${m.id}">Anular</button>`}</td></tr>`).join('')}</table></div>` : ''}
     </section>`;
   }
   function difTxt(C) {

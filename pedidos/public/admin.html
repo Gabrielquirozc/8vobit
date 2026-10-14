@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Administración · Pedidos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="carta.css">
+<style>
+  /* Consola interna (solo nosotros): locales, licencias, pagos y números del negocio. */
+  body { background: var(--surface-2); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .top h1 { font: 800 1.4rem var(--font-display); margin: 0; flex: 1; }
+  .btn { min-height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 700; cursor: pointer; }
+  .btn.pri { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .btn.peligro { color: var(--danger); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpis div { background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); color: var(--ink-2); font-size: .88rem; }
+  .kpis b { display: block; font: 800 1.5rem var(--font-display); color: var(--ink); }
+  .tabla { overflow-x: auto; background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; min-width: 820px; }
+  td, th { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: .9rem; }
+  td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--surface-2); }
+  .chip { display: inline-block; font-size: .78rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); }
+  .chip.activa, .chip.prueba { background: #e6f4e7; color: #1d5e21; } .chip.gracia { background: #fff3cd; color: #7a5200; }
+  .chip.suspendida, .chip.cancelada { background: #fde2df; color: #8a1c12; }
+  @media (prefers-color-scheme: dark) {
+    .chip.activa, .chip.prueba { background: #1d3320; color: #9fdaa3; } .chip.gracia { background: #3a2e14; color: #f5cf7a; }
+    .chip.suspendida, .chip.cancelada { background: #3a1d1a; color: #f3a59b; }
+  }
+  .opc { color: var(--ink-2); font-size: .85rem; }
+  dialog { border: 0; border-radius: var(--r-lg); padding: 0; width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  dialog::backdrop { background: #0008; }
+  .dh { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+  .dh h2 { margin: 0; flex: 1; font: 800 1.2rem var(--font-display); }
+  .db { padding: 4px 18px 18px; overflow-wrap: anywhere; } dialog { overflow-x: hidden; }
+  .db h3 { font: 800 1rem var(--font-display); margin: 18px 0 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 12px; }
+  .field input, .field select, .field textarea { min-height: 44px; }
+  .clave { font: 700 1.3rem ui-monospace, monospace; background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); text-align: center; letter-spacing: .05em; user-select: all; }
+  #login { max-width: 360px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+  .mini td, .mini th { padding: 6px; font-size: .84rem; } .mini { min-width: 0; }
+</style>
+</head>
+<body>
+<section id="login" hidden>
+  <h1 style="font:800 1.4rem var(--font-display);margin:0 0 8px">Administración</h1>
+  <div class="field"><label for="clave">Clave de administración</label><input id="clave" type="password" autocomplete="current-password"></div>
+  <div class="formerr" id="loginErr" role="alert"></div>
+  <button class="btn pri" id="entrar" style="width:100%;margin-top:12px">Entrar</button>
+</section>
+<div class="wrap" id="app" hidden>
+  <div class="top"><h1>Locales y licencias</h1><button class="btn pri" id="nuevo">+ Nuevo local</button><button class="btn" id="salir">Salir</button></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th></tr></thead><tbody id="filas"></tbody></table></div>
+  <p class="opc" style="margin-top:10px">Ingreso mensual = lo que paga cada local por mes según su ciclo y descuento (solo cuentas activas o con pago pendiente). La tarifa por pedido se cobra a mes vencido.</p>
+</div>
+<dialog id="dlg"><div class="dh"><h2 id="dTitulo"></h2><button class="btn" id="dCerrar" aria-label="Cerrar">✕</button></div><div class="db" id="dBody"></div></dialog>
+<script type="module">
+import { api, clp, esc, BASE } from './comun.js';
+const $ = (id) => document.getElementById(id);
+const PLANES = { canal: 'Canal', gestion: 'Gestión', pro: 'Pro' };
+const CICLOS = { mensual: 'Mensual', semestral: 'Semestral (−10 %)', anual: 'Anual (−15 %)' };
+const ESTADO = { prueba: 'Prueba', activa: 'Activa', gracia: 'Pago pendiente', suspendida: 'Suspendida', cancelada: 'Cancelada' };
+const fecha = (d) => (d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const opciones = (o, sel) => Object.entries(o).map(([k, n]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${n}</option>`).join('');
+let R = null;
+
+async function pintar() {
+  R = await api('admin/resumen');
+  const t = R.totales, e = t.por_estado;
+  $('kpis').innerHTML = `<div>Ingreso mensual recurrente<b>${clp(t.mrr)}</b>sin IVA</div>
+    <div>Cobrado este mes<b>${clp(t.cobrado_mes)}</b>pagos registrados</div>
+    <div>Tarifa por pedido<b>${clp(t.tarifa_mes)}</b>este mes · anterior ${clp(t.tarifa_mes_anterior)}</div>
+    <div>Locales<b>${R.locales.length}</b>${e.activa} activos · ${e.prueba} en prueba</div>
+    <div>Atrasados<b>${e.gracia + e.suspendida}</b>${e.gracia} pago pendiente · ${e.suspendida} suspendidos</div>`;
+  $('filas').innerHTML = R.locales.map((l) => `<tr data-id="${l.id}"><td><b>${esc(l.nombre)}</b><br><span class="opc">/${esc(l.slug)}</span></td>
+    <td>${esc(l.plan_nombre || '—')}${l.descuento ? ` <span class="opc">−${l.descuento.pct}%</span>` : ''}</td><td><span class="chip ${l.estado}">${ESTADO[l.estado] || '—'}</span></td>
+    <td>${fecha(l.hasta)}${l.dias != null ? `<br><span class="opc">${l.dias >= 0 ? `en ${l.dias} días` : `hace ${-l.dias} días`}</span>` : ''}</td>
+    <td class="r">${clp(l.mrr)}</td><td class="r">${l.pedidos30} <span class="opc">(${l.web30})</span></td><td class="r">${clp(l.tarifa_mes)}</td>
+    <td>${fecha(l.ultimo_pedido)}</td><td class="r">${l.usuarios}</td></tr>`).join('') || '<tr><td colspan="9" class="opc">Sin locales.</td></tr>';
+}
+$('filas').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) detalle(Number(tr.dataset.id)); };
+
+async function detalle(id) {
+  const D = await api(`admin/locales/${id}`);
+  const L = D.licencia, E = D.estado;
+  $('dTitulo').textContent = D.local.nombre;
+  $('dBody').innerHTML = `
+    <p><span class="chip ${E.estado}">${ESTADO[E.estado]}</span> <span class="opc">${E.plan_nombre} · ${CICLOS[E.ciclo]} · ${clp(E.precio)} + IVA por período · hasta ${fecha(E.hasta)}</span></p>
+    <p class="opc"><a href="${BASE}/${esc(D.local.slug)}" target="_blank" rel="noopener">Ver carta</a> · panel: ${location.origin}${BASE}/panel?local=${esc(D.local.slug)}</p>
+    <h3>Licencia</h3>
+    <form id="fLic"><div class="grid">
+      <div class="field"><label for="lPlan">Plan</label><select id="lPlan">${opciones(PLANES, L.plan)}</select></div>
+      <div class="field"><label for="lCiclo">Ciclo</label><select id="lCiclo">${opciones(CICLOS, L.ciclo)}</select></div>
+      <div class="field"><label for="lPrueba">Prueba hasta</label><input type="date" id="lPrueba" value="${L.prueba_hasta || ''}"></div>
+      <div class="field"><label for="lVence">Pagado hasta</label><input type="date" id="lVence" value="${L.vence || ''}"></div>
+      <div class="field"><label for="lDesc">Descuento %</label><input type="number" min="0" max="100" id="lDesc" value="${L.descuento_pct}"></div>
+      <div class="field"><label for="lDescH">Descuento hasta</label><input type="date" id="lDescH" value="${L.descuento_hasta || ''}"></div>
+      <div class="field"><label for="lTarH">Sin tarifa por pedido hasta</label><input type="date" id="lTarH" value="${L.tarifa_exenta_hasta || ''}"></div>
+      <div class="field"><label><input type="checkbox" id="lCanc" ${L.cancelada ? 'checked' : ''}> Cancelada</label></div>
+    </div><div class="field"><label for="lNotas">Notas</label><textarea id="lNotas" rows="2" maxlength="500">${esc(L.notas || '')}</textarea></div>
+    <div class="formerr" id="lErr"></div><button class="btn pri" style="margin-top:8px">Guardar licencia</button></form>
+    <h3>Registrar pago</h3>
+    <form id="fPago"><div class="grid">
+      <div class="field"><label for="pCiclo">Período</label><select id="pCiclo">${opciones(CICLOS, L.ciclo)}</select></div>
+      <div class="field"><label for="pMedio">Medio</label><select id="pMedio">${opciones({ transferencia: 'Transferencia', efectivo: 'Efectivo', tarjeta: 'Tarjeta', flow: 'Flow', mercadopago: 'Mercado Pago', otro: 'Otro' }, 'transferencia')}</select></div>
+      <div class="field"><label for="pMonto">Monto plan (sin IVA)</label><input id="pMonto" inputmode="numeric" placeholder="Sugerido según plan"></div>
+      <div class="field"><label for="pTarifa">Tarifa por pedido incluida</label><input id="pTarifa" inputmode="numeric" placeholder="${D.tarifas[1].monto}"></div>
+      <div class="field"><label for="pRef">Referencia</label><input id="pRef" maxlength="80"></div>
+      <div class="field"><label for="pFac">N° factura</label><input id="pFac" maxlength="30"></div>
+    </div><div class="formerr" id="pErr"></div><button class="btn pri" style="margin-top:8px">Registrar pago</button>
+    <p class="opc">El período parte cuando termina lo ya pagado (o la prueba); si está atrasado, desde hoy. Precios sin IVA: ${Object.entries(D.precios[L.plan]).map(([c, v]) => `${c} ${clp(v)}`).join(' · ')}.</p></form>
+    <h3>Tarifa por pedido</h3>
+    <table class="mini"><tr><th>Mes</th><th class="r">Pedidos web</th><th class="r">Exentos</th><th class="r">Tarifa</th></tr>${D.tarifas.map((t) => `<tr><td>${t.mes}</td><td class="r">${t.pedidos}</td><td class="r">${t.exentos}</td><td class="r">${clp(t.monto)}</td></tr>`).join('')}</table>
+    <h3>Pagos</h3>
+    ${D.pagos.length ? `<table class="mini"><tr><th>Fecha</th><th>Período</th><th class="r">Plan</th><th class="r">Tarifa</th><th>Medio</th><th>Factura</th></tr>${D.pagos.map((p) => `<tr><td>${fecha(p.fecha)}</td><td>${fecha(p.desde)} → ${fecha(p.hasta)}</td><td class="r">${clp(p.monto)}</td><td class="r">${clp(p.tarifa)}</td><td>${esc(p.medio)}</td><td>${esc(p.factura || '')}</td></tr>`).join('')}</table>` : '<p class="opc">Sin pagos.</p>'}
+    <h3>Acceso</h3>
+    <button class="btn peligro" id="nClave" type="button">Generar clave nueva del local</button> <span class="opc">La anterior deja de funcionar.</span>
+    <div id="clv"></div>
+    <h3>Historial</h3>
+    <table class="mini">${D.eventos.map((e) => `<tr><td>${esc(e.fecha.slice(0, 16))}</td><td>${esc(e.tipo)}</td><td class="opc">${esc(JSON.stringify(e.detalle))}</td></tr>`).join('')}</table>`;
+  $('dlg').showModal();
+  const num = (v) => (String(v).trim() === '' ? '' : Number(String(v).replace(/\D/g, '')));
+  $('fLic').onsubmit = async (ev) => {
+    ev.preventDefault();
+    try {
+      await api(`admin/locales/${id}/licencia`, { method: 'PATCH', body: { plan: $('lPlan').value, ciclo: $('lCiclo').value, prueba_hasta: $('lPrueba').value, vence: $('lVence').value,
+        descuento_pct: Number($('lDesc').value || 0), descuento_hasta: $('lDescH').value, tarifa_exenta_hasta: $('lTarH').value, cancelada: $('lCanc').checked, notas: $('lNotas').value } });
+      await pintar(); detalle(id);
+    } catch (err) { $('lErr').textContent = err.message; }
+  };
+  $('fPago').onsubmit = async (ev) => {
+    ev.preventDefault();
+    try {
+      const r = await api(`admin/locales/${id}/pagos`, { method: 'POST', body: { ciclo: $('pCiclo').value, medio: $('pMedio').value, monto: num($('pMonto').value), tarifa: num($('pTarifa').value), referencia: $('pRef').value, factura: $('pFac').value } });
+      alert(`Pago registrado: ${clp(r.monto)} por ${fecha(r.desde)} → ${fecha(r.hasta)}.`);
+      await pintar(); detalle(id);
+    } catch (err) { $('pErr').textContent = err.message; }
+  };
+  $('nClave').onclick = async () => {
+    if (!confirm('¿Generar una clave nueva? La actual deja de funcionar.')) return;
+    const r = await api(`admin/locales/${id}/clave`, { method: 'POST' });
+    $('clv').innerHTML = `<p>Clave nueva (cópiala ahora; no se vuelve a mostrar):</p><div class="clave">${esc(r.clave)}</div>`;
+  };
+}
+
+$('nuevo').onclick = () => {
+  $('dTitulo').textContent = 'Nuevo local';
+  $('dBody').innerHTML = `<form id="fNuevo"><div class="grid">
+      <div class="field"><label for="nNombre">Nombre</label><input id="nNombre" maxlength="80" required></div>
+      <div class="field"><label for="nSlug">Código (dirección de la carta)</label><input id="nSlug" maxlength="40" placeholder="la-picada" autocapitalize="off" required></div>
+      <div class="field"><label for="nPlan">Plan</label><select id="nPlan">${opciones(PLANES, 'gestion')}</select></div>
+      <div class="field"><label for="nDias">Días de prueba</label><input id="nDias" type="number" min="0" max="365" value="14"></div>
+      <div class="field"><label for="nWa">WhatsApp</label><input id="nWa" type="tel" placeholder="+56 9 1234 5678"></div>
+      <div class="field"><label for="nDir">Dirección</label><input id="nDir" maxlength="120"></div>
+    </div>
+    <div class="field"><label for="nCarta">Carta en JSON <span class="opc">(opcional; mismo formato que seed/gassuso.json: categorías con productos)</span></label><textarea id="nCarta" rows="5" placeholder='{"categorias":[{"nombre":"Sándwiches","productos":[{"nombre":"Lomito","precio":6000}]}]}'></textarea></div>
+    <div class="field"><label for="nNotas">Notas</label><input id="nNotas" maxlength="500"></div>
+    <div class="formerr" id="nErr"></div><button class="btn pri" style="margin-top:10px">Crear local</button></form>`;
+  $('nNombre').oninput = () => { if (!$('nSlug').dataset.tocado) $('nSlug').value = $('nNombre').value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40); };
+  $('nSlug').oninput = () => { $('nSlug').dataset.tocado = 1; };
+  $('fNuevo').onsubmit = async (ev) => {
+    ev.preventDefault();
+    try {
+      const r = await api('admin/locales', { method: 'POST', body: { nombre: $('nNombre').value, slug: $('nSlug').value, plan: $('nPlan').value, prueba_dias: $('nDias').value,
+        whatsapp: $('nWa').value, direccion: $('nDir').value, carta: $('nCarta').value.trim() || undefined, notas: $('nNotas').value } });
+      $('dBody').innerHTML = `<p>Local creado. Entrégale al dueño estos datos (la clave no se vuelve a mostrar):</p>
+        <p>Carta: <a href="${BASE}/${esc(r.slug)}" target="_blank" rel="noopener">${location.origin}${BASE}/${esc(r.slug)}</a><br>Panel: ${location.origin}${BASE}/panel?local=${esc(r.slug)}<br>Código del local: <b>${esc(r.slug)}</b></p>
+        <div class="clave">${esc(r.clave)}</div>`;
+      pintar();
+    } catch (err) { $('nErr').textContent = err.message; }
+  };
+  $('dlg').showModal();
+};
+$('dCerrar').onclick = () => $('dlg').close();
+$('salir').onclick = async () => { await api('admin/logout', { method: 'POST' }); location.reload(); };
+
+async function iniciar() {
+  try { await pintar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
+  $('login').hidden = true; $('app').hidden = false;
+}
+$('entrar').onclick = async () => {
+  try { await api('admin/login', { method: 'POST', body: { password: $('clave').value } }); iniciar(); } catch (e) { $('loginErr').textContent = e.message; }
+};
+$('clave').onkeydown = (e) => e.key === 'Enter' && $('entrar').click();
+iniciar();
+</script>
+</body>
+</html>

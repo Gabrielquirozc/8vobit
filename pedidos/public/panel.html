@@ -394,6 +394,22 @@
   @media (max-width: 980px) { .dgrid { grid-template-columns: 1fr; } .dmapwrap { position: static; order: -1; } .dmapcard { height: 60dvh; } }
   #login { max-width: 380px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
   #login h1 { font: 800 1.6rem var(--font-display); margin: 0 0 8px; }
+  .pin-dots { display: flex; justify-content: center; gap: 12px; min-height: 18px; margin: 4px 0 14px; }
+  .pin-dots span { width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--ink-2); } .pin-dots span.on { background: var(--ink); border-color: var(--ink); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pin-pad button { min-height: 62px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: 700 1.4rem var(--font-display); display: grid; place-items: center; }
+  .pin-pad button.ok { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .pin-turno { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .quien { border: 1px solid #ffffff33; background: transparent; color: inherit; border-radius: 999px; padding: 4px 12px; text-align: left; line-height: 1.15; cursor: pointer; }
+  .quien small { display: block; font-size: .72rem; opacity: .75; } .quien:empty { display: none; }
+  .banner { padding: 10px 16px; font-weight: 600; font-size: .92rem; text-align: center; }
+  .banner.mal { background: #fde2df; color: #8a1c12; } .banner.aviso { background: #fff3cd; color: #6b4a00; }
+  @media (prefers-color-scheme: dark) { .banner.mal { background: #3a1d1a; color: #f3a59b; } .banner.aviso { background: #3a2e14; color: #f5cf7a; } }
+  .tab.bloq::after { content: '🔒'; font-size: .75rem; margin-left: 4px; }
+  body.sin-costos .pmarg, body.sin-costos #cpct, body.sin-costos [data-ver="sincosto"], body.sin-costos .solo-costos { display: none !important; }
+  .tabla-plan { box-shadow: none; margin-top: 6px; } .tabla-plan td, .tabla-plan th { padding: 8px 6px; }
+  .plan-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .plan-cab b { font: 800 1.3rem var(--font-display); }
+  .u-form { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
 </style>
 </head>
@@ -429,12 +445,7 @@
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
 </svg>
 
-<section id="login" hidden>
-  <h1>Panel del local</h1>
-  <div class="field"><label for="clave">Clave</label><input id="clave" type="password" autocomplete="current-password"></div>
-  <div class="formerr" id="loginErr" role="alert"></div>
-  <button class="primary" id="entrar" style="width:100%;margin-top:12px">Entrar</button>
-</section>
+<section id="login" hidden></section>
 
 <div id="app" hidden>
   <header class="bar">
@@ -452,10 +463,12 @@
     </nav>
     <span class="sp"></span>
     <span class="kpi num" id="kpi"></span>
+    <button class="quien" id="quien" type="button" aria-label="Cambiar de usuario"></button>
     <button class="pausa" id="pausa" aria-pressed="false" title="Pausar o reanudar los pedidos por la web"><span class="dot"></span><span id="pausaTxt">Recibiendo pedidos web</span></button>
     <button class="icobtn" id="sonido" aria-pressed="false" aria-label="Activar sonido de pedidos nuevos" title="Sonido"><svg class="ico"><use href="#i-bell-off"/></svg></button>
     <button class="icobtn" id="salir" aria-label="Salir" title="Salir"><svg class="ico"><use href="#i-out"/></svg></button>
   </header>
+  <div id="banner" class="banner" role="status" hidden></div>
   <main>
     <div id="v-pedidos" class="cols"></div>
     <div id="v-venta" class="venta" hidden>
@@ -538,6 +551,7 @@ import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
 import * as H from './hex.js';
 import * as LB from './laboral.js';
 import { crearCajaUI } from './panel-caja.js';
+import { crearCuentaUI } from './panel-cuenta.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -546,6 +560,8 @@ new ResizeObserver(([e]) => document.documentElement.style.setProperty('--barh',
 let D = null, M = null, conocidos = null, audio = null, vista = 'pedidos';
 const MEDIO = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', otro: 'Otro' };
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
+// Quién usa el panel, permisos y plan (public/panel-cuenta.js).
+const CUENTA = crearCuentaUI({ $, ico, toast, api, clp, esc });
 
 // ---------- sonido ----------
 function beep() {
@@ -570,7 +586,7 @@ function tarjeta(p) {
     preparacion: `<button class="paso" data-acc="listo" data-id="${p.id}">${ico('check')}Listo para entregar</button>`,
     listo: p.pagado
       ? `<button class="paso verde" data-acc="entregar" data-id="${p.id}">${ico('check')}Entregar (ya pagado)</button>`
-      : `<button class="paso verde" data-acc="cobrar" data-id="${p.id}">${ico('cash')}Cobrar ${clp(p.total)}</button>`,
+      : CUENTA.puede('cobrar') ? `<button class="paso verde" data-acc="cobrar" data-id="${p.id}">${ico('cash')}Cobrar ${clp(p.total)}</button>` : '<p class="ayuda" style="text-align:center">Listo: lo cobra caja.</p>',
   };
   const seg = `${location.origin}${BASE}/seguimiento?p=${p.token}`;
   const msg = p.estado === 'listo'
@@ -593,8 +609,8 @@ function tarjeta(p) {
     <div class="acc">
       ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
       <button data-acc="comanda" data-id="${p.id}">${ico('printer')}Comanda</button>
-      ${!p.pagado ? `<button data-acc="pagado" data-id="${p.id}">${ico('cash')}Ya pagó</button>` : '<span aria-hidden="true" style="border:0"></span>'}
-      <button class="peligro" data-acc="anular" data-id="${p.id}">${ico('ban')}Anular</button>
+      ${!p.pagado && CUENTA.puede('cobrar') ? `<button data-acc="pagado" data-id="${p.id}">${ico('cash')}Ya pagó</button>` : '<span aria-hidden="true" style="border:0"></span>'}
+      ${CUENTA.puede('anular') ? `<button class="peligro" data-acc="anular" data-id="${p.id}">${ico('ban')}Anular</button>` : '<span aria-hidden="true" style="border:0"></span>'}
     </div></article>`;
 }
 function pintarPedidos() {
@@ -842,7 +858,7 @@ function pintarCierre() {
         : '<p style="color:var(--ink-2)">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
     <h3>Detalle</h3>
     <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
-    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
+    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
   const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, [data-bill]')];
   if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); CAJA.difTxt(C); }
@@ -882,7 +898,7 @@ document.addEventListener('input', (e) => {
   t.value = v; const pos = Math.max(0, v.length - fin); t.setSelectionRange(pos, pos);
 });
 // Gastos, movimientos de caja y arqueo (public/panel-caja.js).
-const CAJA = crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE });
+const CAJA = crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE, puede: (x) => CUENTA.puede(x) });
 CAJA.conectar($('v-cierre'), () => CJ, () => recargarCaja().catch((e) => alert(e.message)));
 CAJA.conectarGastos($('v-gastos'));
 const exportarLinks = CAJA.conectarExportar($('v-resumen'));
@@ -1092,7 +1108,7 @@ function abrirProducto(p, cat) {
           <div class="field"><label for="fpCat">Categoría</label><select id="fpCat">${M.categorias.map((x) => `<option value="${x.id}" ${x.id === fp.categoria_id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></div></div>
       </div>
     </div>
-    <div class="dos"><div class="field"><label for="fpCosto">Costo de insumos <span class="opc">(por unidad)</span></label>${dinero('fpCosto', fp.costo, `placeholder="Sin dato: ≈ ${pctCosto()}% del precio"`)}</div>
+    <div class="dos solo-costos"><div class="field"><label for="fpCosto">Costo de insumos <span class="opc">(por unidad)</span></label>${dinero('fpCosto', fp.costo, `placeholder="Sin dato: ≈ ${pctCosto()}% del precio"`)}</div>
       <div class="field"><label>Margen</label><p class="fp-marg" id="fpMarg"></p></div></div>
     <div class="field"><label for="fpDesc">Descripción <span class="opc">(opcional)</span></label><textarea id="fpDesc" rows="2" maxlength="200" placeholder="Qué lleva, tamaño…">${esc(fp.descripcion || '')}</textarea></div>
     <div class="field"><label>Ingredientes que el cliente elige</label>
@@ -1185,11 +1201,13 @@ async function pintarLocal() {
   await cargarCarta();
   const L = M.local, t = L.transferencia || {}, g = L.legal || {};
   const campo = (id, label, val, extra = '', ayuda = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}<div class="err" id="${id}-err"></div></div>`;
-  const SEC = [['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-legal', 'Datos legales'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
+  const SEC = [['s-plan', 'Tu plan'], ['s-usuarios', 'Usuarios y PIN'], ['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-legal', 'Datos legales'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
   const tipoOk = !t.tipo || TIPOS.includes(t.tipo);
   $('v-local').innerHTML = `<div class="lwrap">
     <nav class="lnav" aria-label="Secciones">${SEC.map(([id, n]) => `<a href="#${id}" data-sec="${id}">${n}</a>`).join('')}</nav>
     <div class="lform">
+    <section class="cardf" id="s-plan"></section>
+    <section class="cardf" id="s-usuarios"></section>
     <section class="cardf" id="s-contacto"><h3>Contacto</h3><p class="ayuda top">Lo que el cliente ve en la portada de la carta y en el seguimiento de su pedido.</p>
       <div class="dos">
         ${campo('l-nombre', 'Nombre del local', L.nombre, 'maxlength="60" required')}
@@ -1235,8 +1253,10 @@ async function pintarLocal() {
     <div class="lbar" id="lbar" role="region" aria-label="Cambios sin guardar"><span><b>Tienes cambios sin guardar</b><span class="formerr" id="l-err" role="alert"></span></span>
       <button type="button" class="ghost" id="l-descartar">Descartar</button><button class="primary" id="l-guardar">Guardar cambios</button></div>`;
   marcarSucio(false);
+  CUENTA.pintarPlan($('s-plan')).catch(() => {}); CUENTA.pintarUsuarios($('s-usuarios')).catch(() => {});
   const v = $('v-local'), q = (sel) => v.querySelector(sel);
-  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar') marcarSucio(true); };
+  // Plan y usuarios se guardan al tiro: no cuentan como cambios del formulario.
+  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar' && !e.target.closest('#s-usuarios, #s-plan')) marcarSucio(true); };
   const enlazar = (pre) => v.querySelectorAll(`[data-${pre}abre]`).forEach((c) => c.addEventListener('change', () => {
     const d = c.dataset[`${pre}abre`]; for (const k of ['desde', 'hasta']) q(`[data-${pre}${k}="${d}"]`).disabled = !c.checked;
   }));
@@ -1726,6 +1746,7 @@ async function pintarEquipo() {
   $('v-equipo').querySelector('[data-trab-nuevo]').onclick = () => abrirTrabajador(null);
   $('v-equipo').querySelectorAll('[data-trab]').forEach((b) => b.onclick = () => abrirTrabajador(ts.find((x) => x.id === b.dataset.trab)));
   $('v-equipo').querySelectorAll('[data-eqmes]').forEach((b) => b.onclick = () => { eqMes = otroMes(eqMes, Number(b.dataset.eqmes)); pintarEquipo(); });
+  CUENTA.bloqueHoras(eqMes).then((h) => $('v-equipo').insertAdjacentHTML('beforeend', h)).catch(() => {});
   $('lb-guardar').onclick = async () => {
     const n = (id) => Number(String($(id).value).replace(/\./g, '').replace(',', '.'));
     const laboral = { imm: digitos($('lb-imm').value), vigencia: $('lb-vig').value, jornadaMax: n('lb-jor'), recargoDomingo: n('lb-dom'),
@@ -1897,7 +1918,7 @@ async function pintarResumen() {
         `<tr><td>${esc(x.nombre)}</td><td class="r">${x.n}</td><td class="r">${clp(x.monto)}</td></tr>`).join('')}</table>` : '<p class="vacio">Sin ventas.</p>'}</div>
     </div>
     <p class="ayuda">La comisión ahorrada usa ${s.comision_app}% (se ajusta en Datos del local). Las ventas de mostrador no cuentan porque no pasarían por la app.</p>
-    ${CAJA.bloqueExportar()}`;
+    ${!CUENTA.puede('exportar') ? '' : CUENTA.tiene('exportar') ? CAJA.bloqueExportar() : `<section class="cardf noprint" style="margin-top:18px"><h3>Exportar para el contador</h3><p class="ayuda">Disponible en el plan Gestión: ventas, caja y gastos en Excel.</p></section>`}`;
   exportarLinks();
   $('v-resumen').querySelectorAll('[data-sem]').forEach((b) => b.onclick = () => {
     const d = new Date(`${semana}T12:00:00`); d.setDate(d.getDate() + Number(b.dataset.sem));
@@ -1926,6 +1947,8 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
   for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
+  const bloq = CUENTA.bloqueada(vista);
+  if (bloq) { $('v-' + vista).innerHTML = CUENTA.vistaBloqueada(bloq); return; }
   if (vista === 'carta') pintarCarta();
   else if (vista === 'resumen') pintarResumen();
   else if (vista === 'local') pintarLocal();
@@ -1946,17 +1969,19 @@ async function despierta() {
   try { bloqueo = await navigator.wakeLock.request('screen'); bloqueo.addEventListener('release', () => { bloqueo = null; }); } catch {}
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) despierta(); });
+let latido = null;
 async function iniciar() {
-  try { await cargarCarta(); await refrescar(); } catch (e) { if (e.status === 401) { $('login').hidden = false; $('clave').focus(); return; } throw e; }
+  try { await CUENTA.cargarYo(); } catch (e) { if (e.status === 401) return CUENTA.pantallaEntrada(iniciar); throw e; }
+  CUENTA.aplicar();
+  await cargarCarta(); await refrescar();
   $('app').hidden = false;
+  // Si el rol no ve la pestaña actual, se abre la primera que sí ve.
+  if (document.querySelector(`[data-v="${vista}"]`).hidden) document.querySelector('[data-v]:not([hidden])')?.click();
   despierta();
-  setInterval(() => !['carta', 'local', 'resumen', 'gastos'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  latido = latido || setInterval(() => !['carta', 'local', 'resumen', 'gastos'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
 }
-$('entrar').onclick = async () => {
-  try { await api('panel/login', { method: 'POST', body: { password: $('clave').value } }); $('login').hidden = true; iniciar(); }
-  catch (e) { $('loginErr').textContent = e.message; }
-};
-$('clave').onkeydown = (e) => e.key === 'Enter' && $('entrar').click();
+// Cambiar de usuario: cierra la sesión y vuelve al teclado de PIN de la tablet.
+$('quien').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
 iniciar();
 </script>
 </body>
