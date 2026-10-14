@@ -41,7 +41,7 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 | | Uber / PedidosYa | Justo Plus | Fudo Avanzado + Tu Delivery | **Nosotros** |
 |---|---|---|---|---|
 | Costo fijo | 0 | ≈ $67.000/mes | $34.500 + IVA | **plan fijo, más bajo (ver §3)** |
-| % por venta en canal propio | 25–30 % | 13 % + 7 % logística | 1,9 % | **0 %** |
+| % por venta en canal propio | 25–30 % | 13 % + 7 % logística | 1,9 % | **0,5 % con tope de $100** |
 | Despacho por zonas con costo real del viaje | — | logística propia | fijo o por zonas | **hexágonos + costeo por vehículo** |
 | Costo de producto y margen | — | — | con recetas (Avanzado) | ✅ (sin recetas) |
 | Sueldos y costo de personal según la ley | — | "pronto" | — | ✅ |
@@ -52,9 +52,10 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 | Soporte local, en persona | — | comercial | remoto | **✅ Concepción, en terreno** |
 
 **Argumento de venta (cierto y verificable):**
-1. **0 % de comisión y precio fijo.** Con $3.000.000 al mes por canal propio: Uber se lleva ~$750.000,
-   Justo ~$600.000 y Fudo ~$57.000 + plan. Nosotros solo cobramos el plan. El panel ya muestra cada mes la
-   comisión que el local se ahorró.
+1. **La comisión más baja: 0,5 % por pedido con tope de $100, más un plan fijo.** Con $3.000.000 al mes
+   por canal propio (≈ 250 pedidos de $12.000): Uber se lleva ~$750.000, Justo ~$600.000 y Fudo
+   ~$57.000 + plan. Nosotros cobramos ~$15.000 + plan. El panel ya muestra cada mes la comisión que el
+   local se ahorró.
 2. **Hecho para un local de delivery chico**, no para un restaurante con mesas: zonas que no pierden plata,
    costo real de cada despacho y sueldo del repartidor según la ley.
 3. **Cercanía**: puesta en marcha en el local, carga de la carta y las fotos, cartel QR y capacitación.
@@ -100,7 +101,12 @@ comisión ahorrada acumulada, caja cuadrada todos los días y el dueño usándol
 
 ## 3. Planes (decididos el 2026-10-14)
 
-Precios en CLP + IVA, sin comisión por venta. Se reajustan una vez al año por IPC.
+Precios en CLP + IVA. Se reajustan una vez al año por IPC.
+
+**Tarifa por pedido (decidida el 2026-10-14): 0,5 % + IVA de cada pedido de la carta online, con tope de
+$100 por pedido.** La paga el local de su venta, **no se le suma al precio del cliente**. Es tan baja que
+no justifica subir los precios de la carta (en un pedido de $12.000 son $60). La venta de mostrador no
+paga tarifa. Se cobra a mes vencido, junto con el plan, según los pedidos web no anulados del mes.
 
 **Formas de pago** (siempre por adelantado): mensual, **semestral −10 %** o **anual −15 %**.
 
@@ -145,6 +151,7 @@ Precios en CLP + IVA, sin comisión por venta. Se reajustan una vez al año por 
 | Meses 4–15 | **50 % de descuento durante el primer año pagado**, con cualquier forma de pago | $17.450/mes · $94.230 semestral · $177.990 anual |
 | Mes 16 en adelante | Precio normal | $34.900/mes · $188.460 semestral · $355.980 anual |
 
+- **Exento de la tarifa por pedido** (0,5 %) durante los meses 1 a 15; paga desde el mes 16.
 - A cambio: testimonio, uso de marca y fotos en nuestro material, y feedback mensual.
 - **Puesta en marcha**: aparece en la propuesta con su valor ($49.900), *bonificada 100 % por ser
   cliente fundador*. Así queda claro que tiene precio para los próximos clientes.
@@ -225,6 +232,7 @@ planes        id, codigo ('canal'|'gestion'|'pro'), nombre, precio_mes, precio_a
 licencias     id, local_id UNIQUE, plan_id, estado ('prueba'|'activa'|'gracia'|'suspendida'|'cancelada'),
               ciclo ('mensual'|'semestral'|'anual'), descuento_pct, descuento_hasta
               (precio fundador: 50 % hasta completar 12 meses pagados),
+              tarifa_pct (0,5), tarifa_tope (100), tarifa_exenta_hasta (Gassuso: fin del mes 15),
               inicio, vence, prueba_hasta, notas, creado, actualizado
 licencia_extras  licencia_id, codigo ('dominio'|'sii'|...), precio, desde, hasta
 pagos         id, licencia_id, periodo_desde, periodo_hasta, monto, medio ('transferencia'|'flow'|...),
@@ -240,6 +248,11 @@ El precio de cada cobro se calcula así: `precio del plan según el ciclo` (mens
 anual −15 %) × (1 − `descuento_pct`, si el período cae antes de `descuento_hasta`). Cada pago cubre
 1, 6 o 12 meses (`periodo_desde`/`periodo_hasta`). Si un pago semestral o anual cruza
 `descuento_hasta`, se prorratea por mes.
+
+La **tarifa por pedido** se calcula a mes vencido: Σ min(total × `tarifa_pct`/100, `tarifa_tope`) de
+los pedidos con `canal='web'` y `estado!='anulado'` del mes, salvo los que caen antes de
+`tarifa_exenta_hasta`. Queda como una línea del cobro del mes siguiente. El local la ve en el panel
+mientras el mes avanza, para que nunca lo tome por sorpresa.
 
 ### Cómo se aplica
 
@@ -303,7 +316,9 @@ local trae la pública. Por ahora **no se hace**: hoy no hay ningún caso que lo
 1. **Planes**: Canal $19.900, Gestión $34.900 y Pro $54.900 + IVA al mes (§3).
 2. **Formas de pago**: mensual, semestral −10 % o anual −15 %, por adelantado.
 3. **Piloto de Gassuso**: 3 meses gratis con Gestión, después 50 % solo durante el primer año pagado,
-   a cambio de testimonio, marca, fotos y feedback.
+   a cambio de testimonio, marca, fotos y feedback. Exento de la tarifa por pedido hasta el mes 15.
+6. **Tarifa por pedido**: 0,5 % + IVA por pedido web con tope de $100, absorbida por el local (no se le
+   traspasa al cliente). La venta de mostrador no paga.
 4. **Puesta en marcha**: bonificada a Gassuso, pero mostrada con su valor ($49.900).
 5. **Facturación**: persona natural de primera categoría con factura del SII; SpA al tener 3–5 clientes.
 

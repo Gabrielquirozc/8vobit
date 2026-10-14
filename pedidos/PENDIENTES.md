@@ -105,8 +105,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - Boleta modo 2 (asistida): el local emite la e-Boleta en el SII y registra el folio en Caja.
 - Mapas: OpenStreetMap + Leaflet incluido en `public/`; direcciones con Nominatim vía servidor.
 - Despacho por zonas con hexágonos (precio por tramo de distancia + ajustes a mano).
-- Planes sin comisión: Canal $19.900, Gestión $34.900, Pro $54.900 + IVA/mes; semestral −10 %, anual
-  −15 % (`ESTRATEGIA.md` §3).
+- Planes: Canal $19.900, Gestión $34.900, Pro $54.900 + IVA/mes; semestral −10 %, anual −15 %, más una
+  tarifa de 0,5 % por pedido web con tope de $100, absorbida por el local (`ESTRATEGIA.md` §3).
+  Gassuso está exento de la tarifa el primer año.
 - Gassuso: 3 meses gratis con Gestión, luego 50 % el primer año pagado; la puesta en marcha se le
   bonifica, pero se muestra con su valor.
 - Facturamos como persona natural de primera categoría (factura SII) y pasamos a SpA con 3–5 clientes.
