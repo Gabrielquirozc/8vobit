@@ -129,7 +129,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       (`public/legal-version.js`, cambiarla al editar `legal.html`); sin Google Fonts (tipografías del
       sistema); privacidad dice servidor en Chile; marcas de PIN rotuladas "control interno, no reemplaza
       el registro de asistencia de la DT".
-- [ ] **Legal, falta**: completar [corchetes] (nombre y RUT del prestador, datos de Gassuso), revisión de
+- [ ] **Legal, falta**: completar [corchetes] (nombre y RUT del prestador, datos de Gassuso), revisión jurídica
       de los 4 documentos (ver `legal/NOTAS-REVISION.md`), firma con Gassuso, y que el
       local lleve el registro oficial de asistencia aparte.
 - [ ] Infra: copiar `docker-compose.yml` y la regla del túnel al espejo `D:\VPS`; anotar puertos
