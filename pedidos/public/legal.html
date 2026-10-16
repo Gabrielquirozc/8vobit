@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Términos y privacidad</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;600;700&display=swap">
 <style>
   :root { --ink: #241c17; --ink-2: #6b5f57; --brand: #c1121f; --bg: #f6efe6; --surface: #fffaf3; --line: #241c171f; --warn: #fff1c2; }
   * { box-sizing: border-box; }
@@ -46,9 +43,9 @@
 <main><div class="in" id="doc"><p class="msg">Cargando…</p></div></main>
 <script type="module">
 import { api, esc, BASE, fmtTel } from './comun.js';
+import { LEGAL_VIGENCIA as VIGENCIA } from './legal-version.js';
 // Borradores de Términos y condiciones y Política de privacidad, armados con los datos del local.
-// Fecha de la versión: cambiarla cada vez que cambie el texto.
-const VIGENCIA = '14 de octubre de 2026';
+// Fecha de la versión: en legal-version.js (cambiarla cada vez que cambie el texto).
 const slug = new URLSearchParams(location.search).get('l') || '';
 const priv = location.pathname.endsWith('/privacidad');
 const $ = (id) => document.getElementById(id);
@@ -86,7 +83,7 @@ const TERMINOS = `
 <p>Los productos de esta carta los prepara y vende:</p>${ficha}
 
 <h2>2. Qué son estos términos</h2>
-<p>Estas condiciones rigen los pedidos que haces en esta carta en línea. Al tocar <b>Enviar pedido</b> declaras haberlas leído y aceptado.
+<p>Estas condiciones rigen los pedidos que haces en esta carta en línea. Al tocar <b>Enviar pedido</b> declaras haberlas leído y aceptado; junto a tu pedido guardamos la fecha de la versión que aceptaste.
 Puedes guardarlas o imprimirlas desde tu navegador. Nada de lo que dicen limita los derechos que te da la Ley N° 19.496 sobre Protección de los Derechos de los Consumidores.</p>
 
 <h2>3. Cómo funciona un pedido</h2>
@@ -161,7 +158,6 @@ const PRIVACIDAD = `
     <ul>
       <li>Cloudflare, que protege y entrega el sitio y mide visitas sin cookies.</li>
       <li>OpenStreetMap: tu navegador descarga desde ahí los mapas, y nuestro servidor le envía el texto de la dirección que buscas para ubicarla.</li>
-      <li>Google Fonts, de donde tu navegador descarga las tipografías.</li>
     </ul>
     Estos servicios funcionan fuera de Chile y reciben datos técnicos de tu conexión (como tu dirección IP).</li>
   <li><b>WhatsApp</b>: si usas el botón para escribirnos, el mensaje viaja por WhatsApp (Meta), según sus propias políticas.</li>
@@ -176,7 +172,7 @@ const PRIVACIDAD = `
 <p>Si no quedas conforme, puedes reclamar ante la Agencia de Protección de Datos Personales, conforme a la Ley N° 21.719, o ante los tribunales de justicia.</p>
 
 <h2>7. Cómo los protegemos</h2>
-<p>El sitio funciona solo con conexión cifrada (HTTPS). El panel del local, donde se ven los pedidos, requiere clave. Los datos de pago de transferencias que ves son los del local; nunca te pediremos claves ni códigos.</p>
+<p>Tus datos se guardan en un servidor ubicado en Chile, con copias de respaldo cifradas en tránsito y guardadas también en Chile. El sitio funciona solo con conexión cifrada (HTTPS). El panel del local, donde se ven los pedidos, requiere clave. Los datos de pago de transferencias que ves son los del local; nunca te pediremos claves ni códigos.</p>
 
 <h2>8. Cambios a esta política</h2>
 <p>Si cambiamos esta política, publicaremos aquí la nueva versión con su fecha. Se rige por la Ley N° 19.628 sobre Protección de la Vida Privada y sus modificaciones, incluida la Ley N° 21.719.</p>`;

@@ -68,7 +68,7 @@ movió la caja o la cerró. En el teclado de PIN también se **marca entrada y s
 del mes aparecen en Equipo. Botón con el nombre arriba a la derecha = cambiar de usuario.
 
 **Tu plan** (Datos del local, solo el dueño): plan, estado (prueba, activa, pago pendiente,
-suspendida), precio, descuento vigente, tarifa por pedido del mes (0,5 % con tope de $100, con los
+suspendida), precio, descuento vigente, tarifa por pedido del mes (1 % con tope de $200, con los
 pedidos exentos aparte) y pagos registrados. Las pestañas que el plan no incluye se ven con 🔒.
 
 **Carta y precios** (pensada para cargar datos rápido en la tablet): buscador, filtros *Sin precio /

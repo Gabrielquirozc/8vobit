@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import * as H from './public/hex.js';
 import * as LB from './public/laboral.js';
+import { LEGAL_VERSION } from './public/legal-version.js';
 import { crearCaja } from './lib/caja.mjs';
 import { crearExportar } from './lib/exportar.mjs';
 import { crearLicencias, PLANES, PLAN_DE } from './lib/licencias.mjs';
@@ -137,6 +138,8 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   if (!cols.has('canal')) db.exec("ALTER TABLE pedidos ADD COLUMN canal TEXT NOT NULL DEFAULT 'web'");
   // Quién cobró o anuló (nombre del usuario del panel).
   if (!cols.has('cobrado_por')) { db.exec('ALTER TABLE pedidos ADD COLUMN cobrado_por TEXT'); db.exec('ALTER TABLE pedidos ADD COLUMN anulado_por TEXT'); }
+  // Versión de los Términos y la Privacidad que aceptó el cliente (solo pedidos web).
+  if (!cols.has('legal_version')) db.exec('ALTER TABLE pedidos ADD COLUMN legal_version TEXT');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS pedidos_token ON pedidos(token)');
   for (const { id } of db.prepare('SELECT id FROM pedidos WHERE token IS NULL').all())
     db.prepare('UPDATE pedidos SET token=? WHERE id=?').run(crypto.randomBytes(16).toString('base64url'), id);
@@ -418,8 +421,8 @@ function pagina(file) {
       .map((m) => `'sha256-${crypto.createHash('sha256').update(m[1]).digest('base64')}'`);
     paginas.set(file, { html, csp: [
       // static.cloudflareinsights.com: Cloudflare Web Analytics, que la zona inyecta sola.
-      "default-src 'self'", `script-src 'self' ${hashes.join(' ')} https://static.cloudflareinsights.com`, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src https://fonts.gstatic.com", "img-src 'self' data: blob: https://tile.openstreetmap.org", "connect-src 'self' https://cloudflareinsights.com", "frame-ancestors 'none'",
+      "default-src 'self'", `script-src 'self' ${hashes.join(' ')} https://static.cloudflareinsights.com`, "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://tile.openstreetmap.org", "connect-src 'self' https://cloudflareinsights.com", "frame-ancestors 'none'",
       "base-uri 'none'", "form-action 'self'", "object-src 'none'",
     ].join('; ') });
   }
@@ -617,6 +620,7 @@ function guardarPedido(local, d, { items, total }) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
+    if ((d.canal || 'web') === 'web') db.prepare('UPDATE pedidos SET legal_version=? WHERE id=?').run(LEGAL_VERSION, pid);
     if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=?, repartidor_id=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, d.geo.repartidor_id ?? null, pid);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido,costo_unitario) VALUES (?,?,?,?,?,?,?,?,?,?)'

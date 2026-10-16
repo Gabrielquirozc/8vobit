@@ -9,7 +9,7 @@ datos reales** a medida que lleguen: pedidos web de Gassuso, horas de soporte, b
 - **Como negocio, sí es viable.** Los costos fijos son muy bajos (servidor propio, sin dependencias) y cada
   local deja casi todo como margen.
 - **La meta de $2.000.000 a medio tiempo y solo NO se alcanza el primer año.** Con un ritmo realista toma
-  **2 a 3 años** y pide **~55 locales pagando**. Lo que frena es el **tiempo de soporte**, no la plata: a
+  **~2 años** y pide **~42 locales pagando** (con la tarifa por pedido en 1 %, decidida el 2026-10-16). Lo que frena es el **tiempo de soporte**, no la plata: a
   medio tiempo y solo, el techo es de ~30–35 locales.
 - Para llegar hay que mover al menos una de estas palancas: **subir el ingreso por local**, **bajar el
   soporte por local** (autoservicio), **pasar a tiempo completo** o **contratar soporte** desde los
@@ -20,14 +20,14 @@ datos reales** a medida que lleguen: pedidos web de Gassuso, horas de soporte, b
 | Concepto | Supuesto | $/mes |
 |---|---|---|
 | Plan | Mezcla 30 % Canal, 55 % Gestión, 15 % Pro, ~7 % de descuento promedio por pagos semestrales y anuales | ≈ 31.000 |
-| Tarifa por pedido | 250 pedidos web/mes × $12.000 × 0,5 % = $60 c/u | ≈ 15.000 |
-| **Ingreso por local** | | **≈ 46.000** |
+| Tarifa por pedido | 250 pedidos web/mes × $12.000 × 1 % = $120 c/u | ≈ 30.000 |
+| **Ingreso por local** | | **≈ 61.000** |
 | Costo variable | Servidor y respaldos prorrateados, pasarela de cobro (fase 2) | ≈ −3.000 |
-| **Margen por local** | | **≈ 43.000** |
+| **Margen por local** | | **≈ 58.000** |
 
 Además está la **puesta en marcha** ($49.900 una vez, ≈ $35.000 libres después de impresos y traslado).
 
-Ojo: **la tarifa por pedido es ~⅓ del ingreso.** Vale tanto como empujar al local a vender por la web.
+Ojo: **la tarifa por pedido es ~½ del ingreso.** Vale tanto como empujar al local a vender por la web.
 Un local que solo vende en mostrador deja ~$31.000.
 
 ## 2. Costos fijos tuyos
@@ -44,16 +44,16 @@ Un local que solo vende en mostrador deja ~$31.000.
 renta (PPM mensual + Global Complementario anual) conviene **reservar ~12 % de la utilidad**. Hay que
 confirmarlo con el contador. Las cotizaciones de salud y pensión como independiente van aparte.
 
-**Cuánto queda en el bolsillo ≈ (locales × 43.000 + puestas en marcha − 115.000) × 0,88**
+**Cuánto queda en el bolsillo ≈ (locales × 58.000 + puestas en marcha − 115.000) × 0,88**
 
 | Locales pagando | En el bolsillo al mes (sin contar puestas en marcha) |
 |---|---|
-| 5 | ≈ $90.000 |
-| 10 | ≈ $280.000 |
-| 20 | ≈ $660.000 |
-| 30 | ≈ $1.030.000 |
-| 45 | ≈ $1.600.000 |
-| **55** | **≈ $1.980.000** |
+| 5 | ≈ $150.000 |
+| 10 | ≈ $410.000 |
+| 20 | ≈ $920.000 |
+| 30 | ≈ $1.430.000 |
+| 35 | ≈ $1.690.000 |
+| **42** | **≈ $2.040.000** |
 
 ## 3. Cuánto tarda en crecer
 
@@ -61,11 +61,11 @@ Altas por mes y bajas mensuales (los locales de comida cierran seguido; 2–3 % 
 
 | Escenario | Altas/mes | Bajas/mes | Mes 12 | Mes 24 | Mes 36 | En el bolsillo, mes 24 (con puestas en marcha) |
 |---|---|---|---|---|---|---|
-| Conservador | 1 | 3 % | 10 locales | 17 | 22 | ≈ $570.000 |
-| Base | 2 | 2 % | 21 | 38 | 52 | ≈ $1.400.000 |
-| Optimista | 3 | 1,5 % | 33 | 61 | 84 | ≈ $2.300.000 |
+| Conservador | 1 | 3 % | 10 locales | 17 | 22 | ≈ $820.000 |
+| Base | 2 | 2 % | 21 | 38 | 52 | ≈ $1.900.000 |
+| Optimista | 3 | 1,5 % | 33 | 61 | 84 | ≈ $3.100.000 |
 
-En el escenario base, **la meta llega cerca del mes 36**, y eso solo si el tiempo alcanza (punto 4).
+En el escenario base, **la meta llega cerca del mes 27**, y eso solo si el tiempo alcanza (punto 4).
 
 ## 4. El límite real: tus horas
 
@@ -90,16 +90,16 @@ con producto, no con esfuerzo: que el dueño se arregle solo.
 2. **Subir el ingreso por local** sin perder el argumento de precio:
    - Empujar a Gestión y Pro, que son los que traen el control que el dueño valora.
    - Cobrar extras: dominio propio, boleta SII directa, sesión de fotos, impresos (cartel, carta, tarjetas).
-   - Revisar la tarifa por pedido cuando haya datos reales. Por ejemplo, 0,5 % con tope de $150 sigue
-     siendo ~4 veces menos que Fudo.
+   - Tarifa por pedido subida a 1 % con tope de $200 (2026-10-16): sigue siendo bastante menos que
+     Fudo (1,9 %) y muchísimo menos que las apps (25–30 %).
 3. **Vender sin ir uno mismo:** contadores y proveedores de los locales que recomienden el sistema, con
    1–2 meses de comisión por cada local que traigan. Testimonio y números de Gassuso (comisión ahorrada).
 4. **Contratar soporte por horas** al pasar los ~25 locales (≈ $250–350 mil/mes por medio tiempo). Ahí
    ya hay margen para pagarlo y te libera para vender y desarrollar.
 5. **Salir de Concepción** cuando el autoservicio funcione: la puesta en marcha remota abre todo Chile.
 
-Con las palancas 1, 2 y 4 aplicadas (ingreso ≈ $55.000 por local y 0,5 h de soporte), la meta baja a
-**~45 locales**, alcanzable en ~30 meses en el escenario base, o en ~18 meses con 3 altas al mes.
+Con las palancas 1, 2 y 4 aplicadas (ingreso ≈ $70.000 por local y 0,5 h de soporte), la meta baja a
+**~36 locales**, alcanzable en ~22 meses en el escenario base, o en ~15 meses con 3 altas al mes.
 
 ## 6. Riesgos
 

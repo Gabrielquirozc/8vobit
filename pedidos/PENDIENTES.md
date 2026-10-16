@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-14 (autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-16 (tarifa por pedido a 1 % con tope $200; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -60,6 +60,7 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `test/api.test.mjs` | Pruebas contra el servidor real con una base temporal |
 | `deploy/` | Despliegue (ps1 + remoto.sh), túnel, exportar/respaldo |
 | `README.md` | Descripción completa de cada función |
+| `legal/` | Borradores: contrato de servicio + encargo de datos, aviso a trabajadores, acuerdo piloto Gassuso |
 
 Convenciones: sin dependencias externas; textos y comentarios en español; migraciones con
 `ALTER TABLE` idempotente (nunca borrar columnas); todo lo del cliente se valida de nuevo en el
@@ -87,7 +88,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
 - [x] **Estrategia** (`ESTRATEGIA.md`): planes, formas de pago, piloto y facturación decididos el 2026-10-14.
-- [ ] **Viabilidad** (`VIABILIDAD.md`): la meta de $2M/mes a medio tiempo pide ~55 locales y bajar el
+- [ ] **Viabilidad** (`VIABILIDAD.md`): la meta de $2M/mes a medio tiempo pide ~42 locales (con tarifa 1 %) y bajar el
       soporte a ≤ 0,5 h por local. Medir en Gassuso los pedidos web y las horas de soporte, y actualizar
       los supuestos al mes 3. Hitos: mes 4 Gassuso paga; mes 6, 3 locales más; mes 12, ≥ 10 locales.
 - [ ] **Siguiente**: propuesta de una página para Gassuso (planes, piloto, puesta en marcha
@@ -121,7 +122,16 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       enlazados desde la carta). Faltan: razón social, RUT y correo del local (Datos del local →
       Datos legales), revisión de un abogado, y confirmar dónde está físicamente el servidor.
       Datos del cliente: se borran solos a los 24 meses y a pedido desde el panel.
-- [ ] Acuerdo del piloto con autorización escrita de uso de fotos.
+- [x] **Paquete legal** (2026-10-16, borradores en `legal/` para el abogado): contrato de servicio 8vobit ↔ local
+      con anexo de encargo de tratamiento (Ley 21.719, vigente desde el 1-dic-2026: firmarlo antes con
+      Gassuso), aviso de privacidad para trabajadores y acuerdo de cliente fundador de Gassuso (con
+      autorización de fotos, marca y testimonio). En código: cada pedido web guarda `legal_version`
+      (`public/legal-version.js`, cambiarla al editar `legal.html`); sin Google Fonts (tipografías del
+      sistema); privacidad dice servidor en Chile; marcas de PIN rotuladas "control interno, no reemplaza
+      el registro de asistencia de la DT".
+- [ ] **Legal, falta**: completar [corchetes] (nombre y RUT del prestador, datos de Gassuso), revisión de
+      abogado de los 4 documentos (incl. exclusión de retracto art. 3 bis b), firma con Gassuso, y que el
+      local lleve el registro oficial de asistencia aparte.
 - [ ] Infra: copiar `docker-compose.yml` y la regla del túnel al espejo `D:\VPS`; anotar puertos
       8099/8100 en su `CLAUDE.md`.
 
@@ -133,7 +143,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - Mapas: OpenStreetMap + Leaflet incluido en `public/`; direcciones con Nominatim vía servidor.
 - Despacho por zonas con hexágonos (precio por tramo de distancia + ajustes a mano).
 - Planes: Canal $19.900, Gestión $34.900, Pro $54.900 + IVA/mes; semestral −10 %, anual −15 %, más una
-  tarifa de 0,5 % por pedido web con tope de $100, absorbida por el local (`ESTRATEGIA.md` §3).
+  tarifa de 1 % por pedido web con tope de $200 (subida desde 0,5 % el 2026-10-16), absorbida por el local (`ESTRATEGIA.md` §3).
   Gassuso está exento de la tarifa el primer año.
 - Gassuso: 3 meses gratis con Gestión, luego 50 % el primer año pagado; la puesta en marcha se le
   bonifica, pero se muestra con su valor.

@@ -34,6 +34,7 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
           <button type="button" data-n="borrar" aria-label="Borrar">${ico('left')}</button><button type="button" data-n="0">0</button><button type="button" class="ok" data-n="ok" aria-label="Entrar">${ico('check')}</button></div>
         <div class="formerr" id="loginErr" role="alert"></div>
         <div class="pin-turno"><button type="button" class="ghostb" data-turno="entrada">Marcar entrada</button><button type="button" class="ghostb" data-turno="salida">Marcar salida</button></div>
+        <p class="opc" style="margin:4px 0 0;font-size:.8rem">Marca de control interno; no reemplaza el registro oficial de asistencia.</p>
         <p style="text-align:center;margin:14px 0 0"><button type="button" class="link" id="aClave">Entrar con la clave del local</button></p>`;
       const dots = () => { $('pinDots').innerHTML = Array.from({ length: Math.max(4, pin.length) }, (_, i) => `<span class="${i < pin.length ? 'on' : ''}"></span>`).join(''); };
       dots();
@@ -126,7 +127,7 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
       <div class="plan-cab"><b>${esc(L.plan_nombre)}</b><span class="chip2 ${['activa', 'prueba'].includes(L.estado) ? 'ok' : 'warn'}">${ESTADO[L.estado]}</span>
         <span class="opc">${L.estado === 'prueba' ? `hasta el ${fecha(L.hasta)}` : L.vence ? `pagado hasta el ${fecha(L.vence)}` : ''}</span></div>
       <table class="tabla-plan"><tr><td>Precio ${L.ciclo === 'mensual' ? 'mensual' : L.ciclo}${L.estado === 'prueba' ? ' al terminar la prueba' : ''}</td><td class="r">${clp(L.precio)} + IVA${L.descuento ? ` <span class="opc">(${L.descuento.pct}% de descuento${L.descuento.hasta ? ` hasta el ${fecha(L.descuento.hasta)}` : ''})</span>` : ''}</td></tr>
-        <tr><td>Tarifa por pedido web</td><td class="r">0,5 % con tope de $100 por pedido${L.tarifa_exenta_hasta ? ` <span class="opc">(exento hasta el ${fecha(L.tarifa_exenta_hasta)})</span>` : ''}</td></tr>
+        <tr><td>Tarifa por pedido web</td><td class="r">1 % con tope de $200 por pedido${L.tarifa_exenta_hasta ? ` <span class="opc">(exento hasta el ${fecha(L.tarifa_exenta_hasta)})</span>` : ''}</td></tr>
         <tr><td>Este mes</td><td class="r">${t.pedidos} pedido${t.pedidos === 1 ? '' : 's'} web · tarifa ${clp(t.monto)}${t.exentos ? ` <span class="opc">(${t.exentos} exento${t.exentos === 1 ? '' : 's'})</span>` : ''}</td></tr>
         <tr><td>Usuarios con PIN</td><td class="r">${L.usuarios ? `hasta ${L.usuarios}` : 'sin límite'}</td></tr></table>
       <p class="ayuda">La tarifa por pedido sale de tu venta y no se le cobra al cliente. Un pedido de ${clp(12000)} paga ${clp(60)}.</p>
@@ -184,7 +185,7 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
     return `<section class="cardf" style="margin-top:14px"><h3>Horas marcadas en el mes</h3><table class="tabla-plan"><tr><th>Persona</th><th class="r">Turnos</th><th class="r">Horas</th><th></th></tr>
       ${r.horas.map((h) => `<tr><td>${esc(h.nombre)}</td><td class="r">${h.turnos}</td><td class="r">${h.horas.toLocaleString('es-CL')}</td>
         <td class="opc">${[h.abiertos && `${h.abiertos} sin salida`, h.revisar && `${h.revisar} de más de 16 h (revisar)`].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table>
-      <p class="ayuda">Horas según las marcas con PIN. Sirven para comparar con los turnos planificados y para la liquidación que hace el contador.</p></section>`;
+      <p class="ayuda">Horas según las marcas con PIN. Sirven para comparar con los turnos planificados. <b>Es un control interno: no reemplaza el registro de asistencia</b> que exige la Dirección del Trabajo (libro o sistema electrónico autorizado).</p></section>`;
   }
 
   return { pantallaEntrada, cargarYo, aplicar, puede, tiene, verCostos, bloqueada, vistaBloqueada, pintarPlan, pintarUsuarios, bloqueHoras, yo: () => YO };
