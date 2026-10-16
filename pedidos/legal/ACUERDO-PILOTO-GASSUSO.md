@@ -14,7 +14,7 @@ Gassuso, Janequeo 507, Concepción.
 | Meses 4 a 15 | 50 % de descuento el primer año pagado, con cualquier forma de pago | $17.450 al mes · $94.230 semestral · $177.990 anual |
 | Desde el mes 16 | Precio normal | $34.900 al mes · $188.460 semestral · $355.980 anual |
 
-- **Tarifa por pedido** (1 % con tope de $200 por pedido web): exenta los meses 1 a 15; se cobra desde el
+- **Tarifa por pedido** (1 % de cada pedido web): exenta los meses 1 a 15; se cobra desde el
   mes 16.
 - **Puesta en marcha** (valor $49.900 más IVA): bonificada al 100 % por ser cliente fundador.
 - 8vobit avisa con **30 días de anticipación** el término del piloto y el término del descuento.

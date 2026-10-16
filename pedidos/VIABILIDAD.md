@@ -90,7 +90,7 @@ con producto, no con esfuerzo: que el dueño se arregle solo.
 2. **Subir el ingreso por local** sin perder el argumento de precio:
    - Empujar a Gestión y Pro, que son los que traen el control que el dueño valora.
    - Cobrar extras: dominio propio, boleta SII directa, sesión de fotos, impresos (cartel, carta, tarjetas).
-   - Tarifa por pedido subida a 1 % con tope de $200 (2026-10-16): sigue siendo bastante menos que
+   - Tarifa por pedido subida a 1 % sin tope (2026-10-16): sigue siendo bastante menos que
      Fudo (1,9 %) y muchísimo menos que las apps (25–30 %).
 3. **Vender sin ir uno mismo:** contadores y proveedores de los locales que recomienden el sistema, con
    1–2 meses de comisión por cada local que traigan. Testimonio y números de Gassuso (comisión ahorrada).

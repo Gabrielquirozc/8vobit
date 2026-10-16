@@ -25,7 +25,7 @@ contrato esté vigente.
 2. Precios de lista (CLP, más IVA): Canal $19.900, Gestión $34.900 y Pro $54.900 al mes. Semestral con
    10 % de descuento y anual con 15 %, pagados por adelantado.
 3. **Tarifa por pedido**: 1 % más IVA del total de cada pedido hecho por la carta en línea y no anulado,
-   con un tope de $200 por pedido. Las ventas de mostrador no pagan tarifa. La tarifa la asume el Local y
+   sin tope. Las ventas de mostrador no pagan tarifa. La tarifa la asume el Local y
    **no puede trasladarse como recargo al cliente final**. Se cobra a mes vencido.
 4. Puesta en marcha (carga de carta, configuración, material con QR y capacitación): $[49.900] más IVA,
    una vez, salvo que se bonifique por escrito.

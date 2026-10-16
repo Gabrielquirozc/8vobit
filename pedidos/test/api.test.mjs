@@ -1176,11 +1176,11 @@ test('licencia: los pagos extienden el plazo; vencida pasa a gracia y luego a so
   assert.equal((await cliente()('POST', '/api/panel/login', { slug, password: nc })).status, 200);
 });
 
-test('tarifa por pedido: 1 % con tope de $200, solo web y respetando la exención', async () => {
+test('tarifa por pedido: 1 % sin tope, solo web y respetando la exención', async () => {
   const { tarifaPedido } = await import('../lib/licencias.mjs');
   assert.equal(tarifaPedido(12000), 120);
   assert.equal(tarifaPedido(20000), 200);
-  assert.equal(tarifaPedido(45000), 200);
+  assert.equal(tarifaPedido(45000), 450);
   assert.equal(tarifaPedido(990), 10);
   cookie = '';
   await req('POST', '/api/panel/login', { slug: 'gassuso', password: 'clave-de-prueba' });

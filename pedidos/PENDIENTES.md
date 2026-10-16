@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-16 (tarifa por pedido a 1 % con tope $200; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-16 (tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -143,7 +143,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - Mapas: OpenStreetMap + Leaflet incluido en `public/`; direcciones con Nominatim vía servidor.
 - Despacho por zonas con hexágonos (precio por tramo de distancia + ajustes a mano).
 - Planes: Canal $19.900, Gestión $34.900, Pro $54.900 + IVA/mes; semestral −10 %, anual −15 %, más una
-  tarifa de 1 % por pedido web con tope de $200 (subida desde 0,5 % el 2026-10-16), absorbida por el local (`ESTRATEGIA.md` §3).
+  tarifa de 1 % por pedido web, sin tope (subida desde 0,5 % el 2026-10-16), absorbida por el local (`ESTRATEGIA.md` §3).
   Gassuso está exento de la tarifa el primer año.
 - Gassuso: 3 meses gratis con Gestión, luego 50 % el primer año pagado; la puesta en marcha se le
   bonifica, pero se muestra con su valor.

@@ -41,7 +41,7 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 | | Uber / PedidosYa | Justo Plus | Fudo Avanzado + Tu Delivery | **Nosotros** |
 |---|---|---|---|---|
 | Costo fijo | 0 | ≈ $67.000/mes | $34.500 + IVA | **plan fijo, más bajo (ver §3)** |
-| % por venta en canal propio | 25–30 % | 13 % + 7 % logística | 1,9 % | **1 % con tope de $200** |
+| % por venta en canal propio | 25–30 % | 13 % + 7 % logística | 1,9 % | **1 %, sin tope** |
 | Despacho por zonas con costo real del viaje | — | logística propia | fijo o por zonas | **hexágonos + costeo por vehículo** |
 | Costo de producto y margen | — | — | con recetas (Avanzado) | ✅ (sin recetas) |
 | Sueldos y costo de personal según la ley | — | "pronto" | — | ✅ |
@@ -52,7 +52,7 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 | Soporte local, en persona | — | comercial | remoto | **✅ Concepción, en terreno** |
 
 **Argumento de venta (cierto y verificable):**
-1. **La comisión más baja: 1 % por pedido con tope de $200, más un plan fijo.** Con $3.000.000 al mes
+1. **La comisión más baja: 1 % por pedido, sin tope, más un plan fijo.** Con $3.000.000 al mes
    por canal propio (≈ 250 pedidos de $12.000): Uber se lleva ~$750.000, Justo ~$600.000 y Fudo
    ~$57.000 + plan. Nosotros cobramos ~$15.000 + plan. El panel ya muestra cada mes la comisión que el
    local se ahorró.
@@ -103,8 +103,8 @@ comisión ahorrada acumulada, caja cuadrada todos los días y el dueño usándol
 
 Precios en CLP + IVA. Se reajustan una vez al año por IPC.
 
-**Tarifa por pedido (decidida el 2026-10-14, subida a 1 % el 2026-10-16): 1 % + IVA de cada pedido de la carta online, con tope de
-$200 por pedido.** La paga el local de su venta, **no se le suma al precio del cliente**. Es tan baja que
+**Tarifa por pedido (decidida el 2026-10-14, subida a 1 % el 2026-10-16): 1 % + IVA de cada pedido de la carta online, sin tope
+(el tope se eliminó el 2026-10-16).** La paga el local de su venta, **no se le suma al precio del cliente**. Es tan baja que
 no justifica subir los precios de la carta (en un pedido de $12.000 son $120). La venta de mostrador no
 paga tarifa. Se cobra a mes vencido, junto con el plan, según los pedidos web no anulados del mes.
 
@@ -232,7 +232,7 @@ planes        id, codigo ('canal'|'gestion'|'pro'), nombre, precio_mes, precio_a
 licencias     id, local_id UNIQUE, plan_id, estado ('prueba'|'activa'|'gracia'|'suspendida'|'cancelada'),
               ciclo ('mensual'|'semestral'|'anual'), descuento_pct, descuento_hasta
               (precio fundador: 50 % hasta completar 12 meses pagados),
-              tarifa_pct (1), tarifa_tope (200), tarifa_exenta_hasta (Gassuso: fin del mes 15),
+              tarifa_pct (1), tarifa_exenta_hasta (Gassuso: fin del mes 15),
               inicio, vence, prueba_hasta, notas, creado, actualizado
 licencia_extras  licencia_id, codigo ('dominio'|'sii'|...), precio, desde, hasta
 pagos         id, licencia_id, periodo_desde, periodo_hasta, monto, medio ('transferencia'|'flow'|...),
@@ -249,7 +249,7 @@ anual −15 %) × (1 − `descuento_pct`, si el período cae antes de `descuento
 1, 6 o 12 meses (`periodo_desde`/`periodo_hasta`). Si un pago semestral o anual cruza
 `descuento_hasta`, se prorratea por mes.
 
-La **tarifa por pedido** se calcula a mes vencido: Σ min(total × `tarifa_pct`/100, `tarifa_tope`) de
+La **tarifa por pedido** se calcula a mes vencido: Σ total × `tarifa_pct`/100 de
 los pedidos con `canal='web'` y `estado!='anulado'` del mes, salvo los que caen antes de
 `tarifa_exenta_hasta`. Queda como una línea del cobro del mes siguiente. El local la ve en el panel
 mientras el mes avanza, para que nunca lo tome por sorpresa.
@@ -317,7 +317,7 @@ local trae la pública. Por ahora **no se hace**: hoy no hay ningún caso que lo
 2. **Formas de pago**: mensual, semestral −10 % o anual −15 %, por adelantado.
 3. **Piloto de Gassuso**: 3 meses gratis con Gestión, después 50 % solo durante el primer año pagado,
    a cambio de testimonio, marca, fotos y feedback. Exento de la tarifa por pedido hasta el mes 15.
-6. **Tarifa por pedido**: 1 % + IVA por pedido web con tope de $200, absorbida por el local (no se le
+6. **Tarifa por pedido**: 1 % + IVA por pedido web, sin tope, absorbida por el local (no se le
    traspasa al cliente). La venta de mostrador no paga.
 4. **Puesta en marcha**: bonificada a Gassuso, pero mostrada con su valor ($49.900).
 5. **Facturación**: persona natural de primera categoría con factura del SII; SpA al tener 3–5 clientes.

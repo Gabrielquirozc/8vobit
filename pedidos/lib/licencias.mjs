@@ -11,7 +11,7 @@ export const PLANES = {
 export const CICLOS = { mensual: { meses: 1, desc: 0 }, semestral: { meses: 6, desc: 10 }, anual: { meses: 12, desc: 15 } };
 // Plan mínimo que abre cada función (para el mensaje "Disponible en el plan …").
 export const PLAN_DE = { costos: 'gestion', equipo: 'gestion', exportar: 'gestion', resultados: 'gestion', inventario: 'pro', combos: 'pro', multilocal: 'pro' };
-export const TARIFA = { pct: 1, tope: 200 };
+export const TARIFA = { pct: 1 };
 const GRACIA_DIAS = 7, CANCELA_DIAS = 90;
 const MEDIOS = ['transferencia', 'efectivo', 'tarjeta', 'flow', 'mercadopago', 'otro'];
 
@@ -32,7 +32,7 @@ export function precioPeriodo(plan, ciclo, descuentoPct = 0) {
   const c = CICLOS[ciclo] || CICLOS.mensual;
   return Math.round(PLANES[plan].mes * c.meses * (1 - c.desc / 100) * (1 - descuentoPct / 100));
 }
-export const tarifaPedido = (total) => Math.min(Math.round((total * TARIFA.pct) / 100), TARIFA.tope);
+export const tarifaPedido = (total) => Math.round((total * TARIFA.pct) / 100);
 
 export function crearLicencias(db, { hoy }) {
   db.exec(`
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS licencia_eventos (
     return e.funciones.includes(funcion);
   }
 
-  // Tarifa por pedido web de un mes: 1 % con tope, salvo los días exentos.
+  // Tarifa por pedido web de un mes: 1 % sin tope, salvo los días exentos.
   function tarifaMes(lid, mes) {
     const L = filaDe(lid);
     const filas = db.prepare("SELECT dia, total FROM pedidos WHERE local_id=? AND canal='web' AND estado!='anulado' AND substr(dia,1,7)=?").all(lid, mes);
