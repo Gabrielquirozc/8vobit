@@ -1,6 +1,6 @@
 # Aviso de privacidad para el personal del local
 
-> **BORRADOR para revisión de un abogado.** Versión 2026-10-16. Lo entrega **el local** (empleador) a cada
+> **BORRADOR v2026-10-16**, revisión jurídica a cargo del prestador (abogado). Lo entrega **el local** (empleador) a cada
 > trabajador que use el panel o cuyos datos se registren en él. Se recomienda que el trabajador firme una
 > copia de recepción.
 

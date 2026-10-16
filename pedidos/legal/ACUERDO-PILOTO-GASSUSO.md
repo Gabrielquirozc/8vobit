@@ -1,6 +1,6 @@
 # Acuerdo de cliente fundador — Gassuso
 
-> **BORRADOR para revisión de un abogado.** Versión 2026-10-16. Complementa el Contrato de prestación de
+> **BORRADOR v2026-10-16**, revisión jurídica a cargo del prestador (abogado). Complementa el Contrato de prestación de
 > servicios (`CONTRATO-SERVICIO.md`), que rige en todo lo que este acuerdo no cambie.
 
 Entre **8vobit** ([nombre], RUT [RUT]) y **[razón social de Gassuso]**, RUT [RUT], que opera el local

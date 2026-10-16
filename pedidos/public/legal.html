@@ -179,7 +179,7 @@ const PRIVACIDAD = `
 
 document.title = `${priv ? 'Privacidad' : 'Términos y condiciones'} · ${L.nombre}`;
 $('titulo').textContent = priv ? 'Política de privacidad' : 'Términos y condiciones';
-$('doc').innerHTML = (faltan.length ? `<div class="borrador" role="note"><b>Borrador.</b> Falta completar en el panel (Datos del local → Datos legales): ${faltan.join(', ')}. Conviene que un abogado lo revise antes de publicar.</div>` : '')
+$('doc').innerHTML = (faltan.length ? `<div class="borrador" role="note"><b>Borrador.</b> Falta completar en el panel (Datos del local → Datos legales): ${faltan.join(', ')}.</div>` : '')
   + `<p class="vig">${esc(L.nombre)} · Vigente desde el ${VIGENCIA}</p>` + (priv ? PRIVACIDAD : TERMINOS);
 </script>
 </body>

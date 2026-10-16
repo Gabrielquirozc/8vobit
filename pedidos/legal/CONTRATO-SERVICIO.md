@@ -1,6 +1,6 @@
 # Contrato de prestación de servicios de software — 8vobit Pedidos
 
-> **BORRADOR para revisión de un abogado.** Versión 2026-10-16. Los campos entre [corchetes] se completan
+> **BORRADOR v2026-10-16**, revisión jurídica a cargo del prestador (abogado). Los campos entre [corchetes] se completan
 > en cada contrato. Incluye como Anexo A el contrato de encargo de tratamiento de datos (Ley 19.628,
 > modificada por la Ley 21.719).
 
@@ -120,8 +120,8 @@ Firmas: ____________________ (8vobit) ____________________ (Cliente)
 
 # Anexo A — Contrato de encargo de tratamiento de datos personales
 
-Conforme a la Ley N° 19.628, modificada por la Ley N° 21.719 (vigente desde el 1 de diciembre de 2026,
-**confirmar con el abogado**):
+Conforme a la Ley N° 19.628, modificada por la Ley N° 21.719 (vigente desde el 1 de diciembre de 2026, según
+BCN, idNorma 1209272):
 
 1. **Partes y roles.** El Local es el **responsable** de los datos de sus clientes y trabajadores. 8vobit
    es el **encargado**: los trata solo por cuenta del Local y siguiendo sus instrucciones, que son las de

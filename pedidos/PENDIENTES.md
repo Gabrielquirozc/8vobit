@@ -120,9 +120,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [ ] Al lanzar: `INDEXAR=1` en el `.env` del servidor y desplegar.
 - [x] Borradores de Términos y Privacidad (`public/legal.html`, rutas `/terminos` y `/privacidad`,
       enlazados desde la carta). Faltan: razón social, RUT y correo del local (Datos del local →
-      Datos legales), revisión de un abogado, y confirmar dónde está físicamente el servidor.
+      Datos legales). Servidor en Chile (ya declarado).
       Datos del cliente: se borran solos a los 24 meses y a pedido desde el panel.
-- [x] **Paquete legal** (2026-10-16, borradores en `legal/` para el abogado): contrato de servicio 8vobit ↔ local
+- [x] **Paquete legal** (2026-10-16, borradores en `legal/`; el creador es abogado y los revisa): contrato de servicio 8vobit ↔ local
       con anexo de encargo de tratamiento (Ley 21.719, vigente desde el 1-dic-2026: firmarlo antes con
       Gassuso), aviso de privacidad para trabajadores y acuerdo de cliente fundador de Gassuso (con
       autorización de fotos, marca y testimonio). En código: cada pedido web guarda `legal_version`
@@ -130,7 +130,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       sistema); privacidad dice servidor en Chile; marcas de PIN rotuladas "control interno, no reemplaza
       el registro de asistencia de la DT".
 - [ ] **Legal, falta**: completar [corchetes] (nombre y RUT del prestador, datos de Gassuso), revisión de
-      abogado de los 4 documentos (incl. exclusión de retracto art. 3 bis b), firma con Gassuso, y que el
+      de los 4 documentos (ver `legal/NOTAS-REVISION.md`), firma con Gassuso, y que el
       local lleve el registro oficial de asistencia aparte.
 - [ ] Infra: copiar `docker-compose.yml` y la regla del túnel al espejo `D:\VPS`; anotar puertos
       8099/8100 en su `CLAUDE.md`.
