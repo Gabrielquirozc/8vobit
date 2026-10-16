@@ -4,31 +4,9 @@
     {
       "name": "pedidos",
       "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "--disable-warning=ExperimentalWarning",
-        "pedidos/server.mjs"
-      ],
-      "env": {
-        "PANEL_PASSWORD": "demo",
-        "ADMIN_PASSWORD": "admin-local",
-        "DATA_DIR": "pedidos/data"
-      },
+      "runtimeArgs": ["--disable-warning=ExperimentalWarning", "pedidos/server.mjs"],
+      "env": { "PANEL_PASSWORD": "demo", "ADMIN_PASSWORD": "admin-local", "DATA_DIR": "pedidos/data" },
       "port": 8099
-    },
-    {
-      "name": "pedidos-autoservicio",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "--disable-warning=ExperimentalWarning",
-        "pedidos/server.mjs"
-      ],
-      "env": {
-        "PANEL_PASSWORD": "demo",
-        "ADMIN_PASSWORD": "admin-local",
-        "DATA_DIR": "C:/Users/hpvictus/AppData/Local/Temp/claude/D--8vobit/3ba5af4c-ffa1-434e-a64b-0922a06d6b64/scratchpad/data2",
-        "PORT": "8111"
-      },
-      "port": 8111
     }
   ]
 }
