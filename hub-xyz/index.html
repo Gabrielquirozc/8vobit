@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gabriel Quiroz Campos — 8vobit</title>
+<meta name="description" content="Derecho, tecnología y gestión. CÓDICE para servicios legales, 8vobit para soluciones digitales.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://8vobit.xyz/">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://8vobit.xyz/">
+<meta property="og:title" content="Gabriel Quiroz Campos — 8vobit">
+<meta property="og:description" content="Derecho, tecnología y gestión. CÓDICE para servicios legales, 8vobit para soluciones digitales.">
+<meta property="og:locale" content="es_CL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Gabriel Quiroz Campos — 8vobit">
+<meta name="twitter:description" content="Derecho, tecnología y gestión. CÓDICE para servicios legales, 8vobit para soluciones digitales.">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23040914'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='16' fill='%2300daf3' text-anchor='middle'%3E8%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+<style>
+  /* ================================================================
+     8vobit.xyz — hub de Gabriel Quiroz Campos
+     Sistema "Architectural Legal Engineering" (ver DESIGN.md).
+     Tema único oscuro, deliberado: se pinta todo explícitamente.
+     ================================================================ */
+  :root {
+    --canvas:      #040914;
+    --card-legal:  #081324;
+    --card-tech:   #071917;
+    --inset-legal: #050e1b;
+    --inset-tech:  #031311;
+    --cyan:        #00daf3;
+    --mint:        #34d399;
+    --text:        #ffffff;
+    --body:        #e2e8f0;
+    --muted:       #94a3b8;
+    --dim:         #64748b;
+    --hair:        rgba(255,255,255,.08);
+    --f-display: "Bodoni Moda", "Times New Roman", serif;
+    --f-body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--body);
+    font-family: var(--f-body);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  ::selection { background: rgba(0,218,243,.25); color: #a5f3fc; }
+  img { max-width: 100%; }
+
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    padding: .625rem 1rem; z-index: 10;
+    background: var(--cyan); color: var(--canvas);
+    font-family: var(--f-mono); font-size: 12px;
+  }
+  .skip:focus { left: 0; }
+
+  /* --- Atmósfera: retícula de plano + focos cenitales --- */
+  .amb { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .amb--grid {
+    background-size: 36px 36px;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.018) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.018) 1px, transparent 1px);
+  }
+  .amb--top {
+    inset: auto; top: -15%; left: 50%; transform: translateX(-50%);
+    width: 650px; height: 520px; border-radius: 50%;
+    background: linear-gradient(to bottom, rgba(12,74,110,.25), rgba(23,37,84,.15), transparent);
+    filter: blur(140px);
+  }
+  .amb--bottom {
+    inset: auto; bottom: -10%; right: -10%;
+    width: 480px; height: 480px; border-radius: 50%;
+    background: linear-gradient(to top, rgba(2,44,34,.22), rgba(8,51,68,.10), transparent);
+    filter: blur(150px);
+  }
+
+  .shell {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 480px;
+    margin: 0 auto;
+    padding: 2.5rem 1rem 1.5rem;
+    display: flex; flex-direction: column; gap: 2rem;
+  }
+  @media (min-width: 640px) { .shell { padding: 4rem 1.5rem 2rem; } }
+
+  /* ======================= CABECERA ======================= */
+  .id-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .75rem; padding-bottom: .875rem;
+    border-bottom: 1px solid var(--hair);
+  }
+  .handle {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .25rem .75rem;
+    border: 1px solid rgba(255,255,255,.1); border-radius: 9999px;
+    background: rgba(8,18,34,.9);
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em;
+    color: #cbd5e1;
+  }
+  .pulse { position: relative; display: flex; width: 8px; height: 8px; flex: none; }
+  .pulse i {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: var(--cyan); opacity: .75;
+    animation: ping 1.6s cubic-bezier(0,0,.2,1) infinite;
+  }
+  .pulse b { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); }
+  @keyframes ping { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+
+  .id-right { display: flex; align-items: center; gap: .75rem; }
+  .monogram {
+    width: 32px; height: 32px; flex: none;
+    display: grid; place-items: center; border-radius: 50%;
+    border: 1px solid rgba(148,163,184,.3);
+    box-shadow: 0 0 12px rgba(255,255,255,.05), inset 0 0 0 1px rgba(255,255,255,.06);
+    background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.01));
+    font-family: var(--f-display); font-size: 12px; letter-spacing: .06em; color: #e2e8f0;
+  }
+  .serial {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .name {
+    margin: 1.75rem 0 0;
+    font-family: var(--f-display); font-weight: 400;
+    font-size: clamp(2.25rem, 9vw, 2.8125rem);
+    line-height: 1.14; letter-spacing: -.01em;
+    color: var(--text); text-wrap: balance;
+  }
+  .role {
+    margin: .625rem 0 0;
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  }
+  .areas {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .625rem;
+    margin: .875rem 0 0;
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: rgba(103,232,249,.95);
+  }
+  .areas s { text-decoration: none; font-family: var(--f-body); font-size: 9px; color: rgba(34,211,238,.4); }
+
+  .quote {
+    margin: 1.25rem 0 0;
+    padding: .5rem 1rem;
+    border-left: 2px solid rgba(34,211,238,.5);
+    border-radius: 0 .75rem .75rem 0;
+    background: linear-gradient(to right, rgba(8,51,68,.2), rgba(10,22,40,.4), transparent);
+    font-weight: 300; color: #cbd5e1;
+  }
+  .quote em {
+    font-family: var(--f-display); font-style: italic; font-size: 1.25rem;
+    line-height: 0; color: rgba(103,232,249,.6);
+  }
+
+  /* ======================= TARJETAS ======================= */
+  .stack { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .dossier {
+    position: relative; overflow: hidden;
+    border-radius: 1rem; padding: 1.25rem;
+    box-shadow: 0 16px 40px rgba(0,0,0,.55);
+    transition: border-color .3s, box-shadow .3s;
+  }
+  @media (min-width: 640px) { .dossier { padding: 1.5rem; } }
+  .dossier::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1.5px;
+    opacity: .8; transition: opacity .3s;
+  }
+  .dossier:hover::before { opacity: 1; }
+
+  .dossier--legal { background: rgba(8,19,36,.85); border: 1px solid rgba(34,211,238,.25); }
+  .dossier--legal::before { background: linear-gradient(to right, transparent, rgba(34,211,238,.7), transparent); }
+  .dossier--legal:hover { border-color: rgba(34,211,238,.6); box-shadow: 0 20px 48px rgba(0,218,243,.15); }
+
+  .dossier--tech { background: rgba(7,25,23,.85); border: 1px solid rgba(52,211,153,.2); }
+  .dossier--tech::before { background: linear-gradient(to right, transparent, rgba(52,211,153,.6), transparent); }
+  .dossier--tech:hover { border-color: rgba(52,211,153,.55); box-shadow: 0 20px 48px rgba(16,185,129,.14); }
+
+  .dossier-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+  .eyebrow {
+    display: flex; align-items: center; gap: .375rem; margin: 0;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .2em; text-transform: uppercase;
+  }
+  .eyebrow i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .dossier--legal .eyebrow { color: #67e8f9; }
+  .dossier--legal .eyebrow i { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  .dossier--tech .eyebrow { color: #86efc4; }
+  .dossier--tech .eyebrow i { background: var(--mint); box-shadow: 0 0 8px var(--mint); }
+
+  .dossier-title { margin: .375rem 0 0; font-size: 1.5rem; line-height: 1.2; color: var(--text); }
+  .dossier--legal .dossier-title { font-family: var(--f-mono); font-weight: 600; letter-spacing: -.02em; }
+  .dossier--tech .dossier-title { font-family: var(--f-display); font-weight: 400; letter-spacing: -.01em; }
+
+  .badge {
+    flex: none; padding: .125rem .625rem; border-radius: 9999px;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500; letter-spacing: .05em;
+  }
+  .badge--legal { background: rgba(8,51,68,.8); color: #67e8f9; border: 1px solid rgba(34,211,238,.3); }
+  .badge--tech  { background: rgba(2,44,34,.8); color: #86efc4; border: 1px solid rgba(52,211,153,.3); }
+
+  .lede { margin: .75rem 0 0; font-size: 13.5px; font-weight: 300; color: #cbd5e1; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: .375rem; margin-top: 1rem; }
+  .tags span {
+    padding: .25rem .75rem; border: 1px solid rgba(255,255,255,.09); border-radius: 9999px;
+    font-size: 11px; font-weight: 300; color: #cbd5e1;
+  }
+  .dossier--legal .tags span { background: rgba(5,14,27,.9); }
+  .dossier--tech .tags span  { background: rgba(3,19,17,.9); }
+
+  .cta, summary.cta {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    margin-top: 1.25rem; padding: .75rem 1rem; min-height: 44px;
+    border-radius: .75rem; text-decoration: none; cursor: pointer;
+    font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: .05em;
+    transition: border-color .2s, background .2s;
+  }
+  summary.cta { list-style: none; }
+  summary.cta::-webkit-details-marker { display: none; }
+  .cta .chev { font-family: var(--f-body); font-size: 1rem; line-height: 1; transition: transform .25s; }
+  details[open] summary.cta .chev { transform: rotate(90deg); }
+
+  .dossier--legal .cta {
+    color: #a5f3fc; border: 1px solid rgba(34,211,238,.3);
+    background: linear-gradient(to right, rgba(8,51,68,.6), rgba(15,23,42,.6));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .dossier--legal .cta:hover { border-color: rgba(103,232,249,.6); background: linear-gradient(to right, rgba(22,78,99,.5), rgba(30,41,59,.6)); }
+  .dossier--tech .cta {
+    color: #a7f3d0; border: 1px solid rgba(52,211,153,.3);
+    background: linear-gradient(to right, rgba(2,44,34,.6), rgba(15,23,42,.6));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .dossier--tech .cta:hover { border-color: rgba(110,231,183,.6); background: linear-gradient(to right, rgba(6,78,59,.5), rgba(30,41,59,.6)); }
+
+  .panel { padding-top: 1.25rem; animation: reveal .28s ease-out; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+  .matters { display: flex; flex-direction: column; margin: 0; }
+  .matter {
+    display: grid; grid-template-columns: 2.25rem 1fr; gap: .75rem;
+    padding: .75rem 0; border-top: 1px solid var(--hair);
+  }
+  .matter:first-child { border-top: 0; padding-top: 0; }
+  .matter dt {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .1em; color: var(--dim); padding-top: .125rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .matter dd { margin: 0; }
+  .matter b { display: block; font-size: 13px; font-weight: 500; color: var(--text); }
+  .matter p { margin: .1875rem 0 0; font-size: 12.5px; font-weight: 300; color: var(--muted); line-height: 1.55; }
+
+  /* ======================= ENLACES ======================= */
+  .sec-head { display: flex; align-items: center; gap: .75rem; padding: 0 .25rem; margin-bottom: .875rem; }
+  .sec-head span {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: .24em; text-transform: uppercase; color: var(--muted);
+  }
+  .sec-head i { flex: 1; height: 1px; background: linear-gradient(to right, rgba(255,255,255,.1), transparent); }
+
+  .capsules { display: flex; flex-direction: column; gap: .625rem; }
+  .capsule {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: .75rem 1rem; min-height: 44px;
+    border: 1px solid var(--hair); border-radius: 9999px;
+    background: linear-gradient(to right, rgba(10,21,38,.8), rgba(7,17,30,.8));
+    font-size: 13.5px; font-weight: 500; color: #e2e8f0; text-decoration: none;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .capsule:hover {
+    border-color: rgba(34,211,238,.4);
+    background: linear-gradient(to right, rgba(17,34,59,.9), rgba(12,26,46,.9));
+    box-shadow: 0 4px 16px rgba(0,218,243,.08);
+  }
+  .capsule > div { display: flex; align-items: center; gap: .75rem; }
+  .capsule .dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: #64748b; transition: background .2s; }
+  .capsule:hover .dot { background: var(--cyan); }
+  .capsule svg { width: 14px; height: 14px; flex: none; color: var(--muted); transition: color .2s, transform .2s; }
+  .capsule:hover svg { color: #67e8f9; transform: translate(2px,-2px); }
+
+  /* ======================= PIE ======================= */
+  .foot {
+    display: flex; flex-direction: column; align-items: center; gap: 1rem;
+    padding-top: 2rem; margin-top: .5rem;
+    border-top: 1px solid var(--hair); text-align: center;
+  }
+  .social { display: flex; gap: .75rem; }
+  .social a {
+    width: 40px; height: 40px; display: grid; place-items: center;
+    border: 1px solid var(--hair); border-radius: 50%;
+    background: rgba(255,255,255,.02); color: var(--muted);
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .social a:hover { color: #67e8f9; border-color: rgba(34,211,238,.5); background: rgba(8,51,68,.3); }
+  .social svg { width: 15px; height: 15px; }
+  .colophon { margin: 0; font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; color: var(--muted); }
+  .colophon b { color: #cbd5e1; font-weight: 500; }
+
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--cyan); outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#contenido">Saltar al contenido</a>
+
+<div class="amb amb--grid"></div>
+<div class="amb amb--top"></div>
+<div class="amb amb--bottom"></div>
+
+<main class="shell" id="contenido">
+
+  <header>
+    <div class="id-bar">
+      <span class="handle">
+        <span class="pulse" aria-hidden="true"><i></i><b></b></span>
+        8vobit.xyz
+      </span>
+      <div class="id-right">
+        <div class="monogram" aria-hidden="true">GQ</div>
+        <span class="serial">Concepción · Chile</span>
+      </div>
+    </div>
+
+    <h1 class="name">Gabriel Quiroz Campos</h1>
+    <p class="role">Egresado de Derecho · Procurador Judicial</p>
+
+    <p class="areas">
+      <span>Derecho</span><s aria-hidden="true">&#9670;</s><span>Tecnología</span><s aria-hidden="true">&#9670;</s><span>Gestión</span>
+    </p>
+
+    <blockquote class="quote">
+      <em aria-hidden="true">&ldquo;</em>Traduzco problemas complejos en ideas y soluciones más claras, entre derecho, tecnología y gestión.<em aria-hidden="true">&rdquo;</em>
+    </blockquote>
+  </header>
+
+  <section class="stack" aria-label="Proyectos">
+
+    <!-- CÓDICE — enlaza al sitio real ya publicado -->
+    <article class="dossier dossier--legal">
+      <div class="dossier-head">
+        <div>
+          <p class="eyebrow"><i aria-hidden="true"></i>Servicios legales</p>
+          <h2 class="dossier-title">[CÓDICE]</h2>
+        </div>
+        <span class="badge badge--legal">Jurídico</span>
+      </div>
+
+      <p class="lede">Soluciones legales para personas y organizaciones, explicadas con claridad.</p>
+
+      <div class="tags">
+        <span>Trabajo</span><span>Herencias</span><span>Familia</span>
+        <span>Propiedad</span><span>Organizaciones</span><span>Trámites</span>
+      </div>
+
+      <a class="cta" href="https://codice.8vobit.xyz">
+        <span>Ir a CÓDICE</span>
+        <span class="chev" aria-hidden="true">&rarr;</span>
+      </a>
+    </article>
+
+    <!-- Pedidos — producto para locales de comida; lleva a /pedidos/ -->
+    <article class="dossier dossier--tech">
+      <div class="dossier-head">
+        <div>
+          <p class="eyebrow"><i aria-hidden="true"></i>Producto · Locales de comida</p>
+          <h2 class="dossier-title">Pedidos para locales</h2>
+        </div>
+        <span class="badge badge--tech">Nuevo</span>
+      </div>
+
+      <p class="lede">Carta web propia con despacho, panel de cocina y caja del día. 1&nbsp;% por pedido, en vez del 25–30&nbsp;% de las apps.</p>
+
+      <div class="tags">
+        <span>Carta web y QR</span><span>Despacho por zonas</span><span>Caja del día</span><span>Desde $19.900</span>
+      </div>
+
+      <a class="cta" href="/pedidos/">
+        <span>Ver planes y precios</span>
+        <span class="chev" aria-hidden="true">&rarr;</span>
+      </a>
+    </article>
+
+    <!-- 8vobit — este dominio; se despliega en la propia página -->
+    <article class="dossier dossier--tech">
+      <div class="dossier-head">
+        <div>
+          <p class="eyebrow"><i aria-hidden="true"></i>Desarrollo &amp; cumplimiento</p>
+          <h2 class="dossier-title">8vobit</h2>
+        </div>
+        <span class="badge badge--tech">Técnico</span>
+      </div>
+
+      <p class="lede">Servicios tecnológicos web, protección de datos y documentación de cumplimiento.</p>
+
+      <div class="tags">
+        <span>Sitios web</span><span>Infraestructura</span><span>Protección de datos</span><span>Automatización</span>
+      </div>
+
+      <details>
+        <summary class="cta">
+          <span>Ver qué hace 8vobit</span>
+          <span class="chev" aria-hidden="true">&rarr;</span>
+        </summary>
+        <div class="panel">
+          <dl class="matters">
+            <div class="matter">
+              <dt>01</dt>
+              <dd>
+                <b>Protección de datos</b>
+                <p>Adecuación a la Ley N.° 21.719: registro de actividades de tratamiento, políticas de privacidad y cookies, contratos de encargo y canal de ejercicio de derechos.</p>
+              </dd>
+            </div>
+            <div class="matter">
+              <dt>02</dt>
+              <dd>
+                <b>Sitios web e infraestructura</b>
+                <p>Desarrollo y administración de sitios, servidores, dominios y correo, respaldos y monitoreo.</p>
+              </dd>
+            </div>
+            <div class="matter">
+              <dt>03</dt>
+              <dd>
+                <b>Sistemas a medida</b>
+                <p>Agendamiento y pagos en línea, paneles de administración, notificaciones automáticas e integraciones.</p>
+              </dd>
+            </div>
+            <div class="matter">
+              <dt>04</dt>
+              <dd>
+                <b>Marcas y propiedad industrial</b>
+                <p>Búsqueda de factibilidad y tramitación de registro de marca ante INAPI.</p>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </details>
+    </article>
+  </section>
+
+  <section aria-label="Enlaces">
+    <div class="sec-head">
+      <span>Contacto</span>
+      <i aria-hidden="true"></i>
+    </div>
+
+    <nav class="capsules">
+      <!-- ===== EDITAR: URL real del perfil de LinkedIn ===== -->
+      <a class="capsule" href="https://www.linkedin.com/in/gabrielquirozcampos/" target="_blank" rel="noopener noreferrer">
+        <div><span class="dot" aria-hidden="true"></span><span>LinkedIn</span></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+
+      <a class="capsule" href="mailto:gabrielquirozcampos@gmail.com">
+        <div><span class="dot" aria-hidden="true"></span><span>Correo</span></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </nav>
+  </section>
+
+  <footer class="foot">
+    <div class="social">
+      <!-- ===== EDITAR: URL real del perfil de LinkedIn ===== -->
+      <a href="https://www.linkedin.com/in/gabrielquirozcampos/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+          <rect x="2" y="9" width="4" height="12"/>
+          <circle cx="4" cy="4" r="2"/>
+        </svg>
+      </a>
+      <a href="mailto:gabrielquirozcampos@gmail.com" aria-label="Correo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+        </svg>
+      </a>
+    </div>
+    <p class="colophon">&copy; Gabriel Quiroz Campos · <b>8vobit</b></p>
+  </footer>
+
+</main>
+</body>
+</html>

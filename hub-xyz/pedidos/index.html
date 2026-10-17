@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedidos para locales — 8vobit</title>
+<meta name="description" content="Canal propio de pedidos con despacho y caja del día para locales de comida. 1 % por pedido, sin comisiones de app. Concepción, Chile.">
+<link rel="canonical" href="https://8vobit.xyz/pedidos/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://8vobit.xyz/pedidos/">
+<meta property="og:title" content="Pedidos para locales — 8vobit">
+<meta property="og:description" content="Tu propia carta web con despacho. 1 % por pedido en vez del 25–30 % de las apps.">
+<meta property="og:locale" content="es_CL">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23040914'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='16' fill='%2334d399' text-anchor='middle'%3E8%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+<style>
+  /* Página de venta de "Pedidos" — mismo sistema visual que el hub (../index.html). */
+  :root {
+    --canvas: #040914;
+    --card: rgba(7,25,23,.85);
+    --inset: #031311;
+    --cyan: #00daf3;
+    --mint: #34d399;
+    --mint-soft: #86efc4;
+    --text: #ffffff;
+    --body: #e2e8f0;
+    --muted: #94a3b8;
+    --dim: #64748b;
+    --hair: rgba(255,255,255,.08);
+    --bad: #f87171;
+    --f-display: "Bodoni Moda", "Times New Roman", serif;
+    --f-body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--body);
+    font-family: var(--f-body); font-size: 15px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  ::selection { background: rgba(52,211,153,.25); }
+  a { color: var(--mint-soft); }
+
+  .amb { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .amb--grid {
+    background-size: 36px 36px;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.018) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.018) 1px, transparent 1px);
+  }
+  .amb--top {
+    inset: auto; top: -15%; left: 50%; transform: translateX(-50%);
+    width: 700px; height: 520px; border-radius: 50%;
+    background: linear-gradient(to bottom, rgba(2,44,34,.35), rgba(8,51,68,.15), transparent);
+    filter: blur(140px);
+  }
+
+  .shell { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 1.25rem 1rem 6rem; }
+  @media (min-width: 640px) { .shell { padding: 1.5rem 1.5rem 4rem; } }
+
+  /* --- barra superior --- */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+         padding-bottom: .875rem; border-bottom: 1px solid var(--hair); }
+  .back { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); text-decoration: none; }
+  .back:hover { color: var(--mint-soft); }
+  .serial { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+
+  .eyebrow { margin: 0; font-family: var(--f-mono); font-size: 11px; font-weight: 600;
+             letter-spacing: .2em; text-transform: uppercase; color: var(--mint-soft); }
+  h1, h2 { font-family: var(--f-display); font-weight: 400; color: var(--text); letter-spacing: -.01em; text-wrap: balance; }
+  h1 { font-size: clamp(2.1rem, 7vw, 3.5rem); line-height: 1.08; margin: .75rem 0 0; }
+  h1 em { font-style: italic; color: var(--mint-soft); }
+  h2 { font-size: clamp(1.6rem, 4.5vw, 2.25rem); line-height: 1.15; margin: .5rem 0 0; }
+  h3 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text); }
+  .lede { max-width: 40rem; margin: 1rem 0 0; font-size: 1.05rem; font-weight: 300; color: #cbd5e1; }
+  .note { font-size: 12.5px; color: var(--muted); margin: .75rem 0 0; }
+
+  section { margin-top: 4.5rem; }
+  .hero { margin-top: 2.5rem; }
+
+  .btns { display: flex; flex-wrap: wrap; gap: .625rem; margin-top: 1.75rem; }
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem; min-height: 46px; padding: .75rem 1.25rem;
+    border-radius: .75rem; text-decoration: none; cursor: pointer; border: 1px solid transparent;
+    font-family: var(--f-mono); font-size: 12.5px; font-weight: 600; letter-spacing: .04em;
+    transition: background .2s, border-color .2s, transform .2s;
+  }
+  .btn--wa { background: var(--mint); color: #022c22; }
+  .btn--wa:hover { background: #6ee7b7; }
+  .btn--ghost { color: #a7f3d0; border-color: rgba(52,211,153,.35); background: rgba(2,44,34,.4); }
+  .btn--ghost:hover { border-color: rgba(110,231,183,.7); }
+  .btn svg { width: 16px; height: 16px; flex: none; }
+
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .625rem; margin-top: 2.25rem; max-width: 40rem; }
+  .kpi { padding: .875rem; border: 1px solid var(--hair); border-radius: .875rem; background: rgba(3,19,17,.7); }
+  .kpi b { display: block; font-family: var(--f-display); font-size: 1.6rem; font-weight: 400; color: var(--text); line-height: 1.1; }
+  .kpi span { font-size: 12px; color: var(--muted); }
+
+  .card { border: 1px solid rgba(52,211,153,.2); border-radius: 1rem; background: var(--card);
+          box-shadow: 0 16px 40px rgba(0,0,0,.45); padding: 1.25rem; }
+  @media (min-width: 640px) { .card { padding: 1.5rem; } }
+
+  /* --- ventajas --- */
+  .grid3 { display: grid; gap: 1rem; margin-top: 1.75rem; }
+  @media (min-width: 760px) { .grid3 { grid-template-columns: repeat(3, 1fr); } }
+  .num { font-family: var(--f-mono); font-size: 11px; color: var(--dim); letter-spacing: .1em; }
+  .card p { margin: .5rem 0 0; font-size: 14px; font-weight: 300; color: #cbd5e1; }
+
+  /* --- tabla comparativa --- */
+  .scroll { overflow-x: auto; margin-top: 1.75rem; border: 1px solid var(--hair); border-radius: 1rem; background: rgba(3,19,17,.6); }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 13.5px; }
+  th, td { padding: .75rem .875rem; text-align: left; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  thead th { font-family: var(--f-mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+  tbody th { font-weight: 400; color: #cbd5e1; }
+  tr:last-child td, tr:last-child th { border-bottom: 0; }
+  .us { background: rgba(52,211,153,.08); color: var(--text); font-weight: 500; }
+  thead .us { color: var(--mint-soft); }
+  .no { color: var(--dim); }
+
+  /* --- calculadora --- */
+  .calc { display: grid; gap: 1.5rem; margin-top: 1.75rem; }
+  @media (min-width: 860px) { .calc { grid-template-columns: 1fr 1.25fr; } }
+  label { display: block; font-size: 13px; color: #cbd5e1; margin-top: 1.25rem; }
+  label:first-child { margin-top: 0; }
+  label output { float: right; font-family: var(--f-mono); color: var(--text); }
+  input[type=range] { width: 100%; margin-top: .5rem; accent-color: var(--mint); }
+  .seg { display: inline-flex; gap: .25rem; margin-top: .5rem; padding: .25rem; border: 1px solid var(--hair); border-radius: .75rem; background: var(--inset); }
+  .seg button {
+    min-height: 38px; padding: .375rem .875rem; border: 0; border-radius: .5rem; cursor: pointer;
+    background: transparent; color: var(--muted); font: 500 12.5px var(--f-mono);
+  }
+  .seg button[aria-pressed=true] { background: rgba(52,211,153,.18); color: var(--text); }
+  .bars { display: flex; flex-direction: column; gap: .875rem; }
+  .bar-row { display: grid; grid-template-columns: 1fr auto; gap: .25rem .75rem; align-items: baseline; }
+  .bar-row span { font-size: 13.5px; color: #cbd5e1; }
+  .bar-row b { font-family: var(--f-mono); font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .bar-track { grid-column: 1 / -1; height: 10px; border-radius: 99px; background: rgba(255,255,255,.05); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; background: #475569; transition: width .35s ease; }
+  .bar-row.us-row span, .bar-row.us-row b { color: var(--mint-soft); }
+  .bar-row.us-row .bar-fill { background: var(--mint); }
+  .saving { margin-top: 1.25rem; padding: 1rem; border-radius: .875rem; border: 1px solid rgba(52,211,153,.35); background: rgba(2,44,34,.5); }
+  .saving b { display: block; font-family: var(--f-display); font-size: 2rem; font-weight: 400; color: var(--text); line-height: 1.1; }
+
+  /* --- planes --- */
+  .plans { display: grid; gap: 1rem; margin-top: 1.5rem; }
+  @media (min-width: 860px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+  .plan { display: flex; flex-direction: column; }
+  .plan--hot { border-color: rgba(52,211,153,.6); box-shadow: 0 20px 48px rgba(16,185,129,.16); }
+  .plan-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+  .pill { padding: .125rem .625rem; border-radius: 99px; font: 500 10px var(--f-mono); letter-spacing: .05em;
+          background: rgba(2,44,34,.8); color: var(--mint-soft); border: 1px solid rgba(52,211,153,.3); }
+  .price { margin-top: .875rem; font-family: var(--f-display); font-size: 2.4rem; color: var(--text); line-height: 1; }
+  .price small { font-family: var(--f-body); font-size: 13px; color: var(--muted); }
+  .price-sub { min-height: 1.25rem; margin: .375rem 0 0; font-size: 12.5px; color: var(--mint-soft); }
+  .plan .for { font-size: 13.5px; color: var(--muted); margin: .75rem 0 0; }
+  .plan ul { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+  .plan li { position: relative; padding-left: 1.4rem; font-size: 13.5px; color: #cbd5e1; }
+  .plan li::before { content: "✓"; position: absolute; left: 0; color: var(--mint); font-weight: 600; }
+  .plan li.plus { color: var(--muted); }
+  .plan li.plus::before { content: "＋"; color: var(--dim); }
+  .plan .btn { margin-top: 1.25rem; justify-content: center; }
+
+  .extras { display: grid; gap: 1rem; margin-top: 1rem; }
+  @media (min-width: 760px) { .extras { grid-template-columns: repeat(3, 1fr); } }
+  .extra b { color: var(--text); font-weight: 600; }
+
+  /* --- preguntas --- */
+  details.faq { border-bottom: 1px solid var(--hair); }
+  details.faq summary { cursor: pointer; list-style: none; padding: 1rem 0; font-weight: 500; color: var(--text); display: flex; justify-content: space-between; gap: 1rem; }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::after { content: "+"; font-family: var(--f-mono); color: var(--mint); }
+  details.faq[open] summary::after { content: "–"; }
+  details.faq p { margin: 0 0 1rem; color: #cbd5e1; font-weight: 300; max-width: 46rem; }
+
+  .final { text-align: center; }
+  .final .btns { justify-content: center; }
+  .foot { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--hair); text-align: center;
+          font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+
+  /* botón flotante en el teléfono */
+  .float-wa { position: fixed; right: 1rem; bottom: 1rem; z-index: 5; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  @media (min-width: 760px) { .float-wa { display: none; } }
+
+  a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="amb amb--grid"></div>
+<div class="amb amb--top"></div>
+
+<main class="shell">
+  <div class="top">
+    <a class="back" href="/">&larr; 8vobit.xyz</a>
+    <span class="serial">Concepción · Chile</span>
+  </div>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <p class="eyebrow">Pedidos para locales de comida</p>
+    <h1>Tus pedidos, <em>sin regalarle</em> el 30&nbsp;% a las apps.</h1>
+    <p class="lede">Tu propia carta web con retiro y despacho por zonas, un panel en vivo para la cocina
+      y la caja del día cuadrada. Pagas un plan fijo y el 1&nbsp;% de cada pedido. Nada más.</p>
+    <div class="btns">
+      <a class="btn btn--wa js-wa" data-msg="Hola, quiero ver una demo del sistema de pedidos para mi local." href="#">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.3.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.6-.1l2 .9c.3.1.4.2.5.3.1.2.1.7-.1 1.3z"/></svg>
+        Pedir una demo por WhatsApp
+      </a>
+      <a class="btn btn--ghost" href="#calculadora">Calcula cuánto ahorras</a>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><b>1&nbsp;%</b><span>por pedido web, sin tope</span></div>
+      <div class="kpi"><b>$19.900</b><span>plan desde, + IVA al mes</span></div>
+      <div class="kpi"><b>En el local</b><span>te lo dejamos funcionando</span></div>
+    </div>
+  </header>
+
+  <!-- ============ VENTAJAS ============ -->
+  <section aria-labelledby="t-ventajas">
+    <p class="eyebrow">Por qué nosotros</p>
+    <h2 id="t-ventajas">Hecho para el local de delivery chico</h2>
+    <div class="grid3">
+      <article class="card">
+        <span class="num">01</span>
+        <h3>La comisión más baja</h3>
+        <p>Uber y PedidosYa se quedan con el 25–30&nbsp;%. Justo cobra 13&nbsp;% más logística. Fudo, 1,9&nbsp;%.
+          Nosotros cobramos el 1&nbsp;%, lo paga el local y no sube el precio a tu cliente.</p>
+      </article>
+      <article class="card">
+        <span class="num">02</span>
+        <h3>Despacho que no pierde plata</h3>
+        <p>Zonas de reparto en el mapa, con el costo real de cada viaje según tu vehículo. Sabes cuánto te
+          deja cada pedido, y el sueldo de tu repartidor calculado según la ley.</p>
+      </article>
+      <article class="card">
+        <span class="num">03</span>
+        <h3>Cerca, en persona</h3>
+        <p>Vamos al local: cargamos la carta y las fotos, dejamos el cartel QR impreso y capacitamos al
+          equipo. Ni Fudo ni Justo van al local.</p>
+      </article>
+    </div>
+
+    <div class="scroll" role="region" aria-label="Comparación con la competencia" tabindex="0">
+      <table>
+        <thead>
+          <tr><th></th><th>Uber / PedidosYa</th><th>Justo Plus</th><th>Fudo Avanzado + Tu Delivery</th><th class="us">8vobit Pedidos</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Costo fijo (+ IVA)</th><td>$0</td><td>≈ $67.000/mes</td><td>$34.500/mes</td><td class="us">desde $19.900/mes</td></tr>
+          <tr><th>% por pedido en canal propio</th><td>25–30&nbsp;%</td><td>13&nbsp;% + 7&nbsp;% logística</td><td>1,9&nbsp;%</td><td class="us">1&nbsp;%</td></tr>
+          <tr><th>El cliente es tuyo (datos y contacto)</th><td class="no">No</td><td>Sí</td><td>Sí</td><td class="us">Sí</td></tr>
+          <tr><th>Costo real de cada despacho</th><td class="no">—</td><td>Logística propia</td><td>Fijo o por zonas</td><td class="us">Zonas + costo por vehículo</td></tr>
+          <tr><th>Costo de productos y margen</th><td class="no">—</td><td class="no">—</td><td>Con recetas</td><td class="us">Sí</td></tr>
+          <tr><th>Sueldos del equipo según la ley</th><td class="no">—</td><td>“Pronto”</td><td class="no">—</td><td class="us">Sí</td></tr>
+          <tr><th>Puesta en marcha en el local</th><td class="no">—</td><td>Comercial</td><td>Remota</td><td class="us">Sí, en Concepción</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Precios públicos de cada empresa revisados en octubre de 2026; pueden cambiar.
+      Lo que aún no tenemos integrado: cobro con tarjeta (conectas tu propia cuenta de Mercado Pago o Flow) y boleta SII directa (por ahora, modo asistido).</p>
+  </section>
+
+  <!-- ============ CALCULADORA ============ -->
+  <section id="calculadora" aria-labelledby="t-calc">
+    <p class="eyebrow">Calculadora</p>
+    <h2 id="t-calc">¿Cuánto pagas en comisiones?</h2>
+    <div class="calc">
+      <div class="card">
+        <label for="ventas">Ventas por delivery al mes <output id="o-ventas"></output></label>
+        <input id="ventas" type="range" min="500000" max="15000000" step="100000" value="3000000">
+        <label for="ticket">Pedido promedio <output id="o-ticket"></output></label>
+        <input id="ticket" type="range" min="5000" max="40000" step="500" value="12000">
+        <label>Plan 8vobit</label>
+        <div class="seg" role="group" aria-label="Plan para comparar">
+          <button type="button" data-plan="canal" aria-pressed="false">Canal</button>
+          <button type="button" data-plan="gestion" aria-pressed="true">Gestión</button>
+          <button type="button" data-plan="pro" aria-pressed="false">Pro</button>
+        </div>
+        <p class="note" id="o-pedidos"></p>
+      </div>
+      <div class="card">
+        <div class="bars" id="bars" aria-live="polite"></div>
+        <div class="saving">
+          <span class="note" style="margin:0">Frente a las apps, con 8vobit te quedas con</span>
+          <b id="o-ahorro"></b>
+          <span class="note" style="margin:0" id="o-ahorro-anio"></span>
+        </div>
+        <p class="note">Montos aproximados, sin IVA. Uber/PedidosYa al 28&nbsp;%; Justo Plus con su plan y 13&nbsp;% (sin logística);
+          Fudo Avanzado + Tu Delivery con 1,9&nbsp;%; 8vobit con el plan elegido y 1&nbsp;%.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PLANES ============ -->
+  <section id="planes" aria-labelledby="t-planes">
+    <p class="eyebrow">Planes</p>
+    <h2 id="t-planes">Elige cuánto control quieres</h2>
+    <p class="lede">Todos incluyen el canal de pedidos completo. Precios + IVA, más 1&nbsp;% por pedido web. La venta en mostrador no paga comisión.</p>
+    <div class="seg" role="group" aria-label="Forma de pago" style="margin-top:1.25rem">
+      <button type="button" data-per="1" aria-pressed="true">Mensual</button>
+      <button type="button" data-per="6" aria-pressed="false">Semestral −10&nbsp;%</button>
+      <button type="button" data-per="12" aria-pressed="false">Anual −15&nbsp;%</button>
+    </div>
+
+    <div class="plans">
+      <article class="card plan" data-base="19900">
+        <div class="plan-head"><h3>Canal</h3></div>
+        <div class="price"><span class="js-price"></span> <small>/mes</small></div>
+        <p class="price-sub js-sub"></p>
+        <p class="for">Para dejar el WhatsApp y el cuaderno, y sacarle pedidos a las apps.</p>
+        <ul>
+          <li>Carta web con fotos, link propio y cartel QR</li>
+          <li>Retiro y despacho por zonas en el mapa, horarios y mínimo</li>
+          <li>Seguimiento del pedido para tu cliente</li>
+          <li>Panel en vivo para la cocina y comanda impresa</li>
+          <li>Venta rápida en mostrador</li>
+          <li>Caja del día con folios, gastos y arqueo</li>
+          <li>Resumen semanal con la comisión ahorrada</li>
+          <li>2 usuarios</li>
+        </ul>
+        <a class="btn btn--ghost js-wa" data-msg="Hola, me interesa el plan Canal para mi local." href="#">Quiero el plan Canal</a>
+      </article>
+
+      <article class="card plan plan--hot" data-base="34900">
+        <div class="plan-head"><h3>Gestión</h3><span class="pill">El más elegido</span></div>
+        <div class="price"><span class="js-price"></span> <small>/mes</small></div>
+        <p class="price-sub js-sub"></p>
+        <p class="for">Para saber si el local gana plata, no solo cuánto vende.</p>
+        <ul>
+          <li>Todo lo del plan Canal</li>
+          <li>Costo de cada producto y margen</li>
+          <li>Costeo de despacho por vehículo</li>
+          <li>Equipo, turnos y sueldos estimados según la ley</li>
+          <li>Estado de resultados mensual</li>
+          <li>Exportar a Excel para tu contador</li>
+          <li>Usuarios ilimitados con PIN y roles</li>
+        </ul>
+        <a class="btn btn--wa js-wa" data-msg="Hola, me interesa el plan Gestión para mi local." href="#">Quiero el plan Gestión</a>
+      </article>
+
+      <article class="card plan" data-base="54900">
+        <div class="plan-head"><h3>Pro</h3></div>
+        <div class="price"><span class="js-price"></span> <small>/mes</small></div>
+        <p class="price-sub js-sub"></p>
+        <p class="for">Para locales con más productos, promociones o más de una sucursal.</p>
+        <ul>
+          <li>Todo lo del plan Gestión</li>
+          <li>Inventario, recetas y proveedores</li>
+          <li>Combos y promociones</li>
+          <li>Varios locales con una sola cuenta</li>
+        </ul>
+        <a class="btn btn--ghost js-wa" data-msg="Hola, me interesa el plan Pro para mi local." href="#">Quiero el plan Pro</a>
+      </article>
+    </div>
+
+    <div class="extras">
+      <div class="card extra"><b>Puesta en marcha · $49.900</b><p>Una vez. Carga de la carta, sesión de fotos básica, cartel y tarjetas QR impresas, y capacitación en el local.</p></div>
+      <div class="card extra"><b>Cobro con tarjeta · sin cargo nuestro</b><p>Conectas tu cuenta de Mercado Pago o Flow y pagas directo la comisión de esa pasarela.</p></div>
+      <div class="card extra"><b>Dominio propio · $2.900/mes</b><p>Tu carta en tu dirección, por ejemplo pide.tulocal.cl.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ PREGUNTAS ============ -->
+  <section aria-labelledby="t-faq">
+    <p class="eyebrow">Preguntas</p>
+    <h2 id="t-faq">Lo que suelen preguntar</h2>
+    <div style="margin-top:1rem">
+      <details class="faq"><summary>¿Tengo que dejar Uber o PedidosYa?</summary>
+        <p>No. La idea es que tus clientes de siempre te pidan directo, por tu link o tu QR, y que las apps queden para clientes nuevos. Cada pedido que se pasa a tu canal es un 27&nbsp;% que deja de irse.</p></details>
+      <details class="faq"><summary>¿El 1&nbsp;% lo paga mi cliente?</summary>
+        <p>No: sale de tu venta y no se suma al precio. En un pedido de $12.000 son $120, tan poco que no hace falta subir la carta.</p></details>
+      <details class="faq"><summary>¿Qué necesito en el local?</summary>
+        <p>Un celular, tablet o computador con internet. Si quieres comandas impresas, una impresora térmica de 80&nbsp;mm.</p></details>
+      <details class="faq"><summary>¿Hay contrato de permanencia?</summary>
+        <p>No. Pagas por adelantado el período que elijas (mensual, semestral o anual) y, si te vas, te entregamos tus datos.</p></details>
+      <details class="faq"><summary>¿Ya lo usa algún local?</summary>
+        <p>Sí, partimos con un local de comida en Concepción como piloto. Te lo podemos mostrar funcionando en la demo.</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Te lo mostramos en tu local</h2>
+    <p class="lede" style="margin-left:auto;margin-right:auto">Escríbenos y coordinamos una demo de 20 minutos con tu propia carta.</p>
+    <div class="btns">
+      <a class="btn btn--wa js-wa" data-msg="Hola, quiero ver una demo del sistema de pedidos para mi local." href="#">Hablar por WhatsApp</a>
+    </div>
+  </section>
+
+  <footer class="foot">&copy; Gabriel Quiroz Campos · 8vobit · Concepción</footer>
+</main>
+
+<a class="btn btn--wa float-wa js-wa" data-msg="Hola, quiero ver una demo del sistema de pedidos para mi local." href="#">WhatsApp</a>
+
+<script>
+  // ===== EDITAR: número de WhatsApp de ventas, solo dígitos (ej. 56912345678).
+  // Mientras esté vacío, los botones abren un correo.
+  const WHATSAPP = '';
+  const CORREO = 'gabrielquirozcampos@gmail.com';
+
+  document.querySelectorAll('.js-wa').forEach(a => {
+    const msg = encodeURIComponent(a.dataset.msg || 'Hola, quiero saber más del sistema de pedidos.');
+    a.href = WHATSAPP
+      ? 'https://wa.me/' + WHATSAPP + '?text=' + msg
+      : 'mailto:' + CORREO + '?subject=' + encodeURIComponent('Pedidos para locales') + '&body=' + msg;
+    if (WHATSAPP) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  });
+
+  const clp = n => '$' + Math.round(n).toLocaleString('es-CL');
+  const PLANES = { canal: 19900, gestion: 34900, pro: 54900 };
+
+  // --- planes: forma de pago ---
+  const DESC = { 1: 0, 6: .10, 12: .15 };
+  function pintarPlanes(per) {
+    document.querySelectorAll('.plan').forEach(p => {
+      const base = +p.dataset.base, mes = base * (1 - DESC[per]);
+      p.querySelector('.js-price').textContent = clp(mes);
+      p.querySelector('.js-sub').textContent = per === 1 ? '' : clp(mes * per) + ' cada ' + per + ' meses';
+    });
+  }
+  document.querySelectorAll('[data-per]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-per]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    pintarPlanes(+b.dataset.per);
+  }));
+  pintarPlanes(1);
+
+  // --- calculadora ---
+  const $v = document.getElementById('ventas'), $t = document.getElementById('ticket');
+  let plan = 'gestion';
+  document.querySelectorAll('[data-plan]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-plan]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    plan = b.dataset.plan; calcular();
+  }));
+  function calcular() {
+    const v = +$v.value, t = +$t.value;
+    document.getElementById('o-ventas').textContent = clp(v);
+    document.getElementById('o-ticket').textContent = clp(t);
+    document.getElementById('o-pedidos').textContent = '≈ ' + Math.round(v / t).toLocaleString('es-CL') + ' pedidos al mes';
+    const filas = [
+      ['Uber / PedidosYa', v * .28],
+      ['Justo Plus', 67000 + v * .13],
+      ['Fudo + Tu Delivery', 34500 + v * .019],
+      ['8vobit ' + { canal: 'Canal', gestion: 'Gestión', pro: 'Pro' }[plan], PLANES[plan] + v * .01, true],
+    ];
+    const max = Math.max(...filas.map(f => f[1]));
+    document.getElementById('bars').innerHTML = filas.map(([n, c, us]) =>
+      '<div class="bar-row' + (us ? ' us-row' : '') + '"><span>' + n + '</span><b>' + clp(c) + '/mes</b>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + (c / max * 100).toFixed(1) + '%"></div></div></div>'
+    ).join('');
+    const ahorro = filas[0][1] - filas[3][1];
+    document.getElementById('o-ahorro').textContent = clp(Math.max(ahorro, 0)) + ' más al mes';
+    document.getElementById('o-ahorro-anio').textContent = '≈ ' + clp(Math.max(ahorro, 0) * 12) + ' al año';
+  }
+  $v.addEventListener('input', calcular); $t.addEventListener('input', calcular);
+  calcular();
+</script>
+</body>
+</html>
