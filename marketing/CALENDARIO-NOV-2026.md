@@ -2,7 +2,12 @@
 
 Estrategia: `ESTRATEGIA-CONTENIDO.md`. Marca: `MARCA-8VOBIT.md`. Proceso: skill `canva-posts`.
 
-**21 carruseles:** 13 de @8vobit y 8 de @resuelve.cl. Mezcla del mes en @8vobit: educar 5, demostrar 3, vender 3 y conectar 2.
+**21 carruseles:** 13 de @8vobit y 8 de @resuelve.cl.
+**Las 3 líneas de @8vobit, rotando:** PARA LOCALES ×4 (6, 9, 13 y 20) · REPARACIÓN ×4 (4, 11, 25 y 27) · PROFESIONALES ×3 (16, 18 y 23) · marca general ×2 (2 y 30). El banco de temas para diciembre está en `BANCO-TEMAS.md`.
+
+| Fecha | Línea | Pieza | Estado |
+|---|---|---|---|
+| 6 nov | PARA LOCALES | ¿Cuánto te cobra realmente Uber? · Canva DAHYOgsJWxY (7 láminas) | 🟨 por aprobar |
 
 Estado: ⬜ por hacer · 🟨 borrador en Canva · ✅ aprobado · 📤 publicado
 
@@ -72,9 +77,9 @@ Las 3 piezas generadas el 16-oct (DAHYOqu2giQ, DAHYOlMQPIw, DAHYOlMeoRM) quedan 
 
 ## Semana 3 · 16–20 nov · Servicios digitales y prueba social
 
-### Lun 16 · @8vobit · Educar · Descubrir ⬜
-- **Objetivo:** guardados. **Gancho:** "HDD o SSD: por qué tu notebook se demora tanto en prender"
-- **Láminas (6):** portada · qué es cada uno · la diferencia en segundos (cifra héroe) · cuánto cuesta el cambio · se conservan tus archivos · cierre "Guárdalo · AGENDA"
+### Lun 16 · @8vobit · PROFESIONALES · Educar · Descubrir ⬜ (P5)
+- **Objetivo:** envíos entre profesionales. **Gancho:** "Deja de agendar por WhatsApp a las 11 de la noche"
+- **Láminas (6):** portada · el problema (chat a toda hora, olvidos) · la agenda online trabaja por ti · recordatorios automáticos · menos inasistencias · cierre "Envíaselo a un colega · WEB"
 
 ### Mar 17 · @resuelve.cl · Vender · Decidir ⬜
 - **Objetivo:** DM. **Gancho:** "¿Te llegó una demanda por deuda? Tienes plazo"
@@ -95,9 +100,10 @@ Las 3 piezas generadas el 16-oct (DAHYOqu2giQ, DAHYOlMQPIw, DAHYOlMeoRM) quedan 
 
 ## Semana 4 · 23–27 nov · Black Friday local
 
-### Lun 23 · @8vobit · Conectar · Considerar ⬜
-- **Objetivo:** seguidores. **Gancho:** "Un día en el taller de 8vobit"
-- **Láminas (6):** fotos reales: recepción · diagnóstico · reparación · prueba · entrega · "Freire 1458 · AGENDA"
+### Lun 23 · @8vobit · PROFESIONALES · Conectar · Considerar ⬜ (P10)
+- **Objetivo:** seguidores y confianza. **Gancho:** "Por qué un abogado hace páginas web"
+- **Láminas (6):** foto de Gabriel · derecho y tecnología · lo que aprendí de los clientes · por qué en Concepción · las 3 líneas de 8vobit · "Síguenos · WEB"
+- El carrusel "Un día en el taller" (R10) pasa a diciembre.
 
 ### Mar 24 · @resuelve.cl · Educar · Descubrir ⬜
 - **Objetivo:** guardados. **Gancho:** "Tu web necesita estos 3 documentos legales"
