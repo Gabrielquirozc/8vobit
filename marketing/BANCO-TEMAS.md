@@ -1,75 +1,82 @@
 # Banco de temas · @8vobit
 
-Las tres líneas de 8vobit, cada una con su etiqueta (la cápsula cian de arriba a la izquierda):
+Una sola cuenta con las tres líneas intercaladas (decidido el 2026-10-16). Cada línea tiene su etiqueta, la cápsula cian de arriba a la izquierda:
 
-| Línea | Etiqueta | Público | Palabra para DM |
+| Línea | Etiqueta | Qué vendemos | Público | Palabra para DM |
+|---|---|---|---|---|
+| Reparación | `REPARACIÓN` | Limpieza, pasta y pads térmicos, piezas importadas (pantallas, top cases, carcasas, flex, SSD, RAM) y armado de PC | Personas con notebook o PC | AGENDA |
+| Agenda | `PARA PROFESIONALES` | **Sistema de agenda online**, con página propia opcional | Psicólogos, kinesiólogos, abogados, estética, barberías | AGENDA PRO |
+| Pedidos | `PARA LOCALES` | **Sistema de pedidos** con carta web, despacho y caja | Dueños de locales de comida | DEMO |
+
+Rotación en la grilla: reparación → agenda → locales → reparación…, de modo que en cualquier fila de 3 se vean las tres caras de 8vobit.
+
+**Regla de cifras:** solo cifras reales (precios propios, temperaturas medidas, segundos cronometrados) o marcadas claramente como "ejemplo". Nada inventado presentado como real.
+
+Leyenda: **E** = educar (guardar) · **D** = demostrar (confianza) · **V** = vender (DM) · **C** = conectar (seguir o enviar).
+
+## REPARACIÓN: el taller es la prueba
+
+Lo que más vende aquí es **mostrar el trabajo real**: la pieza que llega, el equipo abierto, el antes y el después. Cada reparación que entra al taller es material para un carrusel.
+
+| # | Tipo | Gancho de portada | Láminas (fotos reales) |
 |---|---|---|---|
-| Reparación y tecnología | `REPARACIÓN` | Personas con notebook o PC | AGENDA |
-| Servicios profesionales (webs y automatización) | `PROFESIONALES` | Abogados, psicólogos, kinesiólogos, consultoras | WEB |
-| Gestión de tu local (Pedidos) | `PARA LOCALES` | Dueños de locales de comida | DEMO |
+| R1 | E | 5 señales de que tu notebook pide limpieza | Calor, ruido, lentitud, se apaga, batería |
+| R2 | D | Antes y después: así se ve un notebook por dentro tras 3 años | Polvo, ventilador, pasta seca, temperatura medida antes y después |
+| R3 | E | Pasta térmica y pads: qué son y por qué tu equipo se calienta | Macro de la pasta vieja y la nueva, pads, cifra de temperatura real |
+| R4 | D | Pantalla rota: del golpe a como nueva | Pantalla dañada → pieza importada → instalación → resultado |
+| R5 | D | Bisagra suelta y carcasa partida: sí tiene arreglo | Top case o carcasa importada, cambio y resultado |
+| R6 | E | Tu teclado no responde: ¿es el teclado o el flex? | Explicación con foto del cable flex |
+| R7 | E | HDD o SSD: cuánto demora en prender tu notebook | Cronómetro real antes y después de un cambio que hagamos |
+| R8 | E | 8 o 16 GB de RAM: cuánta necesitas según lo que haces | Estudio, oficina, diseño, juegos |
+| R9 | D | Armamos este PC: pieza por pieza | Componentes → armado → cableado → prueba final |
+| R10 | E | Cómo conseguimos las piezas (y por qué te sale más barato) | Importación: pedido → llegada → revisión → instalación |
+| R11 | E | ¿Reparar o comprar otro? La cuenta honesta | Tabla según edad y falla |
+| R12 | E | Black Friday: 4 trampas al comprar un notebook | RAM soldada, HDD, procesador viejo, sin garantía |
+| R13 | E | Se te mojó el notebook: qué hacer en los primeros 10 minutos | Pasos y lo que no hay que hacer |
+| R14 | V | Limpieza completa + pasta térmica: qué incluye y cuánto cuesta | Proceso, tiempo de entrega, precio real |
+| R15 | D | Un día en el taller | Recepción → diagnóstico → reparación → prueba → entrega |
+| R16 | V | Mejora tu notebook en vez de cambiarlo: SSD + RAM | Antes y después de un caso real, con precio |
 
-Regla del mes: rotar las tres líneas (lunes, miércoles y viernes van cambiando), para que la grilla muestre siempre las tres caras de 8vobit.
-Leyenda: **E** = educar (guardar) · **D** = demostrar (confianza) · **V** = vender (DM) · **C** = conectar (seguir o enviar). Cada tema trae su gancho de portada.
+## PARA PROFESIONALES: el sistema de agenda
 
-## REPARACIÓN
+El mensaje central: **"tu agenda trabaja sola mientras tú atiendes"**. Se muestra con capturas reales del sistema de agenda: hay que cargar un profesional de demostración y capturar la vista del cliente reservando y la vista del día del profesional.
 
-| # | Tipo | Gancho de portada | Idea de las láminas |
+| # | Tipo | Gancho de portada | Láminas |
 |---|---|---|---|
-| R1 | E | 5 señales de que tu notebook pide ayuda | Calor, ruido, lentitud, se apaga, batería |
-| R2 | D | Antes y después: 3 años sin limpieza | Fotos reales y temperatura de 92 °C a 61 °C |
-| R3 | E | HDD o SSD: por qué tu notebook demora 2 minutos en prender | Comparación en segundos y costo del cambio |
-| R4 | E | Black Friday: 4 trampas al comprar un notebook | RAM soldada, HDD, procesador viejo, garantía |
-| R5 | E | ¿Vale la pena reparar o mejor comprar otro? | Tabla de decisión por edad y tipo de falla |
-| R6 | E | Cargador barato, notebook caro | Lo que daña la batería y qué cargador conviene |
-| R7 | E | Se te mojó el notebook: qué hacer en los primeros 10 minutos | Pasos en orden; lo que **no** hay que hacer |
-| R8 | V | Tu PC del gobierno sí tiene arreglo | Fallas típicas, precio y plazo |
-| R9 | E | 8 GB o 16 GB de RAM: cuánta necesitas de verdad | Según el uso: estudio, oficina, diseño |
-| R10 | D | Así llega un equipo al taller y así se va | Recepción → diagnóstico → entrega |
-| R11 | E | Pasta térmica: qué es y cada cuánto se cambia | Explicación simple con macro real |
-| R12 | V | Formateo con tus archivos a salvo | Qué incluye, cuánto demora, precio |
-| R13 | E | 3 programas que tu notebook no necesita | Bloatware, antivirus duplicados, limpiadores |
-| R14 | E | Tu notebook se calienta: 4 cosas que puedes hacer hoy | Superficie, base, energía, limpieza |
-| R15 | E | Lo que mirar en un notebook usado antes de comprarlo | Checklist de 6 puntos |
+| A1 | E | Deja de agendar por WhatsApp a las 11 de la noche | El problema → el cliente reserva solo → recordatorio → tú atiendes |
+| A2 | D | Así reserva un paciente en 30 segundos | Capturas reales: elige servicio → hora → confirma → recordatorio |
+| A3 | E | Las inasistencias te cuestan plata: haz la cuenta | Ejemplo marcado: 4 horas perdidas a la semana × valor de la sesión |
+| A4 | V | Sistema de agenda para tu consulta | Qué incluye, cómo partimos, palabra AGENDA PRO |
+| A5 | E | 5 cosas que tu agenda online debe tener | Servicios, horarios, recordatorios, cancelación, historial |
+| A6 | D | Tu día ordenado en una pantalla | Captura de la vista del profesional |
+| A7 | E | Instagram no es tu agenda | Lo que pierdes reservando por DM |
+| A8 | E | Tu web necesita estos 3 documentos legales | Términos, privacidad, datos (puente con resuelve.cl) |
+| A9 | C | Por qué un abogado construye sistemas de agenda | Historia de Gabriel: derecho y tecnología |
+| A10 | E | Recordatorios automáticos: la herramienta más subestimada | Antes y después de la tasa de asistencia (con ejemplo marcado) |
 
-## PROFESIONALES
+## PARA LOCALES: el sistema de pedidos
 
-| # | Tipo | Gancho de portada | Idea de las láminas |
+| # | Tipo | Gancho de portada | Láminas |
 |---|---|---|---|
-| P1 | V | Si tus pacientes no te encuentran en Google, no existes | Qué tiene una web profesional y la agenda online |
-| P2 | E | Instagram no es tu página web | Lo que pierdes sin web propia: Google, confianza, agenda |
-| P3 | E | 5 cosas que tu web profesional debe tener sí o sí | Servicios, quién eres, precios o rango, agenda y contacto |
-| P4 | D | Antes y después: de link en la bio a web con agenda | Caso real (el sitio de resuelve o el hub) |
-| P5 | E | Deja de agendar por WhatsApp a las 11 de la noche | La agenda online trabaja por ti; recordatorios automáticos |
-| P6 | E | Tu web necesita estos 3 documentos legales | Términos, privacidad y cookies (puente con resuelve.cl) |
-| P7 | E | Google Maps: cómo aparecer cuando buscan "psicólogo en Concepción" | Ficha de Google, reseñas y web |
-| P8 | V | Tu web profesional, lista y funcionando | Qué incluye, plazos y mantención; "escríbenos WEB" |
-| P9 | E | 3 tareas que puedes automatizar esta semana | Formularios, recordatorios, respuestas |
-| P10 | C | Por qué un abogado (yo) hace páginas web | Historia de Gabriel: derecho + tecnología |
-| P11 | E | ¿Cuánto cuesta realmente una web? | Qué pagas: dominio, hosting, diseño, mantención |
-| P12 | E | Tu correo con @tunegocio.cl: por qué importa | Confianza y profesionalismo |
-
-## PARA LOCALES
-
-| # | Tipo | Gancho de portada | Idea de las láminas |
-|---|---|---|---|
-| L1 | E | ¿Cuánto te cobra realmente Uber? | ✅ hecho: $3.000.000 → $840.000 → $10 millones al año → $64.900 |
-| L2 | D | Así pide un cliente de Gassuso, sin apps | Recorrido con capturas reales |
+| L1 | E | ¿Cuánto te cobra realmente la app? | 🟨 hecho en Canva (DAHYOgsJWxY); falta marcar las cifras como ejemplo |
+| L2 | D | Así pide un cliente de Gassuso, sin apps | Recorrido con capturas reales (requiere permiso) |
 | L3 | V | Tu propia carta web por 1 % del pedido | Los 3 planes y la puesta en marcha |
-| L4 | D | Lo que ve el dueño cada domingo | El resumen semanal real y la comisión ahorrada |
-| L5 | E | 5 formas de que tus clientes te pidan directo | QR en la caja, bolsa, Instagram, WhatsApp, promo de primera compra |
+| L4 | D | Lo que ve el dueño cada domingo | Resumen semanal con datos de demostración |
+| L5 | E | 5 formas de que tus clientes te pidan directo | QR en caja y bolsa, Instagram, WhatsApp, promo de primera compra |
 | L6 | E | ¿Tu despacho te hace perder plata? | Costo real por zona y por vehículo |
 | L7 | E | El cuaderno de pedidos te está costando clientes | Errores, olvidos, pedidos perdidos |
 | L8 | E | ¿Cuadra tu caja al cierre? | Folios, gastos y arqueo |
-| L9 | E | Cuánto ganas de verdad con cada sándwich | Costo y margen por producto |
-| L10 | V | Puesta en marcha: lo dejamos funcionando en tu local | Carga de la carta, fotos, QR y capacitación |
-| L11 | E | Uber, PedidosYa o carta propia: cuál te conviene | Comparación honesta: usar las apps para clientes nuevos y la carta propia para los que repiten |
-| L12 | E | Tu sueldo y el de tu repartidor, según la ley | Cálculo simple |
-| L13 | C | Por qué hicimos un sistema para locales en Concepción | Historia y misión |
-| L14 | E | La hora peak de tu local, en datos | Cómo usarla para turnos y promociones |
+| L9 | E | Apps o carta propia: cuál te conviene | Comparación honesta: las apps para clientes nuevos y la carta propia para los que repiten |
+| L10 | V | Lo dejamos funcionando en tu local | Carga de la carta, fotos, QR y capacitación |
 
-## Combinaciones que venden (temas puente)
+## Lo que hay que preparar para producir
 
-- **L1 → L3:** primero la cifra que duele y, a la semana siguiente, la solución con precio.
-- **R4 → R3:** "no compres mal" → "mejor mejora el que tienes".
-- **P6 ↔ resuelve.cl:** la misma semana en las dos cuentas (web + documentos legales).
-- **P10 + L13:** la persona detrás genera confianza en las dos líneas.
+| Necesito | Para | Quién |
+|---|---|---|
+| Fotos de cada reparación: antes, pieza nueva, proceso y después | R2, R4, R5, R9, R15, R16 | Dueño, desde el celular, en cada trabajo |
+| Temperaturas reales antes y después (HWMonitor) | R2, R3 | Dueño |
+| Cronómetro de encendido antes y después de un cambio a SSD | R7, R16 | Dueño |
+| Fotos de las piezas importadas al llegar | R10 | Dueño |
+| Precios reales de cada servicio | R14, R16 | Dueño |
+| Profesional de demostración en el sistema de agenda y capturas | A2, A6 | Claude, con el sistema de agenda (agenda.8vobit.xyz o versión nueva) |
+| Pedidos de demostración en Pedidos y capturas del panel | L2, L4 | Claude, en el servidor local |

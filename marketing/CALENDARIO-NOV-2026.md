@@ -3,7 +3,27 @@
 Estrategia: `ESTRATEGIA-CONTENIDO.md`. Marca: `MARCA-8VOBIT.md`. Proceso: skill `canva-posts`.
 
 **21 carruseles:** 13 de @8vobit y 8 de @resuelve.cl.
-**Las 3 líneas de @8vobit, rotando:** PARA LOCALES ×4 (6, 9, 13 y 20) · REPARACIÓN ×4 (4, 11, 25 y 27) · PROFESIONALES ×3 (16, 18 y 23) · marca general ×2 (2 y 30). El banco de temas para diciembre está en `BANCO-TEMAS.md`.
+## @8vobit · plan vigente (reemplaza el detalle de @8vobit en las semanas de abajo)
+
+Las tres líneas se intercalan: reparación → agenda → locales. Los códigos son los de `BANCO-TEMAS.md`, donde está el detalle de cada carrusel.
+
+| Fecha | Línea | Código | Gancho | Objetivo | Requiere |
+|---|---|---|---|---|---|
+| Lun 2 | Marca | — | Tu punto tecnológico en Concepción | Seguidores | Foto de Gabriel y del taller |
+| Mié 4 | REPARACIÓN | R1 | 5 señales de que tu notebook pide limpieza | Guardados | Macro de un ventilador sucio |
+| Vie 6 | PARA LOCALES | L1 | ¿Cuánto te cobra realmente la app? | Envíos | Cifras marcadas como ejemplo |
+| Lun 9 | PARA PROFESIONALES | A1 | Deja de agendar por WhatsApp a las 11 de la noche | Envíos | — |
+| Mié 11 | REPARACIÓN | R2 | Antes y después: un notebook por dentro tras 3 años | Confianza | Fotos y temperaturas reales |
+| Vie 13 | PARA LOCALES | L3 | Tu propia carta web por 1 % del pedido | DM: DEMO | — |
+| Lun 16 | PARA PROFESIONALES | A2 | Así reserva un paciente en 30 segundos | Confianza | Capturas del sistema de agenda |
+| Mié 18 | REPARACIÓN | R4 | Pantalla rota: del golpe a como nueva | Confianza | Fotos de un cambio de pantalla |
+| Vie 20 | PARA LOCALES | L4 | Lo que ve el dueño cada domingo | Confianza | Panel con datos de demostración |
+| Lun 23 | PARA PROFESIONALES | A4 | Sistema de agenda para tu consulta | DM: AGENDA PRO | Precio del sistema de agenda |
+| Mié 25 | REPARACIÓN | R12 | Black Friday: 4 trampas al comprar un notebook | Guardados | — |
+| Vie 27 | REPARACIÓN | R14 | Limpieza completa + pasta térmica: qué incluye y cuánto cuesta | DM: AGENDA | Precio especial |
+| Lun 30 | Marca | — | Noviembre en 8vobit: lo que hicimos | Envíos | Cifras reales del mes |
+
+Reparto: reparación ×4, agenda ×3, locales ×3, marca ×2. Los carruseles de @resuelve.cl de abajo siguen igual.
 
 | Fecha | Línea | Pieza | Estado |
 |---|---|---|---|

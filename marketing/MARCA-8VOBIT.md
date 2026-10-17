@@ -12,7 +12,12 @@ Versión 1 · 2026-10-16. Este documento manda sobre cualquier plantilla vieja. 
 |---|---|---|
 | Persona con notebook o PC (estudiante, trabajador) | "Está lento", "se calienta", "no prende" | Diagnóstico claro, precio antes de tocar y el equipo listo en días, no semanas |
 | Dueño de un local de comida | Las apps se quedan con el 25–30 %; WhatsApp y cuaderno desordenados | Su propio canal de pedidos, 1 % por pedido, y lo dejamos funcionando en el local |
-| Profesional independiente (abogado, psicólogo, kine) | No tiene web, o la que tiene no le trae clientes | Página con agenda online, lista en poco tiempo |
+| Profesional independiente (abogado, psicólogo, kine, estética) | Agenda por WhatsApp a toda hora, olvidos e inasistencias | **Sistema de agenda online**: el cliente reserva solo, le llegan recordatorios y tú ves tu día ordenado (con página propia si la quiere) |
+
+**Los tres productos que vendemos** (en este orden de foco):
+1. **Reparación:** limpieza completa, cambio de pasta y pads térmicos, cambio de piezas importadas (pantallas, top cases, carcasas, cables flex, discos SSD, RAM) y armado de computadores.
+2. **Sistema de agenda** para profesionales.
+3. **Sistema de pedidos** para locales de comida.
 
 **Personalidad:** técnico que explica sin jerga, cercano, directo y honesto con los números. No vende humo: muestra pantallas reales, precios reales y trabajos reales.
 
