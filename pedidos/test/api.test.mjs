@@ -1327,7 +1327,7 @@ test('importar carta: vista previa, errores por fila, agregar y reemplazar sin p
   const chac = ps.find((x) => x.nombre === 'Chacarero');
   // Un local creado desde la administración parte en pausa hasta que el dueño abre la carta.
   assert.equal((await req('GET', '/api/locales/el-rincon')).body.local.pausa, true);
-  assert.equal((await dueno('PATCH', '/api/panel/local', { pausa: false })).status, 200);
+  assert.equal((await dueno('PATCH', '/api/panel/local', { pausa: false, horario: Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']])) })).status, 200); // 24 h: la prueba no depende de la hora
   assert.equal((await req('POST', '/api/locales/el-rincon/pedidos', { cliente: 'Ana', telefono: '+56 9 1111 2222', franja: 'Lo antes posible', items: [{ producto_id: chac.id }] })).status, 201);
   const prev = await imp('Sándwiches\tLomito\t7200\nPostres\tKuchen\t2500', { modo: 'reemplazar' });
   assert.deepEqual(prev.body.archivados.sort(), ['Bebida lata', 'Chacarero', 'Jugo; natural']);
