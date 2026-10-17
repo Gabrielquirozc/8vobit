@@ -27,7 +27,8 @@ Reparto: reparación ×4, agenda ×3, locales ×3, marca ×2. Los carruseles de 
 
 | Fecha | Línea | Pieza | Estado |
 |---|---|---|---|
-| 6 nov | PARA LOCALES | ¿Cuánto te cobra realmente Uber? · Canva DAHYOgsJWxY (7 láminas) | 🟨 por aprobar |
+| 4 nov | REPARACIÓN | 5 señales de que tu notebook pide limpieza · Canva DAHYOofcMu8 (7 láminas) | 🟨 por aprobar |
+| 6 nov | PARA LOCALES | ¿Cuánto te cobra realmente Uber? · Canva DAHYOgsJWxY (7 láminas, cifras marcadas como ejemplo) | ✅ guardado |
 
 Estado: ⬜ por hacer · 🟨 borrador en Canva · ✅ aprobado · 📤 publicado
 
