@@ -22,3 +22,4 @@ Antes de trabajar en `pedidos/`, lee en este orden:
 - Desplegar lo hace el usuario: `powershell -ExecutionPolicy Bypass -File .\pedidos\deploy\desplegar.ps1` desde `D:\8vobit`.
 - Al terminar algo importante, actualizar `pedidos/PENDIENTES.md`: es la memoria que sobrevive entre sesiones.
 - Nunca subir claves: la del panel vive solo en `/srv/docker/compose/pedidos/.env` en el servidor.
+- DM automáticos de Instagram (n8n): cómo funciona y cómo revisarlo en `infra/n8n/OPERACION.md`, copiado en el servidor en `/srv/docker/compose/n8n/OPERACION.md`.
