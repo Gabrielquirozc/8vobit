@@ -261,3 +261,9 @@ dialog.sheet::backdrop { background: rgb(15 10 6 / .5); animation: fade .2s; }
 .recordar input { width: 20px; height: 20px; }
 .recordar .link { background: none; border: 0; color: var(--ink); text-decoration: underline; padding: 8px; }
 .pie-legal { max-width: 720px; margin: 8px auto 0; padding: 16px 16px 140px; text-align: center; font-size: .85rem; color: var(--ink-2); }
+
+/* Promociones de hoy y descuento en el carro */
+.promos { display: grid; gap: 8px; margin: 14px 0 4px; }
+.promo { background: var(--surface); border-left: 4px solid var(--brand, #c0392b); border-radius: 10px; padding: 10px 14px; box-shadow: var(--shadow, none); display: flex; flex-direction: column; gap: 2px; }
+.promo span { color: var(--ink-2); font-size: .92rem; }
+.subtot.desc span:last-child { color: var(--ok, #1e7d32); font-weight: 700; }

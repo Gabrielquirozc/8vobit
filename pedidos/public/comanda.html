@@ -42,6 +42,7 @@ try {
       ${i.nota ? `<div class="ag obs">&gt;&gt; ${esc(i.nota).toUpperCase()}</div>` : ''}`).join('')}
     ${p.notas ? `<hr><div><b>NOTA:</b> ${esc(p.notas)}</div>` : ''}<hr>
     ${p.costo_despacho ? `<div class="it"><span class="n">Despacho</span><span>${clp(p.costo_despacho)}</span></div>` : ''}
+    ${p.descuento ? `<div class="it"><span class="n">Descuento ${esc(p.promo_nombre || '')}</span><span>−${clp(p.descuento)}</span></div>` : ''}
     <div class="tot"><span>TOTAL</span><span>${clp(p.total)}</span></div>
     <div>${p.pagado ? 'PAGADO' : 'PAGO POR CONFIRMAR'}</div>
     ${p.estado === 'anulado' ? '<hr><div class="c big">ANULADO</div>' : ''}`;

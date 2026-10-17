@@ -71,6 +71,7 @@
     <div id="lines"></div>
     <section id="ups" class="ups" aria-labelledby="upsT" hidden></section>
     <div class="subtot" id="despLinea" hidden><span>Despacho</span><span class="num" id="despCosto"></span></div>
+    <div class="subtot desc" id="descLinea" hidden><span id="descNom">Descuento</span><span class="num" id="descMonto"></span></div>
     <div class="tot"><span>Total</span><span class="num" id="ckTotal"></span></div>
 
     <fieldset class="fs"><legend>¿Cómo lo recibes?</legend>
@@ -96,6 +97,7 @@
       <div class="field"><label for="cliente">Nombre</label><input id="cliente" autocomplete="name"><div class="err" id="e-cliente"></div></div>
       <div class="field"><label for="telefono">Celular</label><input id="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678"><div class="err" id="e-telefono"></div></div>
       <label class="recordar"><input type="checkbox" id="recordar" checked> Recordar mis datos en este teléfono <button type="button" class="link" id="olvidar" hidden>Olvidar</button></label>
+      <div class="field"><label for="codigo">Código de descuento <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><input id="codigo" maxlength="16" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"><p class="ayuda" id="codigoMsg" role="status"></p></div>
       <div class="field"><label for="notas">Comentario general del pedido <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><textarea id="notas" rows="2" maxlength="300" placeholder="Ej: tocar el timbre, sin servilletas…"></textarea></div>
     </fieldset>
 
@@ -176,16 +178,21 @@ function itemHtml(p, cIdx) {
     <div class="meta"><span class="tag">Precio por confirmar · pregunta en el local</span></div></div></div>`;
   const veg = M.categorias[cIdx]?.nombre === 'Vegapletos';
   return `<button class="item" data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
-    <div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}
+    <div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}${comboTxt(p) ? `<div class="d">${comboTxt(p)}</div>` : ''}
       <div class="meta"><span class="p num">${clp(p.precio)}</span>${p.incluye ? `<span class="tag pick">Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</span>` : ''}${veg ? `<span class="tag veg">Vegano</span>` : ''}</div></div>
     <div class="thumb">${art(cIdx, '', p)}<span class="qtyb num" data-qb="${p.id}" hidden></span><span class="plus">${ico('plus')}</span></div>
   </button>`;
 }
+// Combo: qué incluye ("Incluye: Barros Luco + Papas + Bebida").
+const comboTxt = (p) => (p.combo?.length ? 'Incluye: ' + p.combo.map((x) => `${x.cantidad > 1 ? x.cantidad + '× ' : ''}${esc(x.nombre)}`).join(' + ') : '');
+// Promociones automáticas de hoy, en la portada de la carta.
+const promoTxt = (x) => `${x.tipo === 'pct' ? `${x.valor} %` : clp(x.valor)} de descuento${x.categoria_id ? ` en ${esc(M.categorias.find((c) => c.id === x.categoria_id)?.nombre || '')}` : ''}${x.desde ? ` de ${x.desde} a ${x.hasta}` : ''}${x.minimo ? ` desde ${clp(x.minimo)}` : ''}`;
 function render() {
   const q = norm($('q').value.trim());
   const match = (p) => !q || norm(p.nombre + ' ' + (p.descripcion || '')).includes(q);
   const cats = M.categorias.map((c, i) => ({ ...c, i, ps: c.productos.filter((p) => p.activo && match(p)).sort((a, b) => vendible(b) - vendible(a)) })).filter((c) => c.ps.length);
   let html = '';
+  if (!q && M.promociones?.length) html += `<section class="promos" aria-label="Promociones de hoy">${M.promociones.map((x) => `<div class="promo"><b>${esc(x.nombre)}</b><span>${promoTxt(x)}</span></div>`).join('')}</section>`;
   if (!q && M.mas_pedidos.length) {
     html += `<section aria-labelledby="t-fav"><h2 class="sec-t" id="t-fav">Los más pedidos</h2><p class="sec-s">Lo que más sale en ${esc(M.local.nombre)}</p><div class="rail">` +
       M.mas_pedidos.map((id) => { const { p, i } = prods.get(id); return `<button class="fav" data-p="${p.id}">${art(i, '', p)}<span class="t"><span class="n">${esc(p.nombre)}</span><span class="p num">${clp(p.precio)}</span></span></button>`; }).join('') + `</div></section>`;
@@ -254,7 +261,7 @@ function abrirProducto(id) {
       <div class="sh-head" style="padding:14px 0 0;position:sticky;top:0;z-index:1;justify-content:flex-end;height:0"><button class="close" data-close aria-label="Cerrar" style="margin-top:44px">${ico('x')}</button></div>
       ${art(i, 'sh-art', p)}
       <h2 id="pdName" style="font:800 1.5rem/1.15 var(--font-display);margin:0">${esc(p.nombre)}</h2>
-      ${p.descripcion ? `<p class="pd-d">${esc(p.descripcion)}</p>` : ''}
+      ${p.descripcion ? `<p class="pd-d">${esc(p.descripcion)}</p>` : ''}${comboTxt(p) ? `<p class="pd-d">${comboTxt(p)}</p>` : ''}
       <p class="num" style="font-weight:700;font-size:1.15rem;margin:8px 0 0">${clp(p.precio)}</p>
       ${p.incluye ? `<div class="group"><div class="group-h"><h3>Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</h3>
         <span class="req ${falta ? '' : 'done'}">${falta ? `Obligatorio · ${pd.sel.length}/${p.incluye}` : 'Listo'}</span></div>
@@ -375,8 +382,26 @@ const hayDespacho = () => D().activo && !!F && (F.despacho_ya || F.slots.some((s
 const porZonas = () => D().modo === 'zonas' && !!M.local.ubicacion;
 let ubic = null, cot = null;
 const costoDespacho = () => (modalidad !== 'despacho' ? 0 : porZonas() ? (cot?.ok ? cot.costo : 0) : D().costo);
+// Descuento del pedido: lo calcula el servidor (promoción automática o código). Se pide con una
+// pequeña espera para no consultar en cada toque del carro.
+let promo = { descuento: 0, promo: null }, promoT = 0, promoClave = '';
+function revisarPromo() {
+  const codigo = $('codigo').value.trim(), clave = JSON.stringify([carro, codigo]);
+  if (clave === promoClave) return;
+  promoClave = clave;
+  clearTimeout(promoT);
+  if ((!M.promociones?.length && !codigo) || !carro.length) { promo = { descuento: 0, promo: null }; $('codigoMsg').textContent = ''; return; }
+  promoT = setTimeout(async () => {
+    try { promo = await api(`locales/${slug}/promo`, { method: 'POST', body: { items: carro, codigo, telefono: $('telefono').value } }); $('codigoMsg').textContent = codigo && promo.descuento ? `Código aplicado: ${promo.promo}` : ''; }
+    catch (e) { promo = { descuento: 0, promo: null }; $('codigoMsg').textContent = e.message; }
+    pintarTotales();
+  }, 300);
+}
 function pintarTotales() {
-  const c = costoDespacho(), sub = total(), falta = modalidad === 'despacho' ? D().minimo - sub : 0;
+  revisarPromo();
+  const c = costoDespacho(), sub = total() - promo.descuento, falta = modalidad === 'despacho' ? D().minimo - total() : 0;
+  $('descLinea').hidden = !promo.descuento;
+  if (promo.descuento) { $('descNom').textContent = promo.promo || 'Descuento'; $('descMonto').textContent = `−${clp(promo.descuento)}`; }
   const zonaMala = modalidad === 'despacho' && porZonas() && cot && !cot.ok;
   $('despLinea').hidden = modalidad !== 'despacho';
   $('despCosto').textContent = porZonas() && !cot ? 'Según tu dirección' : zonaMala ? '—' : c ? clp(c) : 'Gratis';
@@ -493,6 +518,7 @@ function validar() {
   if (first) $(first).focus();
   return !first;
 }
+$('codigo').addEventListener('input', () => pintarTotales());
 for (const k of ['cliente', 'telefono', 'direccion']) $(k).addEventListener('blur', () => $(k).getAttribute('aria-invalid') === 'true' && validar());
 // El celular se ordena solo (9 dígitos → +56 9 …), igual que en el panel.
 $('telefono').addEventListener('blur', (e) => { const d = e.target.value.replace(/\D/g, ''); if (d.length === 9 && d[0] === '9') e.target.value = fmtTel('56' + d); else if (/^569\d{8}$/.test(d)) e.target.value = fmtTel(d); });
@@ -504,11 +530,13 @@ $('enviar').onclick = async () => {
     const r = await api(`locales/${slug}/pedidos`, { method: 'POST', body: {
       items: carro, franja: $('franja').value, modalidad,
       direccion: [$('direccion').value.trim(), $('dirRef').value.trim()].filter(Boolean).join(' · '), ubicacion: modalidad === 'despacho' && porZonas() ? ubic : undefined,
-      cliente: $('cliente').value, telefono: $('telefono').value, notas: $('notas').value,
+      cliente: $('cliente').value, telefono: $('telefono').value, notas: $('notas').value, codigo: $('codigo').value.trim() || undefined,
     } });
     $('dlgCarro').close();
     $('okNum').textContent = `#${r.numero}`;
-    $('okTexto').textContent = `${r.franja === 'Lo antes posible' ? 'Lo preparamos lo antes posible' : 'Para ' + r.franja}. Total ${clp(r.total)}, pagas al ${modalidad === 'despacho' ? 'recibir' : 'retirar'}.`;
+    $('okTexto').textContent = `${r.franja === 'Lo antes posible' ? 'Lo preparamos lo antes posible' : 'Para ' + r.franja}. Total ${clp(r.total)}, pagas al ${modalidad === 'despacho' ? 'recibir' : 'retirar'}.`
+      + (r.cupon ? ` Tu próximo pedido tiene ${r.cupon.valor} % de descuento con el código ${r.cupon.codigo}.` : '');
+    $('codigo').value = ''; promoClave = '';
     const msg = encodeURIComponent(`Hola, hice el pedido #${r.numero} por ${clp(r.total)} (${r.franja}) a nombre de ${$('cliente').value}.`);
     $('okWa').hidden = !M.local.whatsapp;
     $('okWa').href = `https://wa.me/${(M.local.whatsapp || '').replace(/\D/g, '')}?text=${msg}`;

@@ -5,9 +5,10 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
   let YO = null;
   // Pestaña → permiso del rol y función del plan.
   const TABS = { pedidos: ['ver_pedidos'], venta: ['venta'], cierre: ['caja'], gastos: ['gastos'], resumen: ['resumen'],
-    resultados: ['resultados', 'resultados'], carta: ['carta'], despacho: ['despacho'], equipo: ['equipo', 'equipo'], local: ['local'] };
+    resultados: ['resultados', 'resultados'], carta: ['carta'], despacho: ['despacho'], equipo: ['equipo', 'equipo'], local: ['local'],
+    promos: ['carta', 'combos'], inventario: ['inventario', 'inventario'], clientes: ['clientes', 'clientes'] };
   const PLAN_NOMBRE = { canal: 'Canal', gestion: 'Gestión', pro: 'Pro' };
-  const PLAN_DE = { costos: 'gestion', equipo: 'gestion', exportar: 'gestion', resultados: 'gestion' };
+  const PLAN_DE = { costos: 'gestion', equipo: 'gestion', exportar: 'gestion', resultados: 'gestion', clientes: 'gestion', combos: 'pro', inventario: 'pro' };
   const ESTADO = { prueba: 'Prueba', activa: 'Activa', gracia: 'Pago pendiente', suspendida: 'Suspendida', cancelada: 'Cancelada' };
   const fecha = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
 
@@ -105,7 +106,9 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
   function bloqueada(v) { const f = TABS[v]?.[1]; return f && !tiene(f) ? f : null; }
   function vistaBloqueada(f) {
     return `<div class="cardf vacio" style="padding:32px;max-width:640px;margin:20px auto">${ico('ban')}<h3>Disponible en el plan ${PLAN_NOMBRE[PLAN_DE[f]]}</h3>
-      <p>${{ equipo: 'Equipo calcula el costo del personal, los turnos y el sueldo estimado de cada persona según la ley.', exportar: 'Exporta ventas, caja y gastos a Excel para el contador.', resultados: 'El estado de resultados muestra cuánto gana el local cada mes.' }[f] || ''}</p>
+      <p>${{ equipo: 'Equipo calcula el costo del personal, los turnos y el sueldo estimado de cada persona según la ley.', exportar: 'Exporta ventas, caja y gastos a Excel para el contador.', resultados: 'El estado de resultados muestra cuánto gana el local cada mes.',
+        combos: 'Promociones por día y horario, códigos de descuento y combos con precio propio.', inventario: 'Insumos y recetas: cada venta descuenta el stock, avisa cuando algo se acaba y calcula el costo real de cada producto.',
+        clientes: 'Quién compra, cuánto y cada cuánto, y un cupón de vuelta para que el cliente repita por la carta.' }[f] || ''}</p>
       <p class="ayuda">Para cambiar de plan, escríbenos. Tus datos se mantienen.</p></div>`;
   }
   function banner() {

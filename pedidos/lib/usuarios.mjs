@@ -14,6 +14,7 @@ export const PERMISOS = {
   ver_pedidos: 1, mover_pedidos: 1, agotar: 1,
   cobrar: 2, anular: 2, venta: 2, caja: 2, gastos: 2, pausa: 2,
   reabrir_caja: 3, resumen: 3, carta: 3, despacho: 3,
+  inventario: 3, clientes: 3,
   costos: 4, equipo: 4, local: 4, usuarios: 4, exportar: 4, resultados: 4, licencia: 4,
 };
 export const puedeRol = (rol, permiso) => (ROLES[rol]?.nivel || 0) >= (PERMISOS[permiso] ?? 99);

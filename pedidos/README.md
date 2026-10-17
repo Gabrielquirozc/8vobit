@@ -197,6 +197,21 @@ recibe al confirmar y en el WhatsApp del local; muestra el estado en vivo.
   (extienden el plazo desde donde termina lo pagado), se genera una clave nueva y se ve el historial.
   La columna *Primeros pasos* muestra cuánto le falta a cada local nuevo para quedar andando.
 
+## Promociones, inventario y clientes
+
+- **Promociones** (plan Pro): % o monto fijo, automáticas (por días y horario; se anuncian en la carta) o con
+  código; pueden limitarse a una categoría, a un pedido mínimo, a una fecha de término o a un número de usos.
+  Cada pedido lleva la que más descuenta, nunca sobre el despacho, y siempre calculada en el servidor. Anular
+  el pedido devuelve el uso.
+- **Combos** (plan Pro): un producto de la carta con su precio y los productos que incluye; la carta lo muestra
+  y el inventario descuenta lo de cada componente.
+- **Inventario** (plan Pro): insumos con unidad, costo, stock y mínimo; receta por producto. Cada venta descuenta
+  (sin bloquearla) y una anulación devuelve; compras con costo promedio ponderado (y opcionalmente como gasto de
+  insumos en la caja); conteo y merma. Con receta, el costo del producto en el pedido es el real.
+- **Clientes** (plan Gestión): clientes de la carta online por celular (frecuentes, nuevos, dormidos, una vez),
+  historial y lo que más piden. **Cupón de vuelta**: tras cada pedido web, el cliente recibe un código de un solo
+  uso, atado a su celular, para el próximo pedido. Borrar los datos del cliente borra sus cupones.
+
 ## Autoservicio: el local se pone en marcha solo
 
 Para que cada local nuevo necesite poca ayuda (meta: ≤ 0,5 h de soporte al mes, `VIABILIDAD.md` §4–5).

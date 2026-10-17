@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-16 (revisión UX en `REVISION-UX.md` y `ESTUDIO-UX.md`, con alertas de pedidos nuevos en todas las pestañas, sonido que se repite, local nuevo en pausa, recordar datos del cliente y orden de entrega de despachos; tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-16 (promociones y combos, inventario y recetas, clientes y cupón de vuelta; revisión UX en `REVISION-UX.md` y `ESTUDIO-UX.md`, con alertas de pedidos nuevos en todas las pestañas, sonido que se repite, local nuevo en pausa, recordar datos del cliente y orden de entrega de despachos; tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -24,7 +24,7 @@ cd D:\8vobit
 git pull origin claude/compassionate-maxwell-hb826m
 cd pedidos
 $env:PANEL_PASSWORD="demo"; node server.mjs        # http://127.0.0.1:8099/gassuso y /panel (clave demo)
-npm test                                           # 68 pruebas (API de punta a punta + orden de entrega), ~1-2 s
+npm test                                           # 74 pruebas (API de punta a punta + orden de entrega), ~1-2 s
 ```
 
 Requisitos: Node 22 (usa `node:sqlite`, sin dependencias npm). Los datos locales quedan en
@@ -53,6 +53,9 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `lib/exportar.mjs`, `lib/resultados.mjs` | CSV para el contador y estado de resultados |
 | `lib/licencias.mjs`, `lib/usuarios.mjs`, `lib/admin.mjs` | Planes y licencias, usuarios con PIN y roles, consola de administración |
 | `public/panel-cuenta.js`, `public/admin.html` | Entrada con clave o PIN, permisos en el panel, Tu plan, Usuarios; consola `/admin` |
+| `lib/promos.mjs` + `public/panel-promos.js` | Promociones (automáticas por día y horario, por código, por categoría), combos y cupón de vuelta (plan Pro; el cupón, Gestión) |
+| `lib/inventario.mjs` + `public/panel-inventario.js` | Insumos, recetas, compras (costo promedio, opcional como gasto), conteo y merma; la venta descuenta y la anulación devuelve (plan Pro) |
+| `lib/clientes.mjs` + `public/panel-clientes.js` | Clientes de la carta online: frecuentes, nuevos, dormidos, historial (plan Gestión) |
 | `lib/autoservicio.mjs` + `public/panel-inicio.js` | Primeros pasos del local nuevo, importar la carta desde planilla, ayudas por pestaña |
 | `deploy/probar-respaldo.mjs`, `deploy/MONITOREO.md` | Prueba de restauración de respaldos y guía de monitoreo |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |

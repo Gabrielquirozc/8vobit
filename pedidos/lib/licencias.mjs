@@ -5,12 +5,12 @@
 // Precios mensuales sin IVA. Semestral −10 %, anual −15 %. Las funciones definen qué abre cada plan.
 export const PLANES = {
   canal: { nombre: 'Canal', mes: 19900, funciones: [], usuarios: 2 },
-  gestion: { nombre: 'Gestión', mes: 34900, funciones: ['costos', 'equipo', 'exportar', 'resultados'], usuarios: Infinity },
-  pro: { nombre: 'Pro', mes: 54900, funciones: ['costos', 'equipo', 'exportar', 'resultados', 'inventario', 'combos', 'multilocal'], usuarios: Infinity },
+  gestion: { nombre: 'Gestión', mes: 34900, funciones: ['costos', 'equipo', 'exportar', 'resultados', 'clientes'], usuarios: Infinity },
+  pro: { nombre: 'Pro', mes: 54900, funciones: ['costos', 'equipo', 'exportar', 'resultados', 'clientes', 'inventario', 'combos', 'multilocal'], usuarios: Infinity },
 };
 export const CICLOS = { mensual: { meses: 1, desc: 0 }, semestral: { meses: 6, desc: 10 }, anual: { meses: 12, desc: 15 } };
 // Plan mínimo que abre cada función (para el mensaje "Disponible en el plan …").
-export const PLAN_DE = { costos: 'gestion', equipo: 'gestion', exportar: 'gestion', resultados: 'gestion', inventario: 'pro', combos: 'pro', multilocal: 'pro' };
+export const PLAN_DE = { costos: 'gestion', equipo: 'gestion', exportar: 'gestion', resultados: 'gestion', clientes: 'gestion', inventario: 'pro', combos: 'pro', multilocal: 'pro' };
 export const TARIFA = { pct: 1 };
 const GRACIA_DIAS = 7, CANCELA_DIAS = 90;
 const MEDIOS = ['transferencia', 'efectivo', 'tarjeta', 'flow', 'mercadopago', 'otro'];

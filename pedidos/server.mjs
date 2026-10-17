@@ -16,6 +16,9 @@ import { crearUsuarios, ROLES, PERMISOS, puedeRol, verificar } from './lib/usuar
 import { crearAdmin } from './lib/admin.mjs';
 import { crearResultados } from './lib/resultados.mjs';
 import { crearAutoservicio } from './lib/autoservicio.mjs';
+import { crearPromos } from './lib/promos.mjs';
+import { crearInventario } from './lib/inventario.mjs';
+import { crearClientes } from './lib/clientes.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -391,6 +394,7 @@ function borrarCliente(local, telefono) {
   const t = String(telefono || '').replace(/\D/g, '').slice(-9);
   if (t.length < 8) return { error: 'Escribe el celular completo del cliente.' };
   const r = db.prepare(`UPDATE pedidos SET ${ANONIMO} WHERE local_id=? AND telefono != '' AND substr(replace(replace(telefono,'+',''),' ',''), -9) = ?`).run(local.id, t);
+  PROMOS.borrarTelefono(local.id, t);
   return { ok: true, pedidos: Number(r.changes) };
 }
 
@@ -477,8 +481,9 @@ function serveFile(res, file, versionado = false) {
 
 function menu(local) {
   const cats = db.prepare('SELECT id, nombre, salsas FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
+  const cmb = PROMOS.combos(local.id);
   const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir FROM productos WHERE local_id=? AND archivado=0 ORDER BY orden, id').all(local.id)
-    .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null }));
+    .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null, combo: cmb.get(p.id) || null }));
   // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
   // suficientes, se completa con los destacados elegidos a mano.
   const vendidos = db.prepare(`SELECT i.producto_id id, SUM(i.cantidad) n FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id
@@ -493,6 +498,7 @@ function menu(local) {
       logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local), ubicacion: ubicacionDe(local),
       transferencia: local.transferencia ? JSON.parse(local.transferencia) : null, legal: local.legal ? JSON.parse(local.legal) : null },
     mas_pedidos: mas,
+    promociones: LIC.puede(local.id, 'combos') ? PROMOS.enCarta(local.id, ahoraDe(local)) : [],
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
     agregados: db.prepare('SELECT id, nombre, disponible, tipo FROM agregados WHERE local_id=? AND archivado=0 ORDER BY id').all(local.id),
   };
@@ -559,6 +565,8 @@ function crearPedido(local, body) {
 
   const v = validarItems(local, body.items);
   if (v.error) return v;
+  const pr = promoPara(local, v, body.codigo, tel);
+  if (pr.error) return pr;
   let costo = 0, geo = null;
   if (modalidad === 'despacho') {
     const desp = despachoDe(local);
@@ -575,7 +583,26 @@ function crearPedido(local, body) {
       if (veh?.repartidor) geo.repartidor_id = veh.repartidor.id; // por defecto, el repartidor del vehículo con que se calcula
     }
   }
-  return guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo, geo }, { ...v, total: v.total + costo });
+  const r = guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo, geo, promo: pr.promo },
+    { ...v, total: v.total - pr.descuento + costo });
+  // Fidelización: el cliente se lleva un cupón para su próximo pedido.
+  if (LIC.puede(local.id, 'clientes')) r.cupon = PROMOS.cuponVuelta(local, tel, f.dia) ? PROMOS.cuponDe(local.id, tel, f.dia) : null;
+  return { ...r, descuento: pr.descuento, promo: pr.promo?.nombre || null };
+}
+
+// Fecha y hora del local, para las promociones por día y horario.
+const ahoraDe = (local) => ({ dia: franjas(local).dia, hora: new Date().toTimeString().slice(0, 5) });
+// Mejor promoción del pedido (plan Pro; los cupones de vuelta también valen en Gestión).
+// Con un código que no sirve se responde el error; sin código, nunca falla.
+function promoPara(local, v, codigo, telefono) {
+  const conPromos = LIC.puede(local.id, 'combos'), conCupones = LIC.puede(local.id, 'clientes');
+  const sinCodigo = () => (codigo ? { error: 'Ese código no existe o ya no está vigente.' } : { promo: null, descuento: 0 });
+  if (!conPromos && !conCupones) return sinCodigo();
+  const x = PROMOS.aplicar(local.id, { items: v.items, subtotal: v.total, codigo, telefono, ahora: ahoraDe(local) });
+  if (x.error) return x;
+  // Sin el plan Pro solo valen los cupones de vuelta (los que tienen celular).
+  if (x.promo && !conPromos && !x.promo.telefono) return sinCodigo();
+  return { promo: x.promo ? { id: x.promo.id, nombre: x.promo.nombre, descuento: x.descuento } : null, descuento: x.descuento };
 }
 
 // Texto libre del cliente: sin caracteres de control ni saltos raros, largo acotado.
@@ -611,6 +638,7 @@ function validarItems(local, lista) {
 }
 
 function guardarPedido(local, d, { items, total }) {
+  const conInv = LIC.puede(local.id, 'inventario');
   db.exec('BEGIN IMMEDIATE');
   try {
     const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, d.dia).n;
@@ -621,10 +649,13 @@ function guardarPedido(local, d, { items, total }) {
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
     if ((d.canal || 'web') === 'web') db.prepare('UPDATE pedidos SET legal_version=? WHERE id=?').run(LEGAL_VERSION, pid);
+    if (d.promo) { db.prepare('UPDATE pedidos SET descuento=?, promo_id=?, promo_nombre=? WHERE id=?').run(d.promo.descuento, d.promo.id, d.promo.nombre, pid); PROMOS.usar(d.promo.id); }
     if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=?, repartidor_id=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, d.geo.repartidor_id ?? null, pid);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido,costo_unitario) VALUES (?,?,?,?,?,?,?,?,?,?)'
-    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0, costoDe(local, i.p));
+    ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0, conInv ? INV.costo(local.id, i.p.id) ?? costoDe(local, i.p) : costoDe(local, i.p));
+    // Inventario: cada venta descuenta lo que lleva según su receta.
+    if (conInv) INV.descontarPedido(local.id, Number(pid), items.map((i) => ({ producto_id: i.p.id, cantidad: i.cant })));
     db.exec('COMMIT');
     return { id: Number(pid), numero, total, franja: d.franja, token };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -876,6 +907,9 @@ const USU = crearUsuarios(db);
 const ADMIN = crearAdmin(db, { LIC, USU, crearLocal, hoy: today });
 const resultados = crearResultados(db, { equipoMes: (local, mes) => equipoMes(local, mes) });
 const AUTO = crearAutoservicio(db);
+const PROMOS = crearPromos(db);
+const INV = crearInventario(db, { combos: (lid) => PROMOS.combos(lid) });
+const CLI = crearClientes(db);
 // Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
 {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
@@ -902,11 +936,14 @@ function permisoRuta(m, parts) {
   if (a === 'local') return b === 'logo' ? 'local' : m === 'PATCH' ? null : 'local';
   if (a === 'privacidad') return 'local';
   if (a === 'usuarios') return 'usuarios';
+  if (a === 'promos' || a === 'combos') return 'carta';
+  if (a === 'inventario') return 'inventario';
+  if (a === 'clientes') return 'clientes';
   if (a === 'licencia' || a === 'yo' || a === 'logout') return null;
   return 'local';
 }
 // Función del plan que pide cada ruta.
-const FUNCION_RUTA = { exportar: 'exportar', resultados: 'resultados', equipo: 'equipo', turnos: 'equipo' };
+const FUNCION_RUTA = { exportar: 'exportar', resultados: 'resultados', equipo: 'equipo', turnos: 'equipo', promos: 'combos', combos: 'combos', inventario: 'inventario', clientes: 'clientes' };
 
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1); // sin "api"
@@ -929,6 +966,14 @@ async function api(req, res, url) {
       const r = await geocodificar(local, q);
       return r ? send(res, 200, r) : send(res, 503, { error: 'El buscador de direcciones no responde. Marca tu ubicación en el mapa.' });
     }
+    // Vista previa del descuento en el carro (con o sin código).
+    if (m === 'POST' && parts[2] === 'promo') {
+      if (limitar(`promo:${ipDe(req)}`, 30, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera unos minutos.' });
+      const b = await readJson(req), v = validarItems(local, b.items);
+      if (v.error) return send(res, 400, v);
+      const pr = promoPara(local, v, b.codigo, String(b.telefono || ''));
+      return send(res, pr.error ? 400 : 200, pr.error ? pr : { descuento: pr.descuento, promo: pr.promo?.nombre || null });
+    }
     if (m === 'POST' && parts[2] === 'pedidos') {
       if (limitar(`pedido:${ipDe(req)}`, 15, 15 * 60e3)) return send(res, 429, { error: 'Demasiados pedidos seguidos. Espera unos minutos o llama al local.' });
       const r = crearPedido(local, await readJson(req));
@@ -946,7 +991,8 @@ async function api(req, res, url) {
       .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
     return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
-      modalidad: p.modalidad, total: p.total, costo_despacho: p.costo_despacho, pagado: !!p.pagado, creado: p.creado, items });
+      modalidad: p.modalidad, total: p.total, costo_despacho: p.costo_despacho, descuento: p.descuento, promo: p.promo_nombre, pagado: !!p.pagado, creado: p.creado, items,
+      cupon: p.telefono && LIC.puede(p.local_id, 'clientes') ? PROMOS.cuponDe(p.local_id, p.telefono, today()) : null });
   }
 
   // --- administración (solo nosotros) ---
@@ -1096,8 +1142,42 @@ async function api(req, res, url) {
         .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, Date.now(), p.id);
       // Quién cobró y quién anuló: queda registrado.
       if (medio_pago && !p.medio_pago) db.prepare('UPDATE pedidos SET cobrado_por=? WHERE id=?').run(yo.nombre, p.id);
-      if (estado === 'anulado' && p.estado !== 'anulado') db.prepare('UPDATE pedidos SET anulado_por=? WHERE id=?').run(yo.nombre, p.id);
+      if (estado === 'anulado' && p.estado !== 'anulado') {
+        db.prepare('UPDATE pedidos SET anulado_por=? WHERE id=?').run(yo.nombre, p.id);
+        INV.revertirPedido(lid, p.id, yo.nombre); // devuelve al stock lo que se había descontado
+        if (p.promo_id) PROMOS.devolver(p.promo_id);
+      }
       return send(res, 200, pedidoCompleto(p.id, lid));
+    }
+    const r2 = (x, ok = 200) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, ok, x));
+    // Promociones y combos (plan Pro).
+    if (parts[1] === 'promos') {
+      if (m === 'GET' && !parts[2]) return send(res, 200, { promociones: PROMOS.lista(lid) });
+      if (m === 'POST' && !parts[2]) return r2(PROMOS.guardar(lid, await readJson(req)), 201);
+      if (m === 'PATCH' && parts[2]) return r2(PROMOS.guardar(lid, await readJson(req), Number(parts[2])));
+    }
+    if (m === 'PUT' && parts[1] === 'combos' && parts[2]) return r2(PROMOS.guardarCombo(lid, Number(parts[2]), (await readJson(req)).items));
+    // Inventario: insumos, recetas, compras, conteos y mermas (plan Pro).
+    if (parts[1] === 'inventario') {
+      const [, , a, id] = parts;
+      if (m === 'GET' && !a) return send(res, 200, { ...INV.lista(lid), recetas: INV.recetas(lid) });
+      if (m === 'GET' && a === 'movimientos') return send(res, 200, { movimientos: INV.movimientos(lid, url.searchParams.get('insumo')) });
+      if (m === 'POST' && a === 'insumos' && !id) return r2(INV.guardarInsumo(lid, await readJson(req)), 201);
+      if (m === 'PATCH' && a === 'insumos' && id) return r2(INV.guardarInsumo(lid, await readJson(req), Number(id)));
+      if (m === 'POST' && a === 'compras') {
+        const b = await readJson(req), x = INV.compra(lid, b, yo.nombre);
+        // La compra puede quedar además como gasto de insumos en la caja.
+        if (!x.error && b.gasto && Number(b.total) > 0) CAJA.nuevoMovimiento(local, { tipo: 'gasto', categoria: 'insumos', monto: Math.round(Number(b.total)), medio: MEDIOS.includes(b.medio) ? b.medio : 'efectivo', descripcion: `Compra: ${x.nombre}`, documento: b.documento }, yo.nombre);
+        return r2(x, 201);
+      }
+      if (m === 'POST' && a === 'ajustes') return r2(INV.ajuste(lid, await readJson(req), yo.nombre));
+      if (m === 'PUT' && a === 'recetas' && id) return r2(INV.guardarReceta(lid, Number(id), (await readJson(req)).items));
+    }
+    // Clientes del canal propio y cupón de vuelta (plan Gestión).
+    if (parts[1] === 'clientes') {
+      if (m === 'GET' && !parts[2]) return send(res, 200, { ...CLI.lista(lid, { q: url.searchParams.get('q') || '', hoy: franjas(local).dia }), fidelizacion: PROMOS.fidelizacion(local), cupones: PROMOS.cupones(lid).length });
+      if (m === 'PUT' && parts[2] === 'fidelizacion') { if (!puede('carta')) return sinPermiso(); return r2(PROMOS.guardarFidelizacion(local, await readJson(req))); }
+      if (m === 'GET' && parts[2]) return r2(CLI.detalle(lid, parts[2]));
     }
     if (m === 'GET' && parts[1] === 'resumen') {
       const f = url.searchParams.get('semana') || franjas(local).dia;

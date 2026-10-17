@@ -47,13 +47,13 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 | Sueldos y costo de personal según la ley | — | "pronto" | — | ✅ |
 | Gastos, arqueo, estado de resultados | — | ? | Inicial / Pro | ✅ |
 | Usuarios con PIN, roles, entrada y salida | — | ✅ | ✅ | ✅ |
-| Combos y promociones | ✅ | ✅ | ✅ (Inicial) | ❌ **brecha** |
-| Clientes, fidelización, cupones | ✅ | ✅ (loyalty) | cuenta corriente | ❌ **brecha** |
+| Combos y promociones | ✅ | ✅ | ✅ (Inicial) | ✅ (2026-10-16) |
+| Clientes, fidelización, cupones | ✅ | ✅ (loyalty) | cuenta corriente | ✅ cupón de vuelta (2026-10-16) |
 | Avisos automáticos de estado (WhatsApp/SMS) | ✅ | ✅ | ✅ | ❌ |
 | Centralizar Uber / PedidosYa | — | ? | ✅ ($9.500) | ❌ (no se persigue por ahora) |
 | Pago online con tarjeta | ✅ | ✅ | ✅ | ❌ **brecha** |
 | Boleta SII directa | — | ? | ✅ | ❌ (modo asistido) |
-| Inventario y recetas | — | ✅ | ✅ | ❌ |
+| Inventario y recetas | — | ✅ | ✅ | ✅ (2026-10-16) |
 | WhatsApp con IA | — | ✅ | ✅ | ❌ (enlace a WhatsApp) |
 | Soporte local, en persona | — | comercial | remoto | **✅ Concepción, en terreno** |
 
@@ -97,8 +97,8 @@ datos · cartel QR y carta para imprimir · respaldos diarios fuera del servidor
 | 7 | Acuerdo del piloto por escrito: precio, plazo, uso de fotos y marca, soporte | comercial | |
 | 8 | Datos legales del local en Términos y Privacidad | dueño | |
 
-**Fuera de la v1.0** (se agregan después, sin bloquear la venta): inventario, combos, pago online y
-SII directo. (Usuarios con PIN, estado de resultados y multi-local ya se hicieron el 2026-10-14.)
+**Fuera de la v1.0** (se agregan después, sin bloquear la venta): pago online y SII directo.
+(Inventario, combos, promociones y clientes se hicieron el 2026-10-16.) (Usuarios con PIN, estado de resultados y multi-local ya se hicieron el 2026-10-14.)
 
 ### Brechas frente a la competencia (revisado el 2026-10-16)
 
@@ -107,18 +107,19 @@ inventario y combos, que no existen.
 
 | # | Brecha | Quién la tiene | Plan afectado | Prioridad |
 |---|---|---|---|---|
-| 1 | **Combos y promociones** (precio propio, por horario, por código) | Fudo Inicial, Justo, apps | Pro | Alta: chica de hacer y la piden todos |
+| 1 | ✅ **Combos y promociones** (precio propio, por horario, por código) | Fudo Inicial, Justo, apps | Pro | Hecho el 2026-10-16 |
 | 2 | **Pago online con tarjeta** (Mercado Pago o Flow con la cuenta del local) | Fudo, Justo, apps | todos | Alta: sin esto se pierde al cliente que no quiere transferir |
 | 3 | **Avisos automáticos de estado** al cliente (WhatsApp) | Fudo, Justo, apps | todos | Media |
-| 4 | **Inventario y recetas** (descuento de stock, alerta, compras) | Fudo Avanzado, Justo | Pro | Media: necesario para vender Pro |
-| 5 | **Clientes y fidelización** (historial, cupón de vuelta, puntos) | Justo (loyalty), apps | Gestión/Pro | Media: es lo que hace volver al cliente al canal propio |
+| 4 | ✅ **Inventario y recetas** (descuento de stock, alerta, compras, conteo y merma) | Fudo Avanzado, Justo | Pro | Hecho el 2026-10-16 |
+| 5 | ✅ **Clientes y fidelización** (historial, grupos, cupón de vuelta; puntos no) | Justo (loyalty), apps | Gestión/Pro | Hecho el 2026-10-16 |
 | 6 | **Boleta SII directa** (proveedor de DTE) | Fudo Inicial | todos | Media: modo asistido sirve para el piloto |
 | 7 | **Cobro automático** de nuestras licencias (Flow o Mercado Pago) | — | interno | Baja hasta el 5º–10º local |
 | 8 | Centralizar Uber / PedidosYa en el panel | Fudo ($9.500) | — | No se persigue: las APIs son cerradas y va contra el mensaje |
 | 9 | Recepcionista / agente IA por WhatsApp | Fudo ($42.500), Justo | — | No se persigue por ahora |
 
-**Riesgo comercial:** el plan Pro ($54.900) hoy vende funciones que no existen (inventario, combos).
-Hasta tenerlas, ofrecer solo Canal y Gestión, o vender Pro como "incluye inventario y combos al lanzarse".
+**Lo que queda** necesita cuentas externas del local o nuestras: pago online (Mercado Pago o Flow),
+avisos por WhatsApp (WhatsApp Business API) y boleta SII (proveedor de DTE). El plan Pro ya tiene
+todo lo que promete salvo multi-local con una sola cuenta.
 
 **Criterio de éxito del piloto (3 meses):** % de los pedidos totales que pasan por el canal propio,
 comisión ahorrada acumulada, caja cuadrada todos los días y el dueño usándolo sin llamarnos.
@@ -159,6 +160,7 @@ paga tarifa. Se cobra a mes vencido, junto con el plan, según los pedidos web n
 | Exportar a CSV/Excel | — | ✅ | ✅ |
 | Inventario, recetas y proveedores | — | — | ✅ |
 | Combos y promociones | — | — | ✅ |
+| Clientes y cupón de vuelta | — | ✅ | ✅ |
 | Varios locales con una sola cuenta | — | — | ✅ |
 
 **Adicionales** (aparte del plan):
@@ -197,7 +199,7 @@ Los puntos 1 a 8 de §2. Entregable: Gassuso operando con el canal propio y la c
 
 ### L2. Sistema de control. Ahora y siguientes meses
 Etapas de `PLAN-CONTROL.md`: ✅ 1 gastos y arqueo → ✅ 4 exportar → ✅ 3 usuarios con PIN → ✅ 2 estado de
-resultados → 6 combos → 5 inventario → 7 SII. Es el contenido de los planes Gestión y Pro.
+resultados → ✅ 6 combos → ✅ 5 inventario → 7 SII. Es el contenido de los planes Gestión y Pro.
 
 ### L3. Plataforma multi-local. Antes del 2º cliente — ✅ hecho el 2026-10-14 (autoservicio v1 también: primeros pasos, importar planilla, ayudas)
 Hoy la base ya separa por `local_id`, pero el sistema funciona como si hubiera un solo local:

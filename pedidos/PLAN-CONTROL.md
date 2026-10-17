@@ -37,8 +37,9 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 | Usuarios con PIN y roles | ✅ | Cocina, caja, encargado y dueño; entrada y salida con PIN (2026-10-14). |
 | Gastos por categoría | ✅ | Pestaña Gastos con comparación mensual (2026-10-14). |
 | Estado de resultados | ✅ | Pestaña Resultados, con el mes anterior (2026-10-14). Fudo lo da en Pro. |
-| Inventario, recetas, proveedores, compras | ❌ | Fudo Avanzado. |
-| Combos, descuentos, promociones | ❌ | Fudo Inicial. |
+| Inventario, recetas, proveedores, compras | ✅ | Pestaña Inventario: stock, alerta, compras con costo promedio, conteo y merma (2026-10-16). Fudo Avanzado. |
+| Combos, descuentos, promociones | ✅ | Pestaña Promociones: automáticas por día y horario, códigos, por categoría, combos (2026-10-16). |
+| Clientes y cupón de vuelta | ✅ | Pestaña Clientes: frecuentes, nuevos, dormidos, cupón de un solo uso para volver (2026-10-16). |
 | Boleta electrónica directa con el SII | ❌ | Hoy modo asistido (el local emite en el SII y anota el folio). Requiere integrarse con un proveedor de DTE (costo por documento). |
 | Pago con tarjeta integrado (terminal) | ❌ | No conviene construirlo: el local usa su máquina (SumUp, Getnet, etc.) y se registra el medio de pago. |
 | Mesas, garzones, propinas | — | No aplica a un local de delivery. |
@@ -48,7 +49,7 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 Orden pensado para lo que más le sirve a un local de delivery y lo que más pesa en la propuesta.
 Cada etapa se puede desplegar sola.
 
-Estado al 2026-10-16: etapas 1, 2, 3, 4 y 8 ✅ hechas; faltan 5 (inventario), 6 (combos) y 7 (SII).
+Estado al 2026-10-16: etapas 1 a 6 y 8 ✅ hechas; falta 7 (SII).
 
 1. ✅ **Gastos y movimientos de caja** — registrar gastos con categoría (insumos, arriendo, luz, gas,
    sueldos, contador…), retiros y aportes de caja; **arqueo** al cierre (contado vs. esperado, con
@@ -60,10 +61,10 @@ Estado al 2026-10-16: etapas 1, 2, 3, 4 y 8 ✅ hechas; faltan 5 (inventario), 6
    (cocina y caja ve pedidos y caja; el dueño ve todo, sueldos y costos). Registro de quién cobró,
    anuló o cerró caja. Marcar entrada y salida → **turnos reales** para el sueldo.
 4. ✅ **Exportar** — ventas, caja, gastos y pedidos a CSV/Excel por rango de fechas (para el contador).
-5. **Inventario simple** — insumos con unidad y costo; receta de cada producto (cuánto pan, carne,
+5. ✅ **Inventario simple** — insumos con unidad y costo; receta de cada producto (cuánto pan, carne,
    palta…); cada venta descuenta stock; alerta de stock bajo; compras a proveedor que actualizan el
    costo. Reemplaza el costo estimado por el real.
-6. **Combos y promociones** — combos con precio propio y descuentos por horario o por código.
+6. ✅ **Combos y promociones** — combos con precio propio y descuentos por horario o por código.
 7. **Boleta electrónica directa** — integrar un proveedor de DTE autorizado por el SII.
    Evaluar costo por boleta vs. seguir en modo asistido.
 8. ✅ **Multi-local / producto** — alta de locales, licencias y cobro manual hechos el 2026-10-14

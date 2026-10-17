@@ -104,6 +104,11 @@
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .kpis div { background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); color: var(--ink-2); font-size: .9rem; }
   .kpis .sub { display: block; font-size: .8rem; margin-top: 2px; }
+  .kpis .kpi-b { background: var(--surface); border: 2px solid transparent; border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); color: var(--ink-2); font: inherit; font-size: .9rem; text-align: left; cursor: pointer; }
+  .kpis .kpi-b.on { border-color: var(--brand, currentColor); }
+  .kpis .kpi-b b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
+  tr.off td { opacity: .55; }
+  .medios.dias { display: flex; flex-wrap: wrap; gap: 6px; } .medios.dias button { flex: 0 0 auto; width: auto; min-height: 0; padding: 8px 14px; }
   .folio-f { display: flex; gap: 6px; } .folio-f input { width: 140px; min-height: 40px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
   .folio-f .ghostb { min-height: 40px; }
   .kpis b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
@@ -503,6 +508,9 @@
       <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
       <button class="tab" role="tab" data-v="resultados" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Resultados</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
+      <button class="tab" role="tab" data-v="promos" aria-selected="false"><svg class="ico"><use href="#i-receipt"/></svg>Promociones</button>
+      <button class="tab" role="tab" data-v="inventario" aria-selected="false"><svg class="ico"><use href="#i-list"/></svg>Inventario</button>
+      <button class="tab" role="tab" data-v="clientes" aria-selected="false"><svg class="ico"><use href="#i-users"/></svg>Clientes</button>
       <button class="tab" role="tab" data-v="despacho" aria-selected="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
       <button class="tab" role="tab" data-v="equipo" aria-selected="false"><svg class="ico"><use href="#i-users"/></svg>Equipo</button>
       <button class="tab" role="tab" data-v="local" aria-selected="false"><svg class="ico"><use href="#i-store"/></svg>Datos del local</button>
@@ -545,6 +553,9 @@
     <div id="v-equipo" hidden></div>
     <div id="v-resumen" hidden></div>
     <div id="v-resultados" hidden></div>
+    <div id="v-promos" hidden></div>
+    <div id="v-inventario" hidden></div>
+    <div id="v-clientes" hidden></div>
   </main>
 </div>
 
@@ -619,6 +630,9 @@ import * as LB from './laboral.js';
 import { crearCajaUI } from './panel-caja.js';
 import { crearCuentaUI } from './panel-cuenta.js';
 import { crearInicioUI } from './panel-inicio.js';
+import { crearPromosUI } from './panel-promos.js';
+import { crearInventarioUI } from './panel-inventario.js';
+import { crearClientesUI } from './panel-clientes.js';
 import { ordenarRuta, finFranja, enlaceWaze, enlaceMaps } from './ruta.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -727,7 +741,7 @@ function tarjeta(p) {
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
     ${p.modalidad === 'despacho' && reparts().length ? `<label class="prep">🛵 Repartidor <select data-rep="${p.id}"><option value="">Sin asignar</option>${reparts().map((t) => `<option value="${t.id}" ${p.repartidor_id === t.id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></label>` : ''}
-    <div class="pie"><span>${p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : ''}</span><span class="total num">${clp(p.total)}</span></div>
+    <div class="pie"><span>${[p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : '', p.descuento ? `descuento ${clp(p.descuento)} (${esc(p.promo_nombre || '')})` : ''].filter(Boolean).join(' · ')}</span><span class="total num">${clp(p.total)}</span></div>
     ${pasos[p.estado] || ''}
     <div class="acc">
       ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
@@ -1027,6 +1041,10 @@ document.addEventListener('input', (e) => {
 const CAJA = crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE, puede: (x) => CUENTA.puede(x) });
 CAJA.conectar($('v-cierre'), () => CJ, () => recargarCaja().catch((e) => alert(e.message)));
 CAJA.conectarGastos($('v-gastos'));
+// Promociones y combos, inventario y clientes (public/panel-promos.js, panel-inventario.js, panel-clientes.js).
+const PROMOS = crearPromosUI({ $, ico, toast, api, clp, esc }); PROMOS.conectar($('v-promos'));
+const INVENT = crearInventarioUI({ $, ico, toast, api, clp, esc }); INVENT.conectar($('v-inventario'));
+const CLIENTES = crearClientesUI({ $, ico, toast, api, clp, esc, fmtTel, puede: (x) => CUENTA.puede(x) }); CLIENTES.conectar($('v-clientes'));
 const exportarLinks = CAJA.conectarExportar($('v-resumen'));
 let filtro = { q: '', ver: 'todos' };
 const FILTROS = [['todos', 'Todos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo'], ['agotados', 'No disponibles'], ['sinfoto', 'Sin foto']];
@@ -2078,7 +2096,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   vista = b.dataset.v;
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
-  for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'resultados', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
+  for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'resultados', 'despacho', 'equipo', 'promos', 'inventario', 'clientes']) $('v-' + v).hidden = v !== vista;
   INICIO.ayuda(vista); avisos();
   const bloq = CUENTA.bloqueada(vista);
   if (bloq) { $('v-' + vista).innerHTML = CUENTA.vistaBloqueada(bloq); return; }
@@ -2089,6 +2107,9 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   else if (vista === 'equipo') pintarEquipo();
   else if (vista === 'gastos') CAJA.pintarGastos($('v-gastos'), null).catch((e) => alert(e.message));
   else if (vista === 'resultados') CAJA.pintarResultados($('v-resultados'), null).catch((e) => alert(e.message));
+  else if (vista === 'promos') PROMOS.pintar($('v-promos')).catch((e) => alert(e.message));
+  else if (vista === 'inventario') INVENT.pintar($('v-inventario')).catch((e) => alert(e.message));
+  else if (vista === 'clientes') CLIENTES.pintar($('v-clientes')).catch((e) => alert(e.message));
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else { if (vista === 'cierre') { cajaDia = null; cajaD = null; } refrescar(); }
 });
