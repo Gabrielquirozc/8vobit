@@ -24,7 +24,7 @@ Archivos: `docker-compose.yml`, `.env.example` y `flujo-dm-instagram.json` (se i
 - ✅ Token y App Secret cargados en el `.env` (17-oct). El token responde como @8vobit. **Vence en 60 días: renovar antes del 16-dic-2026.**
 - ✅ Webhook verificado en Meta y @8vobit suscrita al campo `messages` (vía API: `POST /me/subscribed_apps?subscribed_fields=messages`).
 - ✅ App **publicada** (modo Live, 17-oct) con política en https://8vobit.xyz/privacidad/ y categoría Negocios y páginas.
-- ⏳ Falta: prueba con un DM real desde @gabq.c.
+- ✅ Probado con un DM real desde @gabq.c ("quiero una demo"): respondió solo (17-oct).
 - (antes) Falta crear la cuenta de dueño en `https://n8n.8vobit.xyz`: hacerlo cuanto antes, porque mientras no exista, cualquiera que entre puede reclamarla.
 
 ## Parte 1 · Servidor (hecha)
