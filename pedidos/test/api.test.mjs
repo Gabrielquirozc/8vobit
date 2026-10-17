@@ -476,14 +476,17 @@ test('despacho: solo en los días y horarios configurados, con costo y pedido m�
   assert.match(chico.body.error, /mínimo/);
   // el retiro no paga despacho ni tiene mínimo
   assert.equal((await pedir([{ producto_id: it.id }])).body.total, it.precio);
-  // solo una franja específica de hoy
-  const s0 = f.slots[0].franja, [a, b] = s0.split('–');
-  assert.equal((await conf({ horario: { ...dias(null), [new Date().getDay()]: [a, b] } })).status, 200);
-  f = (await req('GET', '/api/locales/gassuso/franjas')).body;
-  assert.equal(f.slots.find((x) => x.franja === s0).despacho, true);
-  assert.ok(f.slots.filter((x) => x.franja !== s0).every((x) => !x.despacho));
-  assert.equal((await despacho([{ producto_id: ch.id }], s0)).status, 201);
-  if (f.slots[1]) assert.equal((await despacho([{ producto_id: ch.id }], f.slots[1].franja)).status, 400);
+  // solo una franja específica de hoy. Cerca de medianoche ya no quedan franjas en el día
+  // (la última termina a las 00:00 y se exige tiempo de preparación): ahí se salta este tramo.
+  if (f.slots.length) {
+    const s0 = f.slots[0].franja, [a, b] = s0.split('–');
+    assert.equal((await conf({ horario: { ...dias(null), [new Date().getDay()]: [a, b] } })).status, 200);
+    f = (await req('GET', '/api/locales/gassuso/franjas')).body;
+    assert.equal(f.slots.find((x) => x.franja === s0).despacho, true);
+    assert.ok(f.slots.filter((x) => x.franja !== s0).every((x) => !x.despacho));
+    assert.equal((await despacho([{ producto_id: ch.id }], s0)).status, 201);
+    if (f.slots[1]) assert.equal((await despacho([{ producto_id: ch.id }], f.slots[1].franja)).status, 400);
+  }
   // día sin despacho y despacho apagado
   await conf({ horario: dias(null) });
   assert.equal((await despacho([{ producto_id: ch.id }])).status, 400);
