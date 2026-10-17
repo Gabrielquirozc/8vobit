@@ -3,3 +3,7 @@ __pycache__/
 wget-log*
 backups/snapshots/*
 !backups/snapshots/.gitkeep
+
+# Secretos locales
+.env
+**/.env
