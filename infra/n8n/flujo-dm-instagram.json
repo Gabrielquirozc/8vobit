@@ -1,0 +1,105 @@
+{
+  "name": "DM Instagram · palabras clave 8vobit",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "instagram",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1",
+      "name": "Verificación Meta (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "8vobit-instagram-get"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.mode'] === 'subscribe' && $json.query['hub.verify_token'] === $env.IG_VERIFY_TOKEN ? $json.query['hub.challenge'] : 'token invalido' }}",
+        "options": {}
+      },
+      "id": "a2",
+      "name": "Devolver challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instagram",
+        "options": { "rawBody": true }
+      },
+      "id": "b1",
+      "name": "Mensajes Instagram (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 240],
+      "webhookId": "8vobit-instagram-post"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\n// Respuestas por palabra clave. Tono 8vobit: directo, cercano, sin emojis en exceso.\nconst RESPUESTAS = {\n  'AGENDA': `¡Hola! Gracias por escribir a 8vobit 🔧\\nPara revisar tu notebook o PC, agenda tu hora aquí: ${$env.LINK_AGENDA}\\nEstamos en Freire 1458, Concepción. Si nos cuentas el modelo y qué le pasa, te damos un precio estimado antes de tocarlo.`,\n  'AGENDA PRO': `¡Hola! Gracias por escribir a 8vobit.\\nHacemos tu página profesional con agenda incluida: tus clientes reservan solos, a cualquier hora.\\nCuéntanos a qué te dedicas y te mostramos un ejemplo. Más info: ${$env.LINK_WEB}`,\n  'WEB': `¡Hola! Gracias por escribir a 8vobit.\\nHacemos tu página profesional con agenda incluida: tus clientes reservan solos, a cualquier hora.\\nCuéntanos a qué te dedicas y te mostramos un ejemplo. Más info: ${$env.LINK_WEB}`,\n  'DEMO': `¡Hola! Gracias por escribir a 8vobit 🍔\\nTe mostramos el sistema de pedidos funcionando: carta web, despacho por zonas y caja del día, por 1 % del pedido.\\nPlanes y detalles: ${$env.LINK_PEDIDOS}\\n¿Cómo se llama tu local y en qué sector está? Coordinamos la demo.`\n};\n\nfunction normalizar(s) {\n  return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase();\n}\n\nfunction clasificar(texto) {\n  const t = normalizar(texto);\n  if (/\\bAGENDA\\s*PRO\\b/.test(t)) return 'AGENDA PRO';\n  if (/\\bAGENDA\\b/.test(t)) return 'AGENDA';\n  if (/\\bDEMO\\b/.test(t)) return 'DEMO';\n  if (/\\bWEB\\b/.test(t)) return 'WEB';\n  return null;\n}\n\nconst salida = [];\nfor (const item of $input.all()) {\n  // 1) Verificar que el aviso viene de Meta (firma HMAC-SHA256 con el App Secret).\n  const headers = item.json.headers || {};\n  const firma = String(headers['x-hub-signature-256'] || '');\n  const crudo = item.binary && item.binary.data\n    ? Buffer.from(item.binary.data.data, 'base64')\n    : Buffer.from(JSON.stringify(item.json.body || {}));\n  const esperada = 'sha256=' + crypto.createHmac('sha256', $env.IG_APP_SECRET || '').update(crudo).digest('hex');\n  if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) {\n    continue; // firma inválida: se ignora en silencio\n  }\n\n  // 2) Recorrer los mensajes y quedarse solo con los que traen palabra clave.\n  const body = item.json.body || {};\n  for (const entry of body.entry || []) {\n    for (const ev of entry.messaging || []) {\n      const msg = ev.message;\n      if (!msg || msg.is_echo || typeof msg.text !== 'string') continue;\n      const clave = clasificar(msg.text);\n      if (!clave) continue; // sin palabra clave: lo contesta una persona\n      salida.push({ json: {\n        remitente: ev.sender && ev.sender.id,\n        clave,\n        texto: msg.text.slice(0, 300),\n        respuesta: RESPUESTAS[clave]\n      } });\n    }\n  }\n}\nreturn salida;"
+      },
+      "id": "b2",
+      "name": "Verificar firma y clasificar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v21.0/me/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.IG_ACCESS_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ recipient: { id: $json.remitente }, message: { text: $json.respuesta } }) }}",
+        "options": {}
+      },
+      "id": "b3",
+      "name": "Responder DM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NTFY_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Title", "value": "={{ 'DM Instagram: ' + $('Verificar firma y clasificar').item.json.clave }}" },
+            { "name": "Tags", "value": "speech_balloon" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $('Verificar firma y clasificar').item.json.texto }}",
+        "options": {}
+      },
+      "id": "b4",
+      "name": "Avisar por ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 240]
+    }
+  ],
+  "connections": {
+    "Verificación Meta (GET)": { "main": [[{ "node": "Devolver challenge", "type": "main", "index": 0 }]] },
+    "Mensajes Instagram (POST)": { "main": [[{ "node": "Verificar firma y clasificar", "type": "main", "index": 0 }]] },
+    "Verificar firma y clasificar": { "main": [[{ "node": "Responder DM", "type": "main", "index": 0 }]] },
+    "Responder DM": { "main": [[{ "node": "Avisar por ntfy", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "America/Santiago" },
+  "active": false
+}
