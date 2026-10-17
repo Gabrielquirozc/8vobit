@@ -13,7 +13,7 @@ services:
       N8N_HOST: n8n.8vobit.xyz
       N8N_PROTOCOL: https
       N8N_PORT: "5678"
-      WEBHOOK_URL: https://n8n.8vobit.xyz/
+      N8N_WEBHOOK_URL: https://n8n.8vobit.xyz/
       N8N_PROXY_HOPS: "1"
       GENERIC_TIMEZONE: America/Santiago
       TZ: America/Santiago
