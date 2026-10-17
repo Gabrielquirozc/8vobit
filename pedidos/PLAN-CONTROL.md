@@ -24,7 +24,7 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 
 | Función | Nosotros | Nota |
 |---|---|---|
-| Canal propio: carta web, pedido, seguimiento | ✅ | Fudo lo tiene ("Tu Delivery", 1,9 % por venta); Justo cobra 10–13 %. Nuestro argumento: **0 % de comisión**. |
+| Canal propio: carta web, pedido, seguimiento | ✅ | Fudo lo tiene ("Tu Delivery", 1,9 % por venta); Justo cobra 10–13 %. Nuestro argumento: **1 % por pedido web, sin tope** (la más baja). |
 | Despacho por zonas, costo por vehículo, mínimo y horario | ✅ | Fudo no lo tiene. |
 | Venta de mostrador, comanda 80 mm, medios de pago | ✅ | |
 | Pedidos en vivo para cocina (equivale al Monitor de cocina) | ✅ | Fudo lo cobra aparte (9.500). |
@@ -48,24 +48,26 @@ pago con tarjeta, repartidores Uber a pedido) con **1,9 % + IVA por venta**. Ver
 Orden pensado para lo que más le sirve a un local de delivery y lo que más pesa en la propuesta.
 Cada etapa se puede desplegar sola.
 
-1. **Gastos y movimientos de caja** — registrar gastos con categoría (insumos, arriendo, luz, gas,
+Estado al 2026-10-16: etapas 1, 2, 3, 4 y 8 ✅ hechas; faltan 5 (inventario), 6 (combos) y 7 (SII).
+
+1. ✅ **Gastos y movimientos de caja** — registrar gastos con categoría (insumos, arriendo, luz, gas,
    sueldos, contador…), retiros y aportes de caja; **arqueo** al cierre (contado vs. esperado, con
    diferencia). Base para todo lo demás.
-2. **Estado de resultados mensual** — ventas − costo de productos − personal (ya calculado en Equipo)
+2. ✅ **Estado de resultados mensual** — ventas − costo de productos − personal (ya calculado en Equipo)
    − gastos = resultado; comparado con el mes anterior y con lo que se habría pagado en comisiones de
    apps. Es lo que Fudo cobra en el plan Pro.
-3. **Usuarios con PIN y roles** — cada trabajador de Equipo entra con su PIN; permisos por rol
+3. ✅ **Usuarios con PIN y roles** — cada trabajador de Equipo entra con su PIN; permisos por rol
    (cocina y caja ve pedidos y caja; el dueño ve todo, sueldos y costos). Registro de quién cobró,
    anuló o cerró caja. Marcar entrada y salida → **turnos reales** para el sueldo.
-4. **Exportar** — ventas, caja, gastos y pedidos a CSV/Excel por rango de fechas (para el contador).
+4. ✅ **Exportar** — ventas, caja, gastos y pedidos a CSV/Excel por rango de fechas (para el contador).
 5. **Inventario simple** — insumos con unidad y costo; receta de cada producto (cuánto pan, carne,
    palta…); cada venta descuenta stock; alerta de stock bajo; compras a proveedor que actualizan el
    costo. Reemplaza el costo estimado por el real.
 6. **Combos y promociones** — combos con precio propio y descuentos por horario o por código.
 7. **Boleta electrónica directa** — integrar un proveedor de DTE autorizado por el SII.
    Evaluar costo por boleta vs. seguir en modo asistido.
-8. **Multi-local / producto** — la base ya separa por local (`slug`); faltaría alta de locales,
-   planes y cobro, para venderlo a otros locales.
+8. ✅ **Multi-local / producto** — alta de locales, licencias y cobro manual hechos el 2026-10-14
+   (ver `ESTRATEGIA.md` L3 y L4). Falta el cobro automático.
 
 ## Cómo cobrarlo (propuesta para discutir)
 

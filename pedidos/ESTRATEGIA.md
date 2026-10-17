@@ -45,6 +45,12 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 | Despacho por zonas con costo real del viaje | — | logística propia | fijo o por zonas | **hexágonos + costeo por vehículo** |
 | Costo de producto y margen | — | — | con recetas (Avanzado) | ✅ (sin recetas) |
 | Sueldos y costo de personal según la ley | — | "pronto" | — | ✅ |
+| Gastos, arqueo, estado de resultados | — | ? | Inicial / Pro | ✅ |
+| Usuarios con PIN, roles, entrada y salida | — | ✅ | ✅ | ✅ |
+| Combos y promociones | ✅ | ✅ | ✅ (Inicial) | ❌ **brecha** |
+| Clientes, fidelización, cupones | ✅ | ✅ (loyalty) | cuenta corriente | ❌ **brecha** |
+| Avisos automáticos de estado (WhatsApp/SMS) | ✅ | ✅ | ✅ | ❌ |
+| Centralizar Uber / PedidosYa | — | ? | ✅ ($9.500) | ❌ (no se persigue por ahora) |
 | Pago online con tarjeta | ✅ | ✅ | ✅ | ❌ **brecha** |
 | Boleta SII directa | — | ? | ✅ | ❌ (modo asistido) |
 | Inventario y recetas | — | ✅ | ✅ | ❌ |
@@ -83,16 +89,36 @@ datos · cartel QR y carta para imprimir · respaldos diarios fuera del servidor
 | # | Qué | Tipo | Por qué |
 |---|---|---|---|
 | 1 | Datos del dueño: transferencia, precios faltantes, despacho real, vehículo, insumos | dueño | Sin esto no se puede abrir al público |
-| 2 | **Gastos, movimientos de caja y arqueo** (etapa 1 de `PLAN-CONTROL.md`) | desarrollo | Es lo mínimo que Fudo Inicial tiene y lo primero que un dueño pide: "¿cuadra la caja?" |
-| 3 | **Exportar a CSV** las ventas y la caja por rango de fechas | desarrollo, chico | El contador lo va a pedir el primer mes |
+| 2 | ✅ ~~Gastos, movimientos de caja y arqueo~~ (hecho el 2026-10-14) | desarrollo | |
+| 3 | ✅ ~~Exportar a CSV por rango de fechas~~ (hecho el 2026-10-14) | desarrollo | |
 | 4 | Prueba completa en el local: tablet, impresora, retiro, despacho y cierre de caja | terreno | |
 | 5 | Monitoreo de caída (ping externo + aviso a nuestro celular) | infra | Si se cae un viernes a las 21:00, tenemos que saberlo antes que el local |
 | 6 | Probar la restauración de un respaldo (no solo hacerlo) | infra | |
 | 7 | Acuerdo del piloto por escrito: precio, plazo, uso de fotos y marca, soporte | comercial | |
 | 8 | Datos legales del local en Términos y Privacidad | dueño | |
 
-**Fuera de la v1.0** (se agregan después, sin bloquear la venta): usuarios con PIN, estado de resultados,
-inventario, combos, pago online, SII directo y multi-local.
+**Fuera de la v1.0** (se agregan después, sin bloquear la venta): inventario, combos, pago online y
+SII directo. (Usuarios con PIN, estado de resultados y multi-local ya se hicieron el 2026-10-14.)
+
+### Brechas frente a la competencia (revisado el 2026-10-16)
+
+Lo que falta, en orden de prioridad. Las de plan Pro bloquean su venta: hoy Pro promete
+inventario y combos, que no existen.
+
+| # | Brecha | Quién la tiene | Plan afectado | Prioridad |
+|---|---|---|---|---|
+| 1 | **Combos y promociones** (precio propio, por horario, por código) | Fudo Inicial, Justo, apps | Pro | Alta: chica de hacer y la piden todos |
+| 2 | **Pago online con tarjeta** (Mercado Pago o Flow con la cuenta del local) | Fudo, Justo, apps | todos | Alta: sin esto se pierde al cliente que no quiere transferir |
+| 3 | **Avisos automáticos de estado** al cliente (WhatsApp) | Fudo, Justo, apps | todos | Media |
+| 4 | **Inventario y recetas** (descuento de stock, alerta, compras) | Fudo Avanzado, Justo | Pro | Media: necesario para vender Pro |
+| 5 | **Clientes y fidelización** (historial, cupón de vuelta, puntos) | Justo (loyalty), apps | Gestión/Pro | Media: es lo que hace volver al cliente al canal propio |
+| 6 | **Boleta SII directa** (proveedor de DTE) | Fudo Inicial | todos | Media: modo asistido sirve para el piloto |
+| 7 | **Cobro automático** de nuestras licencias (Flow o Mercado Pago) | — | interno | Baja hasta el 5º–10º local |
+| 8 | Centralizar Uber / PedidosYa en el panel | Fudo ($9.500) | — | No se persigue: las APIs son cerradas y va contra el mensaje |
+| 9 | Recepcionista / agente IA por WhatsApp | Fudo ($42.500), Justo | — | No se persigue por ahora |
+
+**Riesgo comercial:** el plan Pro ($54.900) hoy vende funciones que no existen (inventario, combos).
+Hasta tenerlas, ofrecer solo Canal y Gestión, o vender Pro como "incluye inventario y combos al lanzarse".
 
 **Criterio de éxito del piloto (3 meses):** % de los pedidos totales que pasan por el canal propio,
 comisión ahorrada acumulada, caja cuadrada todos los días y el dueño usándolo sin llamarnos.
@@ -170,7 +196,7 @@ Cada línea avanza sola. Están en orden de prioridad.
 Los puntos 1 a 8 de §2. Entregable: Gassuso operando con el canal propio y la caja cuadrada.
 
 ### L2. Sistema de control. Ahora y siguientes meses
-Etapas de `PLAN-CONTROL.md`: 1 gastos y arqueo → 4 exportar → 3 usuarios con PIN → 2 estado de
+Etapas de `PLAN-CONTROL.md`: ✅ 1 gastos y arqueo → ✅ 4 exportar → ✅ 3 usuarios con PIN → ✅ 2 estado de
 resultados → 6 combos → 5 inventario → 7 SII. Es el contenido de los planes Gestión y Pro.
 
 ### L3. Plataforma multi-local. Antes del 2º cliente — ✅ hecho el 2026-10-14 (autoservicio v1 también: primeros pasos, importar planilla, ayudas)
