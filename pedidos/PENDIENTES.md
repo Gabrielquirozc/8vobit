@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-16 (tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-10-16 (revisión UX en `REVISION-UX.md` y `ESTUDIO-UX.md`, con alertas de pedidos nuevos en todas las pestañas, sonido que se repite, local nuevo en pausa, recordar datos del cliente y orden de entrega de despachos; tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -24,7 +24,7 @@ cd D:\8vobit
 git pull origin claude/compassionate-maxwell-hb826m
 cd pedidos
 $env:PANEL_PASSWORD="demo"; node server.mjs        # http://127.0.0.1:8099/gassuso y /panel (clave demo)
-npm test                                           # 63 pruebas de punta a punta, ~1-2 s
+npm test                                           # 68 pruebas (API de punta a punta + orden de entrega), ~1-2 s
 ```
 
 Requisitos: Node 22 (usa `node:sqlite`, sin dependencias npm). Los datos locales quedan en
@@ -150,3 +150,15 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - Facturamos como persona natural de primera categoría (factura SII) y pasamos a SpA con 3–5 clientes.
 - Repartidor con contrato (no honorarios); cálculo laboral es estimación, la liquidación la hace
   el contador.
+
+
+## Revisión UX (2026-10-16)
+
+Detalle en `REVISION-UX.md` (primera pasada) y `ESTUDIO-UX.md` (mes simulado, onboarding, notificaciones, caché, competencia y orden de entrega).
+Hecho en esta tanda:
+- Panel: consulta pedidos en **todas** las pestañas (antes se saltaba Carta, Datos, Resumen, Resultados y Gastos). Hay una franja "Hay N pedidos nuevos", el título muestra el contador y el sonido se repite cada 10 s hasta aceptar. La preferencia de sonido se recuerda, el primer toque lo reactiva y una franja roja avisa si está apagado. Botones de cocina más grandes (60 y 52 px).
+- Onboarding: un local creado en `/admin` parte **en pausa** y el dueño lo abre al terminar los primeros pasos ("Abrir mi carta a los clientes"). El horario de ejemplo hay que confirmarlo con una casilla. En `/admin` hay "Copiar todo" y "Enviar por WhatsApp al dueño".
+- Carta: "Recordar mis datos en este teléfono" (nombre y celular, más la última dirección por local, en localStorage; "Olvidar" los borra; agregado a Privacidad). Etiqueta en dirRef, chips y enlaces legales de 44 px y fuentes del sistema (ya no se nombran Bricolage ni Inter). Se borró `estilo.css`, que no se usaba.
+- Resumen: la semana en curso se compara con los mismos días de la anterior. Resultados avisa cuando más del 20 % del costo de la comida es estimado.
+- Despacho: "Ordenar entregas de despacho" en Pedidos (`public/ruta.js`). Prueba todos los órdenes y minimiza el retraso contra la franja y luego los km. Tiene Waze por parada y la ruta completa en Google Maps.
+Pendiente de la revisión: reemplazar `alert`, `confirm` y `prompt` por diálogos propios; agrupar las pestañas en tablet; importar omitiendo filas con error; web push para el dueño y el cliente; "Repetir mi último pedido"; asistente de Despacho; hoja de ruta imprimible; reemplazar el JSON de carta en `/admin` por una planilla.

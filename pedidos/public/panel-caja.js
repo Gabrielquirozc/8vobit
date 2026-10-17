@@ -243,6 +243,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
         <div class="${R.resultado >= 0 ? 'cj-res ok' : 'cj-res mal'}">Resultado del mes<b class="num">${R.resultado < 0 ? '−' : ''}${clp(Math.abs(R.resultado))}</b><span class="sub">${R.margen_pct == null ? '' : `${R.margen_pct}% de las ventas`} ${var_(R.resultado, A.resultado)}</span></div>
         <div>Comisión que no pagaste<b class="num">${clp(R.comision_app)}</b><span class="sub">${R.comision_app_pct}% de las ventas web, si fueran por app</span></div>
       </div>
+      ${R.lineas_total && R.lineas_estimadas / R.lineas_total > 0.2 ? `<p class="nota">${ico('note')}<span>Resultado aproximado: en ${Math.round((R.lineas_estimadas / R.lineas_total) * 100)}% de lo vendido el costo de la comida se estimó en ${R.costo_pct}% del precio. Para que sea exacto, carga el costo de cada producto en Carta y precios (filtro "Sin costo").</span></p>` : ''}
       <table class="res-tabla"><tr><th></th><th class="r">${esc(nombreMes(R.mes))}</th><th class="r">Mes anterior</th></tr>
         ${fila('Ventas cobradas', R.ventas, A.ventas)}
         ${fila(`− Costo de la comida${R.lineas_estimadas ? ` <span class="opc">(${R.lineas_estimadas} línea${R.lineas_estimadas === 1 ? '' : 's'} estimada${R.lineas_estimadas === 1 ? '' : 's'} con ${R.costo_pct}%)</span>` : ''}`, -R.costo_comida, null)}

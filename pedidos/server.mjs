@@ -792,8 +792,12 @@ function resumen(local, fecha) {
   const prevLun = new Date(lun); prevLun.setDate(prevLun.getDate() - 7);
   const rango = (desde, hasta) => db.prepare("SELECT * FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ? AND estado!='anulado'").all(local.id, desde, hasta);
   const ps = rango(dias[0], dias[6]);
-  const prevDom = new Date(lun); prevDom.setDate(prevDom.getDate() - 1);
+  // Semana en curso: se compara con los mismos días de la semana anterior (lunes a hoy), no con la semana completa.
+  const hoyD = today(), enCurso = hoyD >= dias[0] && hoyD < dias[6];
+  const nDias = enCurso ? dias.indexOf(hoyD) + 1 : 7;
+  const prevDom = new Date(prevLun); prevDom.setDate(prevDom.getDate() + nDias - 1);
   const prev = rango(iso(prevLun), iso(prevDom));
+  const actual = enCurso ? ps.filter((p) => p.dia <= hoyD) : ps;
   const suma = (l) => l.reduce((a, p) => a + p.total, 0);
   const ventas = suma(ps), web = ps.filter((p) => p.canal !== 'mostrador');
 
@@ -835,7 +839,8 @@ function resumen(local, fecha) {
   return {
     semana: { desde: dias[0], hasta: dias[6] },
     pedidos: ps.length, pedidos_prev: prev.length,
-    variacion: prev.length ? Math.round(((ps.length - prev.length) / prev.length) * 100) : null,
+    variacion: prev.length ? Math.round(((actual.length - prev.length) / prev.length) * 100) : null,
+    dias_comparados: enCurso ? nDias : 7,
     ventas, ticket: ps.length ? Math.round(ventas / ps.length) : 0,
     canal: { web: { pedidos: web.length, ventas: suma(web) }, mostrador: { pedidos: ps.length - web.length, ventas: ventas - suma(web) } },
     mas_vendido: items[0] || null,

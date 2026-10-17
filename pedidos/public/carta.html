@@ -87,7 +87,7 @@
           <div class="geo-res" id="geoRes"></div>
           <div class="geo-mapa-w" id="geoMapaW" hidden><div class="geo-mapa" id="geoMapa" aria-label="Mapa: mueve el mapa para dejar el pin en tu puerta"></div><span class="geo-pin" aria-hidden="true">📍</span></div>
           <p class="geo-info" id="geoInfo" aria-live="polite"></p>
-          <input id="dirRef" class="geo-ref" maxlength="80" placeholder="Depto, block o referencia (opcional)" autocomplete="address-line2">
+          <input id="dirRef" class="geo-ref" aria-label="Depto, block o referencia (opcional)" maxlength="80" placeholder="Depto, block o referencia (opcional)" autocomplete="address-line2">
         </div></div>
       <div class="field"><label for="franja">¿Para cuándo?</label><select id="franja"></select></div>
     </fieldset>
@@ -95,6 +95,7 @@
     <fieldset class="fs"><legend>Tus datos</legend>
       <div class="field"><label for="cliente">Nombre</label><input id="cliente" autocomplete="name"><div class="err" id="e-cliente"></div></div>
       <div class="field"><label for="telefono">Celular</label><input id="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678"><div class="err" id="e-telefono"></div></div>
+      <label class="recordar"><input type="checkbox" id="recordar" checked> Recordar mis datos en este teléfono <button type="button" class="link" id="olvidar" hidden>Olvidar</button></label>
       <div class="field"><label for="notas">Comentario general del pedido <span style="font-weight:400;color:var(--ink-2)">(opcional)</span></label><textarea id="notas" rows="2" maxlength="300" placeholder="Ej: tocar el timbre, sin servilletas…"></textarea></div>
     </fieldset>
 
@@ -472,6 +473,7 @@ function pintarModalidad() {
 }
 $('cartbtn').onclick = async () => {
   pintarCarro(); $('formErr').textContent = '';
+  rellenarDatos();
   $('dlgCarro').showModal();
   try { F = await api(`locales/${slug}/franjas`); } catch { F = null; }
   pintarModalidad();
@@ -512,6 +514,7 @@ $('enviar').onclick = async () => {
     $('okWa').href = `https://wa.me/${(M.local.whatsapp || '').replace(/\D/g, '')}?text=${msg}`;
     const seg = `${BASE}/seguimiento?p=${encodeURIComponent(r.token)}`;
     $('okSeg').href = seg;
+    guardarDatos();
     try { localStorage.setItem(`pedido:${slug}`, JSON.stringify({ seg, numero: r.numero, t: Date.now() })); } catch {}
     $('dlgOk').showModal();
     carro = []; barra(); avisoPedido();
@@ -521,6 +524,25 @@ $('enviar').onclick = async () => {
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
 // Tocar fuera de la hoja la cierra.
 document.querySelectorAll('dialog.sheet').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+
+// "Recordar mis datos": nombre y celular (y la última dirección en este local) quedan solo en este
+// navegador, para no escribirlos en cada pedido. No son credenciales; "Olvidar" los borra.
+const DATOS = 'mis-datos', DIR = `mi-direccion:${slug}`;
+const leerJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)) || null; } catch { return null; } };
+function rellenarDatos() {
+  const d = leerJSON(DATOS), dir = leerJSON(DIR);
+  $('olvidar').hidden = !d;
+  if (d) { if (!$('cliente').value) $('cliente').value = d.cliente || ''; if (!$('telefono').value) $('telefono').value = d.telefono || ''; }
+  if (dir && !$('direccion').value) { $('direccion').value = dir.direccion || ''; $('dirRef').value = dir.ref || ''; }
+}
+function guardarDatos() {
+  try {
+    if (!$('recordar').checked) { localStorage.removeItem(DATOS); localStorage.removeItem(DIR); return; }
+    localStorage.setItem(DATOS, JSON.stringify({ cliente: $('cliente').value.trim(), telefono: $('telefono').value.trim() }));
+    if (modalidad === 'despacho' && $('direccion').value.trim()) localStorage.setItem(DIR, JSON.stringify({ direccion: $('direccion').value.trim(), ref: $('dirRef').value.trim() }));
+  } catch {}
+}
+$('olvidar').onclick = () => { try { localStorage.removeItem(DATOS); localStorage.removeItem(DIR); } catch {} $('cliente').value = ''; $('telefono').value = ''; $('olvidar').hidden = true; $('recordar').checked = false; };
 
 // Si el cliente vuelve a la carta con un pedido reciente, se lo recordamos arriba.
 function avisoPedido() {

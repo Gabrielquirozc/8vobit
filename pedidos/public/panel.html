@@ -30,6 +30,16 @@
 
   /* pedidos */
   .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+  .salida-bar { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+  .salida-bar button { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; width: auto; padding: 0 16px; }
+  .ruta-sel label { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .ruta-sel input { width: 22px; height: 22px; }
+  .ruta { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+  .ruta li { display: grid; grid-template-columns: 44px 1fr; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px; }
+  .ruta .nro { width: 44px; height: 44px; border-radius: 999px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font: 800 1.3rem var(--font-display); }
+  .ruta .tarde { color: var(--danger); font-weight: 700; }
+  .ruta .acc2 { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .ruta .acc2 a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 16px; border-radius: var(--r-sm); border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-weight: 700; }
   @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
   .ped { background: var(--surface); border-radius: var(--r); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); border: 2px solid transparent; }
   .ped.nuevo { border-color: var(--brand); animation: pulso 1.6s ease-in-out 3; }
@@ -47,10 +57,10 @@
   .nota { display: flex; gap: 6px; background: #fff3cd; color: #5c4300; padding: 8px 10px; border-radius: var(--r-sm); margin: 6px 0; font-size: .92rem; }
   .ped .pie { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
   .ped .total { font-weight: 800; font-size: 1.1rem; }
-  .paso { width: 100%; min-height: 54px; margin-top: 10px; border: 0; border-radius: var(--r-sm); background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .paso { width: 100%; min-height: 60px; margin-top: 10px; border: 0; border-radius: var(--r-sm); background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .paso.verde { background: var(--ok); color: #fff; }
   .acc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
-  .acc > * { min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: .8rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; }
+  .acc > * { min-height: 52px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: .9rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; }
   .acc .ico { width: 18px; height: 18px; }
   .acc .peligro { color: var(--danger); }
   .vacio { color: var(--ink-2); text-align: center; padding: 28px 0; border: 2px dashed var(--line); border-radius: var(--r); }
@@ -400,7 +410,7 @@
   .pin-pad button { min-height: 62px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: 700 1.4rem var(--font-display); display: grid; place-items: center; }
   .pin-pad button.ok { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
   .pin-turno { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
-  .quien { border: 1px solid #ffffff33; background: transparent; color: inherit; border-radius: 999px; padding: 4px 12px; text-align: left; line-height: 1.15; cursor: pointer; }
+  .quien { min-height: 44px; border: 1px solid #ffffff33; background: transparent; color: inherit; border-radius: 999px; padding: 4px 12px; text-align: left; line-height: 1.15; cursor: pointer; }
   .quien small { display: block; font-size: .72rem; opacity: .75; } .quien:empty { display: none; }
   /* Primeros pasos, ayudas por pestaña e importar planilla (panel-inicio.js). */
   #inicio, #ayudaTab { max-width: 1100px; margin: 0 auto 12px; }
@@ -436,6 +446,9 @@
   #imTexto { font-family: ui-monospace, Consolas, monospace; font-size: 14px; }
   .banner { padding: 10px 16px; font-weight: 600; font-size: .92rem; text-align: center; }
   .banner.mal { background: #fde2df; color: #8a1c12; } .banner.aviso { background: #fff3cd; color: #6b4a00; }
+  .banner.nuevos { background: var(--brand); color: var(--brand-ink); }
+  .avisob { all: unset; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; width: 100%; font-weight: 700; }
+  .avisob:focus-visible { outline: 3px solid var(--mustard); }
   @media (prefers-color-scheme: dark) { .banner.mal { background: #3a1d1a; color: #f3a59b; } .banner.aviso { background: #3a2e14; color: #f5cf7a; } }
   .tab.bloq::after { content: '🔒'; font-size: .75rem; margin-left: 4px; }
   body.sin-costos .pmarg, body.sin-costos #cpct, body.sin-costos [data-ver="sincosto"], body.sin-costos .solo-costos { display: none !important; }
@@ -502,6 +515,8 @@
     <button class="icobtn" id="salir" aria-label="Salir" title="Salir"><svg class="ico"><use href="#i-out"/></svg></button>
   </header>
   <div id="banner" class="banner" role="status" hidden></div>
+  <div id="avisoSonido" class="banner mal" hidden><button type="button" class="avisob" id="avisoSonidoBtn"><svg class="ico"><use href="#i-bell-off"/></svg>Sonido apagado: no vas a oír los pedidos nuevos. Toca aquí para activarlo</button></div>
+  <div id="avisoNuevos" class="banner nuevos" role="alert" hidden><button type="button" class="avisob" id="avisoNuevosBtn"></button></div>
   <main>
     <div id="inicio" hidden></div>
     <div id="ayudaTab" hidden></div>
@@ -569,6 +584,11 @@
   <div class="sh-body" id="fpBody"></div>
   <div class="sh-foot"><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="fpOk"></button></div>
 </dialog>
+<dialog class="sheet ancho" id="dlgRuta" aria-labelledby="rtTitulo">
+  <div class="sh-head"><h2 id="rtTitulo">Orden de entrega</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body" id="rtBody"></div>
+  <div class="sh-foot"><button class="ghost" data-close type="button">Cerrar</button><a class="primary" id="rtMaps" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">Abrir ruta completa en Google Maps</a></div>
+</dialog>
 <dialog class="sheet ancho" id="dlgVeh" aria-labelledby="vhTitulo">
   <div class="sh-head"><h2 id="vhTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
   <div class="sh-body" id="vhBody"></div>
@@ -599,6 +619,7 @@ import * as LB from './laboral.js';
 import { crearCajaUI } from './panel-caja.js';
 import { crearCuentaUI } from './panel-cuenta.js';
 import { crearInicioUI } from './panel-inicio.js';
+import { ordenarRuta, finFranja, enlaceWaze, enlaceMaps } from './ruta.js';
 const $ = (id) => document.getElementById(id);
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('dialog').close());
@@ -620,10 +641,65 @@ function beep() {
     o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .4);
   }
 }
-$('sonido').onclick = () => {
-  audio = audio || new AudioContext(); audio.resume(); beep();
-  $('sonido').setAttribute('aria-pressed', 'true'); $('sonido').innerHTML = ico('bell'); $('sonido').setAttribute('aria-label', 'Sonido activo');
-};
+// El navegador solo deja sonar después de un toque: la preferencia se recuerda y el primer toque
+// en cualquier parte del panel la vuelve a encender. Mientras esté apagado, una franja roja lo avisa.
+const prefSonido = (v) => { try { if (v === undefined) return localStorage.getItem('sonido') !== '0'; localStorage.setItem('sonido', v ? '1' : '0'); } catch {} return true; };
+function sonidoOn(probar) {
+  audio = audio || new AudioContext(); audio.resume(); if (probar) beep();
+  $('sonido').setAttribute('aria-pressed', 'true'); $('sonido').innerHTML = ico('bell'); $('sonido').setAttribute('aria-label', 'Sonido activo (toca para apagar)');
+  prefSonido(true); avisos();
+}
+function sonidoOff() {
+  if (audio) audio.suspend();
+  $('sonido').setAttribute('aria-pressed', 'false'); $('sonido').innerHTML = ico('bell-off'); $('sonido').setAttribute('aria-label', 'Activar sonido de pedidos nuevos');
+  prefSonido(false); avisos();
+}
+const sonando = () => $('sonido').getAttribute('aria-pressed') === 'true' && audio?.state === 'running';
+$('sonido').onclick = () => (sonando() ? sonidoOff() : sonidoOn(true));
+$('avisoSonidoBtn').onclick = () => sonidoOn(true);
+document.addEventListener('pointerdown', () => { if (prefSonido() && !sonando()) sonidoOn(false); }, { capture: true });
+$('avisoNuevosBtn').onclick = () => document.querySelector('[data-v="pedidos"]').click();
+// Aviso de pedidos web sin aceptar: franja en las otras pestañas, contador en el título
+// y el sonido se repite cada 10 s hasta que alguien los acepte.
+let repetir = 0;
+function avisos() {
+  const n = D ? D.pedidos.filter((p) => p.estado === 'nuevo' && p.canal !== 'mostrador').length : 0;
+  document.title = n ? `(${n}) ${n === 1 ? 'Pedido nuevo' : 'Pedidos nuevos'} · Panel` : 'Panel · Pedidos';
+  $('avisoNuevos').hidden = !n || vista === 'pedidos';
+  if (n) $('avisoNuevosBtn').textContent = `${n === 1 ? 'Hay 1 pedido nuevo' : `Hay ${n} pedidos nuevos`} por aceptar · Ver pedidos`;
+  $('avisoSonido').hidden = $('app').hidden || sonando() || !CUENTA.puede('ver_pedidos');
+  clearInterval(repetir);
+  if (n) repetir = setInterval(() => sonando() && beep(), 10000);
+}
+
+// ---------- orden de entrega de los despachos ----------
+// Se eligen los despachos que salen juntos y el panel ordena las paradas (public/ruta.js).
+function pintarRuta() {
+  const salen = D.pedidos.filter((p) => p.modalidad === 'despacho' && ['preparacion', 'listo'].includes(p.estado));
+  const marcados = new Set([...$('rtBody').querySelectorAll('[data-rt]:checked')].map((x) => Number(x.dataset.rt)));
+  const elegido = (p) => (marcados.size || $('rtBody').dataset.tocado ? marcados.has(p.id) : p.estado === 'listo' || salen.every((x) => x.estado !== 'listo'));
+  const u = M?.local?.ubicacion, desp = M?.local?.despacho || {}, calc = { ...H.CALCULO_BASE, ...(desp.calculo || {}) };
+  const veh = (desp.vehiculos || []).find((v) => v.id === calc.vehiculo) || (desp.vehiculos || [])[0];
+  const now = new Date(), ahora = now.getHours() * 60 + now.getMinutes();
+  const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const sel = salen.filter(elegido);
+  const R = u ? ordenarRuta(u, sel.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, fin: finFranja(p.franja, ahora) })),
+    { factor: calc.factor, velocidad: veh?.velocidad, minEntrega: veh?.minEntrega, ahora }) : null;
+  const porId = new Map(D.pedidos.map((p) => [p.id, p]));
+  $('rtBody').innerHTML = `<p class="ayuda top">Marca los pedidos que salen juntos. El orden busca llegar dentro de la hora prometida a cada cliente y, si se puede, hacer el camino más corto.</p>
+    <div class="ruta-sel">${salen.map((p) => `<label><input type="checkbox" data-rt="${p.id}" ${elegido(p) ? 'checked' : ''}> #${p.numero} · ${esc(p.cliente)} · ${esc(p.direccion || 'sin dirección')} · ${esc(p.franja)}${p.estado === 'preparacion' ? ' (en cocina)' : ''}</label>`).join('')}</div>
+    ${!u ? '<p class="nota">Falta la ubicación del local: márcala en la pestaña Despacho para calcular el orden.</p>' : !R.pasos.length ? '<p class="ayuda">Elige al menos un pedido con ubicación.</p>' : `
+    <p><b>${R.pasos.length} ${R.pasos.length === 1 ? 'parada' : 'paradas'} · ${String(R.km).replace('.', ',')} km aprox.</b>${R.retraso ? ` · <span class="tarde">llegaría ${R.retraso} min tarde en total</span>` : ''}${veh ? '' : ' · <span class="opc">velocidad supuesta 25 km/h (agrega el vehículo en Despacho)</span>'}</p>
+    <ol class="ruta">${R.pasos.map((x, i) => { const p = porId.get(x.id), tarde = x.fin != null && x.llegada > x.fin; return `<li><span class="nro">${i + 1}</span><div>
+      <b>${esc(p.direccion || '')}</b><br>#${p.numero} · ${esc(p.cliente)} · ${p.pagado ? 'pagado' : `<b>cobrar ${clp(p.total)}</b>`}<br>
+      <span class="${tarde ? 'tarde' : 'opc'}">${String(x.km_tramo).replace('.', ',')} km · llega ~${hhmm(x.llegada)} (franja ${esc(p.franja)})</span>
+      <div class="acc2"><a href="${enlaceWaze(x)}" target="_blank" rel="noopener">${ico('bike')}Waze</a><a href="tel:${esc(p.telefono)}">${ico('msg')}Llamar</a></div></div></li>`; }).join('')}</ol>`}
+    ${R?.sin_ubicacion.length ? `<p class="nota">Sin ubicación en el mapa: ${R.sin_ubicacion.map((x) => `#${porId.get(x.id).numero}`).join(', ')}. Agrégalos a mano al final.</p>` : ''}`;
+  const maps = R && enlaceMaps(u, R.pasos);
+  $('rtMaps').hidden = !maps; if (maps) $('rtMaps').href = maps;
+}
+$('rtBody').addEventListener('change', () => { $('rtBody').dataset.tocado = 1; pintarRuta(); });
+$('v-pedidos').addEventListener('click', (e) => { if (e.target.closest('#armarSalida')) { delete $('rtBody').dataset.tocado; $('rtBody').innerHTML = ''; pintarRuta(); $('dlgRuta').showModal(); } });
 
 // ---------- pedidos ----------
 const wa = (p, txt) => `https://wa.me/${p.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(txt)}`;
@@ -662,7 +738,9 @@ function tarjeta(p) {
 }
 function pintarPedidos() {
   const cols = [['nuevo', 'Nuevos'], ['preparacion', 'En cocina'], ['listo', 'Listos para entregar']];
-  $('v-pedidos').innerHTML = cols.map(([k, t]) => {
+  const salen = D.pedidos.filter((p) => p.modalidad === 'despacho' && ['preparacion', 'listo'].includes(p.estado));
+  const salida = salen.length > 1 ? `<div class="salida-bar"><button type="button" class="ghost" id="armarSalida">${ico('bike')}Ordenar entregas de despacho (${salen.length})</button></div>` : '';
+  $('v-pedidos').innerHTML = salida + cols.map(([k, t]) => {
     const ps = D.pedidos.filter((p) => p.estado === k);
     return `<section><h2 class="t">${t}<span class="n num">${ps.length}</span></h2>${ps.map(tarjeta).join('') || '<div class="vacio">Nada por aquí</div>'}</section>`;
   }).join('');
@@ -681,6 +759,7 @@ async function refrescar() {
   // Solo suenan los pedidos web nuevos, no las ventas que hace el propio local.
   if (conocidos && D.pedidos.some((p) => !conocidos.has(p.id) && p.canal !== 'mostrador')) beep();
   conocidos = ids;
+  avisos();
   if (vista === 'pedidos' && !document.querySelector('dialog[open]')) pintarPedidos();
   // La caja se vuelve a dibujar solo si algo cambió: así no se cierra el conteo de billetes mientras se usa.
   if (vista === 'cierre' && !cajaDia && !$('dlgMov').open) {
@@ -1921,7 +2000,7 @@ function barras(datos, { etiqueta, valor, formato, titulo, corto }) {
   </figure>`;
 }
 function textoResumen(s) {
-  const v = s.variacion === null ? '' : ` (${s.variacion >= 0 ? '+' : ''}${s.variacion}% vs. semana anterior)`;
+  const v = s.variacion === null ? '' : ` (${s.variacion >= 0 ? '+' : ''}${s.variacion}% vs. ${s.dias_comparados < 7 ? 'los mismos días de la semana anterior' : 'semana anterior'})`;
   return [`*Resumen ${D.local}* · semana del ${fechaCorta(s.semana.desde)} al ${fechaCorta(s.semana.hasta)}`, '',
     `1. Pedidos: ${s.pedidos}${v}`,
     `2. Ticket promedio: ${clp(s.ticket)}`,
@@ -1935,7 +2014,7 @@ async function pintarResumen() {
   const s = await api(`panel/resumen${semana ? `?semana=${semana}` : ''}`);
   semana = s.semana.desde;
   const hoyLun = (await api('panel/resumen')).semana.desde;
-  const flecha = s.variacion === null ? '' : `<span class="delta ${s.variacion >= 0 ? 'up' : 'down'}">${s.variacion >= 0 ? '▲' : '▼'} ${Math.abs(s.variacion)}% <span>vs. semana anterior (${s.pedidos_prev})</span></span>`;
+  const flecha = s.variacion === null ? '' : `<span class="delta ${s.variacion >= 0 ? 'up' : 'down'}">${s.variacion >= 0 ? '▲' : '▼'} ${Math.abs(s.variacion)}% <span>vs. ${s.dias_comparados < 7 ? `los mismos ${s.dias_comparados} ${s.dias_comparados === 1 ? 'día' : 'días'} de la semana anterior` : 'semana anterior'} (${s.pedidos_prev})</span></span>`;
   $('v-resumen').innerHTML = `
     <div class="res-head">
       <div style="display:flex;align-items:center;gap:6px">
@@ -2000,7 +2079,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
   for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'resultados', 'despacho', 'equipo']) $('v-' + v).hidden = v !== vista;
-  INICIO.ayuda(vista);
+  INICIO.ayuda(vista); avisos();
   const bloq = CUENTA.bloqueada(vista);
   if (bloq) { $('v-' + vista).innerHTML = CUENTA.vistaBloqueada(bloq); return; }
   if (vista === 'carta') pintarCarta();
@@ -2034,7 +2113,9 @@ async function iniciar() {
   // Si el rol no ve la pestaña actual, se abre la primera que sí ve.
   if (document.querySelector(`[data-v="${vista}"]`).hidden) document.querySelector('[data-v]:not([hidden])')?.click();
   despierta();
-  latido = latido || setInterval(() => !['carta', 'local', 'resumen', 'resultados', 'gastos'].includes(vista) && refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  // Se consulta en todas las pestañas: un pedido nuevo tiene que avisar aunque estés editando la carta.
+  latido = latido || setInterval(() => refrescar().catch((e) => e.status === 401 && location.reload()), 3000);
+  avisos();
 }
 // Cambiar de usuario: cierra la sesión y vuelve al teclado de PIN de la tablet.
 $('quien').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };

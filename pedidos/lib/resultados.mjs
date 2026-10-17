@@ -34,7 +34,7 @@ export function crearResultados(db, { equipoMes }) {
     const resultado = margen - personal.monto - totalOperacion;
     return {
       mes, pedidos: peds.length, ventas, ventas_web: web, despacho_cobrado: despacho,
-      costo_comida: costoComida, lineas_estimadas: estimadas, costo_pct: pct, margen_bruto: margen,
+      costo_comida: costoComida, lineas_estimadas: estimadas, lineas_total: items.length, costo_pct: pct, margen_bruto: margen,
       personal, operacion, total_operacion: totalOperacion, resultado,
       margen_pct: ventas ? Math.round((resultado / ventas) * 1000) / 10 : null,
       compras_insumos: gastos.insumos,

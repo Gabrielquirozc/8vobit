@@ -164,12 +164,24 @@ $('nuevo').onclick = () => {
   $('nSlug').oninput = () => { $('nSlug').dataset.tocado = 1; };
   $('fNuevo').onsubmit = async (ev) => {
     ev.preventDefault();
+    const nombre = $('nNombre').value.trim(), wa = $('nWa').value.replace(/\D/g, '');
     try {
       const r = await api('admin/locales', { method: 'POST', body: { nombre: $('nNombre').value, slug: $('nSlug').value, plan: $('nPlan').value, prueba_dias: $('nDias').value,
         whatsapp: $('nWa').value, direccion: $('nDir').value, carta: $('nCarta').value.trim() || undefined, notas: $('nNotas').value } });
       $('dBody').innerHTML = `<p>Local creado. Entrégale al dueño estos datos (la clave no se vuelve a mostrar):</p>
         <p>Carta: <a href="${BASE}/${esc(r.slug)}" target="_blank" rel="noopener">${location.origin}${BASE}/${esc(r.slug)}</a><br>Panel: ${location.origin}${BASE}/panel?local=${esc(r.slug)}<br>Código del local: <b>${esc(r.slug)}</b></p>
-        <div class="clave">${esc(r.clave)}</div>`;
+        <div class="clave">${esc(r.clave)}</div>
+        <p class="formerr" style="color:inherit">La carta queda <b>en pausa</b> hasta que el dueño termine los primeros pasos y la abra desde su panel.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="dCopiar">Copiar todo</button>${wa ? `<a class="btn" id="dWa" target="_blank" rel="noopener">Enviar por WhatsApp al dueño</a>` : ''}</div>`;
+      const msg = `¡Hola! Tu local ${nombre} ya está creado en 8vobit Pedidos.
+
+Panel: ${location.origin}${BASE}/panel?local=${r.slug}
+Código del local: ${r.slug}
+Clave: ${r.clave}
+
+Entra desde la tablet o el computador del local y sigue los primeros pasos (unos 10 minutos). Tu carta para los clientes quedará en ${location.origin}${BASE}/${r.slug}`;
+      $('dCopiar').onclick = async () => { try { await navigator.clipboard.writeText(msg); $('dCopiar').textContent = '✓ Copiado'; } catch { $('dCopiar').textContent = 'No se pudo copiar'; } };
+      if (wa) $('dWa').href = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
       pintar();
     } catch (err) { $('nErr').textContent = err.message; }
   };

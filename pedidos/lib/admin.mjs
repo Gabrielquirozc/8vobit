@@ -68,6 +68,8 @@ export function crearAdmin(db, { LIC, USU, crearLocal, hoy }) {
     try {
       const lid = crearLocal({ ...carta, local });
       USU.ponerClave(lid, clave);
+      // El local nuevo parte en pausa: la carta se abre desde el panel cuando el dueño termina los primeros pasos.
+      db.prepare('UPDATE locales SET pausa=1 WHERE id=?').run(lid);
       LIC.crear(lid, { plan: b.plan || 'gestion', pruebaDias: dias, notas: texto(b.notas, 500) });
       db.exec('COMMIT');
       return { id: lid, slug, clave };

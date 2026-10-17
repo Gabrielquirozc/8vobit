@@ -56,8 +56,10 @@ export function crearInicioUI(ctx) {
     const barra = `<div class="ini-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${E.total}" aria-valuenow="${E.listos}" aria-label="Avance de los primeros pasos"><span style="width:${pct}%"></span></div>`;
     if (E.completo) {
       const slug = carta()?.local?.slug || '';
-      el.innerHTML = `<section class="cardf ini listo"><header class="sh"><h3>${ico('check')}¡Tu local está listo para recibir pedidos!</h3></header>${barra}
-        <p class="ayuda">Prueba tu carta haciendo un pedido de ensayo, imprime el cartel con el QR y compártelo en tus redes.</p>
+      const pausa = $('pausa').getAttribute('aria-pressed') === 'true';
+      el.innerHTML = `<section class="cardf ini listo"><header class="sh"><h3>${ico('check')}${pausa ? '¡Tu carta está lista!' : '¡Tu local está listo para recibir pedidos!'}</h3></header>${barra}
+        ${pausa ? '<p class="ayuda"><b>Tu carta todavía está en pausa: los clientes la ven pero no pueden pedir.</b> Revísala, haz un pedido de ensayo y ábrela cuando quieras.</p><p><button type="button" class="primary" data-ini-abrir>Abrir mi carta a los clientes</button></p>' : ''}
+        <p class="ayuda">Antes del primer servicio: deja el panel abierto en la tablet con el sonido activo (campana arriba), haz un pedido de ensayo desde tu celular, imprime el cartel con el QR y compártelo en tus redes. Si trabajas con más personas, crea sus PIN en Datos del local.</p>
         <div class="ini-acc"><a class="ghostb fuerte" href="${BASE}/${esc(slug)}" target="_blank">Ver mi carta</a><a class="ghostb" href="cartel" target="_blank">Cartel y tarjetas con QR</a>
         <span class="sp"></span><button type="button" class="primary chico" data-ini-cerrar>Terminar</button></div></section>`;
     } else if (min) {
@@ -66,6 +68,7 @@ export function crearInicioUI(ctx) {
       const sig = E.pasos.find((p) => !p.hecho && !p.omitido);
       el.innerHTML = `<section class="cardf ini"><header class="sh"><h3>Primeros pasos para dejar tu local andando</h3><span class="sp"></span>
           <span class="num ini-n">${E.listos} de ${E.total}</span><button type="button" class="link" data-ini-min="1">Ocultar</button></header>${barra}
+        ${$('pausa').getAttribute('aria-pressed') === 'true' ? '<p class="ayuda">Tu carta está en pausa mientras completas estos pasos: los clientes todavía no pueden pedir.</p>' : ''}
         <ol class="ini-pasos">${E.pasos.map((p) => `<li class="${p.hecho ? 'ok' : p.omitido ? 'omit' : ''} ${p === sig ? 'sig' : ''}">
           <span class="ini-ico" aria-hidden="true">${p.hecho ? ico('check') : p.omitido ? '–' : ''}</span>
           <span class="ini-t"><b>${esc(p.titulo)}</b><small>${p.hecho ? 'Listo' : p.omitido ? 'Omitido' : esc(p.detalle)}</small></span>
@@ -73,6 +76,8 @@ export function crearInicioUI(ctx) {
     }
   }
   document.addEventListener('click', async (e) => {
+    const ab = e.target.closest('[data-ini-abrir]');
+    if (ab) { $('pausa').click(); setTimeout(pintar, 600); return; }
     const t = e.target.closest('[data-ini-min], [data-ini-cerrar], [data-inicio-abrir], [data-paso]');
     if (!t) return;
     try {
@@ -120,10 +125,12 @@ export function crearInicioUI(ctx) {
     else if (id === 'horario') {
       hoja(paso.titulo, `<p class="ayuda top">Marca los días que abres y las horas. La carta solo ofrece horas de retiro dentro de este horario.</p>
         <p><button type="button" class="ghostb" id="in-copiar">Copiar el lunes a todos</button></p>${tablaHorario('i', L.horario)}
-        <p class="ayuda">Si cierras después de medianoche (ej. 02:00) cuenta como la madrugada siguiente. El despacho tiene su propio horario en la pestaña Despacho.</p>`, { ok: async () => {
+        <p class="ayuda">Si cierras después de medianoche (ej. 02:00) cuenta como la madrugada siguiente. El despacho tiene su propio horario en la pestaña Despacho.</p>
+        ${paso.hecho ? '' : '<label class="ayuda" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="in-hrev" style="width:22px;height:22px"> Revisé cada día: el horario viene de ejemplo (12:00 a 22:00).</label>'}`, { ok: async () => {
         const q = (s) => $('inBody').querySelector(s);
         const horario = Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-iabre="${d}"]`).checked ? [q(`[data-idesde="${d}"]`).value, q(`[data-ihasta="${d}"]`).value] : null]));
         if (!Object.values(horario).some(Boolean)) throw new Error('Marca al menos un día de atención.');
+        if (!paso.hecho && !q('#in-hrev').checked) throw new Error('Revisa los días y horas y marca la casilla: el horario viene de ejemplo.');
         await patchLocal({ horario }); toast('✓ Horario guardado'); return true;
       } });
       const q = (s) => $('inBody').querySelector(s);
