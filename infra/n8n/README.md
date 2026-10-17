@@ -13,7 +13,14 @@ Archivos: `docker-compose.yml`, `.env.example` y `flujo-dm-instagram.json` (se i
 
 ---
 
-## Parte 1 · Servidor (lo puede hacer Claude con tu OK)
+## Estado (2026-10-17)
+
+- ✅ n8n corriendo en lenovo-edge (`/srv/docker/compose/n8n`, puerto 127.0.0.1:5678) y publicado en `https://n8n.8vobit.xyz` por el túnel.
+- ✅ `.env` creado en el servidor con `N8N_ENCRYPTION_KEY` e `IG_VERIFY_TOKEN` generados allí. Faltan `IG_APP_SECRET` e `IG_ACCESS_TOKEN` (parte 2).
+- ✅ Flujo importado e **inactivo** (ID `GOhImTsPA0GizMPu`).
+- ⚠️ Falta crear la cuenta de dueño en `https://n8n.8vobit.xyz`: hacerlo cuanto antes, porque mientras no exista, cualquiera que entre puede reclamarla.
+
+## Parte 1 · Servidor (hecha)
 
 1. Crear `/srv/docker/compose/n8n/` con `docker-compose.yml` y `.env` (a partir de `.env.example`). Generar en el servidor `N8N_ENCRYPTION_KEY` e `IG_VERIFY_TOKEN` con `openssl rand -hex`.
 2. Agregar al túnel (en `/etc/cloudflared/config.yml`, antes de la regla 404):
