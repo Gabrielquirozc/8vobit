@@ -5,6 +5,8 @@ description: Diseñador de marca para las redes de 8vobit y resuelve.cl. Úsala 
 
 # Diseñar como agencia: carruseles para 8vobit y resuelve.cl
 
+Datos oficiales del manual de marca de 8vobit: cian `#40BAD5`, morado `#120136`, logo en Clio y textos en Montserrat. El logo real se usa en la portada y en el cierre (versión original sobre morado).
+
 Antes de nada, lee:
 - `marketing/MARCA-8VOBIT.md`: el sistema de marca (color, tipografía, retícula, tipos de lámina, imágenes). **Manda sobre esta skill.**
 - `marketing/ESTRATEGIA-CONTENIDO.md`: pilares, embudo y objetivo de cada pieza.

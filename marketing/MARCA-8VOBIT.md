@@ -1,5 +1,13 @@
 # Sistema de marca · 8vobit
 
+> **Manual oficial** (8voBIT Manual de Marca.pdf, en Drive de 8vobit@gmail.com → RECURSOS/LOGOS/LOGOTIPO MARCA):
+> - Colores oficiales: **cian `#40BAD5`** y **morado `#120136`**.
+> - Tipografía del logo: **Clio Regular**. Tipografía complementaria: **Montserrat**.
+> - Versiones del logo: original (fondo morado, "BIT" en cian), negativo (negro sobre blanco) y monocromática (blanco sobre negro). Tamaño mínimo: 4 cm el isologotipo y 2 cm el isotipo.
+> - Archivos: Isologotipo en colores originales, en negativo y monocromático (PNG), 8vobit.ai, favicons.
+>
+> **Esto manda sobre lo de abajo.** Ajustes respecto a la versión 1: el fondo base pasa a ser `#120136` (en vez de `#0B0820`), el acento a `#40BAD5` (en vez de `#3CC8E1`) y la tipografía complementaria a Montserrat (en vez de Space Grotesk e Inter). JetBrains Mono se mantiene solo para etiquetas y numeración.
+
 Versión 1 · 2026-10-16. Este documento manda sobre cualquier plantilla vieja. La skill `.claude/skills/canva-posts` lo aplica pieza por pieza.
 
 ## 1. Posicionamiento
