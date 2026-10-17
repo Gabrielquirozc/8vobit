@@ -18,7 +18,10 @@ Archivos: `docker-compose.yml`, `.env.example` y `flujo-dm-instagram.json` (se i
 - ✅ n8n corriendo en lenovo-edge (`/srv/docker/compose/n8n`, puerto 127.0.0.1:5678) y publicado en `https://n8n.8vobit.xyz` por el túnel.
 - ✅ `.env` creado en el servidor con `N8N_ENCRYPTION_KEY` e `IG_VERIFY_TOKEN` generados allí. Faltan `IG_APP_SECRET` e `IG_ACCESS_TOKEN` (parte 2).
 - ✅ Flujo importado e **inactivo** (ID `GOhImTsPA0GizMPu`).
-- ⚠️ Falta crear la cuenta de dueño en `https://n8n.8vobit.xyz`: hacerlo cuanto antes, porque mientras no exista, cualquiera que entre puede reclamarla.
+- ✅ App de Meta **"8vobit DM"** creada (ID `1009509995498920`, caso de uso *Administrar mensajes y contenido en Instagram*, sin portfolio comercial por ahora; modo desarrollo).
+- ✅ Cuenta de dueño de n8n creada por Gabriel.
+- ⏳ Falta: conectar @8vobit en la app, copiar el token y el App Secret al `.env`, activar el flujo y configurar el webhook (parte 2, pasos 3 a 7).
+- (antes) Falta crear la cuenta de dueño en `https://n8n.8vobit.xyz`: hacerlo cuanto antes, porque mientras no exista, cualquiera que entre puede reclamarla.
 
 ## Parte 1 · Servidor (hecha)
 
