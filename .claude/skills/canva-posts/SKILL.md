@@ -1,96 +1,94 @@
 ---
 name: canva-posts
-description: Reglas de diseño para crear o editar publicaciones de Instagram en Canva para 8vobit y resuelve.cl (tamaños de letra, márgenes, espaciado y disposición). Úsala siempre antes de generate-design, edit-design o copy-design de una pieza para redes, y para revisar una pieza antes de guardarla.
+description: Diseñador de marca para las redes de 8vobit y resuelve.cl. Úsala siempre antes de crear, editar o revisar una publicación o un carrusel en Canva (generate-design, copy-design, edit-design) y al planificar contenido. Fija el proceso, el sistema visual (tipografía, color, retícula, imágenes reales) y la revisión de calidad.
 ---
 
-# Publicaciones en Canva sin errores de tamaño ni de disposición
+# Diseñar como agencia: carruseles para 8vobit y resuelve.cl
 
-Los errores que ya pasaron y que esta skill evita:
-- Pie de página a 17 px y descripciones a 21 px: no se leen en el celular.
-- Titular que choca con la imagen o que corta "30 / %" en dos líneas.
-- Textos de ancho fijo angosto que parten frases en tres líneas.
-- Reusar las fotos viejas y frases flojas como "cotiza gratis".
-- Poner el enlace "8vobit.xyz" en el afiche.
+Antes de nada, lee:
+- `marketing/MARCA-8VOBIT.md`: el sistema de marca (color, tipografía, retícula, tipos de lámina, imágenes). **Manda sobre esta skill.**
+- `marketing/ESTRATEGIA-CONTENIDO.md`: pilares, embudo y objetivo de cada pieza.
+- `marketing/CALENDARIO-*.md`: qué toca publicar.
 
-## 1. Lienzo y retícula
+Errores que ya cometimos y que esta skill existe para evitar:
+1. Letras de 17–21 px que no se leen en el celular.
+2. Reusar las fotos de notebook de la plantilla vieja.
+3. Frases flojas ("cotiza gratis") y la URL dentro de la pieza.
+4. El titular chocando con los íconos después de agrandar la letra.
+5. Mockups con una app inventada en vez de la nuestra.
+6. Diseños con buena pinta pero sin objetivo: bonitos, pero no venden.
 
-- Formato por defecto: **1080 × 1350** (4:5). Las historias van en 1080 × 1920.
-- **Margen de seguridad: 96 px** por lado. Nada de texto fuera de x 96–984, y 96–1254.
-  En historias, deja libres además los 220 px de arriba y los 260 px de abajo (ahí van los botones de Instagram).
-- Todo se alinea a una **retícula de 8 px**: posiciones, anchos y separaciones múltiplos de 8.
-- Un solo eje de alineación por pieza: todo a la izquierda (x = 96) o todo centrado. No se mezclan.
+## Paso 0. Brief: sin brief no se diseña
 
-## 2. Escala tipográfica (en un lienzo de 1080 px de ancho)
+Para cada carrusel, escribir esto antes de abrir Canva:
 
-| Nivel | Tamaño | Peso | Interlineado | Uso |
-|---|---|---|---|---|
-| Titular | **96–128 px** | Extra negrita | 1.0–1.1 | 2 a 4 líneas, máximo 6 palabras por línea |
-| Dato destacado | 72–96 px | Negrita | 1.0 | Precio o cifra ("Desde $15.000", "1 %") |
-| Subtítulo | **40–48 px** | Regular o medio | 1.25 | Una o dos líneas |
-| Cuerpo y viñetas | **32–36 px** | Regular | 1.3 | Máximo 3 viñetas, 1 línea cada una idealmente |
-| Etiqueta o rótulo | 26–28 px | Semi negrita, mayúsculas, interletrado +0.08 | 1.2 | Categoría ("SERVICIO TÉCNICO") |
-| Pie (dirección, CTA) | **28 px mínimo** | Semi negrita | 1.2 | Una sola línea |
+```
+Pieza:        (fecha · cuenta · serie)
+Objetivo:     alcance | guardados | envíos | mensajes (DM)    ← uno solo
+Etapa:        descubrir | considerar | decidir
+Público:      (uno de los tres de MARCA §1)
+Gancho:       (6–9 palabras; problema, cifra o promesa)
+Láminas:      (lista de 5–8 con tipo de MARCA §7 y texto final)
+Prueba:       (qué captura o foto real se usa)
+CTA:          (una sola acción, coherente con el objetivo)
+Métrica:      (cómo sabremos si funcionó)
+```
 
-Reglas duras:
-- **Nada bajo 26 px.** Si no cabe a 26 px, sobra texto: se corta el texto, no la letra.
-- Entre un nivel y el siguiente debe haber al menos 1,4 veces de diferencia (titular 112 → subtítulo 44 → cuerpo 34).
-- Máximo **3 niveles de tamaño** por pieza, más el pie.
-- Máximo **2 familias tipográficas**.
-- Máximo **35 palabras** en total por pieza (sin contar el pie). Lo demás va en el texto de la publicación.
+Reglas del texto:
+- Una idea por lámina. Titular máximo de 9 palabras; cuerpo máximo de 25 palabras.
+- La portada promete y las láminas cumplen. La última pide una sola cosa.
+- La CTA sigue al objetivo: si buscamos guardados, "Guárdalo para cuando lo necesites"; si buscamos envíos, "Envíaselo a quien tenga un local"; si buscamos mensajes, "Escríbenos por DM con la palabra DEMO".
+- Cifras con espacio no separable: `30 %`, `$19.900 + IVA`.
 
-## 3. Espaciado vertical
+## Paso 1. Imagen real primero
 
-- Titular → subtítulo: 32–48 px.
-- Subtítulo → bloque de viñetas: 64–80 px.
-- Entre viñetas: 24–32 px.
-- Bloque de contenido → pie: al menos 80 px.
-- Cualquier imagen y texto: al menos **48 px de aire**. Nunca se superponen, salvo que el texto vaya sobre una zona plana con contraste ≥ 4.5:1.
+- Si la pieza habla de Pedidos, usar las capturas de `marketing/capturas/` (son de la app real). Si faltan datos o la pantalla sale vacía, **no se diseña con una pantalla vacía**: se pide cargar datos de demostración y se captura de nuevo con el servidor local (`preview_start pedidos`, local `gassuso`, la clave de prueba de `.claude/launch.json`).
+- Si habla del taller, pedirle al dueño fotos reales (lista en el calendario) o usar macros propios.
+- Para subir una imagen a Canva: `create-upload-url` o `upload-asset-from-url`, y después `insert_fill` o `update_fill`.
+- Si no hay imagen real, la lámina se resuelve con tipografía y una cifra, no con stock.
 
-## 4. Saltos de línea
+## Paso 2. Construir
 
-- Usar espacio no separable (` `) entre una cifra y su unidad o símbolo: `30 %`, `$19.900 + IVA`, `1 %`.
-- También en las frases cortas que no deben partirse: `a las apps`.
-- En los titulares, forzar los saltos con `\n` donde se lee mejor, no dejarlos al ancho de la caja.
-- Las cajas de texto ocupan el ancho útil completo (888 px = 1080 − 2 × 96), salvo en diseños a dos columnas (cada columna de 420 px con 48 px de separación).
-- Al cambiar el texto de una caja, **redimensionar el ancho** (`resize_element`) y volver a revisar la altura en el documento devuelto.
+**Camino preferido:** copiar el diseño base de la serie (`copy-design`) y cambiar solo textos e imágenes. Las bases están en la tabla de series del calendario.
 
-## 5. Disposición
+**Si la base no existe:** crearla una vez, con mucho cuidado, y que el usuario la apruebe antes de producir la serie:
+1. `generate-design` (instagram_post) con una consulta que incluya: paleta en hexadecimal (MARCA §2), "Space Grotesk para titulares, Inter para el cuerpo", "fondo #0B0820 casi negro", "mucho espacio negativo, composición editorial y alineada a la izquierda", el texto exacto, "sin URLs, sin fotos de stock, sin interfaces inventadas" y el tipo de lámina.
+2. Revisar los 4 candidatos (`create-design-from-candidate` + `read-design` con thumbnails). Descartar los que traigan texto inventado o mal escrito.
+3. Tomar el mejor y **corregirlo a mano** con `edit-design` contra MARCA §3 y §6:
+   - `format_text` → tamaños, pesos y color.
+   - `resize_element` → ancho de los textos (888 px, o 420 por columna).
+   - `position_element` → x = 96, etiqueta en y = 96, pie en y = 1206.
+4. Para un carrusel: `add_page` (1080×1350, fondo `#0B0820`) y repetir la estructura en cada lámina.
 
-- Jerarquía de arriba hacia abajo: marca pequeña (opcional) → titular → apoyo (imagen o viñetas) → dato o CTA → pie.
-- La imagen principal ocupa entre el 35 % y el 50 % del lienzo. Tiene que ser propia del tema (local de comida, celular con la carta, componentes, taller). **No reusar las fotos de notebook de la plantilla antigua.**
-- Un solo punto focal por pieza. Si hay foto potente, el texto se reduce a titular + una línea.
-- Una sola llamada a la acción, al final: "Agenda por DM", "Pide una demo por DM", "Freire 1458, Concepción".
-- **No poner URLs en la pieza** (ni 8vobit.xyz ni otras). El enlace va en la bio.
-- Prohibido: "cotiza gratis", "precios increíbles", signos de exclamación en cadena y emojis dentro de la pieza.
+## Paso 3. Revisión de calidad (obligatoria, lámina por lámina)
 
-## 6. Paleta
+Con el `document` devuelto por `edit-design`, revisar:
 
-| Marca | Fondo | Acento | Texto |
-|---|---|---|---|
-| 8vobit | #120136 (morado profundo) | #40bad5 (cian) | #ffffff, y #cbd5e1 para el texto secundario |
-| resuelve.cl | Un color plano por área: azul noche (datos o deudas), turquesa (propiedades), naranjo (laboral), burdeo (familia) | Blanco | Blanco |
+**Tamaños y texto**
+- [ ] Ningún texto bajo 26 px. Titular de lámina ≥ 80 px y de portada ≥ 112 px.
+- [ ] Máximo 3 tamaños y 2–3 fuentes del sistema (Space Grotesk, Inter, JetBrains Mono).
+- [ ] Sin palabras inventadas ni faltas de ortografía. Leer cada texto letra por letra.
+- [ ] Ninguna cifra separada de su símbolo. Ningún titular con una palabra sola en la última línea.
 
-Solo un color de acento por pieza, y únicamente para la palabra o cifra clave.
+**Disposición**
+- [ ] Todo dentro de x 96–984 e y 96–1254.
+- [ ] Para cada texto, `top + height` + 48 ≤ `top` del elemento siguiente. Agrandar una letra hace crecer la caja hacia abajo: siempre recalcular.
+- [ ] Etiqueta, titular y pie en la misma posición en todas las láminas.
+- [ ] Una sola alineación (izquierda), salvo la portada o el cierre.
 
-## 7. Flujo de trabajo obligatorio
+**Color e imagen**
+- [ ] Acento cian en una sola palabra o cifra por lámina.
+- [ ] Contraste suficiente (nada de cian sobre hueso).
+- [ ] La imagen es real (nuestra app, nuestro taller) y está nítida.
 
-1. **Antes de generar**: escribir el texto final de cada pieza (titular, subtítulo, viñetas, CTA) y contar las palabras. Si pasa de 35, recortar.
-2. **Generar** con `generate-design` (instagram_post) y una consulta que incluya: los textos exactos, la paleta en hexadecimal, "sin URLs", "sin fotos de notebook", el estilo ("moderno, premium, mucho aire") y la imagen pedida.
-3. **Revisar cada candidato** (`create-design-from-candidate` + `read-design` con thumbnails) y descartar los que tengan texto inventado o mal escrito (por ejemplo "3° GJOT" o "botines").
-4. **Abrir una transacción** y leer `design_content`. Revisar los tamaños de letra contra la tabla de la sección 2 y corregir con `format_text` (font_size) todo lo que esté bajo el mínimo.
-5. Corregir anchos (`resize_element`) y posiciones (`position_element`) según las secciones 1, 3 y 4.
-   Cada vez que se agranda una letra, la caja crece hacia abajo. Hay que calcular `top + height` de cada texto en el documento devuelto y comprobar que queden **al menos 48 px** antes del `top` del siguiente elemento. Si no alcanza, se sube el bloque de arriba (marca, titular) o se baja el de abajo, sin pasar el margen de 96 px.
-6. **Verificar en la miniatura devuelta**:
-   - [ ] ¿Algún texto bajo 26 px?
-   - [ ] ¿Algo fuera del margen de 96 px?
-   - [ ] ¿Algún texto encima de una imagen sin contraste?
-   - [ ] ¿Alguna cifra separada de su símbolo?
-   - [ ] ¿Algún texto mal escrito o inventado por la IA?
-   - [ ] ¿Una sola CTA y sin URL?
-7. Mostrar la miniatura al usuario (SendUserFile) y **guardar (`commit`) solo cuando apruebe**.
+**Mensaje**
+- [ ] La portada se entiende en 1 segundo sin leer el resto.
+- [ ] Hay una CTA, coherente con el objetivo del brief, y no hay URL.
 
-## 8. Producción en serie (calendario)
+Recién entonces: mostrar las miniaturas al usuario (SendUserFile) y hacer `commit` **solo con su aprobación**.
 
-- Cada serie usa **un mismo diseño base** aprobado: se copia (`copy-design`) y solo cambian los textos y la imagen. Así la grilla se ve coherente.
-- Las series se nombran en Canva como `8VB · AAAA-MM-DD · tema` o `RES · AAAA-MM-DD · tema`, para encontrarlas.
-- Antes de producir una serie, validar la primera pieza con el usuario. Las siguientes repiten la estructura.
+## Paso 4. Entregar
+
+- Nombre en Canva: `8VB · 2026-11-03 · gancho-corto` o `RES · …`.
+- Anotar en el calendario el ID de Canva de la pieza y el estado: borrador, aprobado o publicado.
+- Escribir el texto de la publicación: la primera línea repite el gancho; luego 3–5 líneas de valor, la CTA y 3–5 hashtags locales (#Concepcion #ServicioTecnicoConcepcion…).

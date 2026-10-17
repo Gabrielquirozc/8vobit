@@ -1,5 +1,7 @@
 # Plan de contenido y captación de clientes
 
+> **Actualizado:** la estrategia vigente está en `ESTRATEGIA-CONTENIDO.md`, el sistema visual en `MARCA-8VOBIT.md` y la planificación en `CALENDARIO-NOV-2026.md`. Este archivo queda como registro de las decisiones de marca (8vobit como punto tecnológico, resuelve.cl en lugar de CÓDICE). Las secciones "Ritmo semanal" y "Piezas en Canva" quedan reemplazadas por esos documentos.
+
 Escrito el 2026-10-16. Es la memoria del lado comercial: qué marca vende qué, dónde se publica y con qué ritmo.
 
 ## Marcas (decidido)
