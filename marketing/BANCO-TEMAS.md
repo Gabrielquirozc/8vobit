@@ -14,6 +14,23 @@ Rotación en la grilla: reparación → agenda → locales → reparación…, d
 
 Leyenda: **E** = educar (guardar) · **D** = demostrar (confianza) · **V** = vender (DM) · **C** = conectar (seguir o enviar).
 
+## Tono (decidido el 2026-10-16)
+
+Redactor creativo chileno, no lista genérica de IA. Humor reconocible, situaciones reales y contingencia del mes. Prohibidos como gancho: "5 señales…", "3 tips…" y cualquier tema que publique igual cualquier servicio técnico. En reparación el enfoque es "no se ha mantenido", no "está lento".
+
+## Ganchos aprobados
+
+| Código | Línea | Gancho |
+|---|---|---|
+| R0 | REPARACIÓN | Lo que encontramos dentro de un notebook esta semana (serie fija con fotos reales) |
+| R17 | REPARACIÓN | Certámenes de fin de año: que tu notebook no te abandone ahora |
+| R18 | REPARACIÓN | Limpieza express: tu computador limpio en una tarde |
+| A1 | PROFESIONALES | ¿Sigues respondiendo mensajes hasta la madrugada? (página de servicios con agenda) |
+| L0 | PARA LOCALES | Pedidos por WhatsApp: una tragedia en 5 actos |
+| L11 | PARA LOCALES | Calcula cada ángulo de tu negocio: de los ingredientes a la bencina y el desgaste del auto |
+
+Nota: el producto de PROFESIONALES hoy es la **página web de servicios con agenda incluida** (landing + reservas). La agenda sola como producto independiente queda para más adelante.
+
 ## REPARACIÓN: el taller es la prueba
 
 Lo que más vende aquí es **mostrar el trabajo real**: la pieza que llega, el equipo abierto, el antes y el después. Cada reparación que entra al taller es material para un carrusel.
