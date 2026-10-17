@@ -28,7 +28,9 @@ Reparto: reparación ×4, agenda ×3, locales ×3, marca ×2. Los carruseles de 
 | Fecha | Línea | Pieza | Estado |
 |---|---|---|---|
 | — | — | "5 señales…" descartado por genérico (Canva DAHYOofcMu8, sin guardar) | ❌ |
-| 6 nov | PARA LOCALES | ¿Cuánto te cobra realmente Uber? · Canva DAHYOgsJWxY (7 láminas, cifras marcadas como ejemplo) | ✅ guardado |
+| 6 nov | PARA LOCALES | ¿Cuánto te cobra realmente Uber? · Canva DAHYOgsJWxY (cifras marcadas como ejemplo, con isotipo) | ✅ guardado |
+| 9 nov | PARA PROFESIONALES | ¿Sigues respondiendo mensajes? · Canva DAHYOrvCsgc (con isotipo) | ✅ guardado |
+| 13 nov | PARA LOCALES | 5 tragedias de un pedido por WhatsApp · Canva DAHYOofcMu8 (con isotipo) | ✅ guardado |
 
 Estado: ⬜ por hacer · 🟨 borrador en Canva · ✅ aprobado · 📤 publicado
 
