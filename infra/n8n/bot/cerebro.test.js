@@ -76,7 +76,57 @@ test('teclado: dice que no se hace', () => {
   assert.match(r.respuesta, /no estamos haciendo/);
 });
 
-test('palabra DEMO de los carruseles sigue funcionando', () => {
+test('DEMO inicia el flujo web directo en pedidos', () => {
   const r = decidir('DEMO', null, tarde, links);
-  assert.match(r.respuesta, /pedidos\.test/);
+  assert.strictEqual(r.intencion, 'web_inicio');
+  assert.match(r.respuesta, /a qué se dedica/i);
+  assert.strictEqual(r.contacto.web.eleccion, 'PEDIDOS');
+});
+
+test('flujo web completo con botones: pedidos, caliente → Gassuso, reunión y aviso urgente', () => {
+  let r = decidir('quiero una pagina web', null, tarde, links);
+  // "pagina web" ya dice qué quiere: salta a la pregunta del negocio
+  assert.strictEqual(r.contacto.web.eleccion, 'PAGINA');
+  r = decidir('', null, tarde, links, 'MENU_WEB');
+  assert.strictEqual(r.botones.length, 4);
+  r = decidir('Pedidos para mi local', r.contacto, tarde + 60e3, links, 'W_PEDIDOS');
+  assert.match(r.respuesta, /a qué se dedica/i);
+  r = decidir('Sushi en Lomas', r.contacto, tarde + 120e3, links);
+  assert.strictEqual(r.botones.length, 3);
+  r = decidir('Por apps de delivery', r.contacto, tarde + 180e3, links, 'H_APPS');
+  assert.strictEqual(r.botones.length, 3);
+  r = decidir('Este mes', r.contacto, tarde + 240e3, links, 'C_MES');
+  assert.strictEqual(r.intencion, 'web_cierre');
+  assert.match(r.respuesta, /gassuso/);
+  assert.match(r.respuesta, /#reunion/);
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.resumen, /Sushi en Lomas/);
+  assert.strictEqual(r.contacto.web, null);
+});
+
+test('flujo web: solo mirando no es urgente', () => {
+  let r = decidir('', null, tarde, links, 'MENU_WEB');
+  r = decidir('agenda', r.contacto, tarde + 1e3, links);
+  r = decidir('psicóloga', r.contacto, tarde + 2e3, links);
+  r = decidir('por whatsapp', r.contacto, tarde + 3e3, links);
+  r = decidir('solo estoy mirando', r.contacto, tarde + 4e3, links);
+  assert.strictEqual(r.aviso, 'normal');
+  assert.match(r.respuesta, /#agendar/);
+});
+
+test('flujo web: "hablar" pasa a Gabriel en cualquier paso', () => {
+  let r = decidir('', null, tarde, links, 'MENU_WEB');
+  r = decidir('prefiero hablar con alguien', r.contacto, tarde + 1e3, links);
+  assert.strictEqual(r.intencion, 'web_humano');
+  assert.strictEqual(r.aviso, 'urgente');
+});
+
+test('bienvenida ofrece el menú Reparación / Desarrollo web', () => {
+  const r = decidir('hola', null, tarde, links);
+  assert.deepStrictEqual(r.botones.map(b => b.payload), ['MENU_REP', 'MENU_WEB']);
+});
+
+test('si Gabriel está conversando, el flujo web no arranca', () => {
+  const r = decidir('DEMO', { visto: tarde - 3 * H, gabriel: tarde - H }, tarde, links);
+  assert.strictEqual(r.respuesta, null);
 });

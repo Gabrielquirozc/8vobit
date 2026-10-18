@@ -48,7 +48,8 @@ for (const item of $input.all()) {
       const remitente = ev.sender && ev.sender.id;
       if (!remitente) continue;
       const texto = typeof msg.text === 'string' ? msg.text : (msg.attachments ? '[adjunto]' : '');
-      const d = decidir(texto === '[adjunto]' ? '' : texto, memoria.contactos[remitente], ahora, links);
+      const payload = msg.quick_reply && msg.quick_reply.payload ? String(msg.quick_reply.payload) : '';
+      const d = decidir(texto === '[adjunto]' ? '' : texto, memoria.contactos[remitente], ahora, links, payload);
       if (d.respuesta) d.contacto.ultimoTexto = d.respuesta;
       memoria.contactos[remitente] = d.contacto;
       if (!d.respuesta && !d.aviso) continue;
@@ -57,6 +58,9 @@ for (const item of $input.all()) {
         intencion: d.intencion,
         texto: texto.slice(0, 300),
         respuesta: d.respuesta,
+        // Botones de respuesta rápida de Instagram (título máx. 20 caracteres).
+        botones: (d.botones || []).map(b => ({ content_type: 'text', title: String(b.titulo).slice(0, 20), payload: b.payload })),
+        resumen: d.resumen || '',
         aviso: d.aviso,
         prioridad: d.aviso === 'urgente' ? '5' : '3',
         // Pausa "humana": más larga si la respuesta es más larga (6 a 25 s).
@@ -88,19 +92,19 @@ flujo.nodes = [
     parameters: { amount: "={{ $('¿Hay respuesta?').item.json.pausa }}" } },
   { id: 'b6', name: 'Responder DM', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1200, 160],
     parameters: { method: 'POST', url: graph, sendHeaders: true, headerParameters: auth, sendBody: true, specifyBody: 'json',
-      jsonBody: "={{ JSON.stringify({ recipient: { id: $('¿Hay respuesta?').item.json.remitente }, message: { text: $('¿Hay respuesta?').item.json.respuesta } }) }}", options: {} } },
+      jsonBody: "={{ JSON.stringify({ recipient: { id: $('¿Hay respuesta?').item.json.remitente }, message: Object.assign({ text: $('¿Hay respuesta?').item.json.respuesta }, ($('¿Hay respuesta?').item.json.botones || []).length ? { quick_replies: $('¿Hay respuesta?').item.json.botones } : {}) }) }}", options: {} } },
   { id: 'b7', name: '¿Hay que avisar?', type: 'n8n-nodes-base.filter', typeVersion: 2, position: [480, 360],
     parameters: { conditions: { options: { caseSensitive: true, typeValidation: 'loose' }, combinator: 'and',
       conditions: [{ id: 'v1', leftValue: '={{ $json.aviso }}', rightValue: '', operator: { type: 'string', operation: 'notEmpty', singleValue: true } }] }, options: {} } },
   { id: 'b8', name: 'Avisar por ntfy', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [720, 360],
     parameters: { method: 'POST', url: '={{ $env.NTFY_URL }}', sendHeaders: true,
       headerParameters: { parameters: [
-        { name: 'Title', value: "={{ ($json.aviso === 'urgente' ? '🚨 ' : '') + 'DM Instagram: ' + $json.intencion }}" },
+        { name: 'Title', value: "={{ ($json.aviso === 'urgente' ? '🚨 ' : '') + ($json.intencion.startsWith('web_') ? 'Lead web: ' : 'DM Instagram: ') + $json.intencion }}" },
         { name: 'Priority', value: '={{ $json.prioridad }}' },
         { name: 'Tags', value: 'speech_balloon' }
       ] },
       sendBody: true, contentType: 'raw', rawContentType: 'text/plain',
-      body: "={{ $json.texto + ($json.respuesta ? '\\n\\nBot: ' + $json.respuesta : '\\n\\n(el bot no respondió)') }}", options: {} } }
+      body: "={{ ($json.resumen ? '📋 ' + $json.resumen + '\\n\\n' : '') + $json.texto + ($json.respuesta ? '\\n\\nBot: ' + $json.respuesta : '\\n\\n(el bot no respondió)') }}", options: {} } }
 ];
 flujo.connections = {
   'Verificación Meta (GET)': { main: [[{ node: 'Devolver challenge', type: 'main', index: 0 }]] },

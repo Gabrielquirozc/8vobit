@@ -1,6 +1,11 @@
 # Bot de DM: flujo de onboarding para desarrollo web (propuesta)
 
-Estado: **diseño para aprobar** (18-oct-2026). Todavía no está implementado.
+Estado: **implementado y desplegado** el 18-oct-2026, en `bot/cerebro.js` → `flujoWeb()`, con 17 pruebas. Las respuestas de Gabriel de esa noche quedaron aplicadas:
+- **Página web:** como no hay portafolio publicado, el cierre siempre pasa a Gabriel (aviso urgente) y ofrece la reunión.
+- **Agenda online:** muestra la agenda de 8vobit funcionando (8vobit.xyz/#agendar) y deja el precio para la reunión, mientras no se apruebe `marketing/PRECIOS-AGENDA-ONLINE.md`.
+- **Pedidos:** muestra Gassuso en vivo (pedidos.8vobit.xyz/gassuso), con 1% por pedido.
+- La bienvenida y la respuesta nocturna ofrecen dos botones: **Reparación** y **Desarrollo web**.
+- Como la agenda todavía no envía correos, el cierre dice "cuando agendes, te confirmo el link de Meet por aquí".
 Complementa el bot de reparaciones (`bot/cerebro.js`). Este flujo se activa cuando alguien muestra interés en una plataforma web.
 
 ## Qué hace el mercado (resumen del estudio)
@@ -64,8 +69,8 @@ Fuentes: [Inrō, calificación en Instagram 2026](https://www.inro.social/blog/i
 - **Sin IA**, igual que el resto del bot. El paso 1 (texto libre) solo se guarda, no se interpreta.
 - **Medición:** cuántos entran, cuántos llegan al paso 4 y cuántos agendan. Eso permite ajustar las preguntas con datos reales.
 
-## Decisiones pendientes (Gabriel)
+## Pendiente
 
-1. ¿Te sirven estas 3 preguntas o quieres cambiar alguna? (La de presupuesto la dejé fuera a propósito).
-2. ¿Qué ejemplo se muestra para "Página web" y qué precio se dice para "Agenda online"?
-3. Mientras pedidos.8vobit.xyz no esté listo, ¿qué se muestra para pedidos?
+- Armar un portafolio para que "Página web" pueda mostrar ejemplos sin pasar por Gabriel.
+- Agregar el precio de la agenda al cierre cuando se apruebe la propuesta.
+- Probar desde una cuenta real que los botones (quick replies) se vean bien en la app de Instagram.

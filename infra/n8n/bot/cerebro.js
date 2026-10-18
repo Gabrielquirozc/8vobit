@@ -198,9 +198,146 @@ function horaChile(ahora) {
   return Number(h);
 }
 
-// contacto: { visto, gabriel, enviados: {intencion: ts}, ultimoBot, bots: [ts] } (memoria persistente)
-// Devuelve { intencion, respuesta|null, aviso: null|'normal'|'urgente', contacto }
-function decidir(texto, contacto, ahora, links) {
+// ---------------------------------------------------------------------------
+// Flujo de onboarding para desarrollo web (ver infra/n8n/FLUJO-WEB.md).
+// 3 preguntas con botones (quick replies) y un cierre que muestra y agenda.
+// Estado en contacto.web = { paso, eleccion, negocio, hoy, cuando, t, reintento }.
+// ---------------------------------------------------------------------------
+const LINK_REUNION = 'https://8vobit.xyz/#reunion';
+const LINK_GASSUSO = 'https://pedidos.8vobit.xyz/gassuso';
+const LINK_AGENDA_DEMO = 'https://8vobit.xyz/#agendar';
+
+const MENU_INICIO = [['Reparación', 'MENU_REP'], ['Desarrollo web', 'MENU_WEB']];
+const W_ELECCION = [['Página web', 'W_PAGINA'], ['Agenda online', 'W_AGENDA'], ['Pedidos para local', 'W_PEDIDOS'], ['Quiero conversarlo', 'W_CONVERSAR']];
+const W_HOY = {
+  PAGINA: [['No tengo página', 'H_NO'], ['Quiero mejorarla', 'H_MEJORAR']],
+  AGENDA: [['WhatsApp o cuaderno', 'H_WSP'], ['Uso otra app', 'H_APP']],
+  PEDIDOS: [['Por WhatsApp', 'H_WSP'], ['Por apps de delivery', 'H_APPS'], ['Ambas', 'H_AMBAS']]
+};
+const W_CUANDO = [['Este mes', 'C_MES'], ['En 1 a 3 meses', 'C_TRIM'], ['Solo estoy mirando', 'C_MIRANDO']];
+const NOMBRE_ELECCION = { PAGINA: 'Página web', AGENDA: 'Agenda online', PEDIDOS: 'Pedidos para local', CONVERSAR: 'Quiere conversarlo' };
+
+function botones(lista) { return lista.map(([titulo, payload]) => ({ titulo, payload })); }
+
+function eleccionDesde(t, payload) {
+  if (payload && payload.startsWith('W_')) return payload.slice(2);
+  if (/pagina|web|sitio|landing/.test(t)) return 'PAGINA';
+  if (/agenda|reserva|hora/.test(t)) return 'AGENDA';
+  if (/pedido|local|delivery|carta|restoran|comida/.test(t)) return 'PEDIDOS';
+  if (/convers|hablar|reunion|no se/.test(t)) return 'CONVERSAR';
+  return null;
+}
+
+function cierreWeb(w) {
+  const caliente = w.cuando !== 'C_MIRANDO';
+  const resumen = [NOMBRE_ELECCION[w.eleccion], w.negocio, w.hoyTexto, { C_MES: 'este mes', C_TRIM: 'en 1 a 3 meses', C_MIRANDO: 'solo mirando' }[w.cuando]].filter(Boolean).join(' · ');
+  let texto;
+  if (w.eleccion === 'PEDIDOS') {
+    texto = 'Mira cómo funciona en un local real, Gassuso: ' + LINK_GASSUSO + '\nTus clientes piden directo, por 1% del pedido, sin las comisiones de las apps.';
+  } else if (w.eleccion === 'AGENDA') {
+    texto = 'Es la misma agenda que usamos en 8vobit. Pruébala como si fueras cliente: ' + LINK_AGENDA_DEMO + '\nLa tuya queda con tu marca y conectada a tu Google Calendar.';
+  } else if (w.eleccion === 'PAGINA') {
+    texto = 'Para mostrarte ejemplos parecidos a lo que buscas, Gabriel te escribe personalmente por acá 🙌';
+  } else {
+    texto = '¡Buenísimo! Lo vemos juntos.';
+  }
+  texto += caliente
+    ? '\n\nSi quieres, agendamos una reunión gratis de 45 min por Google Meet: ' + LINK_REUNION + '\nCuando agendes, te confirmo el link de Meet por aquí.'
+    : '\n\nCuando quieras verlo con calma, agenda una reunión gratis acá: ' + LINK_REUNION + ' o escribe REUNIÓN.';
+  // Página web siempre pasa a Gabriel (no hay portafolio publicado todavía).
+  const urgente = caliente || w.eleccion === 'PAGINA' || w.eleccion === 'CONVERSAR';
+  return { texto, aviso: urgente ? 'urgente' : 'normal', resumen };
+}
+
+// Devuelve null si el mensaje no es del flujo web; si lo es, { respuesta, botones, aviso, intencion, resumen }.
+function flujoWeb(texto, payload, c, ahora) {
+  const t = normalizar(texto);
+  const activo = c.web && c.web.paso !== undefined && ahora - c.web.t < DIA;
+  const inicia = payload === 'MENU_WEB'
+    || /\b(desarrollo web|pagina web|sitio web|agenda pro|landing|sistema de pedidos|pedidos para mi local)\b|^(web|demo|agenda pro)[!. ]*$/.test(t)
+    || /\bdemo\b/.test(t);
+  if (!activo && !inicia) return null;
+
+  // Salida a una persona en cualquier momento.
+  if (/\b(hablar|persona|humano|gabriel)\b/.test(t)) {
+    const resumen = c.web ? NOMBRE_ELECCION[c.web.eleccion] || '' : '';
+    c.web = null;
+    return { intencion: 'web_humano', respuesta: '¡Dale! Le aviso a Gabriel y te escribe por aquí 🙌', botones: null, aviso: 'urgente', resumen };
+  }
+
+  if (!activo) {
+    // Inicio: si el mensaje ya dice qué quiere, se salta la primera pregunta.
+    const pre = /\bdemo\b|pedido/.test(t) ? 'PEDIDOS' : /agenda/.test(t) ? 'AGENDA' : payload === 'MENU_WEB' ? null : (/pagina|sitio|landing/.test(t) ? 'PAGINA' : null);
+    c.web = { paso: pre ? 1 : 0, eleccion: pre, t: ahora, reintento: 0 };
+    if (!pre) return { intencion: 'web_inicio', respuesta: '¡Hola! Te ayudo con eso 🙌 ¿Qué te gustaría resolver?', botones: botones(W_ELECCION), aviso: null };
+    return { intencion: 'web_inicio', respuesta: '¡Buenísimo! Para mostrarte algo que te sirva: ¿a qué se dedica tu negocio?', botones: null, aviso: null };
+  }
+
+  const w = c.web; w.t = ahora;
+  const reintentar = (pregunta, lista) => {
+    if (w.reintento >= 1) { c.web = null; return { intencion: 'web_humano', respuesta: 'Te paso con Gabriel para verlo directo 🙌', botones: null, aviso: 'urgente', resumen: NOMBRE_ELECCION[w.eleccion] || '' }; }
+    w.reintento++;
+    return { intencion: 'web_repite', respuesta: pregunta, botones: lista ? botones(lista) : null, aviso: null };
+  };
+
+  if (w.paso === 0) {
+    const e = eleccionDesde(t, payload);
+    if (!e) return reintentar('¿Cuál de estas opciones se parece más a lo que buscas?', W_ELECCION);
+    w.eleccion = e; w.reintento = 0;
+    if (e === 'CONVERSAR') { w.cuando = 'C_TRIM'; const f = cierreWeb(w); c.web = null; return { intencion: 'web_cierre', respuesta: f.texto, botones: null, aviso: f.aviso, resumen: f.resumen }; }
+    w.paso = 1;
+    return { intencion: 'web_paso1', respuesta: '¿A qué se dedica tu negocio?', botones: null, aviso: null };
+  }
+  if (w.paso === 1) {
+    if (!t || t.length < 2) return reintentar('¿A qué se dedica tu negocio? (por ejemplo: psicóloga, sushi, peluquería)');
+    w.negocio = String(texto).slice(0, 80); w.paso = 2; w.reintento = 0;
+    return { intencion: 'web_paso2', respuesta: '¿Y cómo lo haces hoy?', botones: botones(W_HOY[w.eleccion] || W_HOY.PAGINA), aviso: null };
+  }
+  if (w.paso === 2) {
+    const op = (W_HOY[w.eleccion] || []).find(([, p]) => p === payload);
+    w.hoyTexto = op ? op[0] : String(texto).slice(0, 60);
+    w.paso = 3; w.reintento = 0;
+    return { intencion: 'web_paso3', respuesta: '¿Para cuándo lo necesitas?', botones: botones(W_CUANDO), aviso: null };
+  }
+  if (w.paso === 3) {
+    let cuando = payload && payload.startsWith('C_') ? payload : null;
+    if (!cuando) cuando = /mirando|viendo|cotiz|todavia|aun no/.test(t) ? 'C_MIRANDO' : /mes|ya|urgente|pronto|semana|luego/.test(t) ? 'C_MES' : /\d|mes|meses/.test(t) ? 'C_TRIM' : null;
+    if (!cuando) return reintentar('¿Para cuándo lo necesitas?', W_CUANDO);
+    w.cuando = cuando;
+    const f = cierreWeb(w); c.web = null;
+    return { intencion: 'web_cierre', respuesta: f.texto, botones: null, aviso: f.aviso, resumen: f.resumen };
+  }
+  c.web = null;
+  return null;
+}
+
+// contacto: { visto, gabriel, enviados: {intencion: ts}, ultimoBot, bots: [ts], web } (memoria persistente)
+// Devuelve { intencion, respuesta|null, botones|null, aviso: null|'normal'|'urgente', resumen?, contacto }
+function decidir(texto, contacto, ahora, links, payload) {
+  const c0 = Object.assign({ visto: 0, gabriel: 0, enviados: {}, bots: [] }, contacto || {});
+  const gabrielActivo = c0.gabriel && ahora - c0.gabriel < 12 * HORA;
+  // El menú de bienvenida "Reparación" vuelve al bot de siempre con un saludo de servicio técnico.
+  if (payload === 'MENU_REP') {
+    c0.visto = ahora; c0.web = null;
+    if (gabrielActivo) return { intencion: 'menu_rep', respuesta: null, botones: null, aviso: 'normal', contacto: c0 };
+    c0.ultimoBot = ahora; c0.bots = (c0.bots || []).concat(ahora);
+    return { intencion: 'menu_rep', respuesta: '¡Dale! Cuéntame qué le pasa a tu notebook o PC (y el modelo si lo tienes) y te digo cuánto sale.', botones: null, aviso: null, contacto: c0 };
+  }
+  if (!gabrielActivo) {
+    const w = flujoWeb(texto, payload, c0, ahora);
+    if (w) {
+      c0.visto = ahora;
+      if (w.respuesta) { c0.ultimoBot = ahora; c0.bots = (c0.bots || []).filter(x => ahora - x < HORA).concat(ahora); }
+      return Object.assign({ contacto: c0 }, w);
+    }
+  }
+  const r = decidirBase(texto, c0, ahora, links);
+  // La bienvenida ofrece el menú de dos opciones como botones.
+  if (r.respuesta && (r.contacto.enviados.bienvenida === ahora || r.contacto.enviados.fuera_horario === ahora)) r.botones = botones(MENU_INICIO);
+  return r;
+}
+
+function decidirBase(texto, contacto, ahora, links) {
   const c = Object.assign({ visto: 0, gabriel: 0, enviados: {}, bots: [] }, contacto || {});
   const ids = clasificar(texto);
   const regla = id => REGLAS.find(r => r.id === id);
@@ -266,4 +403,4 @@ function decidir(texto, contacto, ahora, links) {
 }
 
 /* FIN-CEREBRO */
-if (typeof module !== 'undefined') module.exports = { decidir, clasificar, normalizar, TEXTOS, REGLAS };
+if (typeof module !== 'undefined') module.exports = { decidir, flujoWeb, clasificar, normalizar, TEXTOS, REGLAS };
