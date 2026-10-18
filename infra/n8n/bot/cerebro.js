@@ -101,15 +101,15 @@ const TEXTOS = {
     'Nos dedicamos a notebooks y PC 💻. Celulares, tablets y consolas no los estamos viendo, ¡perdón! Si tienes algo con tu compu, feliz te ayudo.'
   ],
   agendar: [
-    'Puedes tomar hora directo acá: ' + AGENDA + '. Dejas el equipo en el lobby de Freire 1458 y me escribes al llegar 🙌',
-    '¡Dale! Las horas disponibles están acá: ' + AGENDA + '. Recibimos en el lobby de Freire 1458, no hay que subir.'
+    'Puedes tomar hora directo acá: ' + AGENDA + '. Atendemos solo con hora agendada, y al confirmar te llega la dirección 🙌',
+    '¡Dale! Las horas disponibles están acá: ' + AGENDA + '. Atendemos solo con hora agendada; al confirmar te mandamos la dirección.'
   ],
   horario: [
-    'Atendemos de lunes a viernes de 9:00 a 12:30 y de 14:30 a 20:00, y el sábado de 10:00 a 12:30. Las horas libres las ves acá: ' + AGENDA
+    'Atendemos solo con hora agendada: de lunes a viernes de 9:00 a 12:30 y de 14:30 a 20:00, y el sábado de 10:00 a 12:30. Las horas libres las ves acá: ' + AGENDA
   ],
   ubicacion: [
-    'Estamos en Freire 1458, Concepción. Recibimos en el lobby del edificio, así que no hay que subir: me escribes al llegar y bajo 🙌',
-    'Freire 1458, Concepción. Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'
+    'Estamos en Freire 1458, Concepción. Atendemos solo con hora agendada (' + AGENDA + '). Recibimos en el lobby del edificio: me escribes al llegar y bajo 🙌',
+    'Freire 1458, Concepción, solo con hora agendada (' + AGENDA + '). Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'
   ],
   tiempo: [
     'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: con stock en Santiago son 2 a 7 días hábiles, e importada, 2 a 4 semanas. Te aviso siempre antes.'
@@ -118,7 +118,7 @@ const TEXTOS = {
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'
   ],
   domicilio: [
-    'Podemos retirar y entregar dentro de Concepción por $5.000 cada tramo. Si te acomoda más, lo dejas en el lobby de Freire 1458. Agenda: ' + AGENDA
+    'Podemos retirar y entregar dentro de Concepción por $5.000 cada tramo. Si te acomoda más, lo traes tú con hora agendada: ' + AGENDA
   ],
   web: [
     '¡Hola! Hacemos tu página profesional con agenda incluida: tus clientes reservan solos, a cualquier hora. Cuéntame a qué te dedicas y te muestro un ejemplo. Más info: ' + LINK_WEB
