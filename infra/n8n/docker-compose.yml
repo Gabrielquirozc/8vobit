@@ -1,4 +1,4 @@
-# n8n.8vobit.xyz: automatización de los DM de Instagram (palabras clave AGENDA, DEMO, WEB).
+# n8n.8vobit.xyz: bot de DM de Instagram de 8vobit (ver OPERACION.md y bot/).
 # En el servidor vive en /srv/docker/compose/n8n/. Los secretos van en .env (fuera de git).
 services:
   n8n:

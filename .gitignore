@@ -7,3 +7,4 @@ backups/snapshots/*
 # Secretos locales
 .env
 **/.env
+infra/n8n/chats/

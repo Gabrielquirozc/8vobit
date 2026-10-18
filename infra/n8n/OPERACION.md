@@ -7,12 +7,31 @@ Cualquier sesión puede leerlo para saber qué hay y cómo verificarlo. **Aquí 
 
 1. Alguien escribe un DM a @8vobit en Instagram.
 2. Meta avisa con un POST a `https://n8n.8vobit.xyz/webhook/instagram` (túnel de Cloudflare → `127.0.0.1:5678`).
-3. El flujo **"DM Instagram · palabras clave 8vobit"** (ID `GOhImTsPA0GizMPu`):
-   - verifica la firma `X-Hub-Signature-256` con `IG_APP_SECRET` (si es inválida, la ignora);
-   - busca la palabra clave: **AGENDA PRO**, **AGENDA**, **DEMO** o **WEB** (sin tildes ni mayúsculas);
-   - responde el DM con `POST graph.instagram.com/v21.0/me/messages` (`IG_ACCESS_TOKEN`);
-   - avisa al celular por ntfy (`NTFY_URL`, tema `8vobit-dm`).
-4. Los mensajes sin palabra clave no se tocan: los responde Gabriel a mano.
+3. El flujo **"DM Instagram · bot 8vobit"** (ID `GOhImTsPA0GizMPu`) es un **bot sin IA que suena humano**. El diseño está en `D:\VPS\infra\bot-8vobit\DISENO.md`. Lo que hace:
+   - Verifica la firma `X-Hub-Signature-256` con `IG_APP_SECRET`; si es inválida, ignora el mensaje.
+   - Clasifica el mensaje por **intención**, con unas 35 reglas: precio por servicio, llegada, estado del equipo, pago, horario, ubicación, spam… También reconoce DEMO, WEB y AGENDA PRO. Responde con la lista de precios oficial (`marketing/PRECIOS-SERVICIO-TECNICO.md`).
+   - Para parecer humano, muestra "escribiendo…", espera entre 6 y 25 s y elige entre varias versiones de cada respuesta.
+   - **Se calla** en tres casos:
+     - si Gabriel escribió a mano a esa persona en las últimas 12 h;
+     - si ya mandó esa misma respuesta en las últimas 24 h, o ya mandó 3 en la última hora;
+     - si la conversación está en curso (hubo mensajes en las últimas 48 h) y no es logística (llegada, estado, pago, garantía, horario, ubicación).
+   - A quien escribe entre las 21:00 y las 9:00 le dice que Gabriel contesta mañana.
+   - Avisa al celular por ntfy (`NTFY_URL`, tema `8vobit-dm`). Los avisos llevan **prioridad 5** cuando son urgentes: llegada, "sigue igual", líquido derramado o pregunta por el estado del equipo.
+4. Lo que el bot no entiende no lo contesta: llega a ntfy y lo responde Gabriel.
+5. La memoria de cada contacto (cuándo escribió, qué se le respondió) vive en los *static data* del flujo dentro de n8n, y se borra a los 60 días sin movimiento.
+
+**Cambiar textos o reglas:** se editan `infra/n8n/bot/cerebro.js` en el repo. Luego se corren `node --test infra/n8n/bot/` y `node infra/n8n/bot/construir-flujo.js`, y se reimporta el flujo (ver "Desplegar el flujo"). No se editan a mano dentro de n8n, porque el repo es la fuente.
+
+## Desplegar el flujo (desde `D:\8vobit`, PowerShell)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\infra\n8n\desplegar-bot.ps1
+```
+
+Corre las pruebas, arma el flujo, lo copia con `gabriel@lenovo-edge` (no con tu usuario de Windows) y lo importa y publica en n8n. Si da *Connection timed out*, revisa que Tailscale esté conectado en el PC.
+
+Después: prueba de punta a punta desde otra cuenta ("hola, cuánto sale formatear?") y copia de esta guía en el servidor (`/srv/docker/compose/n8n/OPERACION.md`).
+**Antes:** apagar la bienvenida automática nativa de Instagram (app de Instagram → Herramientas para empresas → Respuestas automáticas / Preguntas frecuentes), para que no se pise con el bot.
 
 ## Piezas
 

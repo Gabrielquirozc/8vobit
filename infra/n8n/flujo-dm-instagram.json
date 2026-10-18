@@ -1,5 +1,5 @@
 {
-  "name": "DM Instagram · palabras clave 8vobit",
+  "name": "DM Instagram · bot 8vobit",
   "nodes": [
     {
       "parameters": {
@@ -11,7 +11,10 @@
       "name": "Verificación Meta (GET)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "8vobit-instagram-get"
     },
     {
@@ -24,82 +27,300 @@
       "name": "Devolver challenge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [240, 0]
+      "position": [
+        240,
+        0
+      ]
     },
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "instagram",
-        "options": { "rawBody": true }
+        "options": {
+          "rawBody": true
+        }
       },
       "id": "b1",
       "name": "Mensajes Instagram (POST)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 240],
+      "position": [
+        0,
+        240
+      ],
       "webhookId": "8vobit-instagram-post"
     },
     {
-      "parameters": {
-        "jsCode": "const crypto = require('crypto');\n\n// Respuestas por palabra clave. Tono 8vobit: directo, cercano, sin emojis en exceso.\nconst RESPUESTAS = {\n  'AGENDA': `¡Hola! Gracias por escribir a 8vobit 🔧\\nPara revisar tu notebook o PC, agenda tu hora aquí: ${$env.LINK_AGENDA}\\nEstamos en Freire 1458, Concepción. Si nos cuentas el modelo y qué le pasa, te damos un precio estimado antes de tocarlo.`,\n  'AGENDA PRO': `¡Hola! Gracias por escribir a 8vobit.\\nHacemos tu página profesional con agenda incluida: tus clientes reservan solos, a cualquier hora.\\nCuéntanos a qué te dedicas y te mostramos un ejemplo. Más info: ${$env.LINK_WEB}`,\n  'WEB': `¡Hola! Gracias por escribir a 8vobit.\\nHacemos tu página profesional con agenda incluida: tus clientes reservan solos, a cualquier hora.\\nCuéntanos a qué te dedicas y te mostramos un ejemplo. Más info: ${$env.LINK_WEB}`,\n  'DEMO': `¡Hola! Gracias por escribir a 8vobit 🍔\\nTe mostramos el sistema de pedidos funcionando: carta web, despacho por zonas y caja del día, por 1 % del pedido.\\nPlanes y detalles: ${$env.LINK_PEDIDOS}\\n¿Cómo se llama tu local y en qué sector está? Coordinamos la demo.`\n};\n\nfunction normalizar(s) {\n  return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase();\n}\n\nfunction clasificar(texto) {\n  const t = normalizar(texto);\n  if (/\\bAGENDA\\s*PRO\\b/.test(t)) return 'AGENDA PRO';\n  if (/\\bAGENDA\\b/.test(t)) return 'AGENDA';\n  if (/\\bDEMO\\b/.test(t)) return 'DEMO';\n  if (/\\bWEB\\b/.test(t)) return 'WEB';\n  return null;\n}\n\nconst salida = [];\nfor (const item of $input.all()) {\n  // 1) Verificar que el aviso viene de Meta (firma HMAC-SHA256 con el App Secret).\n  const headers = item.json.headers || {};\n  const firma = String(headers['x-hub-signature-256'] || '');\n  const crudo = item.binary && item.binary.data\n    ? Buffer.from(item.binary.data.data, 'base64')\n    : Buffer.from(JSON.stringify(item.json.body || {}));\n  const esperada = 'sha256=' + crypto.createHmac('sha256', $env.IG_APP_SECRET || '').update(crudo).digest('hex');\n  if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) {\n    continue; // firma inválida: se ignora en silencio\n  }\n\n  // 2) Recorrer los mensajes y quedarse solo con los que traen palabra clave.\n  const body = item.json.body || {};\n  for (const entry of body.entry || []) {\n    for (const ev of entry.messaging || []) {\n      const msg = ev.message;\n      if (!msg || msg.is_echo || typeof msg.text !== 'string') continue;\n      const clave = clasificar(msg.text);\n      if (!clave) continue; // sin palabra clave: lo contesta una persona\n      salida.push({ json: {\n        remitente: ev.sender && ev.sender.id,\n        clave,\n        texto: msg.text.slice(0, 300),\n        respuesta: RESPUESTAS[clave]\n      } });\n    }\n  }\n}\nreturn salida;"
-      },
       "id": "b2",
-      "name": "Verificar firma y clasificar",
+      "name": "Verificar firma y decidir",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [240, 240]
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "jsCode": "// Cerebro del bot de DM de @8vobit. Sin IA: reglas por intención + textos con la voz de Gabriel.\n// Es una función pura: recibe el mensaje y la memoria del contacto, y devuelve qué hacer.\n// Se incrusta tal cual en el nodo Code de n8n (lo hace construir-flujo.js); lo de abajo de\n// FIN-CEREBRO solo existe para las pruebas locales.\n// Precios: marketing/PRECIOS-SERVICIO-TECNICO.md. Si cambian allá, cambian aquí.\n\nconst HORA = 3600 * 1000;\nconst DIA = 24 * HORA;\n\nconst AGENDA = '{{LINK_AGENDA}}';\nconst LINK_WEB = '{{LINK_WEB}}';\nconst LINK_PEDIDOS = '{{LINK_PEDIDOS}}';\nconst DIAG = 'El diagnóstico son $5.000 y se descuentan si haces el servicio.';\n\n// Varias versiones por respuesta: el bot no suena igual cada vez.\nconst TEXTOS = {\n  bienvenida: [\n    '¡Hola! ¿Cómo estás? Cuéntame qué le pasa a tu compu (y el modelo si lo tienes a mano) y te ayudo 🙌',\n    'Holaa, ¿cómo va? Cuéntame qué necesitas con tu equipo y lo vemos 🙌',\n    '¡Hola! Bienvenid@ a 8vobit. ¿Qué le pasa a tu notebook o PC?'\n  ],\n  llegada: [\n    '¡Voy bajando! Dame un par de minutos 🏃',\n    '¡Bajo altiro! Espérame en el lobby porfa 🙌',\n    '¡Ya voy! Un par de minutos y estoy abajo'\n  ],\n  garantia: [\n    'Uff, lo siento. Déjame revisar tu caso y te escribo en un rato para solucionarlo.',\n    'Pucha, perdón por eso. Lo vemos con prioridad: te escribo en un rato.'\n  ],\n  urgente: [\n    'Ojo: si se mojó, **no lo prendas ni lo cargues**. Desconéctalo y, si puedes, sácale la batería. Te escribo en un rato para verlo lo antes posible. Si quieres asegurar hora: ' + AGENDA,\n    'Si le cayó líquido, déjalo apagado y sin cargador, eso es lo más importante. Te escribo en un rato; mientras, puedes tomar hora acá: ' + AGENDA\n  ],\n  no_enciende: [\n    'Uh, ¿no prende ni enchufado? Puede ser batería, cargador o placa. Hay que verlo en diagnóstico. ' + DIAG + ' Agenda acá: ' + AGENDA,\n    'Ya veo. Para saber si es batería, cargador o algo de placa hay que revisarlo. ' + DIAG + ' Puedes tomar hora acá: ' + AGENDA\n  ],\n  estado: [\n    'Déjame revisar cómo va tu equipo y te aviso altiro 🙌',\n    '¡Hola! Reviso cómo va y te cuento en un rato.'\n  ],\n  pago: [\n    '¡Gracias! Apenas lo vea te confirmo 🙌',\n    '¡Dale! Quedo atento y te confirmo el pago.'\n  ],\n  precio_general: [\n    'Depende de lo que tenga el equipo. Formateo $15.000, limpieza interna $20.000 (gamer $25.000) y el combo de las dos $30.000. Para algo más específico, cuéntame qué le pasa y el modelo. ' + DIAG,\n    'Te cuento: formateo $15.000, limpieza $20.000 (gamer o torre $25.000) y formateo + limpieza $30.000. Si es otra cosa, dime qué le pasa y el modelo y te doy precio. ' + DIAG\n  ],\n  formateo: [\n    'El formateo son $15.000 e incluye drivers y programas gratuitos. Si quieres que respalde tus archivos son $5.000 más. Queda listo el mismo día. Agenda acá: ' + AGENDA,\n    'Formatear sale $15.000 (con respaldo de tus cosas, $20.000), y se entrega el mismo día. Si además lo limpiamos por dentro, el combo queda en $30.000. Hora acá: ' + AGENDA\n  ],\n  lento: [\n    'Si está lento, muchas veces es Windows o temperatura. Formateo $15.000, limpieza $20.000 o las dos por $30.000. Si no sabes cuál, lo vemos en el diagnóstico. ' + DIAG + ' Agenda: ' + AGENDA,\n    'Cuando anda lento, normalmente es un formateo ($15.000), una limpieza ($20.000) o las dos ($30.000). Lo vemos en el diagnóstico. ' + DIAG + ' Hora acá: ' + AGENDA\n  ],\n  limpieza: [\n    'La limpieza interna con cambio de pasta térmica son $20.000; si es gamer o torre (pasta y pads), $25.000. Queda el mismo día. Agenda acá: ' + AGENDA,\n    'Limpieza interna: $20.000 en notebook normal y $25.000 en gamer o torre. Si le sumas formateo, el combo queda en $30.000. Hora acá: ' + AGENDA\n  ],\n  pantalla: [\n    'La instalación de pantalla son $25.000 más la pieza, que depende del modelo. ¿Me mandas el modelo exacto (sale en la etiqueta de abajo) y una foto? Así te cotizo la pieza.',\n    'Para cotizar pantalla necesito el modelo exacto (etiqueta de abajo) y una foto del daño. La instalación son $25.000 más la pieza.'\n  ],\n  bateria: [\n    'Instalar batería son $10.000 más la pieza. ¿Me mandas el modelo exacto (etiqueta de abajo)? Así te cotizo la batería.',\n    'La batería: $10.000 de instalación más la pieza según el modelo. Mándame el modelo exacto y te cotizo.'\n  ],\n  jack: [\n    'El jack de carga va desde $15.000 (si está soldado a la placa, $30.000) más la pieza. Hay que verlo en diagnóstico. ' + DIAG + ' Agenda: ' + AGENDA,\n    'Cambio de jack: $15.000 si va en cable o placa aparte y $30.000 si está soldado, más la pieza. Lo confirmamos en el diagnóstico. ' + DIAG\n  ],\n  upgrade: [\n    'Instalar RAM son $10.000 y SSD $15.000 (con Windows instalado, $25.000), más la pieza. ¿Me mandas el modelo exacto? Así veo qué le sirve y te cotizo.',\n    'Para RAM o SSD necesito el modelo exacto para ver qué es compatible. Instalación: RAM $10.000, SSD $15.000 o $25.000 con sistema operativo, más la pieza.'\n  ],\n  ventilador: [\n    'El cambio de ventilador son $15.000 más la pieza. Muchas veces basta con una limpieza ($20.000). Lo vemos en el diagnóstico. ' + DIAG + ' Agenda: ' + AGENDA\n  ],\n  bisagras: [\n    'Las bisagras son $25.000 más la pieza (si hay que reconstruir los anclajes, $10.000 más). Mándame el modelo y una foto y te cotizo.'\n  ],\n  teclado: [\n    'Cambios de teclado no estamos haciendo, porque no quedan con la terminación que nos gusta 😕. Si quieres te recomiendo un teclado externo, o lo vemos si es otra cosa.'\n  ],\n  datos: [\n    'La recuperación de datos son $20.000; si no se logra recuperar nada, pagas solo el diagnóstico ($5.000). Demora 1 a 2 días. Agenda acá: ' + AGENDA\n  ],\n  programas: [\n    'Cada programa con licencia (Office, Photoshop, etc.) son $10.000. Si formateamos, los programas gratuitos van incluidos. Agenda: ' + AGENDA\n  ],\n  armado: [\n    'El armado de PC son $50.000. Cuéntame para qué lo vas a usar y tu presupuesto, y te recomiendo piezas.'\n  ],\n  remoto: [\n    'Atendemos remoto por AnyDesk: $10.000 hasta 1 hora (dudas, programas, configuración). Formateos y limpiezas son presenciales. ¿Qué necesitas?'\n  ],\n  otros_disp: [\n    'Nos dedicamos a notebooks y PC 💻. Celulares, tablets y consolas no los estamos viendo, ¡perdón! Si tienes algo con tu compu, feliz te ayudo.'\n  ],\n  agendar: [\n    'Puedes tomar hora directo acá: ' + AGENDA + '. Dejas el equipo en el lobby de Freire 1458 y me escribes al llegar 🙌',\n    '¡Dale! Las horas disponibles están acá: ' + AGENDA + '. Recibimos en el lobby de Freire 1458, no hay que subir.'\n  ],\n  horario: [\n    'Atendemos de lunes a viernes de 9:00 a 12:30 y de 14:30 a 20:00, y el sábado de 10:00 a 12:30. Las horas libres las ves acá: ' + AGENDA\n  ],\n  ubicacion: [\n    'Estamos en Freire 1458, Concepción. Recibimos en el lobby del edificio, así que no hay que subir: me escribes al llegar y bajo 🙌',\n    'Freire 1458, Concepción. Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'\n  ],\n  tiempo: [\n    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: con stock en Santiago son 2 a 7 días hábiles, e importada, 2 a 4 semanas. Te aviso siempre antes.'\n  ],\n  descuento: [\n    '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'\n  ],\n  domicilio: [\n    'Podemos retirar y entregar dentro de Concepción por $5.000 cada tramo. Si te acomoda más, lo dejas en el lobby de Freire 1458. Agenda: ' + AGENDA\n  ],\n  web: [\n    '¡Hola! Hacemos tu página profesional con agenda incluida: tus clientes reservan solos, a cualquier hora. Cuéntame a qué te dedicas y te muestro un ejemplo. Más info: ' + LINK_WEB\n  ],\n  demo: [\n    '¡Hola! Te muestro el sistema de pedidos funcionando: carta web, despacho por zonas y caja del día, por 1% del pedido. Detalles: ' + LINK_PEDIDOS + ' ¿Cómo se llama tu local y en qué sector está?'\n  ],\n  gracias: [\n    '¡De nada! Cualquier cosa me escribes 🙌',\n    '¡Un gusto! Aquí estoy para lo que necesites.'\n  ],\n  fuera_horario: [\n    'Te respondo con calma mañana desde las 9 🙌 Mientras, si quieres, puedes tomar hora acá: ' + AGENDA,\n    'Ahora no estoy, pero te contesto mañana temprano. Si te sirve, las horas están acá: ' + AGENDA\n  ]\n};\n\n// Orden = prioridad. 'aviso' manda ntfy; 'urgente' lo manda con prioridad alta.\nconst REGLAS = [\n  { id: 'spam', re: /app\\.link|bnc\\.lt|private video|too shy|really? hot|ur realy|crypto|bitcoin|forex|followers? (gratis|free)|sneaky mission/ },\n  { id: 'llegada', re: /\\b(llegu[eé]|estoy (afuera|abajo|aca|aqui|en el hall|en la puerta|en el lobby|esperando)|ya estoy (aca|aqui|afuera|abajo)|voy llegando|estoy llegando)\\b/, urgente: true },\n  { id: 'garantia', re: /\\b(sigue (igual|fallando|con)|volvio a (fallar|pasar)|otra vez (lo mismo|se)|no quedo bien)\\b/, urgente: true },\n  { id: 'urgente', re: /\\b(se mojo|derram|le cayo (agua|cafe|te|jugo|bebida)|se me cayo (agua|cafe)|liquido)\\b/, urgente: true },\n  { id: 'estado', re: /\\b(esta listo|ya esta (listo)?\\??$|estara listo|como va (mi|el)|novedad(es)? (de|del|con)|puedo (ir a )?(buscar|retirar)|cuando (lo )?retiro|esta disponible mi)\\b/, urgente: true },\n  { id: 'pago', re: /\\b(te (transferi|deposite)|ya (transferi|pague|deposite)|comprobante|transferencia (lista|hecha))\\b/, aviso: true },\n  { id: 'agendo', re: /\\b(agende|ya agendo|voy a agendar|agendada|agendado|tome (la )?hora|reserve)\\b/, aviso: true },\n  { id: 'demo', re: /\\bdemo\\b/ },\n  { id: 'web', re: /\\b(agenda pro|pagina web|sitio web|landing)\\b|^web$/ },\n  { id: 'teclado', re: /\\bteclado\\b/ },\n  { id: 'pantalla', re: /\\b(pantalla|display|flex)\\b/ },\n  { id: 'bisagras', re: /\\bbisagra/ },\n  { id: 'jack', re: /\\b(jack|pin de carga|entrada de(l)? cargador|puerto de carga)\\b/ },\n  { id: 'bateria', re: /\\bbateria/ },\n  { id: 'upgrade', re: /\\b(ram|ssd|disco|almacenamiento|memoria)\\b/ },\n  { id: 'ventilador', re: /\\bventilador\\b/ },\n  { id: 'datos', re: /\\b(recuperar|recuperacion|se (me )?borr|tarjeta sd|disco externo|pendrive)\\b/ },\n  { id: 'programas', re: /\\b(office|photoshop|autocad|licencia|instalar (un )?programa)\\b/ },\n  { id: 'armado', re: /\\b(armar|armado|pc gamer)\\b/ },\n  { id: 'remoto', re: /\\b(remot[ao]|anydesk|teamviewer|telematic)/ },\n  { id: 'domicilio', re: /\\b(domicilio|retiran|van a buscar|lo pasan a buscar)\\b/ },\n  { id: 'otros_disp', re: /\\b(celular|iphone|telefono|tablet|ipad|consola|play ?station|nintendo|switch)\\b/ },\n  { id: 'no_enciende', re: /\\b(no (prende|enciende|parte|da imagen)|murio|pantalla negra)\\b/ },\n  { id: 'formateo', re: /\\b(format|reinstal|windows)/ },\n  { id: 'limpieza', re: /\\b(limpieza|limpiar|mantencion|manutencion|pasta termica|se calienta|temperatura)\\b/ },\n  { id: 'lento', re: /\\b(lento|lenta|se pega|se queda pegad)/ },\n  { id: 'descuento', re: /\\b(descuento|estudiante|promo)\\b/ },\n  { id: 'tiempo', re: /\\b(cuanto (se )?demora|cuanto tiempo|cuantos dias|para cuando estaria)\\b/ },\n  { id: 'agendar', re: /\\b(agend|reserv|tienes hora|hay hora|disponibilidad|cupo)/ },\n  { id: 'ubicacion', re: /\\b(donde (esta|estan|queda|quedan|atiend)|direccion|ubicad|que depto|departamento)\\b/ },\n  { id: 'horario', re: /\\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados))\\b/ },\n  { id: 'precio_general', re: /\\b(cuanto (sale|cuesta|cobr|vale|saldria|seria)|precio|valor|cotiz|presupuesto|costo)\\b/ },\n  { id: 'gracias', re: /^(muchas )?gracias|^(bacan|genial|excelente|perfecto|super)[!. ]*(gracias)?/ },\n  { id: 'saludo', re: /^(hol+[ai]+s?|holi+s?|buena?s?|wena?s?|hola buenas)( (tardes|noches|dias))?[ !.,]*(como (estas|estan|va)\\??)?[ !.]*$/ }\n];\n\n// Combinaciones: si hay intención de servicio, gana sobre precio_general, agendar o saludo.\nconst SERVICIO = ['no_enciende','teclado','pantalla','bisagras','jack','bateria','upgrade','ventilador','datos','programas','armado','remoto','domicilio','otros_disp','formateo','limpieza','lento'];\n\nfunction normalizar(s) {\n  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\nfunction hash(s) {\n  let h = 2166136261;\n  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }\n  return h >>> 0;\n}\n\nfunction clasificar(texto) {\n  const t = normalizar(texto);\n  const ids = REGLAS.filter(r => r.re.test(t)).map(r => r.id);\n  return ids;\n}\n\nfunction horaChile(ahora) {\n  const h = new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', hour: 'numeric', hourCycle: 'h23' }).format(new Date(ahora));\n  return Number(h);\n}\n\n// contacto: { visto, gabriel, enviados: {intencion: ts}, ultimoBot, bots: [ts] } (memoria persistente)\n// Devuelve { intencion, respuesta|null, aviso: null|'normal'|'urgente', contacto }\nfunction decidir(texto, contacto, ahora, links) {\n  const c = Object.assign({ visto: 0, gabriel: 0, enviados: {}, bots: [] }, contacto || {});\n  const ids = clasificar(texto);\n  const regla = id => REGLAS.find(r => r.id === id);\n  const nuevo = !c.visto || ahora - c.visto > 30 * DIA;\n  c.visto = ahora;\n\n  let id = ids[0] || null;\n  const servicio = ids.find(x => SERVICIO.includes(x));\n  if (servicio && ['precio_general', 'agendar', 'saludo', 'gracias', 'tiempo', 'descuento', 'horario', 'ubicacion'].includes(id)) id = servicio;\n  // \"lento\" + \"formatear\" → formateo; \"no prende\" + \"batería\" → batería\n  if (id === 'lento' && ids.includes('formateo')) id = 'formateo';\n  if (id === 'no_enciende' && ids.includes('bateria')) id = 'bateria';\n\n  const r = id && regla(id);\n  let aviso = r && r.urgente ? 'urgente' : 'normal';\n  if (id === 'spam') return { intencion: 'spam', respuesta: null, aviso: null, contacto: c };\n\n  // Conversación en curso (algo en las últimas 48 h): el bot solo se encarga de la logística;\n  // las consultas las sigue Gabriel. Las respuestas con datos son para quien recién llega.\n  const enCurso = contacto && contacto.visto && ahora - contacto.visto < 2 * DIA;\n  const LOGISTICA = ['llegada', 'estado', 'pago', 'urgente', 'garantia', 'ubicacion', 'horario'];\n  const gabrielActivo = c.gabriel && ahora - c.gabriel < 12 * HORA;\n  const h = horaChile(ahora);\n  const deNoche = h >= 21 || h < 9;\n\n  let clave = null;\n  if (!id) clave = nuevo ? 'bienvenida' : null;            // sin intención clara: solo saludo si es nuevo\n  else if (id === 'saludo') clave = nuevo ? 'bienvenida' : null;\n  else if (id === 'gracias') clave = c.ultimoBot && ahora - c.ultimoBot < 2 * HORA ? 'gracias' : null;\n  else clave = id;\n\n  if (id === 'agendo') clave = null;\n  if (enCurso && clave && !LOGISTICA.includes(clave) && clave !== 'gracias') clave = null;\n\n  // De noche y sin nada que contestar con datos: avisar que se responde mañana (una vez por noche).\n  if (deNoche && (!clave || clave === 'bienvenida') && !(c.enviados.fuera_horario && ahora - c.enviados.fuera_horario < 10 * HORA)) {\n    clave = 'fuera_horario';\n  }\n  // De noche no se promete bajar al lobby.\n  if (clave === 'llegada' && deNoche) clave = null;\n\n  // Gabriel está conversando: el bot se calla (los avisos siguen).\n  if (gabrielActivo) clave = null;\n  // No repetir la misma respuesta en 24 h ni mandar más de 3 por hora.\n  if (clave && c.enviados[clave] && ahora - c.enviados[clave] < DIA) clave = null;\n  c.bots = (c.bots || []).filter(t => ahora - t < HORA);\n  if (clave && c.bots.length >= 3) clave = null;\n\n  let respuesta = null;\n  if (clave) {\n    const opciones = TEXTOS[clave];\n    respuesta = opciones[hash(String(ahora) + clave) % opciones.length]\n      .split('{{LINK_AGENDA}}').join(links.agenda)\n      .split('{{LINK_WEB}}').join(links.web)\n      .split('{{LINK_PEDIDOS}}').join(links.pedidos)\n      .replace(/\\*\\*/g, '');\n    c.enviados[clave] = ahora;\n    c.ultimoBot = ahora;\n    c.bots.push(ahora);\n  }\n  if (!id && !respuesta) aviso = 'normal';\n  return { intencion: id || 'sin_intencion', respuesta, aviso, contacto: c };\n}\n\n\n// ---- Pegamento n8n: firma de Meta, memoria por contacto y salida ----\nconst crypto = require('crypto');\nconst memoria = $getWorkflowStaticData('global');\nmemoria.contactos = memoria.contactos || {};\nconst links = { agenda: $env.LINK_AGENDA, web: $env.LINK_WEB, pedidos: $env.LINK_PEDIDOS };\nconst ahora = Date.now();\n\n// Olvidar contactos sin movimiento en 60 días (la memoria vive dentro de n8n).\nfor (const [id, c] of Object.entries(memoria.contactos)) {\n  if (ahora - (c.visto || c.gabriel || 0) > 60 * DIA) delete memoria.contactos[id];\n}\n\nconst salida = [];\nfor (const item of $input.all()) {\n  const headers = item.json.headers || {};\n  const firma = String(headers['x-hub-signature-256'] || '');\n  const crudo = item.binary && item.binary.data\n    ? Buffer.from(item.binary.data.data, 'base64')\n    : Buffer.from(JSON.stringify(item.json.body || {}));\n  const esperada = 'sha256=' + crypto.createHmac('sha256', $env.IG_APP_SECRET || '').update(crudo).digest('hex');\n  if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) continue;\n\n  for (const entry of (item.json.body || {}).entry || []) {\n    for (const ev of entry.messaging || []) {\n      const msg = ev.message;\n      if (!msg) continue;\n      if (msg.is_echo) {\n        // Mensaje enviado desde la cuenta: si no es el último texto del bot, lo escribió Gabriel.\n        const cliente = ev.recipient && ev.recipient.id;\n        const c = memoria.contactos[cliente] || {};\n        if (typeof msg.text !== 'string' || msg.text !== c.ultimoTexto) {\n          c.gabriel = ahora;\n          memoria.contactos[cliente] = c;\n        }\n        continue;\n      }\n      const remitente = ev.sender && ev.sender.id;\n      if (!remitente) continue;\n      const texto = typeof msg.text === 'string' ? msg.text : (msg.attachments ? '[adjunto]' : '');\n      const d = decidir(texto === '[adjunto]' ? '' : texto, memoria.contactos[remitente], ahora, links);\n      if (d.respuesta) d.contacto.ultimoTexto = d.respuesta;\n      memoria.contactos[remitente] = d.contacto;\n      if (!d.respuesta && !d.aviso) continue;\n      salida.push({ json: {\n        remitente,\n        intencion: d.intencion,\n        texto: texto.slice(0, 300),\n        respuesta: d.respuesta,\n        aviso: d.aviso,\n        prioridad: d.aviso === 'urgente' ? '5' : '3',\n        // Pausa \"humana\": más larga si la respuesta es más larga (6 a 25 s).\n        pausa: d.respuesta ? Math.min(25, 6 + Math.round(d.respuesta.length / 15)) : 0\n      } });\n    }\n  }\n}\nreturn salida;\n"
+      }
     },
     {
+      "id": "b3",
+      "name": "¿Hay respuesta?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        480,
+        160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "r1",
+              "leftValue": "={{ $json.respuesta }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b4",
+      "name": "Escribiendo…",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        160
+      ],
+      "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
         "url": "https://graph.instagram.com/v21.0/me/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.IG_ACCESS_TOKEN }}" }
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.IG_ACCESS_TOKEN }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ recipient: { id: $json.remitente }, message: { text: $json.respuesta } }) }}",
+        "jsonBody": "={{ JSON.stringify({ recipient: { id: $json.remitente }, sender_action: \"typing_on\" }) }}",
         "options": {}
-      },
-      "id": "b3",
+      }
+    },
+    {
+      "id": "b5",
+      "name": "Pausa humana",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        160
+      ],
+      "webhookId": "8vobit-pausa",
+      "parameters": {
+        "amount": "={{ $('¿Hay respuesta?').item.json.pausa }}"
+      }
+    },
+    {
+      "id": "b6",
       "name": "Responder DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 240]
+      "position": [
+        1200,
+        160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v21.0/me/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ recipient: { id: $('¿Hay respuesta?').item.json.remitente }, message: { text: $('¿Hay respuesta?').item.json.respuesta } }) }}",
+        "options": {}
+      }
     },
     {
+      "id": "b7",
+      "name": "¿Hay que avisar?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        480,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.aviso }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b8",
+      "name": "Avisar por ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        360
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.NTFY_URL }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Title", "value": "={{ 'DM Instagram: ' + $('Verificar firma y clasificar').item.json.clave }}" },
-            { "name": "Tags", "value": "speech_balloon" }
+            {
+              "name": "Title",
+              "value": "={{ ($json.aviso === 'urgente' ? '🚨 ' : '') + 'DM Instagram: ' + $json.intencion }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.prioridad }}"
+            },
+            {
+              "name": "Tags",
+              "value": "speech_balloon"
+            }
           ]
         },
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "text/plain",
-        "body": "={{ $('Verificar firma y clasificar').item.json.texto }}",
+        "body": "={{ $json.texto + ($json.respuesta ? '\\n\\nBot: ' + $json.respuesta : '\\n\\n(el bot no respondió)') }}",
         "options": {}
-      },
-      "id": "b4",
-      "name": "Avisar por ntfy",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [720, 240]
+      }
     }
   ],
   "connections": {
-    "Verificación Meta (GET)": { "main": [[{ "node": "Devolver challenge", "type": "main", "index": 0 }]] },
-    "Mensajes Instagram (POST)": { "main": [[{ "node": "Verificar firma y clasificar", "type": "main", "index": 0 }]] },
-    "Verificar firma y clasificar": { "main": [[{ "node": "Responder DM", "type": "main", "index": 0 }]] },
-    "Responder DM": { "main": [[{ "node": "Avisar por ntfy", "type": "main", "index": 0 }]] }
+    "Verificación Meta (GET)": {
+      "main": [
+        [
+          {
+            "node": "Devolver challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensajes Instagram (POST)": {
+      "main": [
+        [
+          {
+            "node": "Verificar firma y decidir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar firma y decidir": {
+      "main": [
+        [
+          {
+            "node": "¿Hay respuesta?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "¿Hay que avisar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay respuesta?": {
+      "main": [
+        [
+          {
+            "node": "Escribiendo…",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribiendo…": {
+      "main": [
+        [
+          {
+            "node": "Pausa humana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa humana": {
+      "main": [
+        [
+          {
+            "node": "Responder DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay que avisar?": {
+      "main": [
+        [
+          {
+            "node": "Avisar por ntfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1", "timezone": "America/Santiago" },
-  "active": false
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "active": false,
+  "id": "GOhImTsPA0GizMPu"
 }
