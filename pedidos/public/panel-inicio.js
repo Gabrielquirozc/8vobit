@@ -16,7 +16,7 @@ export function crearInicioUI(ctx) {
     cierre: ['1. Al abrir: cuenta el sencillo de la caja y anótalo en "Fondo inicial" (botón anotar).',
       '2. Durante el turno: una compra o pago con plata de la caja es un Gasto; plata que se lleva el dueño o se deposita es un Retiro; sencillo que se agrega es un Ingreso.',
       '3. Al cerrar: cuenta billetes y monedas, escribe el total en "Efectivo contado" y toca Cerrar caja.',
-      '4. La diferencia compara lo contado con lo que "Debería haber". Si falta, salió plata sin anotar o hubo un error de vuelto; si sobra, falta anotar un ingreso o se cobró de más. Deja el motivo en la nota.'],
+      '4. La diferencia compara lo contado con lo que "Debería haber en caja". Si falta, salió plata sin anotar o hubo un error de vuelto; si sobra, falta anotar un ingreso o se cobró de más. Deja el motivo en la nota.'],
     gastos: ['Anota cada pago del local (insumos, gas, arriendo, sueldos): elige la categoría y cómo se pagó.',
       'Los pagados en efectivo se descuentan de la caja del día; transferencia o tarjeta solo quedan anotados. Si te equivocas, usa Anular.',
       'Con ellos se arma el estado de resultados del mes.'],

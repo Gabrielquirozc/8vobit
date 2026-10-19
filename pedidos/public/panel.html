@@ -979,8 +979,8 @@ function pintarCierre() {
       <button class="ghost noprint" data-print style="display:inline-flex;align-items:center;gap:6px;width:auto">${ico('printer')}Imprimir cierre</button></div>
     <div class="kpis">
       <div>Cobrado<b class="num">${clp(total)}</b></div>
-      <div class="cj-ciegomsg">Efectivo en caja<b class="num">—</b><span class="sub">Se muestra al escribir lo contado</span></div>
-      <div class="cj-esp">Efectivo en caja<b class="num">${clp(C ? C.esperado.total : suma(efectivo))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Debería haber (sin cerrar)'}</span>` : ''}</div>
+      <div class="cj-ciegomsg">Debería haber en caja<b class="num">—</b><span class="sub">Se muestra al escribir lo contado</span></div>
+      <div class="cj-esp">Debería haber en caja<b class="num">${clp(C ? C.esperado.total : suma(efectivo))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Efectivo de hoy, sin cerrar'}</span>` : ''}</div>
       <div>Ventas<b class="num">${cobrados.length}</b></div>
       <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
       <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b><span class="sub">${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos</span></div>

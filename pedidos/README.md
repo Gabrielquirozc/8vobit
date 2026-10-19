@@ -34,8 +34,8 @@ con los pedidos web.
 (web / mostrador), ticket promedio, por cobrar, anulados, boletas por emitir
 (con registro de folio) y detalle imprimible.
 
-**Efectivo en caja y arqueo** (dentro de Caja del día): fondo inicial (sugiere lo contado en el cierre
-anterior), ingresos y retiros de efectivo con motivo, y gastos. El panel calcula cuánto *debería haber*
+**Cuadre del efectivo y arqueo** (dentro de Caja del día): fondo inicial (sugiere lo contado en el cierre
+anterior), ingresos y retiros de efectivo con motivo, y gastos. El panel calcula cuánto *debería haber en caja*
 (fondo + ventas en efectivo + ingresos − retiros − gastos pagados en efectivo). Al cerrar se escribe lo
 contado (o se cuenta por billetes y monedas) y queda la diferencia (cuadra, sobra o falta) con una nota.
 Una caja cerrada no acepta movimientos en efectivo; se puede reabrir y el cierre anterior queda

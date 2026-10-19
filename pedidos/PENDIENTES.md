@@ -97,7 +97,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [ ] **Siguiente**: propuesta de una página para Gassuso (planes, piloto, puesta en marcha
       bonificada) e inicio de actividades en el SII (persona natural de primera categoría) antes del mes 4.
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
-      arqueo al cierre. Pestaña Gastos y bloque "Efectivo en caja" en Caja del día.
+      arqueo al cierre. Pestaña Gastos y bloque "Cuadre del efectivo" en Caja del día.
+- [x] Review de caja (2026-10-19, `REVIEW-CAJA.md`): menú en dos líneas, pasos del turno en la ayuda,
+      aviso "Caja sin abrir", arqueo ciego opcional (por dispositivo) y nombres unificados. Pendientes 5-7 del review.
 - [x] Exportar a CSV para el contador (2026-10-14): ventas, productos, caja diaria y gastos.
 - [x] Monitoreo (2026-10-14): `/salud/completo` (base, respaldo del día, disco) y guía de UptimeRobot en
       `deploy/MONITOREO.md`. **Falta que el dueño cree el monitor** (5 min).

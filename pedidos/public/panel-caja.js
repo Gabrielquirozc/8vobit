@@ -8,7 +8,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   let CATS = {};
 
   // ---------- arqueo ciego (opcional, preferencia de este dispositivo) ----------
-  // Si está activo, el "Debería haber" se oculta hasta que se escribe el efectivo contado.
+  // Si está activo, el "Debería haber en caja" se oculta hasta que se escribe el efectivo contado.
   const ciegoOn = () => { try { return localStorage.getItem('caja_ciego') === '1'; } catch { return false; } };
   const aplicarCiego = (C) => {
     const v = $('cjContado');
@@ -26,7 +26,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   let mv = null;
   function abrirMov(tipo, { dia, hoy, sugerido, alGuardar }) {
     mv = { tipo, medio: 'efectivo', alGuardar };
-    $('mvTitulo').textContent = { fondo: 'Fondo inicial de la caja', ingreso: 'Ingreso de efectivo', retiro: 'Retiro de efectivo', gasto: 'Nuevo gasto' }[tipo];
+    $('mvTitulo').textContent = { fondo: 'Anotar fondo inicial', ingreso: 'Anotar ingreso', retiro: 'Anotar retiro', gasto: 'Anotar gasto' }[tipo];
     const g = tipo === 'gasto';
     $('mvForm').innerHTML = `
       <div class="field"><label for="mvMonto">Monto</label>${dinero('mvMonto', tipo === 'fondo' ? sugerido?.monto : 0, 'placeholder="0" required')}
@@ -75,22 +75,22 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     return `${sinAbrir ? `<div class="banner aviso noprint" role="status" style="border-radius:var(--r-sm);margin-bottom:12px"><strong>Caja sin abrir:</strong> anota el fondo inicial para que el efectivo cuadre.
         <button class="ghostb" data-cj="mov" data-tipo="fondo" style="margin-left:8px">Anotar fondo inicial</button></div>` : ''}
     <section class="cardf cj">
-      <div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Efectivo en caja</h3>
+      <div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Cuadre del efectivo</h3>
         <div class="cj-acc noprint">${K ? '' : `<button class="ghostb" data-cj="mov" data-tipo="gasto">${ico('plus')}Gasto</button>
           <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
           <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>`}</div></div>
       <div class="cj-grid">
         <table class="cj-cuenta cj-esp">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
-          <p class="cj-ciegomsg ayuda">Total esperado oculto: se muestra al escribir lo contado.</p>
-          <div class="cj-tot cj-esp"><span>Debería haber</span><b class="num">${clp(E.total)}</b></div>
+          <p class="cj-ciegomsg ayuda">Debería haber en caja: se muestra al escribir lo contado.</p>
+          <div class="cj-tot cj-esp"><span>Debería haber en caja</span><b class="num">${clp(E.total)}</b></div>
         <div class="cj-arqueo">${K ? `
           <div class="cj-res ${dif === 0 ? 'ok' : 'mal'}"><span>${dif === 0 ? 'Caja cuadrada' : dif > 0 ? 'Sobra' : 'Falta'}</span><b class="num">${dif === 0 ? clp(K.contado) : clp(Math.abs(dif))}</b>
-            <span class="sub">Contado ${clp(K.contado)} · esperado ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
+            <span class="sub">Contado ${clp(K.contado)} · debía haber ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
           ${K.nota ? `<p class="nota" style="margin-top:8px">${ico('note')}<span>${esc(K.nota)}</span></p>` : ''}
-          ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Hoy debería haber ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
+          ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Debería haber en caja ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
           ${K.detalle.por_cobrar ? `<p class="ayuda">Al cerrar quedaban ${K.detalle.por_cobrar} pedido(s) por cobrar.</p>` : ''}
           ${puede('reabrir_caja') ? '<button class="ghostb noprint" data-cj="reabrir" style="margin-top:10px">Reabrir caja</button>' : ''}` : `
-          <form id="cjForm"><label class="noprint" style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.88rem;color:var(--ink-2)"><input type="checkbox" data-cj-ciego ${ciegoOn() ? 'checked' : ''}>Contar sin ver el total esperado</label><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
+          <form id="cjForm"><label class="noprint" style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.88rem;color:var(--ink-2)"><input type="checkbox" data-cj-ciego ${ciegoOn() ? 'checked' : ''}>Contar sin ver lo que debería haber en caja</label><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
           <details class="cj-bill"><summary>Contar por billetes y monedas</summary><div class="cj-bills">${BILLETES.map((b) =>
             `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
           <div class="cj-dif num" id="cjDif" aria-live="polite"></div>

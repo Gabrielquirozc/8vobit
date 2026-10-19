@@ -24,7 +24,7 @@ Referencia: guía de arqueos de Fudo (abrir con monto inicial en efectivo, chip 
 1. (hecho) Pasos del turno en la ayuda de pestaña (AYUDAS.cierre/gastos).
 2. (hecho) Aviso "Caja sin abrir: anota el fondo inicial" al haber ventas en efectivo y fondo 0.
 3. (hecho, por dispositivo) Arqueo ciego opcional. Límites: es ayuda de honestidad, no control antifraude; quien cuenta puede apagar la casilla y la tabla Movimientos permite sumar el esperado a mano. Si el dueño lo quiere obligatorio: pasarlo a ajuste del local con permiso.
-4. Unificar nombre "Efectivo en caja" / "Debería haber".
+4. (hecho) Unificar nombres: "Debería haber en caja" y bloque "Cuadre del efectivo". El CSV del contador sigue con "Efectivo esperado" para no romper planillas.
 5. Pedir confirmación reforzada si la diferencia pasa de un umbral (ej. $5.000) y exigir nota.
 6. Conteo de tarjeta/transferencia contra voucher o cartola en el cierre.
 7. Cierre por turno con nombre de cajero.
