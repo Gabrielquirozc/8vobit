@@ -170,6 +170,7 @@
   .tabs-nav { order: 7; display: flex; gap: 4px; min-width: 0; flex: 0 0 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }
   .tabs-nav::-webkit-scrollbar { display: none; }
   .tab { flex: none; }
+  .cj-ciegomsg { display: none; } #v-cierre.ciego-on .cj-ciegomsg { display: block; } #v-cierre.ciego-on .cj-esp { display: none; }
   .bar .quien { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
   @media (max-width: 900px) { .bar .kpi { display: none; } }
   @media (max-width: 600px) {
@@ -978,7 +979,8 @@ function pintarCierre() {
       <button class="ghost noprint" data-print style="display:inline-flex;align-items:center;gap:6px;width:auto">${ico('printer')}Imprimir cierre</button></div>
     <div class="kpis">
       <div>Cobrado<b class="num">${clp(total)}</b></div>
-      <div>Efectivo en caja<b class="num">${clp(C ? C.esperado.total : suma(efectivo))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Debería haber (sin cerrar)'}</span>` : ''}</div>
+      <div class="cj-ciegomsg">Efectivo en caja<b class="num">—</b><span class="sub">Se muestra al escribir lo contado</span></div>
+      <div class="cj-esp">Efectivo en caja<b class="num">${clp(C ? C.esperado.total : suma(efectivo))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Debería haber (sin cerrar)'}</span>` : ''}</div>
       <div>Ventas<b class="num">${cobrados.length}</b></div>
       <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
       <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b><span class="sub">${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos</span></div>
@@ -1000,7 +1002,8 @@ function pintarCierre() {
     ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
   const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, [data-bill]')];
-  if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); CAJA.difTxt(C); }
+  if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); }
+  CAJA.difTxt(C);
   if (billetesAbierto && $('v-cierre').querySelector('.cj-bill')) $('v-cierre').querySelector('.cj-bill').open = true;
 }
 $('v-cierre').onclick = (e) => {

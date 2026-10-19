@@ -7,6 +7,14 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   const signo = (n) => (n > 0 ? '+' : n < 0 ? '−' : '') + clp(Math.abs(n));
   let CATS = {};
 
+  // ---------- arqueo ciego (opcional, preferencia de este dispositivo) ----------
+  // Si está activo, el "Debería haber" se oculta hasta que se escribe el efectivo contado.
+  const ciegoOn = () => { try { return localStorage.getItem('caja_ciego') === '1'; } catch { return false; } };
+  const aplicarCiego = (C) => {
+    const v = $('cjContado');
+    $('v-cierre').classList.toggle('ciego-on', !!(C && !C.cierre && v && !v.value.trim() && ciegoOn()));
+  };
+
   // ---------- diálogo de movimiento ----------
   const dlg = document.createElement('dialog');
   dlg.className = 'sheet'; dlg.id = 'dlgMov'; dlg.setAttribute('aria-labelledby', 'mvTitulo');
@@ -72,8 +80,9 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
           <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>`}</div></div>
       <div class="cj-grid">
-        <table class="cj-cuenta">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
-          <div class="cj-tot"><span>Debería haber</span><b class="num">${clp(E.total)}</b></div>
+        <table class="cj-cuenta cj-esp">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
+          <p class="cj-ciegomsg ayuda">Total esperado oculto: se muestra al escribir lo contado.</p>
+          <div class="cj-tot cj-esp"><span>Debería haber</span><b class="num">${clp(E.total)}</b></div>
         <div class="cj-arqueo">${K ? `
           <div class="cj-res ${dif === 0 ? 'ok' : 'mal'}"><span>${dif === 0 ? 'Caja cuadrada' : dif > 0 ? 'Sobra' : 'Falta'}</span><b class="num">${dif === 0 ? clp(K.contado) : clp(Math.abs(dif))}</b>
             <span class="sub">Contado ${clp(K.contado)} · esperado ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
@@ -81,7 +90,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Hoy debería haber ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
           ${K.detalle.por_cobrar ? `<p class="ayuda">Al cerrar quedaban ${K.detalle.por_cobrar} pedido(s) por cobrar.</p>` : ''}
           ${puede('reabrir_caja') ? '<button class="ghostb noprint" data-cj="reabrir" style="margin-top:10px">Reabrir caja</button>' : ''}` : `
-          <form id="cjForm"><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
+          <form id="cjForm"><label class="noprint" style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.88rem;color:var(--ink-2)"><input type="checkbox" data-cj-ciego ${ciegoOn() ? 'checked' : ''}>Contar sin ver el total esperado</label><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
           <details class="cj-bill"><summary>Contar por billetes y monedas</summary><div class="cj-bills">${BILLETES.map((b) =>
             `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
           <div class="cj-dif num" id="cjDif" aria-live="polite"></div>
@@ -97,7 +106,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     </section>`;
   }
   function difTxt(C) {
-    const v = $('cjContado'); if (!v) return;
+    const v = $('cjContado'); aplicarCiego(C); if (!v) return;
     if (!v.value) { $('cjDif').textContent = ''; $('cjDif').className = 'cj-dif num'; return; }
     const d = digitos(v.value) - C.esperado.total;
     $('cjDif').textContent = d === 0 ? '✓ Cuadra' : `${d > 0 ? 'Sobran' : 'Faltan'} ${clp(Math.abs(d))}`;
@@ -118,6 +127,11 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           await api(`panel/caja/cierre?dia=${C.dia}`, { method: 'DELETE' }); toast('Caja reabierta'); recargar();
         }
       } catch (err) { alert(err.message); }
+    });
+    cont.addEventListener('change', (e) => {
+      if (!e.target.matches?.('[data-cj-ciego]')) return;
+      try { localStorage.setItem('caja_ciego', e.target.checked ? '1' : '0'); } catch {}
+      aplicarCiego(actual());
     });
     cont.addEventListener('input', (e) => {
       if (e.target.dataset.bill !== undefined) {
