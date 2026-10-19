@@ -22,7 +22,7 @@ Referencia: guía de arqueos de Fudo (abrir con monto inicial en efectivo, chip 
 
 ## Mejoras chicas, por prioridad
 1. (hecho) Pasos del turno en la ayuda de pestaña (AYUDAS.cierre/gastos).
-2. Aviso "Caja sin abrir: anota el fondo inicial" al haber ventas en efectivo y fondo 0.
+2. (hecho) Aviso "Caja sin abrir: anota el fondo inicial" al haber ventas en efectivo y fondo 0.
 3. Arqueo ciego opcional (ocultar esperado hasta escribir lo contado).
 4. Unificar nombre "Efectivo en caja" / "Debería haber".
 5. Pedir confirmación reforzada si la diferencia pasa de un umbral (ej. $5.000) y exigir nota.

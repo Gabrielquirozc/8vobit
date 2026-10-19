@@ -62,7 +62,11 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     const E = C.esperado, K = C.cierre;
     const filas = [['Fondo inicial', E.fondo, 'fondo'], [`Ventas en efectivo (${E.ventas_n})`, E.ventas], ['Ingresos', E.ingresos], ['Retiros', -E.retiros], ['Gastos pagados en efectivo', -E.gastos]];
     const dif = K ? K.diferencia : null;
-    return `<section class="cardf cj">
+    // Hoy, sin cerrar, con movimiento y sin fondo anotado: falta abrir la caja.
+    const sinAbrir = !K && C.dia === C.hoy && !E.fondo && (E.ventas_n > 0 || C.movimientos.some((m) => !m.anulado));
+    return `${sinAbrir ? `<div class="banner aviso noprint" role="status" style="border-radius:var(--r-sm);margin-bottom:12px"><strong>Caja sin abrir:</strong> anota el fondo inicial para que el efectivo cuadre.
+        <button class="ghostb" data-cj="mov" data-tipo="fondo" style="margin-left:8px">Anotar fondo inicial</button></div>` : ''}
+    <section class="cardf cj">
       <div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Efectivo en caja</h3>
         <div class="cj-acc noprint">${K ? '' : `<button class="ghostb" data-cj="mov" data-tipo="gasto">${ico('plus')}Gasto</button>
           <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
