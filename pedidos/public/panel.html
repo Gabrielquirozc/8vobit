@@ -160,19 +160,18 @@
   .tile .emoji, .art .emoji { font-size: 44px; line-height: 1; }
   .ped li .ag.obs { color: var(--brand); font-weight: 700; display: flex; align-items: center; gap: 4px; }
   .ped li .ag.obs .ico { width: 14px; height: 14px; }
-  /* Barra superior: una línea en pantallas anchas; en el resto, nombre y acciones arriba
-     y las pestañas en una segunda línea que se desplaza de lado (nunca se parte). */
-  .bar { flex-wrap: nowrap; }
-  .tabs-nav { display: flex; gap: 4px; min-width: 0; }
+  /* Barra superior: siempre en dos líneas. Arriba el nombre y las acciones; abajo las
+     pestañas, que se desplazan de lado y nunca se parten ni se montan sobre las acciones
+     (con 13 pestañas no caben en una línea ni a 1920 px). */
+  .bar { flex-wrap: wrap; row-gap: 6px; }
   .tab, .pausa { white-space: nowrap; }
-  @media (max-width: 1640px) { .bar .kpi { display: none; } }
-  @media (max-width: 1499px) {
-    .bar { flex-wrap: wrap; row-gap: 6px; }
-    .bar .marca { order: 0; } .bar .sp { order: 1; } .bar .pausa { order: 2; } #sonido { order: 3; } #salir { order: 4; }
-    .tabs-nav { order: 5; flex: 0 0 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }
-    .tabs-nav::-webkit-scrollbar { display: none; }
-    .tab { flex: none; }
-  }
+  .bar .marca { order: 0; } .bar .sp { order: 1; } .bar .kpi { order: 2; } .bar .quien { order: 3; }
+  .bar .pausa { order: 4; } #sonido { order: 5; } #salir { order: 6; }
+  .tabs-nav { order: 7; display: flex; gap: 4px; min-width: 0; flex: 0 0 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }
+  .tabs-nav::-webkit-scrollbar { display: none; }
+  .tab { flex: none; }
+  .bar .quien { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+  @media (max-width: 900px) { .bar .kpi { display: none; } }
   @media (max-width: 600px) {
     .pausa #pausaTxt { display: none; } .pausa { width: 44px; padding: 0; justify-content: center; }
     .tab .ico { display: none; } .tab { padding: 0 12px; }
@@ -2130,6 +2129,7 @@ async function iniciar() {
   CUENTA.aplicar();
   await cargarCarta(); await refrescar();
   $('app').hidden = false;
+  document.querySelector('.tab[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   INICIO.ayuda(vista); INICIO.cargar().catch(() => {});
   // Si el rol no ve la pestaña actual, se abre la primera que sí ve.
   if (document.querySelector(`[data-v="${vista}"]`).hidden) document.querySelector('[data-v]:not([hidden])')?.click();
