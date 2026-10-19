@@ -3,6 +3,7 @@
 export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE, puede = () => true }) {
   const TIPO = { fondo: 'Fondo inicial', ingreso: 'Ingreso', retiro: 'Retiro', gasto: 'Gasto' };
   const MEDIOS = { efectivo: ['Efectivo', 'cash'], transferencia: ['Transferencia', 'bank'], tarjeta: ['Tarjeta', 'card'], otro: ['Otro', 'dots'] };
+  const UMBRAL_NOTA = 5000; // igual que en lib/caja.mjs
   const BILLETES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
   const signo = (n) => (n > 0 ? '+' : n < 0 ? '−' : '') + clp(Math.abs(n));
   let CATS = {};
@@ -94,7 +95,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <details class="cj-bill"><summary>Contar por billetes y monedas</summary><div class="cj-bills">${BILLETES.map((b) =>
             `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
           <div class="cj-dif num" id="cjDif" aria-live="polite"></div>
-          <div class="field"><label for="cjNota">Nota <span class="opc">(opcional)</span></label><input id="cjNota" maxlength="300" placeholder="Ej. se pagó al gásfiter con plata de la caja"></div>
+          <div class="field"><label for="cjNota">Nota <span class="opc">(obligatoria si la diferencia pasa de ${clp(UMBRAL_NOTA)})</span></label><input id="cjNota" maxlength="300" placeholder="Ej. se pagó al gásfiter con plata de la caja"></div>
           <div class="formerr" id="cjErr" role="alert"></div>
           <button class="primary" style="width:100%;margin-top:10px">Cerrar caja</button></form>`}
         </div></div>
@@ -147,6 +148,9 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       const C = actual();
       if (!$('cjContado').value.trim()) { $('cjErr').textContent = 'Cuenta el efectivo y escribe el total (si no hay nada, escribe 0).'; return $('cjContado').focus(); }
       const contado = digitos($('cjContado').value), d = contado - C.esperado.total;
+      if (Math.abs(d) > UMBRAL_NOTA && $('cjNota').value.replace(/[^\p{L}\p{N}]/gu, '').length < 3) {
+        $('cjErr').textContent = `${d > 0 ? 'Sobran' : 'Faltan'} ${clp(Math.abs(d))}. Escribe qué pasó antes de cerrar.`; return $('cjNota').focus();
+      }
       if (d !== 0 && !confirm(`${d > 0 ? 'Sobran' : 'Faltan'} ${clp(Math.abs(d))}. ¿Cerrar la caja igual?`)) return;
       try {
         await api('panel/caja/cierre', { method: 'POST', body: { dia: C.dia, contado, nota: $('cjNota').value } });

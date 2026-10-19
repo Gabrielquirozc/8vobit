@@ -841,7 +841,7 @@ test('caja: el efectivo esperado suma fondo, ventas e ingresos y resta retiros y
   assert.ok(c.esperado.ventas >= a.precio);
 
   // Cierre de ayer: su conteo es el fondo sugerido para hoy.
-  assert.equal((await req('POST', '/api/panel/caja/cierre', { dia: diaAyer, contado: 12345 })).status, 200);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { dia: diaAyer, contado: 12345, nota: 'Conteo de prueba' })).status, 200);
   c = (await req('GET', '/api/panel/caja')).body;
   assert.deepEqual(c.fondo_sugerido, { dia: diaAyer, monto: 12345 });
 
@@ -872,6 +872,16 @@ test('caja: el efectivo esperado suma fondo, ventas e ingresos y resta retiros y
   assert.equal(k.body.cierre.diferencia, -500);
   assert.equal(k.body.cierre.nota, 'Faltó sencillo');
   assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp })).status, 409);
+  // Diferencia grande: la nota es obligatoria (también en el servidor).
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  const sinNota = await req('POST', '/api/panel/caja/cierre', { contado: esp - 8000, nota: ' - ' });
+  assert.equal(sinNota.status, 400); assert.match(sinNota.body.error, /Faltan \$8\.000.*nota/);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp + 8000 })).status, 400);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 8000, nota: 'Pago al gásfiter' })).status, 200);
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 5000 })).status, 200); // en el umbral: sin nota
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 500 })).status, 200); // vuelve al estado anterior
 
   // Caja cerrada: no se mueve el efectivo, pero sí se anotan gastos por transferencia.
   assert.equal((await mov({ tipo: 'retiro', monto: 1000, descripcion: 'x' })).status, 409);

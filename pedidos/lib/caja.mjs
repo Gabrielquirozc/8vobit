@@ -18,6 +18,9 @@ export const CATEGORIAS = {
 };
 const TIPOS = ['fondo', 'ingreso', 'retiro', 'gasto'];
 const MONTO_MAX = 50_000_000;
+// Diferencia (en pesos, sobra o falta) desde la cual cerrar la caja exige explicar qué pasó en la nota.
+// Pendiente: hacerlo ajustable por local.
+export const UMBRAL_NOTA = 5000;
 const esDia = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(`${v}T12:00:00`));
 const texto = (v, max) => String(v ?? '').replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, max) || null;
 const diasEntre = (a, b) => Math.round((new Date(`${b}T12:00:00`) - new Date(`${a}T12:00:00`)) / 864e5);
@@ -119,9 +122,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (!Number.isInteger(contado) || contado < 0 || contado > MONTO_MAX) return { error: 'Escribe el efectivo contado, en pesos y sin decimales' };
     if (cierreDe(lid, dia)) return { error: 'La caja de ese día ya está cerrada', status: 409 };
     const e = esperado(lid, dia);
+    const nota = texto(b.nota, 300), dif = contado - e.total;
+    if (Math.abs(dif) > UMBRAL_NOTA && (nota ?? '').replace(/[^\p{L}\p{N}]/gu, '').length < 3)
+      return { error: `${dif < 0 ? 'Faltan' : 'Sobran'} $${Math.abs(dif).toLocaleString('es-CL')}. Escribe qué pasó en la nota antes de cerrar.` };
     const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0").get(lid, dia).n;
     db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario) VALUES (?,?,?,?,?,?,?,?)')
-      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar }), texto(b.nota, 300), quien);
+      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar }), nota, quien);
     return caja(local, dia);
   }
 
