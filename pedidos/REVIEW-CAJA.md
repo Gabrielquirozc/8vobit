@@ -27,4 +27,4 @@ Referencia: guía de arqueos de Fudo (abrir con monto inicial en efectivo, chip 
 4. (hecho) Unificar nombres: "Debería haber en caja" y bloque "Cuadre del efectivo". El CSV del contador sigue con "Efectivo esperado" para no romper planillas.
 5. (hecho, umbral fijo $5.000 en lib/caja.mjs) Pedir confirmación reforzada si la diferencia pasa de un umbral (ej. $5.000) y exigir nota.
 6. (hecho, opcional) Conteo de tarjeta/transferencia contra voucher o cartola en el cierre.
-7. Cierre por turno con nombre de cajero.
+7. (hecho) Corte de turno (corte X): cuenta y registra quién entrega sin cerrar el día; el cierre del día ya guarda quién cerró. Pendiente opcional: cortes en el CSV y anularlos.

@@ -1220,6 +1220,7 @@ async function api(req, res, url) {
         return x.error ? send(res, x.cerrado ? 409 : 400, { error: x.error }) : send(res, 201, x);
       }
       if (m === 'DELETE' && parts[2] === 'movimientos' && parts[3]) return r(CAJA.anularMovimiento(local, Number(parts[3]), yo.nombre));
+      if (m === 'POST' && parts[2] === 'cortes') return r(CAJA.corte(local, await readJson(req), yo.nombre));
       if (m === 'POST' && parts[2] === 'cierre') return r(CAJA.cerrar(local, await readJson(req), yo.nombre));
       if (m === 'DELETE' && parts[2] === 'cierre') return r(CAJA.reabrir(local, dia, yo.nombre));
     }

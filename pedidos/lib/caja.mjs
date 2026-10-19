@@ -25,6 +25,13 @@ const esDia = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !
 const texto = (v, max) => String(v ?? '').replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, max) || null;
 const diasEntre = (a, b) => Math.round((new Date(`${b}T12:00:00`) - new Date(`${a}T12:00:00`)) / 864e5);
 
+// Con una diferencia grande, la nota (mínimo 3 letras o números) es obligatoria.
+function notaFaltante(dif, nota, verbo) {
+  if (Math.abs(dif) > UMBRAL_NOTA && (nota ?? '').replace(/[^\p{L}\p{N}]/gu, '').length < 3)
+    return { error: `${dif < 0 ? 'Faltan' : 'Sobran'} $${Math.abs(dif).toLocaleString('es-CL')}. Escribe qué pasó en la nota antes de ${verbo}.` };
+  return null;
+}
+
 export function crearCaja(db, { hoy, MEDIOS }) {
   db.exec(`
 CREATE TABLE IF NOT EXISTS caja_movimientos (
@@ -33,6 +40,11 @@ CREATE TABLE IF NOT EXISTS caja_movimientos (
   documento TEXT, anulado INTEGER NOT NULL DEFAULT 0,
   creado TEXT NOT NULL DEFAULT (datetime('now','localtime')), anulado_en TEXT);
 CREATE INDEX IF NOT EXISTS caja_mov_dia ON caja_movimientos(local_id, dia);
+CREATE TABLE IF NOT EXISTS caja_cortes (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id), dia TEXT NOT NULL,
+  esperado INTEGER NOT NULL, contado INTEGER NOT NULL, diferencia INTEGER NOT NULL, nota TEXT, usuario TEXT,
+  creado TEXT NOT NULL DEFAULT (datetime('now','localtime')));
+CREATE INDEX IF NOT EXISTS caja_cortes_dia ON caja_cortes(local_id, dia);
 CREATE TABLE IF NOT EXISTS caja_cierres (
   id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id), dia TEXT NOT NULL,
   esperado INTEGER NOT NULL, contado INTEGER NOT NULL, diferencia INTEGER NOT NULL, detalle TEXT NOT NULL,
@@ -78,6 +90,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       dia, hoy: hoy(local), categorias: CATEGORIAS,
       movimientos: db.prepare('SELECT id, tipo, categoria, descripcion, monto, medio, documento, anulado, creado, usuario, anulado_por FROM caja_movimientos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       esperado: esperado(lid, dia),
+      cortes: db.prepare('SELECT id, esperado, contado, diferencia, nota, usuario, creado FROM caja_cortes WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       cierre: c ? { ...c, detalle: JSON.parse(c.detalle) } : null,
       fondo_sugerido: previo ? { dia: previo.dia, monto: previo.contado } : null,
     };
@@ -133,11 +146,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const e = esperado(lid, dia);
     const vendidoMedio = (m) => db.prepare("SELECT COALESCE(SUM(total),0) s FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND medio_pago=?").get(lid, dia, m).s;
     const nota = texto(b.nota, 300), dif = contado - e.total;
-    if (Math.abs(dif) > UMBRAL_NOTA && (nota ?? '').replace(/[^\p{L}\p{N}]/gu, '').length < 3)
-      return { error: `${dif < 0 ? 'Faltan' : 'Sobran'} $${Math.abs(dif).toLocaleString('es-CL')}. Escribe qué pasó en la nota antes de cerrar.` };
+    const falta = notaFaltante(dif, nota, 'cerrar');
+    if (falta) return falta;
     const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0").get(lid, dia).n;
     db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario,contado_tarjeta,contado_transferencia) VALUES (?,?,?,?,?,?,?,?,?,?)')
       .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar, sistema_tarjeta: vendidoMedio('tarjeta'), sistema_transferencia: vendidoMedio('transferencia') }), nota, quien, tarjeta, transf);
+    return caja(local, dia);
+  }
+
+  // Corte de turno: quien entrega la caja anota lo contado. No cierra el día.
+  function corte(local, b, quien = null) {
+    const lid = local.id, h = hoy(local);
+    const dia = b.dia === undefined ? h : b.dia;
+    if (!esDia(dia) || dia > h) return { error: 'Fecha inválida' };
+    if (diasEntre(dia, h) > 7) return { error: 'Solo se puede hacer el corte de los últimos 7 días' };
+    const contado = Number(b.contado);
+    if (!Number.isInteger(contado) || contado < 0 || contado > MONTO_MAX) return { error: 'Escribe el efectivo contado, en pesos y sin decimales' };
+    if (cierreDe(lid, dia)) return { error: 'La caja de ese día ya está cerrada. Reábrela para hacer un corte.', status: 409 };
+    const e = esperado(lid, dia), nota = texto(b.nota, 300), dif = contado - e.total;
+    const falta = notaFaltante(dif, nota, 'hacer el corte');
+    if (falta) return falta;
+    db.prepare('INSERT INTO caja_cortes (local_id,dia,esperado,contado,diferencia,nota,usuario) VALUES (?,?,?,?,?,?,?)').run(lid, dia, e.total, contado, dif, nota, quien);
     return caja(local, dia);
   }
 
@@ -160,5 +189,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       anterior: { mes: ant, total: anterior.reduce((s, g) => s + g.monto, 0), por_categoria: porCat(anterior) } };
   }
 
-  return { caja, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
+  return { caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
 }

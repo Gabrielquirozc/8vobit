@@ -27,16 +27,18 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   let mv = null;
   function abrirMov(tipo, { dia, hoy, sugerido, alGuardar }) {
     mv = { tipo, medio: 'efectivo', alGuardar };
-    $('mvTitulo').textContent = { fondo: 'Anotar fondo inicial', ingreso: 'Anotar ingreso', retiro: 'Anotar retiro', gasto: 'Anotar gasto' }[tipo];
+    $('mvTitulo').textContent = { fondo: 'Anotar fondo inicial', ingreso: 'Anotar ingreso', corte: 'Corte de turno', retiro: 'Anotar retiro', gasto: 'Anotar gasto' }[tipo];
     const g = tipo === 'gasto';
     $('mvForm').innerHTML = `
-      <div class="field"><label for="mvMonto">Monto</label>${dinero('mvMonto', tipo === 'fondo' ? sugerido?.monto : 0, 'placeholder="0" required')}
+      <div class="field"><label for="mvMonto">${tipo === 'corte' ? 'Efectivo contado' : 'Monto'}</label>${dinero('mvMonto', tipo === 'fondo' ? sugerido?.monto : 0, 'placeholder="0" required')}
         ${tipo === 'fondo' ? `<p class="ayuda">${sugerido ? `Sugerido: lo contado al cerrar el ${esc(fechaLarga(sugerido.dia))}.` : 'El sencillo con que se abre la caja.'}</p>` : ''}</div>
       ${g ? `<div class="field"><label for="mvCat">Categoría</label><select id="mvCat" required><option value="">Elegir…</option>${Object.entries(CATS).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('')}</select></div>
         <div class="field"><span class="lbl">Cómo se pagó</span><div class="medios" role="group" aria-label="Cómo se pagó">${Object.entries(MEDIOS).map(([k, [n, i]]) =>
           `<button type="button" data-mvmedio="${k}" aria-pressed="${k === 'efectivo'}">${ico(i)}${n}</button>`).join('')}</div>
           <p class="ayuda" id="mvMedioAyuda">Sale del efectivo de la caja.</p></div>` : ''}
-      ${tipo !== 'fondo' ? `<div class="field"><label for="mvDesc">${g ? 'Detalle <span class="opc">(opcional)</span>' : 'Motivo'}</label><input id="mvDesc" maxlength="120" autocomplete="off" placeholder="${g ? 'Ej. paltas y tomates de la feria' : tipo === 'retiro' ? 'Ej. retiro del dueño, depósito al banco' : 'Ej. sencillo, aporte del dueño'}"></div>` : ''}
+      ${tipo === 'corte' ? `<p class="ayuda" style="margin:0 0 10px">Cuenta el efectivo de la caja. El día sigue abierto; queda anotado quién entregó y cuánto había.</p>` : ''}
+      ${tipo === 'corte' ? `<div class="field"><label for="mvDesc">Nota <span class="opc">(obligatoria si la diferencia pasa de ${clp(UMBRAL_NOTA)})</span></label><input id="mvDesc" maxlength="300" autocomplete="off" placeholder="Ej. entrega de turno a Juan"></div>` : ''}
+      ${tipo !== 'fondo' && tipo !== 'corte' ? `<div class="field"><label for="mvDesc">${g ? 'Detalle <span class="opc">(opcional)</span>' : 'Motivo'}</label><input id="mvDesc" maxlength="120" autocomplete="off" placeholder="${g ? 'Ej. paltas y tomates de la feria' : tipo === 'retiro' ? 'Ej. retiro del dueño, depósito al banco' : 'Ej. sencillo, aporte del dueño'}"></div>` : ''}
       ${g ? `<div class="dos"><div class="field"><label for="mvDoc">N° de boleta o factura <span class="opc">(opcional)</span></label><input id="mvDoc" maxlength="40" autocomplete="off"></div>
         <div class="field"><label for="mvDia">Fecha</label><input id="mvDia" type="date" value="${dia}" max="${hoy}"></div></div>` : ''}
       <div class="formerr" id="mvErr" role="alert"></div>`;
@@ -54,6 +56,15 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     const body = { tipo: mv.tipo, monto: digitos($('mvMonto').value), descripcion: $('mvDesc')?.value };
     if (mv.tipo === 'gasto') Object.assign(body, { categoria: $('mvCat').value, medio: mv.medio, documento: $('mvDoc').value, dia: $('mvDia').value });
     else if (mv.dia) body.dia = mv.dia;
+    if (mv.tipo === 'corte') {
+      if (!$('mvMonto').value.trim()) { $('mvErr').textContent = 'Cuenta el efectivo y escribe el total (si no hay nada, escribe 0).'; return $('mvMonto').focus(); }
+      $('mvOk').disabled = true;
+      try {
+        await api('panel/caja/cortes', { method: 'POST', body: { dia: mv.dia, contado: body.monto, nota: body.descripcion } });
+        dlg.close(); toast('✓ Corte de turno anotado'); mv.alGuardar?.();
+      } catch (err) { $('mvErr').textContent = err.message; } finally { $('mvOk').disabled = false; }
+      return;
+    }
     if (!body.monto) { $('mvErr').textContent = 'Escribe el monto.'; return $('mvMonto').focus(); }
     if (mv.tipo === 'gasto' && !body.categoria) { $('mvErr').textContent = 'Elige la categoría.'; return $('mvCat').focus(); }
     $('mvOk').disabled = true;
@@ -79,7 +90,8 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       <div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Cuadre del efectivo</h3>
         <div class="cj-acc noprint">${K ? '' : `<button class="ghostb" data-cj="mov" data-tipo="gasto">${ico('plus')}Gasto</button>
           <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
-          <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>`}</div></div>
+          <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>
+          <button class="ghostb" data-cj="mov" data-tipo="corte">${ico('note')}Corte de turno</button>`}</div></div>
       <div class="cj-grid">
         <table class="cj-cuenta cj-esp">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
           <p class="cj-ciegomsg ayuda">Debería haber en caja: se muestra al escribir lo contado.</p>
@@ -104,6 +116,8 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <div class="formerr" id="cjErr" role="alert"></div>
           <button class="primary" style="width:100%;margin-top:10px">Cerrar caja</button></form>`}
         </div></div>
+      ${C.cortes.length ? `<h3>Cortes de turno</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Quién</th><th class="r">Contado</th><th class="r">Debería haber en caja</th><th class="r">Diferencia</th></tr>
+        ${C.cortes.map((t) => `<tr><td>${esc(t.creado.slice(11, 16))}</td><td>${esc(t.usuario || '')}${t.nota ? `<br><span class="opc">${esc(t.nota)}</span>` : ''}</td><td class="r">${clp(t.contado)}</td><td class="r">${clp(t.esperado)}</td><td class="r">${t.diferencia === 0 ? 'Cuadra' : signo(t.diferencia)}</td></tr>`).join('')}</table></div>` : ''}
       ${C.movimientos.length ? `<h3>Movimientos</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Tipo</th><th>Detalle</th><th>Medio</th><th class="r">Monto</th><th class="noprint"></th></tr>
         ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}${m.usuario ? `<br><span class="opc">${esc(m.usuario)}</span>` : ''}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(CATS[m.categoria] || m.categoria)}` : ''}</td>
           <td>${esc(m.descripcion || '')}${m.documento ? ` <span class="opc">(${esc(m.documento)})</span>` : ''}</td><td>${MEDIOS[m.medio]?.[0] || ''}</td>

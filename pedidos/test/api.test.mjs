@@ -881,6 +881,19 @@ test('caja: el efectivo esperado suma fondo, ventas e ingresos y resta retiros y
   assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
   assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 5000 })).status, 200); // en el umbral: sin nota
   assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  // Corte de turno: no cierra el día.
+  assert.equal((await req('POST', '/api/panel/caja/cortes', { contado: 'x' })).status, 400);
+  assert.equal((await req('POST', '/api/panel/caja/cortes', { contado: -5 })).status, 400);
+  assert.equal((await req('POST', '/api/panel/caja/cortes', { contado: esp - 9000, nota: '' })).status, 400);
+  const ct = await req('POST', '/api/panel/caja/cortes', { contado: esp - 200, nota: 'Entrega a Juan' });
+  assert.equal(ct.status, 200); assert.equal(ct.body.cierre, null);
+  assert.equal(ct.body.cortes.length, 1);
+  assert.equal(ct.body.cortes[0].diferencia, -200); assert.equal(ct.body.cortes[0].esperado, esp);
+  assert.equal((await req('POST', '/api/panel/caja/cortes', { contado: esp - 9000, nota: 'Compra sin anotar' })).status, 200);
+  assert.equal((await req('GET', '/api/panel/caja')).body.cortes.length, 2);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 500 })).status, 200);
+  assert.equal((await req('POST', '/api/panel/caja/cortes', { contado: esp })).status, 409);
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
   // Voucher y cartola: opcionales, se guardan y se devuelven; inválidos dan 400.
   assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp, contado_tarjeta: -1 })).status, 400);
   assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp, contado_transferencia: 'abc' })).status, 400);
