@@ -39,12 +39,12 @@ export function crearExportar(db, { caja }) {
     const dias = db.prepare(`SELECT dia FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ?
         UNION SELECT dia FROM caja_movimientos WHERE local_id=? AND dia BETWEEN ? AND ? AND anulado=0 AND (tipo!='gasto' OR medio='efectivo')
         UNION SELECT dia FROM caja_cierres WHERE local_id=? AND dia BETWEEN ? AND ? AND anulado=0 ORDER BY dia`).all(lid, desde, hasta, lid, desde, hasta, lid, desde, hasta);
-    return csv(['Fecha', 'Vendido (cobrado)', 'Ventas en efectivo', 'Fondo inicial', 'Ingresos', 'Retiros', 'Gastos en efectivo', 'Efectivo esperado', 'Efectivo contado', 'Diferencia', 'Nota del cierre'],
+    return csv(['Fecha', 'Vendido (cobrado)', 'Ventas en efectivo', 'Fondo inicial', 'Ingresos', 'Retiros', 'Gastos en efectivo', 'Efectivo esperado', 'Efectivo contado', 'Diferencia', 'Nota del cierre', 'Tarjeta según voucher', 'Transferencias según cartola'],
       dias.map(({ dia }) => {
         const e = caja.esperado(lid, dia);
         const vendido = db.prepare("SELECT COALESCE(SUM(total),0) s FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1").get(lid, dia).s;
-        const k = db.prepare('SELECT contado, diferencia, nota FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
-        return [dia, vendido, e.ventas, e.fondo, e.ingresos, e.retiros, e.gastos, e.total, k?.contado, k?.diferencia, k?.nota];
+        const k = db.prepare('SELECT contado, diferencia, nota, contado_tarjeta, contado_transferencia FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
+        return [dia, vendido, e.ventas, e.fondo, e.ingresos, e.retiros, e.gastos, e.total, k?.contado, k?.diferencia, k?.nota, k?.contado_tarjeta, k?.contado_transferencia];
       }));
   }
   function gastos(lid, desde, hasta) {

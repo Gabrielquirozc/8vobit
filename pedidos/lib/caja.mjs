@@ -46,6 +46,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (!cols.has('usuario')) { db.exec(`ALTER TABLE ${t} ADD COLUMN usuario TEXT`); db.exec(`ALTER TABLE ${t} ADD COLUMN anulado_por TEXT`); }
   }
 
+  // Lo que dicen el voucher de la máquina de tarjetas y la cartola (opcionales, solo informativos).
+  for (const c of ['contado_tarjeta', 'contado_transferencia']) {
+    const cols = new Set(db.prepare('PRAGMA table_info(caja_cierres)').all().map((x) => x.name));
+    if (!cols.has(c)) db.exec(`ALTER TABLE caja_cierres ADD COLUMN ${c} INTEGER`);
+  }
+
   const cierreDe = (lid, dia) => db.prepare('SELECT * FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
 
   // Cuánto efectivo debería haber en la caja ese día, con su desglose.
@@ -121,13 +127,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const contado = Number(b.contado);
     if (!Number.isInteger(contado) || contado < 0 || contado > MONTO_MAX) return { error: 'Escribe el efectivo contado, en pesos y sin decimales' };
     if (cierreDe(lid, dia)) return { error: 'La caja de ese día ya está cerrada', status: 409 };
+    const opc = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+    const tarjeta = opc(b.contado_tarjeta), transf = opc(b.contado_transferencia);
+    for (const v of [tarjeta, transf]) if (v !== null && (!Number.isInteger(v) || v < 0 || v > MONTO_MAX)) return { error: 'Escribe lo de tarjeta y transferencia en pesos, sin decimales (o déjalo vacío)' };
     const e = esperado(lid, dia);
+    const vendidoMedio = (m) => db.prepare("SELECT COALESCE(SUM(total),0) s FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND medio_pago=?").get(lid, dia, m).s;
     const nota = texto(b.nota, 300), dif = contado - e.total;
     if (Math.abs(dif) > UMBRAL_NOTA && (nota ?? '').replace(/[^\p{L}\p{N}]/gu, '').length < 3)
       return { error: `${dif < 0 ? 'Faltan' : 'Sobran'} $${Math.abs(dif).toLocaleString('es-CL')}. Escribe qué pasó en la nota antes de cerrar.` };
     const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0").get(lid, dia).n;
-    db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario) VALUES (?,?,?,?,?,?,?,?)')
-      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar }), nota, quien);
+    db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario,contado_tarjeta,contado_transferencia) VALUES (?,?,?,?,?,?,?,?,?,?)')
+      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar, sistema_tarjeta: vendidoMedio('tarjeta'), sistema_transferencia: vendidoMedio('transferencia') }), nota, quien, tarjeta, transf);
     return caja(local, dia);
   }
 

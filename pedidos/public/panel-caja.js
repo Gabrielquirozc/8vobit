@@ -87,6 +87,8 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
         <div class="cj-arqueo">${K ? `
           <div class="cj-res ${dif === 0 ? 'ok' : 'mal'}"><span>${dif === 0 ? 'Caja cuadrada' : dif > 0 ? 'Sobra' : 'Falta'}</span><b class="num">${dif === 0 ? clp(K.contado) : clp(Math.abs(dif))}</b>
             <span class="sub">Contado ${clp(K.contado)} · debía haber ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
+          ${['tarjeta', 'transferencia'].map((m) => { const v = K[`contado_${m}`], sis = K.detalle[`sistema_${m}`]; if (v == null || sis == null) return '';
+            const d = v - sis; return `<p class="ayuda">${m === 'tarjeta' ? 'Tarjeta (voucher)' : 'Transferencias (cartola)'}: ${clp(v)} · sistema ${clp(sis)} · ${d === 0 ? 'cuadra' : `${d > 0 ? 'sobran' : 'faltan'} ${clp(Math.abs(d))}`}</p>`; }).join('')}
           ${K.nota ? `<p class="nota" style="margin-top:8px">${ico('note')}<span>${esc(K.nota)}</span></p>` : ''}
           ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Debería haber en caja ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
           ${K.detalle.por_cobrar ? `<p class="ayuda">Al cerrar quedaban ${K.detalle.por_cobrar} pedido(s) por cobrar.</p>` : ''}
@@ -94,6 +96,9 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <form id="cjForm"><label class="noprint" style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.88rem;color:var(--ink-2)"><input type="checkbox" data-cj-ciego ${ciegoOn() ? 'checked' : ''}>Contar sin ver lo que debería haber en caja</label><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
           <details class="cj-bill"><summary>Contar por billetes y monedas</summary><div class="cj-bills">${BILLETES.map((b) =>
             `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
+          <details class="cj-bill"><summary>Voucher y cartola <span class="opc">(opcional)</span></summary><div class="cj-bills">
+            <label><span>Tarjeta</span>${dinero('cjTarjeta', 0, 'placeholder="Según voucher"')}</label>
+            <label><span>Transferencias</span>${dinero('cjTransf', 0, 'placeholder="Según cartola"')}</label></div></details>
           <div class="cj-dif num" id="cjDif" aria-live="polite"></div>
           <div class="field"><label for="cjNota">Nota <span class="opc">(obligatoria si la diferencia pasa de ${clp(UMBRAL_NOTA)})</span></label><input id="cjNota" maxlength="300" placeholder="Ej. se pagó al gásfiter con plata de la caja"></div>
           <div class="formerr" id="cjErr" role="alert"></div>
@@ -153,7 +158,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       }
       if (d !== 0 && !confirm(`${d > 0 ? 'Sobran' : 'Faltan'} ${clp(Math.abs(d))}. ¿Cerrar la caja igual?`)) return;
       try {
-        await api('panel/caja/cierre', { method: 'POST', body: { dia: C.dia, contado, nota: $('cjNota').value } });
+        await api('panel/caja/cierre', { method: 'POST', body: { dia: C.dia, contado, nota: $('cjNota').value, contado_tarjeta: $('cjTarjeta').value.trim() ? digitos($('cjTarjeta').value) : null, contado_transferencia: $('cjTransf').value.trim() ? digitos($('cjTransf').value) : null } });
         toast(d === 0 ? '✓ Caja cerrada y cuadrada' : '✓ Caja cerrada con diferencia'); recargar();
       } catch (err) { $('cjErr').textContent = err.message; }
     });

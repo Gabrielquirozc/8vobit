@@ -881,6 +881,16 @@ test('caja: el efectivo esperado suma fondo, ventas e ingresos y resta retiros y
   assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
   assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 5000 })).status, 200); // en el umbral: sin nota
   assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  // Voucher y cartola: opcionales, se guardan y se devuelven; inválidos dan 400.
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp, contado_tarjeta: -1 })).status, 400);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp, contado_transferencia: 'abc' })).status, 400);
+  const kv = await req('POST', '/api/panel/caja/cierre', { contado: esp, contado_tarjeta: 15000, contado_transferencia: 0 });
+  assert.equal(kv.status, 200); assert.equal(kv.body.cierre.contado_tarjeta, 15000); assert.equal(kv.body.cierre.contado_transferencia, 0);
+  assert.equal(typeof kv.body.cierre.detalle.sistema_tarjeta, 'number');
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
+  const kn = await req('POST', '/api/panel/caja/cierre', { contado: esp });
+  assert.equal(kn.body.cierre.contado_tarjeta, null); assert.equal(kn.body.cierre.contado_transferencia, null);
+  assert.equal((await req('DELETE', '/api/panel/caja/cierre')).status, 200);
   assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp - 500 })).status, 200); // vuelve al estado anterior
 
   // Caja cerrada: no se mueve el efectivo, pero sí se anotan gastos por transferencia.

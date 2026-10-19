@@ -959,7 +959,7 @@ function pintarCierre() {
   const D = cajaD || DD();
   const C = CJ && CJ.dia === D.dia ? CJ : null;
   // Lo que se esté escribiendo en el arqueo no se pierde cuando el panel se actualiza solo.
-  const guardado = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, [data-bill]')].map((i) => i.value);
+  const guardado = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, #cjTarjeta, #cjTransf, [data-bill]')].map((i) => i.value);
   const billetesAbierto = $('v-cierre').querySelector('.cj-bill')?.open;
   cierreFirma = JSON.stringify([cajaD || DD(), CJ]);
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
@@ -1001,7 +1001,7 @@ function pintarCierre() {
     <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
     ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
-  const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, [data-bill]')];
+  const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, #cjTarjeta, #cjTransf, [data-bill]')];
   if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); }
   CAJA.difTxt(C);
   if (billetesAbierto && $('v-cierre').querySelector('.cj-bill')) $('v-cierre').querySelector('.cj-bill').open = true;
