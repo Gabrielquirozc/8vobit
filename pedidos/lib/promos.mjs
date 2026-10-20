@@ -135,6 +135,136 @@ CREATE TABLE IF NOT EXISTS combo_items (
     return { producto_id: pid, items: combo(pid) };
   }
 
+  // ---------- combos propios: un producto de la carta (categoría "Combos") con precio propio y sus componentes ----------
+  const CAT_COMBOS = 'Combos';
+  // Componentes: ids del local (404 si no existen), sin combos dentro de combos, al menos 2 unidades en total y hasta 10 productos distintos.
+  function itemsCombo(lid, lista, propio = 0) {
+    if (!Array.isArray(lista) || !lista.length || lista.length > 10) return { error: 'Un combo lleva al menos 2 unidades (hasta 10 productos distintos).' };
+    const por = new Map();
+    for (const x of lista) {
+      const id = Number(x?.producto_id), cant = Math.round(Number(x?.cantidad) || 1);
+      if (!Number.isInteger(id) || !db.prepare('SELECT 1 FROM productos WHERE id=? AND local_id=? AND archivado=0').get(id, lid)) return { error: 'Un producto del combo no existe.', status: 404 };
+      if (id === propio) return { error: 'Un combo no puede llevarse a sí mismo.' };
+      if (db.prepare('SELECT 1 FROM combo_items WHERE producto_id=?').get(id)) return { error: 'Un combo no puede llevar otro combo.' };
+      por.set(id, (por.get(id) || 0) + cant);
+    }
+    for (const c of por.values()) if (!(c >= 1 && c <= 20)) return { error: 'Cantidad inválida en el combo.' };
+    if ([...por.values()].reduce((s, c) => s + c, 0) < 2) return { error: 'Un combo lleva al menos 2 productos.' };
+    return { items: [...por] };
+  }
+  const precioCombo = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 && n <= 1e6 ? n : null; };
+  const comboDe = (lid, pid) => db.prepare('SELECT id, nombre, precio, activo FROM productos WHERE id=? AND local_id=? AND archivado=0 AND EXISTS (SELECT 1 FROM combo_items WHERE producto_id=productos.id)').get(pid, lid);
+
+  function crearCombo(lid, b) {
+    const nombre = texto(b.nombre, 80);
+    if (!nombre) return { error: 'Ponle un nombre al combo.' };
+    const precio = precioCombo(b.precio);
+    if (!precio) return { error: 'El precio del combo debe ser un monto entero mayor a 0.' };
+    const it = itemsCombo(lid, b.items);
+    if (it.error) return it;
+    db.exec('BEGIN');
+    try {
+      let cat = db.prepare('SELECT id FROM categorias WHERE local_id=? AND lower(nombre)=lower(?)').get(lid, CAT_COMBOS);
+      if (!cat) cat = { id: Number(db.prepare('INSERT INTO categorias (local_id,nombre,orden,salsas) VALUES (?,?,(SELECT COALESCE(MAX(orden),-1)+1 FROM categorias WHERE local_id=?),0)').run(lid, CAT_COMBOS, lid).lastInsertRowid) };
+      const orden = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM productos WHERE categoria_id=?').get(cat.id).n;
+      const id = Number(db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir,costo)
+        VALUES (?,?,?,NULL,?,?,0,0,?,0,0,NULL)`).run(lid, cat.id, nombre, precio, b.activo === false ? 0 : 1, orden).lastInsertRowid);
+      for (const [cid, cant] of it.items) db.prepare('INSERT INTO combo_items (producto_id,componente_id,cantidad) VALUES (?,?,?)').run(id, cid, cant);
+      db.exec('COMMIT');
+      return { id, categoria_id: cat.id };
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+  function editarCombo(lid, pid, b) {
+    const p = comboDe(lid, pid);
+    if (!p) return { error: 'No existe', status: 404 };
+    const nombre = b.nombre === undefined ? p.nombre : texto(b.nombre, 80);
+    if (!nombre) return { error: 'Ponle un nombre al combo.' };
+    const precio = b.precio === undefined ? p.precio : precioCombo(b.precio);
+    if (!precio) return { error: 'El precio del combo debe ser un monto entero mayor a 0.' };
+    const it = b.items === undefined ? null : itemsCombo(lid, b.items, pid);
+    if (it?.error) return it;
+    db.exec('BEGIN');
+    try {
+      db.prepare('UPDATE productos SET nombre=?, precio=?, activo=? WHERE id=?').run(nombre, precio, b.activo === undefined ? p.activo : (b.activo ? 1 : 0), pid);
+      if (precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, pid, p.precio, precio);
+      if (it) {
+        db.prepare('DELETE FROM combo_items WHERE producto_id=?').run(pid);
+        for (const [cid, cant] of it.items) db.prepare('INSERT INTO combo_items (producto_id,componente_id,cantidad) VALUES (?,?,?)').run(pid, cid, cant);
+      }
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return { id: pid };
+  }
+  // Quitar un combo lo saca de la carta (el producto queda archivado) y borra su composición.
+  function quitarCombo(lid, pid) {
+    if (!comboDe(lid, pid)) return { error: 'No existe', status: 404 };
+    db.exec('BEGIN');
+    try {
+      db.prepare('DELETE FROM combo_items WHERE producto_id=?').run(pid);
+      db.prepare('UPDATE productos SET archivado=1, activo=0 WHERE id=?').run(pid);
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return { ok: true };
+  }
+
+  // ---------- ideas según las ventas de los últimos 60 días ----------
+  const DIA_PL = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados'];
+  const MIN_PEDIDOS = 30, VENTANA = 60;
+  const aMin = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
+  const hh = (h) => `${String(h % 24).padStart(2, '0')}:00`;
+  // Franja de 3 horas con menos pedidos dentro del horario de ese día (sin la primera ni la última hora, que siempre son flojas).
+  function franjaFlaca(lid, desde, hoyDia, dow, horas) {
+    const [a, bruto] = [aMin(horas[0]), aMin(horas[1])], b = bruto <= a ? bruto + 1440 : bruto;
+    let h0 = Math.ceil(a / 60), h1 = Math.floor(b / 60);
+    if (h1 - h0 >= 5) { h0 += 1; h1 -= 1; }
+    if (h1 - h0 < 3) return null;
+    const cuenta = new Map(db.prepare("SELECT CAST(substr(creado,12,2) AS INTEGER) h, COUNT(*) n FROM pedidos WHERE local_id=? AND dia>=? AND dia<? AND estado!='anulado' AND CAST(strftime('%w',dia) AS INTEGER)=? GROUP BY h").all(lid, desde, hoyDia, dow).map((r) => [r.h, r.n]));
+    let mejor = null;
+    for (let h = h0; h + 3 <= h1; h++) {
+      const s = [0, 1, 2].reduce((t, k) => t + (cuenta.get((h + k) % 24) || 0), 0);
+      const centro = Math.abs(h + 1.5 - (h0 + h1) / 2); // a igual venta, la franja más cercana al centro del horario
+      if (!mejor || s < mejor.s || (s === mejor.s && centro < mejor.centro)) mejor = { h, s, centro };
+    }
+    return mejor && { desde: hh(mejor.h), hasta: hh(mejor.h + 3) };
+  }
+  // Solo lectura. Con menos de 30 pedidos no sugiere nada.
+  function sugerencias(local, hoyDia) {
+    const lid = local.id, desde = sumarDias(hoyDia, -(VENTANA - 1));
+    const t = db.prepare("SELECT COUNT(*) n, MIN(dia) primero FROM pedidos WHERE local_id=? AND dia>=? AND dia<? AND estado!='anulado'").get(lid, desde, hoyDia);
+    if (t.n < MIN_PEDIDOS) return { suficiente: false, pedidos: t.n, minimo: MIN_PEDIDOS, dias: [], combos: [] };
+    // Pedidos por día de la semana, comparando cada día con el promedio de los días en que el local abre.
+    const ini = t.primero > desde ? t.primero : desde, ocurre = Array(7).fill(0);
+    for (let d = ini; d < hoyDia; d = sumarDias(d, 1)) ocurre[new Date(`${d}T12:00:00`).getDay()]++;
+    const porDia = new Map(db.prepare("SELECT CAST(strftime('%w',dia) AS INTEGER) d, COUNT(*) n FROM pedidos WHERE local_id=? AND dia>=? AND dia<? AND estado!='anulado' GROUP BY d").all(lid, ini, hoyDia).map((r) => [r.d, r.n]));
+    const horario = JSON.parse(local.horario || '{}');
+    const dias = [];
+    const sem = [0, 1, 2, 3, 4, 5, 6].filter((d) => horario[d] && ocurre[d] >= 3).map((d) => ({ d, prom: (porDia.get(d) || 0) / ocurre[d] }));
+    if (sem.length >= 3) {
+      const media = sem.reduce((s, x) => s + x.prom, 0) / sem.length;
+      for (const x of sem.filter((y) => y.prom <= media * 0.7).sort((a, b) => a.prom - b.prom).slice(0, 2)) {
+        const pct = Math.round((1 - x.prom / media) * 100), f = franjaFlaca(lid, ini, hoyDia, x.d, horario[x.d]);
+        dias.push({ dia: x.d, nombre: DIA_PL[x.d], pct, promedio: Math.round(media * 10) / 10, este_dia: Math.round(x.prom * 10) / 10, desde: f?.desde || null, hasta: f?.hasta || null, valor: 15,
+          evidencia: `Los ${DIA_PL[x.d]} vendes ${pct} % menos que el promedio (${String(Math.round(x.prom * 10) / 10).replace('.', ',')} pedidos contra ${String(Math.round(media * 10) / 10).replace('.', ',')} por día).` });
+      }
+    }
+    // Productos que se piden juntos en el mismo pedido (sin combos ni productos que ya no se venden).
+    const combos = [];
+    const pares = db.prepare(`SELECT a.producto_id a, b.producto_id b, COUNT(DISTINCT a.pedido_id) n FROM pedido_items a
+        JOIN pedido_items b ON b.pedido_id=a.pedido_id AND a.producto_id<b.producto_id JOIN pedidos p ON p.id=a.pedido_id
+        WHERE p.local_id=? AND p.dia>=? AND p.dia<? AND p.estado!='anulado' GROUP BY a.producto_id, b.producto_id HAVING n>=5 ORDER BY n DESC LIMIT 20`).all(lid, desde, hoyDia);
+    const prod = (id) => db.prepare('SELECT id, nombre, precio FROM productos WHERE id=? AND local_id=? AND archivado=0 AND activo=1 AND precio_pendiente=0 AND precio>0 AND NOT EXISTS (SELECT 1 FROM combo_items WHERE producto_id=productos.id)').get(id, lid);
+    const yaCombo = db.prepare('SELECT 1 FROM combo_items x JOIN combo_items y ON y.producto_id=x.producto_id AND y.componente_id=? WHERE x.componente_id=?');
+    for (const r of pares) {
+      const a = prod(r.a), b = prod(r.b);
+      if (!a || !b || yaCombo.get(r.b, r.a)) continue;
+      const suma = a.precio + b.precio, precio = Math.max(10, Math.round((suma * 0.9) / 10) * 10);
+      combos.push({ nombre: `${a.nombre} + ${b.nombre}`, items: [{ producto_id: a.id, cantidad: 1 }, { producto_id: b.id, cantidad: 1 }], suma, precio, pedidos: r.n,
+        evidencia: `Se piden juntos en ${r.n} pedidos de los últimos ${VENTANA} días.` });
+      if (combos.length === 3) break;
+    }
+    return { suficiente: true, pedidos: t.n, minimo: MIN_PEDIDOS, dias, combos };
+  }
+
   // ---------- fidelización: cupón de vuelta ----------
   const fidelizacion = (local) => ({ ...FIDELIZACION, ...(local.fidelizacion ? JSON.parse(local.fidelizacion) : {}) });
   function guardarFidelizacion(local, b) {
@@ -169,5 +299,5 @@ CREATE TABLE IF NOT EXISTS combo_items (
   // Derecho a borrar los datos del cliente: sus cupones se van con él.
   const borrarTelefono = (lid, telefono) => db.prepare('DELETE FROM promociones WHERE local_id=? AND telefono=?').run(lid, tel9(telefono));
 
-  return { lista, guardar, aplicar, usar, devolver, enCarta, combo, combos, guardarCombo, fidelizacion, guardarFidelizacion, cuponVuelta, cuponDe, cupones, borrarTelefono, tel9 };
+  return { crearCombo, editarCombo, quitarCombo, sugerencias, lista, guardar, aplicar, usar, devolver, enCarta, combo, combos, guardarCombo, fidelizacion, guardarFidelizacion, cuponVuelta, cuponDe, cupones, borrarTelefono, tel9 };
 }

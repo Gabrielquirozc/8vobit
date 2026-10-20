@@ -145,6 +145,7 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   // Versión de los Términos y la Privacidad que aceptó el cliente (solo pedidos web).
   if (!cols.has('legal_version')) db.exec('ALTER TABLE pedidos ADD COLUMN legal_version TEXT');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS pedidos_token ON pedidos(token)');
+  db.exec('CREATE INDEX IF NOT EXISTS pedido_items_pedido ON pedido_items(pedido_id)');
   for (const { id } of db.prepare('SELECT id FROM pedidos WHERE token IS NULL').all())
     db.prepare('UPDATE pedidos SET token=? WHERE id=?').run(crypto.randomBytes(16).toString('base64url'), id);
 }
@@ -1195,9 +1196,21 @@ async function api(req, res, url) {
     const r2 = (x, ok = 200) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, ok, x));
     // Promociones y combos (plan Pro).
     if (parts[1] === 'promos') {
-      if (m === 'GET' && !parts[2]) return send(res, 200, { promociones: PROMOS.lista(lid) });
+      if (m === 'GET' && parts[2] === 'sugerencias') return send(res, 200, PROMOS.sugerencias(local, franjas(local).dia));
+      if (m === 'GET' && !parts[2]) {
+        // Costos por producto (receta o costo manual), solo para quien ve costos: sirven para el margen estimado de un combo.
+        const costos = {};
+        if (puede('costos') && conPlan('costos')) for (const p of db.prepare('SELECT id, costo FROM productos WHERE local_id=? AND archivado=0').all(lid)) { const c = INV.costo(lid, p.id) ?? p.costo; if (c != null) costos[p.id] = c; }
+        return send(res, 200, { promociones: PROMOS.lista(lid), costos });
+      }
       if (m === 'POST' && !parts[2]) return r2(PROMOS.guardar(lid, await readJson(req)), 201);
       if (m === 'PATCH' && parts[2]) return r2(PROMOS.guardar(lid, await readJson(req), Number(parts[2])));
+    }
+    // Combos propios (producto de la carta con precio propio + sus componentes).
+    if (parts[1] === 'combos') {
+      if (m === 'POST' && !parts[2]) return r2(PROMOS.crearCombo(lid, await readJson(req)), 201);
+      if (m === 'PATCH' && parts[2]) return r2(PROMOS.editarCombo(lid, Number(parts[2]), await readJson(req)));
+      if (m === 'DELETE' && parts[2]) return r2(PROMOS.quitarCombo(lid, Number(parts[2])));
     }
     if (m === 'PUT' && parts[1] === 'combos' && parts[2]) return r2(PROMOS.guardarCombo(lid, Number(parts[2]), (await readJson(req)).items));
     // Inventario: insumos, recetas, compras, conteos y mermas (plan Pro).

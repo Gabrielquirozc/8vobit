@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 let srv, B, dir;
@@ -200,4 +201,87 @@ test('sin plan Pro vuelven los candados (los datos quedan)', async () => {
   assert.deepEqual((await menu()).promociones, []);
   await plan('pro');
   assert.ok((await panel('GET', '/api/panel/inventario')).body.insumos.length >= 2);
+});
+
+test('combos propios: nombre, precio y componentes se crean y editan desde un solo lugar', async () => {
+  await plan('pro');
+  const libres = (await vendibles()).filter((p) => !p.combo);
+  const [a, b, c] = libres;
+  const cuerpo = { nombre: 'Combo del barrio', precio: 7990, items: [{ producto_id: a.id, cantidad: 1 }, { producto_id: b.id, cantidad: 2 }] };
+  const r = await panel('POST', '/api/panel/combos', cuerpo);
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  // Aparece en la carta (categoría "Combos") con su precio propio y sus componentes.
+  const m = await menu();
+  const cat = m.categorias.find((x) => x.nombre === 'Combos');
+  const p = cat.productos.find((x) => x.id === r.body.id);
+  assert.equal(p.nombre, 'Combo del barrio'); assert.equal(p.precio, 7990);
+  assert.deepEqual(p.combo.map((x) => [x.producto_id, x.cantidad]).sort(), [[a.id, 1], [b.id, 2]].sort());
+  // Se puede vender con ese precio.
+  assert.equal((await pedir([{ producto_id: p.id }])).body.total, 7990);
+  // Un segundo combo reutiliza la categoría.
+  const r2 = await panel('POST', '/api/panel/combos', { ...cuerpo, nombre: 'Otro' });
+  assert.equal(r2.body.categoria_id, r.body.categoria_id);
+  // Editar precio, nombre y componentes.
+  assert.equal((await panel('PATCH', `/api/panel/combos/${r.body.id}`, { precio: 6990, nombre: 'Combo barrio', items: [{ producto_id: a.id, cantidad: 1 }, { producto_id: c.id, cantidad: 1 }] })).status, 200);
+  const p2 = (await menu()).categorias.flatMap((x) => x.productos).find((x) => x.id === r.body.id);
+  assert.equal(p2.precio, 6990); assert.equal(p2.nombre, 'Combo barrio'); assert.deepEqual(p2.combo.map((x) => x.producto_id).sort(), [a.id, c.id].sort());
+  // Validaciones.
+  const mal = (x) => panel('POST', '/api/panel/combos', { ...cuerpo, ...x });
+  for (const precio of [0, -5, 99.5, 'gratis', 2e6]) assert.equal((await mal({ precio })).status, 400, String(precio));
+  assert.equal((await mal({ nombre: ' ' })).status, 400);
+  assert.equal((await mal({ items: [{ producto_id: a.id, cantidad: 1 }] })).status, 400); // al menos 2 productos
+  assert.equal((await mal({ items: [] })).status, 400);
+  assert.equal((await mal({ items: [{ producto_id: a.id }, { producto_id: r.body.id }] })).status, 400); // combo dentro de combo
+  assert.equal((await mal({ items: [{ producto_id: a.id }, { producto_id: 999999 }] })).status, 404); // producto de otro local o inexistente
+  assert.equal((await panel('PATCH', '/api/panel/combos/999999', { precio: 5000 })).status, 404);
+  assert.equal((await panel('PATCH', `/api/panel/combos/${a.id}`, { precio: 5000 })).status, 404); // un producto común no es combo
+  // Pausar lo deja no disponible; quitarlo lo saca de la carta.
+  assert.equal((await panel('PATCH', `/api/panel/combos/${r2.body.id}`, { activo: false })).status, 200);
+  assert.equal((await menu()).categorias.flatMap((x) => x.productos).find((x) => x.id === r2.body.id).activo, 0);
+  assert.equal((await panel('DELETE', `/api/panel/combos/${r2.body.id}`)).status, 200);
+  assert.equal((await panel('DELETE', `/api/panel/combos/${r.body.id}`)).status, 200);
+  assert.equal((await menu()).categorias.flatMap((x) => x.productos).some((x) => x.id === r.body.id), false);
+  // Sin plan Pro, candado.
+  await plan('canal');
+  assert.equal((await panel('POST', '/api/panel/combos', cuerpo)).status, 402);
+  await plan('pro');
+});
+
+test('ideas según tus ventas: pocas ventas dan estado vacío; con datos detecta el día flojo y el par frecuente', async () => {
+  await plan('pro');
+  const vacio = await panel('GET', '/api/panel/promos/sugerencias');
+  assert.equal(vacio.status, 200);
+  assert.equal(vacio.body.suficiente, false); assert.deepEqual(vacio.body.dias, []); assert.deepEqual(vacio.body.combos, []);
+  // Siembra directa: 60 días, 2 pedidos al día salvo los martes (ninguno); A + B juntos en uno de cada dos pedidos.
+  const [a, b, c] = (await vendibles()).filter((p) => !p.combo).slice(3); // fuera de los que ya están en combos
+  const sq = new DatabaseSync(path.join(dir, 'data', 'pedidos.db'));
+  sq.exec('PRAGMA busy_timeout = 5000');
+  const lid = sq.prepare('SELECT id FROM locales WHERE slug=?').get('gassuso').id;
+  const iso = (d) => d.toISOString().slice(0, 10);
+  let k = 0;
+  sq.exec('BEGIN');
+  for (let i = 1; i <= 59; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    if (d.getDay() === 2) continue;
+    for (let j = 0; j < 2; j++) {
+      const hora = 12 + (d.getDay() === 3 ? j * 6 : j); // los miércoles, más separados: no cambia el resultado
+      const id = Number(sq.prepare("INSERT INTO pedidos (local_id,numero,cliente,telefono,franja,modalidad,estado,pagado,total,dia,creado,actualizado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+        .run(lid, 100 + j, 'Sembrado', '+56911112222', 'Lo antes posible', 'retiro', 'entregado', 1, 5000, iso(d), `${iso(d)} ${String(hora).padStart(2, '0')}:30:00`, Date.now()).lastInsertRowid);
+      const items = k++ % 2 === 0 ? [a, b] : [c];
+      for (const p of items) sq.prepare('INSERT INTO pedido_items (pedido_id,producto_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?)').run(id, p.id, p.nombre, 1, p.precio);
+    }
+  }
+  sq.exec('COMMIT'); sq.close();
+  const s = (await panel('GET', '/api/panel/promos/sugerencias')).body;
+  assert.equal(s.suficiente, true);
+  const martes = s.dias.find((x) => x.dia === 2);
+  assert.ok(martes, JSON.stringify(s.dias));
+  assert.ok(martes.pct >= 90); assert.match(martes.evidencia, /martes/); assert.match(martes.desde, /^\d\d:00$/); assert.match(martes.hasta, /^\d\d:00$/);
+  const par = s.combos.find((x) => x.items.some((i) => i.producto_id === a.id) && x.items.some((i) => i.producto_id === b.id));
+  assert.ok(par, JSON.stringify(s.combos));
+  assert.ok(par.pedidos >= 20); assert.equal(par.suma, a.precio + b.precio); assert.equal(par.precio, Math.round((par.suma * 0.9) / 10) * 10);
+  // Sin sesión de otro rol no hay datos; sin plan Pro, candado.
+  await plan('canal');
+  assert.equal((await panel('GET', '/api/panel/promos/sugerencias')).status, 402);
+  await plan('pro');
 });

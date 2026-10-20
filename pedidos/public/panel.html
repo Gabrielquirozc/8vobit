@@ -109,6 +109,22 @@
   .kpis .kpi-b b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
   tr.off td { opacity: .55; }
   .propbox { margin: 8px 0; } .propbox summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; font-weight: 600; } .propbox .segn { margin-bottom: 8px; }
+  #v-promos { font-variant-numeric: tabular-nums; }
+  #v-promos button:not(:disabled):active { transform: scale(.97); } #v-promos button { transition: transform .1s ease; }
+  .pideas { margin: 12px 0 16px; padding: 4px 16px; } .pideas summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; list-style: none; } .pideas summary::-webkit-details-marker { display: none; }
+  .pideas summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg); transition: transform .18s ease; } .pideas[open] summary::after { transform: rotate(-135deg); }
+  .idlist { list-style: none; margin: 0; padding: 0 0 8px; } .idlist li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .idlist li > span { flex: 1 1 240px; } .idlist small { display: block; color: var(--ink-2); font-size: .82rem; margin-top: 2px; }
+  .cfitem { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); min-height: 52px; } .cfitem .cfn { flex: 1; min-width: 0; } .cfitem small { display: block; color: var(--ink-2); font-size: .8rem; }
+  .cfq { display: inline-flex; align-items: center; gap: 4px; } .cfq b { min-width: 28px; text-align: center; }
+  .cfq button { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1.2rem; font-weight: 700; cursor: pointer; }
+  .cfbus { width: 100%; min-height: 44px; margin-top: 8px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  .cfres { display: grid; gap: 0; margin-top: 4px; max-height: 280px; overflow-y: auto; }
+  .cfadd { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 8px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); text-align: left; cursor: pointer; border-radius: var(--r-sm); }
+  .cfadd:hover, .cfadd:focus-visible { background: var(--surface-2); } .cfadd > span:first-of-type { flex: 1; min-width: 0; } .cfadd small { display: block; color: var(--ink-2); font-size: .8rem; }
+  .cfcalc { margin: 8px 0; padding: 8px 12px; border-radius: var(--r-sm); background: var(--bg); } .cfl { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; } .cfl.aviso { color: var(--danger); font-weight: 600; }
+  .prbtns { display: flex; gap: 8px; margin-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { #v-promos button, .pideas summary::after { transition: none; } #v-promos button:not(:disabled):active { transform: none; } }
   .prtipos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
   .prtipo { display: flex; flex-direction: column; gap: 4px; text-align: left; min-height: 96px; padding: 14px; border-radius: var(--r-sm); border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
   .prtipo b { font-size: 1rem; } .prtipo span { color: var(--ink-2); font-size: .85rem; } .prtipo em { font-style: normal; font-size: .85rem; font-weight: 600; }
