@@ -100,9 +100,11 @@ falta para cada función. Nada queda "de prueba" sin que el local lo sepa.
 - [ ] Bloqueo suave: la carta no sale en vivo mientras falte el mínimo; el panel dice qué falta.
 - [ ] Aviso en cada pantalla que use un valor supuesto (despacho de demo, costo estimado 35 %, etc.).
 - [ ] Pedido de prueba guiado de punta a punta (impresora, aviso, caja) sin ensuciar las ventas.
-- [ ] **Mensajes del pedido**: el cliente escribe desde seguimiento, el local responde desde la tarjeta
-      del pedido en el panel (aviso + sonido), queda guardado; se cierra al entregar o anular. Revisar
-      qué se puede rescatar del chat construido para Códice (codice.8vobit.xyz, puerto 8093 en lenovo-edge).
+- [x] **Mensajes del pedido** (2026-10-20, `lib/mensajes.mjs`, tabla `pedido_mensajes`): el cliente escribe
+      desde seguimiento y el local responde desde la tarjeta del pedido (botón con el último mensaje, franja
+      y sonido que se repite mientras haya sin leer). Solo pedidos web; hasta 300 caracteres y 40 por pedido;
+      se cierra al entregar o anular; el cliente no ve qué usuario respondió. Construido desde cero (no usa Códice).
+      Falta: web push para avisar fuera de la página.
 - [ ] Notificaciones del navegador (web push) para el cliente (estado del pedido) y el local (pedido nuevo).
 - [ ] WhatsApp, teléfono e Instagram del local: opcionales, el local decide si se muestran.
 

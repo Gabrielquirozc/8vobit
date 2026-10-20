@@ -20,6 +20,7 @@ import { crearAutoservicio } from './lib/autoservicio.mjs';
 import { crearPromos } from './lib/promos.mjs';
 import { crearInventario } from './lib/inventario.mjs';
 import { crearClientes } from './lib/clientes.mjs';
+import { crearMensajes } from './lib/mensajes.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -522,6 +523,7 @@ function pedidoCompleto(id, localId) {
   if (p.fiado_nombre) p.fiado_saldo = p.total - CAJA.fiados.abonado(id);
   p.items = db.prepare('SELECT nombre, agregados, salsas, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(id)
     .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
+  p.mensajes = MSJ.de(id); p.sin_leer = MSJ.sinLeer(id); p.mensajes_abiertos = MSJ.abierto(p);
   return p;
 }
 
@@ -926,6 +928,7 @@ const AUTO = crearAutoservicio(db);
 const PROMOS = crearPromos(db);
 const INV = crearInventario(db, { combos: (lid) => PROMOS.combos(lid) });
 const CLI = crearClientes(db);
+const MSJ = crearMensajes(db);
 // Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
 {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
@@ -1009,7 +1012,17 @@ async function api(req, res, url) {
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
     return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
       modalidad: p.modalidad, total: p.total, costo_despacho: p.costo_despacho, descuento: p.descuento, promo: p.promo_nombre, pagado: !!p.pagado, creado: p.creado, items,
-      cupon: p.telefono && LIC.puede(p.local_id, 'clientes') ? PROMOS.cuponDe(p.local_id, p.telefono, today()) : null });
+      cupon: p.telefono && LIC.puede(p.local_id, 'clientes') ? PROMOS.cuponDe(p.local_id, p.telefono, today()) : null,
+      mensajes: MSJ.paraCliente(p) });
+  }
+  // El cliente le escribe al local sobre su pedido (solo pedidos web, mientras no se entregue o anule).
+  if (m === 'POST' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '') && parts[2] === 'mensajes' && !parts[3]) {
+    if (limitar(`msj:${ipDe(req)}`, 20, 15 * 60e3) || limitar(`msjp:${parts[1]}`, 10, 15 * 60e3)) return send(res, 429, { error: 'Demasiados mensajes seguidos. Espera unos minutos o llama al local.' });
+    const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
+    if (!p || p.canal !== 'web') return send(res, 404, { error: 'No encontramos ese pedido' });
+    const r = MSJ.escribir(p, 'cliente', (await readJson(req)).texto);
+    if (r.error) return send(res, r.status || 400, { error: r.error });
+    return send(res, 201, MSJ.paraCliente(p));
   }
 
   // --- administración (solo nosotros) ---
@@ -1133,6 +1146,18 @@ async function api(req, res, url) {
     if (m === 'GET' && parts[1] === 'pedidos' && parts[2]) {
       const p = pedidoCompleto(Number(parts[2]), lid);
       return p ? send(res, 200, { ...p, local: local.nombre }) : send(res, 404, { error: 'No existe' });
+    }
+    // Mensajes del pedido: responder al cliente y marcar como leído.
+    if (m === 'POST' && parts[1] === 'pedidos' && parts[2] && parts[3] === 'mensajes') {
+      if (!puede('ver_pedidos')) return sinPermiso();
+      const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      if (parts[4] === 'leidos') { MSJ.leer(p.id); return send(res, 200, pedidoCompleto(p.id, lid)); }
+      if (parts[4]) return send(res, 404, { error: 'No encontrado' });
+      if (p.canal !== 'web') return send(res, 409, { error: 'Solo los pedidos de la carta online tienen mensajes' });
+      const r = MSJ.escribir(p, 'local', (await readJson(req)).texto, yo.nombre);
+      if (r.error) return send(res, r.status || 400, { error: r.error });
+      return send(res, 201, pedidoCompleto(p.id, lid));
     }
     if (m === 'PATCH' && parts[1] === 'pedidos' && parts[2]) {
       const b = await readJson(req);

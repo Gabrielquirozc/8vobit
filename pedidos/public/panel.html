@@ -54,6 +54,14 @@
   .ped li { padding: 5px 0; border-bottom: 1px dashed var(--line); }
   .ped li:last-child { border-bottom: 0; }
   .ped li .ag { display: block; color: var(--ink-2); font-size: .88rem; padding-left: 2.4ch; }
+  .msjbtn { display: flex; align-items: center; gap: 8px; width: 100%; margin: 6px 0; padding: 8px 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+  .msjbtn.sinleer { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); font-weight: 700; }
+  .msjbtn span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hilo { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .hilo li { max-width: 85%; padding: 8px 12px; border-radius: 14px; background: var(--line); overflow-wrap: anywhere; }
+  .hilo li.local { align-self: flex-end; background: var(--brand); color: var(--brand-ink); }
+  #msjForm[hidden] { display: none; }
+  .hilo small { display: block; opacity: .75; font-size: .75rem; margin-top: 2px; }
   .nota { display: flex; gap: 6px; background: #fff3cd; color: #5c4300; padding: 8px 10px; border-radius: var(--r-sm); margin: 6px 0; font-size: .92rem; }
   .ped .pie { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
   .ped .total { font-weight: 800; font-size: 1.1rem; }
@@ -689,6 +697,12 @@
   <div class="sh-body" id="fpBody"></div>
   <div class="sh-foot"><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="fpOk"></button></div>
 </dialog>
+<dialog class="sheet" id="dlgMsj" aria-labelledby="msjTitulo">
+  <div class="sh-head"><h2 id="msjTitulo">Mensajes</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body"><p class="ayuda top" id="msjAyuda"></p><ul class="hilo" id="msjHilo" aria-live="polite"></ul></div>
+  <form class="sh-foot" id="msjForm"><label for="msjTexto" style="position:absolute;left:-9999px">Respuesta al cliente</label>
+    <input id="msjTexto" maxlength="300" autocomplete="off" placeholder="Responder al cliente" style="flex:1;min-width:0;padding:12px;border-radius:12px;font:inherit" required><button class="primary" type="submit" style="flex:0 0 auto">Enviar</button></form>
+</dialog>
 <dialog class="sheet ancho" id="dlgRuta" aria-labelledby="rtTitulo">
   <div class="sh-head"><h2 id="rtTitulo">Orden de entrega</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
   <div class="sh-body" id="rtBody"></div>
@@ -769,15 +783,17 @@ document.addEventListener('pointerdown', () => { if (prefSonido() && !sonando())
 $('avisoNuevosBtn').onclick = () => document.querySelector('[data-v="pedidos"]').click();
 // Aviso de pedidos web sin aceptar: franja en las otras pestañas, contador en el título
 // y el sonido se repite cada 10 s hasta que alguien los acepte.
-let repetir = 0;
+let repetir = 0, sinLeerAntes = 0;
 function avisos() {
   const n = D ? D.pedidos.filter((p) => p.estado === 'nuevo' && p.canal !== 'mostrador').length : 0;
-  document.title = n ? `(${n}) ${n === 1 ? 'Pedido nuevo' : 'Pedidos nuevos'} · Panel` : 'Panel · Pedidos';
-  $('avisoNuevos').hidden = !n || vista === 'pedidos';
-  if (n) $('avisoNuevosBtn').textContent = `${n === 1 ? 'Hay 1 pedido nuevo' : `Hay ${n} pedidos nuevos`} por aceptar · Ver pedidos`;
+  const ms = D ? D.pedidos.filter((p) => p.sin_leer).map((p) => `#${p.numero}`) : [];
+  const total = n + ms.length;
+  document.title = n ? `(${n}) ${n === 1 ? 'Pedido nuevo' : 'Pedidos nuevos'} · Panel` : ms.length ? `(${ms.length}) Mensaje de cliente · Panel` : 'Panel · Pedidos';
+  $('avisoNuevos').hidden = !total || vista === 'pedidos';
+  if (total) $('avisoNuevosBtn').textContent = [n ? `${n === 1 ? 'Hay 1 pedido nuevo' : `Hay ${n} pedidos nuevos`} por aceptar` : '', ms.length ? `Mensaje de cliente en ${ms.join(', ')}` : ''].filter(Boolean).join(' · ') + ' · Ver pedidos';
   $('avisoSonido').hidden = $('app').hidden || sonando() || !CUENTA.puede('ver_pedidos');
   clearInterval(repetir);
-  if (n) repetir = setInterval(() => sonando() && beep(), 10000);
+  if (total) repetir = setInterval(() => sonando() && beep(), 10000);
 }
 
 // ---------- orden de entrega de los despachos ----------
@@ -836,6 +852,7 @@ function tarjeta(p) {
     ${p.notas ? `<div class="nota">${ico('note')}<span>${esc(p.notas)}</span></div>` : ''}
     ${p.modalidad === 'despacho' && reparts().length ? `<label class="prep">🛵 Repartidor <select data-rep="${p.id}"><option value="">Sin asignar</option>${reparts().map((t) => `<option value="${t.id}" ${p.repartidor_id === t.id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></label>` : ''}
     <div class="pie"><span>${[p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : '', p.descuento ? `descuento ${clp(p.descuento)} (${esc(p.promo_nombre || '')})` : ''].filter(Boolean).join(' · ')}</span><span class="total num">${clp(p.total)}</span></div>
+    ${botonMsj(p)}
     ${pasos[p.estado] || ''}
     <div class="acc">
       ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
@@ -844,6 +861,40 @@ function tarjeta(p) {
       ${CUENTA.puede('anular') ? `<button class="peligro" data-acc="anular" data-id="${p.id}">${ico('ban')}Anular</button>` : '<span aria-hidden="true" style="border:0"></span>'}
     </div></article>`;
 }
+// Mensajes del pedido (solo pedidos de la carta online): botón con el último mensaje y si hay sin leer.
+function botonMsj(p) {
+  if (p.canal === 'mostrador' || (!p.mensajes_abiertos && !p.mensajes.length)) return '';
+  const u = p.mensajes.at(-1);
+  const txt = p.sin_leer ? `${p.sin_leer === 1 ? 'Mensaje nuevo' : `${p.sin_leer} mensajes nuevos`}: ${u.texto}` : u ? `${u.de === 'local' ? 'Tú' : esc(p.cliente.split(' ')[0])}: ${u.texto}` : 'Escribir al cliente';
+  return `<button type="button" class="msjbtn ${p.sin_leer ? 'sinleer' : ''}" data-acc="mensajes" data-id="${p.id}">${ico('msg')}<span>${esc(txt)}</span></button>`;
+}
+let msjId = null;
+function pintarMsj() {
+  const p = D.pedidos.find((x) => x.id === msjId); if (!p) return $('dlgMsj').close();
+  $('msjTitulo').textContent = `Pedido #${p.numero} · ${p.cliente}`;
+  $('msjAyuda').textContent = p.mensajes_abiertos ? 'El cliente ve tus respuestas en la página de seguimiento de su pedido.' : 'El pedido terminó: los mensajes están cerrados.';
+  $('msjForm').hidden = !p.mensajes_abiertos;
+  const firma = p.mensajes.map((m) => m.id).join(',');
+  if ($('msjHilo').dataset.firma === firma) return;
+  $('msjHilo').dataset.firma = firma;
+  $('msjHilo').innerHTML = p.mensajes.map((m) => `<li class="${m.de}">${esc(m.texto)}<small>${m.de === 'local' ? esc(m.autor || 'Local') : esc(p.cliente.split(' ')[0])} · ${esc(m.creado.slice(11, 16))}</small></li>`).join('') || '<li style="background:none;color:var(--ink-2)">Aún no hay mensajes.</li>';
+  $('msjHilo').lastElementChild?.scrollIntoView({ block: 'nearest' });
+}
+async function abrirMsj(id) {
+  msjId = id; delete $('msjHilo').dataset.firma; $('msjTexto').value = '';
+  pintarMsj(); $('dlgMsj').showModal();
+  const p = D.pedidos.find((x) => x.id === id);
+  if (p.sin_leer) { const r = await api(`panel/pedidos/${id}/mensajes/leidos`, { method: 'POST', body: {} }); Object.assign(p, r); avisos(); }
+}
+$('msjForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const b = e.target.querySelector('button'); b.disabled = true;
+  try {
+    const r = await api(`panel/pedidos/${msjId}/mensajes`, { method: 'POST', body: { texto: $('msjTexto').value } });
+    Object.assign(D.pedidos.find((x) => x.id === msjId), r); $('msjTexto').value = ''; pintarMsj(); avisos();
+  } catch (err) { alert(err.message); } finally { b.disabled = false; }
+});
+$('dlgMsj').addEventListener('close', () => { msjId = null; if (vista === 'pedidos') pintarPedidos(); });
 function pintarPedidos() {
   const cols = [['nuevo', 'Nuevos'], ['preparacion', 'En cocina'], ['listo', 'Listos para entregar']];
   const salen = D.pedidos.filter((p) => p.modalidad === 'despacho' && ['preparacion', 'listo'].includes(p.estado));
@@ -867,6 +918,11 @@ async function refrescar() {
   // Solo suenan los pedidos web nuevos, no las ventas que hace el propio local.
   if (conocidos && D.pedidos.some((p) => !conocidos.has(p.id) && p.canal !== 'mostrador')) beep();
   conocidos = ids;
+  // Un mensaje nuevo del cliente también suena (una vez por mensaje; se repite en avisos()).
+  const msjSinLeer = D.pedidos.reduce((s, p) => s + p.sin_leer, 0);
+  if (msjSinLeer > sinLeerAntes) beep();
+  sinLeerAntes = msjSinLeer;
+  if (msjId && $('dlgMsj').open) pintarMsj();
   avisos();
   if (vista === 'pedidos' && !document.querySelector('dialog[open]')) pintarPedidos();
   // La caja se vuelve a dibujar solo si algo cambió: así no se cierra el conteo de billetes mientras se usa.
@@ -894,6 +950,7 @@ $('v-pedidos').onclick = async (e) => {
       case 'entregar': await patch(id, { estado: 'entregado' }); toast(`Pedido #${p.numero} entregado`); break;
       case 'cobrar': return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Cobrar y entregar', enviar: (b) => patch(id, { ...b, estado: 'entregado' }) });
       case 'comanda': comanda(id); break;
+      case 'mensajes': return abrirMsj(id);
       case 'pagado': return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Registrar pago', enviar: (b) => patch(id, b) });
       case 'anular': if (confirm(`¿Anular el pedido #${p.numero}?`)) await patch(id, { estado: 'anulado' }); break;
     }

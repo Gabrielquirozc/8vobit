@@ -32,6 +32,16 @@
   .pulse { display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: var(--brand); margin-right: 8px; animation: pul 1.6s ease-in-out infinite; vertical-align: middle; }
   @keyframes pul { 50% { opacity: .3; } }
   .upd { color: var(--ink-2); font-size: .8rem; margin-top: 12px; }
+  #chat { padding-top: 0; margin-top: -24px; }
+  #chat h2 { font: 700 1.05rem/1.2 var(--font-display); margin: 0 0 4px; }
+  .hilo { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+  .hilo li { max-width: 85%; padding: 8px 12px; border-radius: 14px; background: var(--line); overflow-wrap: anywhere; }
+  .hilo li.cliente { align-self: flex-end; background: var(--brand); color: var(--brand-ink, #fff); }
+  .hilo time { display: block; font-size: .72rem; opacity: .75; margin-top: 2px; }
+  .escribir { display: flex; gap: 8px; margin-top: 12px; }
+  .escribir textarea { flex: 1; min-height: 44px; resize: vertical; font: inherit; padding: 10px; border-radius: 12px; border: 1px solid var(--line); }
+  .escribir button { flex: 0 0 auto; }
+  .escribir[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -43,6 +53,19 @@
 <main class="wrap" id="app" aria-busy="true">
   <p class="msg">Cargando tu pedido…</p>
 </main>
+<!-- Fuera de #app: el estado se redibuja cada pocos segundos y no debe borrar lo que el cliente escribe. -->
+<section class="wrap" id="chat" hidden>
+  <div class="card">
+    <h2>Mensajes con el local</h2>
+    <p class="msg" id="chatAyuda" style="font-size:.9rem">¿Algún cambio o aviso sobre tu pedido? Escríbele al local aquí.</p>
+    <ul class="hilo" id="hilo" aria-live="polite"></ul>
+    <form class="escribir" id="fChat">
+      <label class="sr-only" for="tChat" style="position:absolute;left:-9999px">Mensaje para el local</label>
+      <textarea id="tChat" maxlength="300" rows="1" placeholder="Ej.: voy 10 minutos tarde" required></textarea>
+      <button class="primary" type="submit">Enviar</button>
+    </form>
+  </div>
+</section>
 <script type="module">
 import { api, clp, esc, BASE, fmtTel } from './comun.js';
 const token = new URLSearchParams(location.search).get('p') || '';
@@ -94,15 +117,40 @@ async function cargar() {
         <p style="color:var(--ink-2);font-size:.85rem;margin:0">Indica el pedido #${p.numero} en el comentario de la transferencia.</p></details>` : ''}
     </section>
     <div class="row2">
-      ${wa ? `<a class="primary" href="${wa}" target="_blank" rel="noopener"><svg class="ico"><use href="#i-msg"/></svg>Escribir al local</a>` : ''}
+      ${wa ? `<a class="ghost" style="display:flex;align-items:center;justify-content:center;gap:8px" href="${wa}" target="_blank" rel="noopener"><svg class="ico"><use href="#i-msg"/></svg>WhatsApp</a>` : ''}
       ${p.local.telefono ? `<a class="ghost" style="display:flex;align-items:center;justify-content:center;gap:8px" href="tel:+${esc(p.local.telefono)}" aria-label="Llamar al local ${esc(fmtTel(p.local.telefono))}"><svg class="ico"><use href="#i-phone"/></svg>Llamar</a>` : ''}
       <a class="ghost" style="display:flex;align-items:center;justify-content:center" href="${BASE}/${esc(p.local.slug)}">Pedir de nuevo</a>
     </div>
     <p class="upd">${fin ? '' : 'Esta página se actualiza sola.'}</p>`;
+  pintarChat(p.mensajes);
   if (ultimo && ultimo !== p.estado) navigator.vibrate?.([60, 40, 60]);
   ultimo = p.estado;
   if (!fin) programar();
 }
+// Mensajes del pedido: el hilo se redibuja solo si cambió, y el formulario no se toca.
+let firmaChat = '';
+function pintarChat(M) {
+  if (!M) return;
+  const chat = document.getElementById('chat');
+  chat.hidden = !M.abierto && !M.lista.length;
+  document.getElementById('fChat').hidden = !M.abierto;
+  document.getElementById('chatAyuda').textContent = M.abierto ? '¿Algún cambio o aviso sobre tu pedido? Escríbele al local aquí.' : 'El pedido terminó: los mensajes están cerrados.';
+  const firma = M.lista.map((m) => m.id).join(',');
+  if (firma === firmaChat) return;
+  const nuevoDelLocal = firmaChat && M.lista.at(-1)?.de === 'local';
+  firmaChat = firma;
+  document.getElementById('hilo').innerHTML = M.lista.map((m) => `<li class="${m.de}"><span class="sr-only" style="position:absolute;left:-9999px">${m.de === 'cliente' ? 'Tú' : 'El local'}: </span>${esc(m.texto)}<time>${m.de === 'cliente' ? 'Tú' : 'Local'} · ${esc(m.creado.slice(11, 16))}</time></li>`).join('');
+  if (nuevoDelLocal) navigator.vibrate?.([60, 40, 60]);
+}
+document.getElementById('fChat').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const t = document.getElementById('tChat'), b = e.target.querySelector('button');
+  if (!t.value.trim()) return;
+  b.disabled = true;
+  try { pintarChat(await api(`seguimiento/${encodeURIComponent(token)}/mensajes`, { method: 'POST', body: { texto: t.value } })); t.value = ''; }
+  catch (err) { alert(err.message || 'No se pudo enviar. Intenta de nuevo.'); }
+  finally { b.disabled = false; }
+});
 // Más seguido mientras la pestaña está a la vista; se detiene al terminar.
 function programar() { clearTimeout(timer); timer = setTimeout(cargar, document.hidden ? 30000 : 5000); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && ultimo && !['entregado', 'anulado'].includes(ultimo)) cargar(); });

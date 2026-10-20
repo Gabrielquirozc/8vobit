@@ -155,6 +155,32 @@ test('flujo de un pedido: aceptar, listo, cobrar en efectivo con vuelto', async 
   assert.equal(ok.body.estado, 'entregado');
 });
 
+test('mensajes del pedido: el cliente escribe, el local responde y se cierra al entregar', async () => {
+  const p = await prod('Barros Luco');
+  const { body: { id, token } } = await pedir([{ producto_id: p.id }]);
+  const seg = `/api/seguimiento/${token}`;
+  assert.equal((await req('POST', `${seg}/mensajes`, { texto: '   ' })).status, 400);
+  assert.equal((await req('POST', `${seg}/mensajes`, { texto: 'x'.repeat(301) })).status, 400);
+  const r = await req('POST', `${seg}/mensajes`, { texto: 'Voy 10 minutos tarde' });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.lista.at(-1).de, 'cliente');
+  await login();
+  let pd = (await req('GET', `/api/panel/pedidos/${id}`)).body;
+  assert.equal(pd.sin_leer, 1);
+  pd = (await req('POST', `/api/panel/pedidos/${id}/mensajes`, { texto: 'Te esperamos <b>' })).body;
+  assert.equal(pd.sin_leer, 0);
+  assert.equal(pd.mensajes.length, 2);
+  const s = (await req('GET', seg)).body.mensajes;
+  assert.equal(s.lista[1].de, 'local');
+  assert.equal(s.lista[1].texto, 'Te esperamos <b>');
+  assert.equal(s.lista[1].autor, undefined); // el cliente no ve quién del local respondió
+  await req('PATCH', `/api/panel/pedidos/${id}`, { estado: 'anulado' });
+  assert.equal((await req('POST', `${seg}/mensajes`, { texto: 'hola' })).status, 409);
+  assert.equal((await req('POST', `/api/panel/pedidos/${id}/mensajes`, { texto: 'hola' })).status, 409);
+  assert.equal((await req('GET', seg)).body.mensajes.abierto, false);
+  assert.equal((await req('POST', '/api/seguimiento/tokenquenoexiste1234567/mensajes', { texto: 'hola' })).status, 404);
+});
+
 test('un pedido anulado no se puede cobrar y no ocupa cupo', async () => {
   const p = await prod('Italiano');
   const { body: { id } } = await pedir([{ producto_id: p.id }]);
