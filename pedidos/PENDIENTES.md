@@ -100,6 +100,10 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
   **Nunca se cobra automático al terminar la prueba:** el local queda en pausa y se le ofrece seguir; el pago lo
   inicia el cliente (link de pago Flow o suscripción que él activa). Pendiente: cuenta Flow de 8vobit y límites
   durante la prueba (pedidos, productos, exportar).
+  **Avisos de la prueba (buena onda, por WhatsApp y en el panel):** día 1 bienvenida y primeros pasos; día 7
+  mitad de la prueba con lo logrado (pedidos, ventas) y ayuda; día 13 "mañana termina" con el botón para seguir;
+  día 14 queda en pausa, sus datos están guardados y puede seguir cuando quiera; día 17 un último saludo, sin
+  insistir más. Tono cercano, nunca amenazante; borradores en este mismo punto cuando se construya.
 
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
