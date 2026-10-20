@@ -108,6 +108,14 @@
   .kpis .kpi-b.on { border-color: var(--brand, currentColor); }
   .kpis .kpi-b b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
   tr.off td { opacity: .55; }
+  .prtipos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .prtipo { display: flex; flex-direction: column; gap: 4px; text-align: left; min-height: 96px; padding: 14px; border-radius: var(--r-sm); border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .prtipo b { font-size: 1rem; } .prtipo span { color: var(--ink-2); font-size: .85rem; } .prtipo em { font-style: normal; font-size: .85rem; font-weight: 600; }
+  .prtipo:hover, .prtipo:focus-visible { border-color: var(--ink); }
+  .prresumen { margin: 6px 0 12px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--bg); font-weight: 700; }
+  .prmas { margin: 6px 0 10px; } .prmas summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--ink-2); }
+  #prForm .medios.dias button { min-height: 44px; }
+  @media (max-width: 520px) { .prtipos { grid-template-columns: 1fr; } }
   .medios.dias { display: flex; flex-wrap: wrap; gap: 6px; } .medios.dias button { flex: 0 0 auto; width: auto; min-height: 0; padding: 8px 14px; }
   .folio-f { display: flex; gap: 6px; } .folio-f input { width: 140px; min-height: 40px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
   .folio-f .ghostb { min-height: 40px; }
