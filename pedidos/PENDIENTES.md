@@ -88,6 +88,12 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 
 ## Pendiente técnico / próximos pasos sugeridos
 
+- **/admin como tablero del gestor (2026-10-20, `lib/gestion.mjs`)**: imagen 8vobit, escalones 5/10/20/42/50 locales
+  con bolsillo estimado (fórmula de VIABILIDAD.md, usa el ingreso real por local), ritmo de altas y meses a la meta,
+  hitos con semáforo, cobranza de la semana y riesgo de baja. Falta: **embudo de prospectos** (contactado → demo →
+  prueba → pagando) y **horas de soporte por local**; ambos necesitan tablas nuevas. Las bajas se cuentan como
+  canceladas que alguna vez pagaron (no hay fecha de baja).
+
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
 - [x] **Estrategia** (`ESTRATEGIA.md`): planes, formas de pago, piloto y facturación decididos el 2026-10-14.

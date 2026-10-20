@@ -53,6 +53,22 @@
   .field input, .field select, .field textarea { min-height: 44px; }
   .clave { font: 700 1.3rem ui-monospace, monospace; background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); text-align: center; letter-spacing: .05em; user-select: all; }
   #login { max-width: 360px; margin: 14vh auto; padding: 24px; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+  .sec { font: 800 1.05rem var(--font-display); margin: 22px 0 10px; color: #7DD4E8; letter-spacing: .02em; }
+  .card { background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); }
+  .duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+  .escala { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .esc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; font-size: .84rem; color: var(--ink-2); }
+  .esc.meta { border-color: #4BB8D4; box-shadow: 0 0 0 1px #4BB8D4 inset; } .esc.ok { opacity: .7; }
+  .esc b { display: block; font: 800 1.3rem var(--font-display); color: var(--ink); }
+  .barra { height: 8px; border-radius: 99px; background: #120136; overflow: hidden; margin: 8px 0 4px; }
+  .barra i { display: block; height: 100%; background: linear-gradient(90deg, #4BB8D4, #7DD4E8); }
+  .lista { list-style: none; margin: 0; padding: 0; } .lista li { padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer; font-size: .9rem; }
+  .lista li:last-child { border: 0; } .lista li:hover { color: #7DD4E8; }
+  .sem { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  .sem.ok { background: #6fd67a; } .sem.cerca { background: #f5cf7a; } .sem.atrasado { background: #ff8a7a; } .sem.pendiente { background: #9B8FB5; }
+  .altas { display: flex; align-items: flex-end; gap: 6px; height: 60px; margin-top: 8px; }
+  .altas div { flex: 1; text-align: center; font-size: .72rem; color: var(--ink-2); }
+  .altas span { display: block; background: #4BB8D4; border-radius: 4px 4px 0 0; margin-bottom: 3px; min-height: 2px; }
   .mini td, .mini th { padding: 6px; font-size: .84rem; } .mini { min-width: 0; }
 </style>
 </head>
@@ -67,6 +83,19 @@
 <div class="wrap" id="app" hidden>
   <div class="top"><span class="marca"><img src="isotipo-8vobit.png" alt="8vobit"></span><h1>Locales y licencias</h1><button class="btn pri" id="nuevo">+ Nuevo local</button><button class="btn" id="salir">Salir</button></div>
   <div class="kpis" id="kpis"></div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="sec" style="flex:1">Escalones de crecimiento</h2>
+    <label class="opc" for="meta">Meta</label><select id="meta" style="min-height:36px;border-radius:999px;padding:0 10px"></select></div>
+  <div class="card" id="metaCard" style="margin-bottom:10px"></div>
+  <div class="escala" id="escala"></div>
+  <div class="duo" style="margin-top:12px">
+    <div class="card"><h2 class="sec" style="margin-top:0">Hitos</h2><div id="hitos"></div></div>
+    <div class="card"><h2 class="sec" style="margin-top:0">Altas pagadas por mes</h2><div id="altas"></div></div>
+  </div>
+  <div class="duo" style="margin-top:12px">
+    <div class="card"><h2 class="sec" style="margin-top:0">Cobranza y licencias</h2><ul class="lista" id="cobranza"></ul></div>
+    <div class="card"><h2 class="sec" style="margin-top:0">Riesgo de baja</h2><ul class="lista" id="riesgo"></ul></div>
+  </div>
+  <h2 class="sec">Locales</h2>
   <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th><th>Primeros pasos</th></tr></thead><tbody id="filas"></tbody></table></div>
   <p class="opc" style="margin-top:10px">Ingreso mensual = lo que paga cada local por mes según su ciclo y descuento (solo cuentas activas o con pago pendiente). La tarifa por pedido se cobra a mes vencido.</p>
 </div>
@@ -89,12 +118,37 @@ async function pintar() {
     <div>Tarifa por pedido<b>${clp(t.tarifa_mes)}</b>este mes · anterior ${clp(t.tarifa_mes_anterior)}</div>
     <div>Locales<b>${R.locales.length}</b>${e.activa} activos · ${e.prueba} en prueba</div>
     <div>Atrasados<b>${e.gracia + e.suspendida}</b>${e.gracia} pago pendiente · ${e.suspendida} suspendidos</div>`;
+  pintarGestion(R.gestion);
   $('filas').innerHTML = R.locales.map((l) => `<tr data-id="${l.id}"><td><b>${esc(l.nombre)}</b><br><span class="opc">/${esc(l.slug)}</span></td>
     <td>${esc(l.plan_nombre || '—')}${l.descuento ? ` <span class="opc">−${l.descuento.pct}%</span>` : ''}</td><td><span class="chip ${l.estado}">${ESTADO[l.estado] || '—'}</span></td>
     <td>${fecha(l.hasta)}${l.dias != null ? `<br><span class="opc">${l.dias >= 0 ? `en ${l.dias} días` : `hace ${-l.dias} días`}</span>` : ''}</td>
     <td class="r">${clp(l.mrr)}</td><td class="r">${l.pedidos30} <span class="opc">(${l.web30})</span></td><td class="r">${clp(l.tarifa_mes)}</td>
     <td>${fecha(l.ultimo_pedido)}</td><td class="r">${l.usuarios}</td><td>${!l.inicio ? '' : l.inicio.listos === l.inicio.total ? 'Listo' : l.inicio.cerrado ? '—' : `${l.inicio.listos} de ${l.inicio.total}`}</td></tr>`).join('') || '<tr><td colspan="10" class="opc">Sin locales.</td></tr>';
 }
+// Meta elegida: preferencia de quien mira (solo en este navegador).
+const leerMeta = () => { try { return Number(localStorage.getItem('admin-meta')) || 20; } catch { return 20; } };
+function pintarGestion(G) {
+  const meta = leerMeta();
+  $('meta').innerHTML = G.escalones.map((e) => `<option value="${e.locales}" ${e.locales === meta ? 'selected' : ''}>${e.locales} locales</option>`).join('');
+  const M = G.escalones.find((e) => e.locales === meta) || G.escalones[2];
+  const pct = Math.min(100, Math.round((G.pagando / M.locales) * 100));
+  $('metaCard').innerHTML = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:baseline"><b style="font:800 1.6rem var(--font-display)">${G.pagando} de ${M.locales}</b>
+    <span class="opc">locales pagando · faltan ${M.faltan} · ${M.meses === 0 ? 'meta cumplida' : M.meses == null ? 'sin altas recientes para estimar' : `a este ritmo (${G.ritmo}/mes) faltan ~${M.meses} meses`}</span></div>
+    <div class="barra"><i style="width:${pct}%"></i></div>
+    <span class="opc">Hoy en el bolsillo ≈ ${clp(G.bolsillo)}/mes (ingreso por local ${clp(G.por_local)}) · en la meta ≈ ${clp(M.bolsillo)}/mes · bajas ${G.bajas} (${G.tasa_bajas} %; meta &lt; 3 %/mes) · mes ${G.mes_negocio} del negocio</span>`;
+  $('escala').innerHTML = G.escalones.map((e) => `<div class="esc ${e.locales === M.locales ? 'meta' : ''} ${e.faltan === 0 ? 'ok' : ''}">
+    <b>${e.locales} locales</b>≈ ${clp(e.bolsillo)}/mes en el bolsillo<div class="barra"><i style="width:${Math.min(100, Math.round((G.pagando / e.locales) * 100))}%"></i></div>
+    ${e.faltan === 0 ? '✓ logrado' : `faltan ${e.faltan}${e.meses ? ` · ~${e.meses} meses` : ''}`}</div>`).join('');
+  const HT = { ok: 'Cumplido', cerca: 'Se acerca', atrasado: 'Atrasado', pendiente: 'Pendiente' };
+  $('hitos').innerHTML = G.hitos.map((h) => `<p style="margin:6px 0"><span class="sem ${h.estado}"></span><b>Mes ${h.mes}</b>: ${esc(h.texto)} <span class="opc">· ${HT[h.estado]}</span></p>`).join('');
+  const max = Math.max(1, ...G.altas.map((a) => a.n));
+  $('altas').innerHTML = `<div class="altas">${G.altas.map((a) => `<div><span style="height:${Math.round((a.n / max) * 40)}px"></span>${a.n}<br>${a.mes.slice(5)}</div>`).join('')}</div>
+    <p class="opc">Ritmo: ${G.ritmo} altas/mes (promedio de los últimos 3 meses).</p>`;
+  $('cobranza').innerHTML = G.cobranza.map((c) => `<li data-id="${c.id}"><span class="chip ${c.estado}">${ESTADO[c.estado]}</span> <b>${esc(c.nombre)}</b> · ${esc(c.motivo)}</li>`).join('') || '<li class="opc">Nada pendiente esta semana.</li>';
+  $('riesgo').innerHTML = G.riesgo.map((c) => `<li data-id="${c.id}"><b>${esc(c.nombre)}</b> · ${c.motivos.map(esc).join(' · ')}</li>`).join('') || '<li class="opc">Ningún local en riesgo.</li>';
+}
+$('meta').onchange = () => { try { localStorage.setItem('admin-meta', $('meta').value); } catch {} pintarGestion(R.gestion); };
+for (const id of ['cobranza', 'riesgo']) $(id).onclick = (e) => { const li = e.target.closest('li[data-id]'); if (li) detalle(Number(li.dataset.id)); };
 $('filas').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) detalle(Number(tr.dataset.id)); };
 
 async function detalle(id) {

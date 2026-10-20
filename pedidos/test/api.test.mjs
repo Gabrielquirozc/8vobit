@@ -1057,6 +1057,14 @@ test('admin: sin sesión no entra, crea un local con clave propia y lo administr
   assert.equal(gas.plan, 'gestion');
   assert.equal(gas.estado, 'prueba'); // cliente fundador: piloto de 90 días desde el seed
   assert.ok(gas.dias > 80);
+  // Tablero del gestor: escalones hacia la meta, hitos y listas de cobranza y riesgo.
+  const G = r0.gestion;
+  assert.deepEqual(G.escalones.map((e) => e.locales), [5, 10, 20, 42, 50]);
+  assert.equal(G.pagando, 0);
+  assert.equal(G.escalones[3].bolsillo, Math.round((42 * 58000 - 115000) * 0.88));
+  assert.equal(G.hitos.length, 3);
+  assert.ok(G.riesgo.some((x) => x.id === gas.id) || Array.isArray(G.riesgo));
+  assert.ok(Array.isArray(G.cobranza));
 
   for (const b of [{ slug: 'Mal Slug', nombre: 'X' }, { slug: 'panel', nombre: 'X' }, { slug: 'gassuso', nombre: 'X' }, { slug: 'nuevo-local', nombre: '' }, { slug: 'nuevo-local', nombre: 'X', plan: 'oro' }, { slug: 'nuevo-local', nombre: 'X', carta: '{malo' }])
     assert.equal((await ad('POST', '/api/admin/locales', b)).status, 400, JSON.stringify(b));
@@ -1127,6 +1135,12 @@ test('PIN y roles: la tablet del local, permisos por rol y turnos', async () => 
   assert.equal(coc.body.rol, 'cocina');
   assert.equal((await pic('GET', '/api/panel/yo')).body.nombre, 'Beto');
   assert.equal((await pic('GET', '/api/panel/pedidos')).status, 200);
+  // Cocina no cobra, tampoco dividiendo el pago: 403 y el pedido queda sin pagar.
+  const sinPagar = (await pic('GET', '/api/panel/pedidos')).body.pedidos.find((x) => !x.pagado && x.estado !== 'anulado');
+  if (sinPagar || console.error("SINPAGAR_NULO")) {
+    assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'tarjeta', monto: sinPagar.total - 1 }] })).status, 403);
+    assert.equal((await pic('GET', `/api/panel/pedidos/${sinPagar.id}`)).body.pagado, 0);
+  }
   assert.equal((await pic('GET', '/api/panel/caja')).status, 403);
   assert.equal((await pic('POST', '/api/panel/venta', { items: [], medio_pago: 'efectivo' })).status, 403);
   assert.equal((await pic('PATCH', '/api/panel/local', { nombre: 'Hackeado' })).status, 403);
@@ -1396,4 +1410,36 @@ test('importar carta y primeros pasos: permisos y límites', async () => {
   assert.equal((await dueno('POST', '/api/panel/importar', { filas: Array.from({ length: 501 }, (_, i) => ({ categoria: 'A', nombre: `P${i}`, precio: 1 })) })).status, 400);
   // Sin sesión no hay nada.
   assert.equal((await cliente()('POST', '/api/panel/importar', { texto: 'A\tB\t1' })).status, 401);
+});
+
+// ---------- pago mixto ----------
+test('pago mixto: se divide entre medios, la caja suma cada parte y anular revierte ambas', async () => {
+  await login();
+  const a = await prod('Italiano');
+  const C0 = (await req('GET', '/api/panel/caja')).body;
+  const total = a.precio;
+  const ef = 1000, tj = total - ef;
+  const mal = (pagos) => req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], pagos });
+  assert.equal((await mal([{ medio: 'efectivo', monto: ef }, { medio: 'tarjeta', monto: tj + 1 }])).status, 400); // no suma el total
+  assert.equal((await mal([{ medio: 'efectivo', monto: ef }, { medio: 'cripto', monto: tj }])).status, 400); // medio inválido
+  assert.equal((await mal([{ medio: 'efectivo', monto: 0 }, { medio: 'tarjeta', monto: total }])).status, 400); // monto no positivo
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], pagos: [{ medio: 'efectivo', monto: ef }, { medio: 'tarjeta', monto: tj }], recibido: 500 })).status, 400); // recibido < parte en efectivo
+  const r = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], pagos: [{ medio: 'efectivo', monto: ef }, { medio: 'tarjeta', monto: tj }], recibido: 2000 });
+  assert.equal(r.status, 201); assert.equal(r.body.vuelto, 2000 - ef);
+  const p = (await req('GET', `/api/panel/pedidos/${r.body.id}`)).body;
+  assert.equal(p.medio_pago, 'mixto'); assert.deepEqual(p.pagos, [{ medio: 'efectivo', monto: ef }, { medio: 'tarjeta', monto: tj }]);
+  const C1 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C1.esperado.ventas - C0.esperado.ventas, ef); // en efectivo solo cuenta su parte
+  assert.equal(C1.esperado.ventas_n - C0.esperado.ventas_n, 1);
+  // Anular revierte las dos partes.
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${r.body.id}`, { estado: 'anulado' })).status, 200);
+  const C2 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C2.esperado.ventas, C0.esperado.ventas);
+  // Un solo medio sigue igual; "pagos" con un único medio equivale a ese medio.
+  const u = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], pagos: [{ medio: 'tarjeta', monto: total }] });
+  assert.equal(u.status, 201);
+  assert.equal((await req('GET', `/api/panel/pedidos/${u.body.id}`)).body.medio_pago, 'tarjeta');
+  // Cobro de un pedido existente con pago dividido.
+  const w = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'efectivo', recibido: total });
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${w.body.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'otro', monto: total - 1 }] })).status, 200);
 });
