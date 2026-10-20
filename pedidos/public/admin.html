@@ -96,7 +96,7 @@
     <div class="card"><h2 class="sec" style="margin-top:0">Riesgo de baja</h2><ul class="lista" id="riesgo"></ul></div>
   </div>
   <h2 class="sec">Locales</h2>
-  <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th><th>Primeros pasos</th></tr></thead><tbody id="filas"></tbody></table></div>
+  <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th><th>Para publicar</th><th>Contrato</th></tr></thead><tbody id="filas"></tbody></table></div>
   <p class="opc" style="margin-top:10px">Ingreso mensual = lo que paga cada local por mes según su ciclo y descuento (solo cuentas activas o con pago pendiente). La tarifa por pedido se cobra a mes vencido.</p>
 </div>
 <dialog id="dlg"><div class="dh"><h2 id="dTitulo"></h2><button class="btn" id="dCerrar" aria-label="Cerrar">✕</button></div><div class="db" id="dBody"></div></dialog>
@@ -109,6 +109,11 @@ const ESTADO = { prueba: 'Prueba', activa: 'Activa', gracia: 'Pago pendiente', s
 const fecha = (d) => (d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 const opciones = (o, sel) => Object.entries(o).map(([k, n]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${n}</option>`).join('');
 let R = null;
+// Avance del nivel "Para recibir pedidos" y estado del contrato de cada local.
+const avance = (i) => (!i ? '' : i.recibir.listos === i.recibir.total ? (i.publicado ? 'Publicado' : 'Listo, en pausa')
+  : `${i.recibir.listos} de ${i.recibir.total}${i.publicado ? ' <span class="opc">(publicado)</span>' : ''}`);
+const contratoTxt = (c) => (!c ? '' : !c.aceptado ? `<span class="opc">${c.datos_completos ? 'Sin aceptar' : 'Faltan datos'}</span>`
+  : `${c.vigente ? '✓' : '<span class="chip gracia">Versión anterior</span>'} v${esc(c.aceptado.version)}<br><span class="opc">${fecha(c.aceptado.fecha)}</span>`);
 
 async function pintar() {
   R = await api('admin/resumen');
@@ -123,7 +128,7 @@ async function pintar() {
     <td>${esc(l.plan_nombre || '—')}${l.descuento ? ` <span class="opc">−${l.descuento.pct}%</span>` : ''}</td><td><span class="chip ${l.estado}">${ESTADO[l.estado] || '—'}</span></td>
     <td>${fecha(l.hasta)}${l.dias != null ? `<br><span class="opc">${l.dias >= 0 ? `en ${l.dias} días` : `hace ${-l.dias} días`}</span>` : ''}</td>
     <td class="r">${clp(l.mrr)}</td><td class="r">${l.pedidos30} <span class="opc">(${l.web30})</span></td><td class="r">${clp(l.tarifa_mes)}</td>
-    <td>${fecha(l.ultimo_pedido)}</td><td class="r">${l.usuarios}</td><td>${!l.inicio ? '' : l.inicio.listos === l.inicio.total ? 'Listo' : l.inicio.cerrado ? '—' : `${l.inicio.listos} de ${l.inicio.total}`}</td></tr>`).join('') || '<tr><td colspan="10" class="opc">Sin locales.</td></tr>';
+    <td>${fecha(l.ultimo_pedido)}</td><td class="r">${l.usuarios}</td><td>${avance(l.inicio)}</td><td>${contratoTxt(l.contrato)}</td></tr>`).join('') || '<tr><td colspan="11" class="opc">Sin locales.</td></tr>';
 }
 // Meta elegida: preferencia de quien mira (solo en este navegador).
 const leerMeta = () => { try { return Number(localStorage.getItem('admin-meta')) || 20; } catch { return 20; } };
@@ -184,12 +189,14 @@ async function detalle(id) {
     <table class="mini"><tr><th>Mes</th><th class="r">Pedidos web</th><th class="r">Exentos</th><th class="r">Tarifa</th></tr>${D.tarifas.map((t) => `<tr><td>${t.mes}</td><td class="r">${t.pedidos}</td><td class="r">${t.exentos}</td><td class="r">${clp(t.monto)}</td></tr>`).join('')}</table>
     <h3>Pagos</h3>
     ${D.pagos.length ? `<table class="mini"><tr><th>Fecha</th><th>Período</th><th class="r">Plan</th><th class="r">Tarifa</th><th>Medio</th><th>Factura</th></tr>${D.pagos.map((p) => `<tr><td>${fecha(p.fecha)}</td><td>${fecha(p.desde)} → ${fecha(p.hasta)}</td><td class="r">${clp(p.monto)}</td><td class="r">${clp(p.tarifa)}</td><td>${esc(p.medio)}</td><td>${esc(p.factura || '')}</td></tr>`).join('')}</table>` : '<p class="opc">Sin pagos.</p>'}
+    <h3>Datos legales y contrato</h3><div id="legal"><p class="opc">Cargando…</p></div>
     <h3>Acceso</h3>
     <button class="btn peligro" id="nClave" type="button">Generar clave nueva del local</button> <span class="opc">La anterior deja de funcionar.</span>
     <div id="clv"></div>
     <h3>Historial</h3>
     <table class="mini">${D.eventos.map((e) => `<tr><td>${esc(e.fecha.slice(0, 16))}</td><td>${esc(e.tipo)}</td><td class="opc">${esc(JSON.stringify(e.detalle))}</td></tr>`).join('')}</table>`;
   $('dlg').showModal();
+  pintarLegal(id).catch((e) => { $('legal').textContent = e.message; });
   const num = (v) => (String(v).trim() === '' ? '' : Number(String(v).replace(/\D/g, '')));
   $('fLic').onsubmit = async (ev) => {
     ev.preventDefault();
@@ -214,6 +221,28 @@ async function detalle(id) {
   };
 }
 
+// Datos legales del local (mismos campos y validadores que el panel del dueño) y contratos aceptados.
+async function pintarLegal(id) {
+  const G = await api(`admin/locales/${id}/legal`), C = G.contrato;
+  $('legal').innerHTML = `<p class="opc">${C.aceptado ? `Contrato aceptado: versión ${esc(C.aceptado.version)}, ${fecha(C.aceptado.fecha)}${C.vigente ? '' : ' · <b>hay una versión nueva: el dueño debe aceptarla de nuevo</b>'}` : 'El dueño todavía no acepta el contrato.'}
+      ${G.faltan.length ? ` · Faltan: ${G.faltan.map((f) => esc(f.nombre.toLowerCase())).join(', ')}` : ' · Datos completos'}</p>
+    <form id="fLegal"><div class="grid">${G.campos.map((c) => `<div class="field"><label for="lg-${c.id}">${esc(c.nombre)}</label><input id="lg-${c.id}" data-lg="${c.id}" value="${esc(G.datos[c.id] || '')}" maxlength="${c.max || 80}"></div>`).join('')}</div>
+    <div class="formerr" id="lgErr" role="alert"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn pri">Guardar datos legales</button><button class="btn" type="button" id="lgVista">Vista previa del contrato</button></div></form>
+    ${C.historial.length ? `<table class="mini" style="margin-top:10px"><tr><th>Fecha</th><th>Versión</th><th>Aceptó</th><th></th></tr>${C.historial.map((h) => `<tr><td>${esc(h.fecha.slice(0, 16))}</td><td>${esc(h.version)}</td><td>${esc(h.nombre)} <span class="opc">${esc(h.rut)}</span></td>
+      <td><a href="${BASE}/api/admin/locales/${id}/contrato?id=${h.id}" target="_blank" rel="noopener">Ver</a> · <a href="${BASE}/api/admin/locales/${id}/contrato?id=${h.id}&descargar=1">Descargar</a></td></tr>`).join('')}</table>` : ''}
+    <div id="lgPrev"></div>`;
+  const datos = () => Object.fromEntries([...$('legal').querySelectorAll('[data-lg]')].map((x) => [x.dataset.lg, x.value]));
+  $('fLegal').onsubmit = async (ev) => {
+    ev.preventDefault(); $('lgErr').textContent = '';
+    try { await api(`admin/locales/${id}/legal`, { method: 'PATCH', body: { legal: datos() } }); await pintar(); await pintarLegal(id); } catch (err) { $('lgErr').textContent = err.message; }
+  };
+  $('lgVista').onclick = async () => {
+    $('lgErr').textContent = '';
+    try { const v = await api(`admin/locales/${id}/legal/vista`, { method: 'POST', body: { legal: datos() } });
+      $('lgPrev').innerHTML = `<div class="card" style="margin-top:10px;max-height:50vh;overflow:auto;font-size:.88rem">${v.html}</div>`; } catch (err) { $('lgErr').textContent = err.message; }
+  };
+}
 $('nuevo').onclick = () => {
   $('dTitulo').textContent = 'Nuevo local';
   $('dBody').innerHTML = `<form id="fNuevo"><div class="grid">
@@ -223,6 +252,7 @@ $('nuevo').onclick = () => {
       <div class="field"><label for="nDias">Días de prueba</label><input id="nDias" type="number" min="0" max="365" value="14"></div>
       <div class="field"><label for="nWa">WhatsApp</label><input id="nWa" type="tel" placeholder="+56 9 1234 5678"></div>
       <div class="field"><label for="nDir">Dirección</label><input id="nDir" maxlength="120"></div>
+      <div class="field"><label for="nCorreo">Correo del dueño <span class="opc">(para enviarle el acceso)</span></label><input id="nCorreo" type="email" maxlength="80"></div>
     </div>
     <div class="field"><label for="nCarta">Carta en JSON <span class="opc">(opcional; mismo formato que seed/gassuso.json: categorías con productos)</span></label><textarea id="nCarta" rows="5" placeholder='{"categorias":[{"nombre":"Sándwiches","productos":[{"nombre":"Lomito","precio":6000}]}]}'></textarea></div>
     <div class="field"><label for="nNotas">Notas</label><input id="nNotas" maxlength="500"></div>
@@ -231,7 +261,8 @@ $('nuevo').onclick = () => {
   $('nSlug').oninput = () => { $('nSlug').dataset.tocado = 1; };
   $('fNuevo').onsubmit = async (ev) => {
     ev.preventDefault();
-    const nombre = $('nNombre').value.trim(), wa = $('nWa').value.replace(/\D/g, '');
+    // 8vobit nunca inicia conversaciones por WhatsApp: el acceso se copia o se envía por correo.
+    const nombre = $('nNombre').value.trim(), correo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($('nCorreo').value.trim()) ? $('nCorreo').value.trim() : '';
     try {
       const r = await api('admin/locales', { method: 'POST', body: { nombre: $('nNombre').value, slug: $('nSlug').value, plan: $('nPlan').value, prueba_dias: $('nDias').value,
         whatsapp: $('nWa').value, direccion: $('nDir').value, carta: $('nCarta').value.trim() || undefined, notas: $('nNotas').value } });
@@ -239,7 +270,7 @@ $('nuevo').onclick = () => {
         <p>Carta: <a href="${BASE}/${esc(r.slug)}" target="_blank" rel="noopener">${location.origin}${BASE}/${esc(r.slug)}</a><br>Panel: ${location.origin}${BASE}/panel?local=${esc(r.slug)}<br>Código del local: <b>${esc(r.slug)}</b></p>
         <div class="clave">${esc(r.clave)}</div>
         <p class="formerr" style="color:inherit">La carta queda <b>en pausa</b> hasta que el dueño termine los primeros pasos y la abra desde su panel.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="dCopiar">Copiar todo</button>${wa ? `<a class="btn" id="dWa" target="_blank" rel="noopener">Enviar por WhatsApp al dueño</a>` : ''}</div>`;
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="dCopiar">Copiar mensaje</button>${correo ? `<a class="btn" id="dMail">Enviar por correo a ${esc(correo)}</a>` : ''}</div>`;
       const msg = `¡Hola! Tu local ${nombre} ya está creado en 8vobit Pedidos.
 
 Panel: ${location.origin}${BASE}/panel?local=${r.slug}
@@ -248,7 +279,7 @@ Clave: ${r.clave}
 
 Entra desde la tablet o el computador del local y sigue los primeros pasos (unos 10 minutos). Tu carta para los clientes quedará en ${location.origin}${BASE}/${r.slug}`;
       $('dCopiar').onclick = async () => { try { await navigator.clipboard.writeText(msg); $('dCopiar').textContent = '✓ Copiado'; } catch { $('dCopiar').textContent = 'No se pudo copiar'; } };
-      if (wa) $('dWa').href = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+      if (correo) $('dMail').href = `mailto:${encodeURIComponent(correo)}?subject=${encodeURIComponent(`Tu acceso a 8vobit Pedidos · ${nombre}`)}&body=${encodeURIComponent(msg)}`;
       pintar();
     } catch (err) { $('nErr').textContent = err.message; }
   };

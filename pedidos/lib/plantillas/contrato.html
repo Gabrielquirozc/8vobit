@@ -1,0 +1,152 @@
+<h1>Contrato de prestación de servicios de software — 8vobit Pedidos</h1>
+<p class="vig">Versión {{version}}. Incluye como Anexo A el contrato de encargo de tratamiento de datos (Ley 19.628, modificada por la Ley 21.719).</p>
+
+<p>En {{ciudad}}, a {{fecha}}, entre:</p>
+<ul>
+  <li><b>El Prestador</b>: {{prestador_nombre}}, RUT {{prestador_rut}}, persona natural con inicio de actividades en primera
+    categoría, nombre de fantasía <b>8vobit</b>, domicilio en {{prestador_domicilio}}, correo {{prestador_correo}} ("8vobit").</li>
+  <li><b>El Cliente</b>: {{razon_social}}, RUT {{rut}}, representado por {{representante}}, RUT {{representante_rut}}, domicilio en
+    {{domicilio}}, correo {{correo}}, que opera el local {{nombre_local}} ("el Local").</li>
+</ul>
+
+<h2>1. Objeto</h2>
+<p>8vobit da al Local acceso, en modalidad de servicio en línea, al sistema <b>8vobit Pedidos</b>: carta en
+línea para que sus clientes hagan pedidos, panel de gestión (pedidos, venta de mostrador, caja, gastos,
+resultados, despacho, equipo y los demás módulos de su plan) y las herramientas asociadas. No se vende ni
+se cede el software: el Local recibe una licencia de uso no exclusiva e intransferible mientras el
+contrato esté vigente.</p>
+
+<h2>2. Plan, precios y tarifa por pedido</h2>
+<ol>
+  <li>Plan contratado: <b>{{plan}}</b>, ciclo <b>{{ciclo}}</b>.</li>
+  <li>Precios de lista (CLP, más IVA): Canal $19.900, Gestión $34.900 y Pro $54.900 al mes. Semestral con
+    10 % de descuento y anual con 15 %, pagados por adelantado.</li>
+  <li><b>Tarifa por pedido</b>: 1 % más IVA del total de cada pedido hecho por la carta en línea y no anulado,
+    sin tope. Las ventas de mostrador no pagan tarifa. La tarifa la asume el Local y
+    <b>no puede trasladarse como recargo al cliente final</b>. Se cobra a mes vencido.</li>
+  <li>Puesta en marcha (carga de carta, configuración, material con QR y capacitación): $49.900 más IVA,
+    una vez, salvo que se bonifique por escrito.</li>
+  <li>Los precios se reajustan una vez al año según el IPC, avisando con 30 días de anticipación. Cualquier
+    otro cambio de precio se avisa con 60 días y el Local puede terminar el contrato sin costo antes de que
+    rija.</li>
+  <li>8vobit emite factura electrónica por cada cobro. Plazo de pago: 5 días desde la factura.</li>
+</ol>
+
+<h2>3. Período de prueba</h2>
+<p>Si se pacta una prueba, dura {{prueba_dias}} días desde la activación y no tiene costo. Al terminar, el Local elige un
+plan o el servicio pasa a suspendido según la cláusula 5.</p>
+
+<h2>4. Obligaciones de 8vobit</h2>
+<ol>
+  <li>Mantener el servicio funcionando con diligencia, con respaldos diarios de la información y una copia
+    fuera del servidor principal.</li>
+  <li>Corregir las fallas que se le reporten, dando prioridad a las que impidan recibir o cobrar pedidos.</li>
+  <li>Soporte por WhatsApp y correo en horario lunes a sábado, 10:00 a 20:00.</li>
+  <li>Avisar con anticipación las mantenciones programadas, en horarios de baja actividad.</li>
+  <li>Tratar los datos personales según el Anexo A.</li>
+</ol>
+<p><b>Disponibilidad</b>: 8vobit no garantiza un servicio ininterrumpido. El sistema funciona en un servidor
+propio ubicado en Chile y depende de energía eléctrica, internet y proveedores (Cloudflare, OpenStreetMap).
+Si una caída atribuible a 8vobit supera 4 horas seguidas dentro del horario de atención del Local, el
+Local puede pedir un descuento proporcional del plan de ese mes.</p>
+
+<h2>5. Atraso en el pago, suspensión y término</h2>
+<ol>
+  <li>Vencido el período pagado, hay <b>7 días de gracia</b> con el servicio normal.</li>
+  <li>Después, el servicio queda <b>suspendido</b>: el panel funciona en solo lectura, la carta no recibe
+    pedidos y el Local <b>siempre puede exportar su información</b>.</li>
+  <li>Con 90 días de suspensión el contrato se entiende terminado.</li>
+  <li>Cualquiera de las partes puede terminar el contrato avisando por escrito con 30 días de anticipación.
+    En los planes semestral y anual no se devuelve lo pagado, salvo que el término se deba a un
+    incumplimiento grave de 8vobit o a un cambio de precio no aceptado (cláusula 2.5).</li>
+  <li>8vobit puede terminar el contrato de inmediato si el Local usa el sistema para actividades ilícitas o
+    para fraude a sus clientes.</li>
+</ol>
+
+<h2>6. Obligaciones del Local</h2>
+<ol>
+  <li>Mantener correctos los datos de su carta: precios, alérgenos, horarios, zonas y costos de despacho.</li>
+  <li><b>Emitir la boleta o factura electrónica</b> de cada venta en el SII. El sistema solo ayuda a registrar
+    el folio: el cumplimiento tributario es del Local.</li>
+  <li>Ser el <b>vendedor</b> frente a sus clientes y responder ante ellos según la Ley 19.496 (calidad de los
+    productos, entregas, reclamos). Los Términos y condiciones de la carta los publica el Local, con sus
+    datos.</li>
+  <li>Cuidar la clave del local y los PIN de su equipo, y asignar a cada persona el rol que corresponde.</li>
+  <li>Tratar los datos de sus clientes y trabajadores según la ley (es el <b>responsable</b> de esos datos).</li>
+  <li>Pagar en los plazos pactados.</li>
+</ol>
+
+<h2>7. Propiedad de la información</h2>
+<p>Los datos que el Local carga o que se generan con su operación (carta, fotos, pedidos, caja, gastos,
+equipo) <b>son del Local</b>. Durante el contrato y hasta 90 días después de su término, el Local puede
+exportarlos (CSV y copia completa a pedido). Pasado ese plazo, 8vobit los elimina, salvo lo que la ley lo
+obligue a conservar. El software, su código, diseño y marca <b>son de 8vobit</b>.</p>
+
+<h2>8. Fotos y marca</h2>
+<p>El Local declara tener derecho a usar las fotos y logos que sube. 8vobit solo puede usar la marca,
+fotos o resultados del Local en su material comercial con autorización escrita aparte.</p>
+
+<h2>9. Límite de responsabilidad</h2>
+<ol>
+  <li>Las estimaciones del sistema (sueldos y cargas según la ley laboral, costos de despacho, márgenes,
+    estado de resultados) son <b>referenciales</b>: no reemplazan al contador ni al asesor laboral.</li>
+  <li>8vobit no responde por lucro cesante ni por daños indirectos. Su responsabilidad total por cualquier
+    causa queda limitada a lo pagado por el Local en los <b>12 meses</b> anteriores al hecho, salvo dolo o
+    culpa grave.</li>
+</ol>
+
+<h2>10. Confidencialidad</h2>
+<p>Ambas partes guardan reserva de la información de la otra que conozcan por este contrato, durante su
+vigencia y por 2 años después.</p>
+
+<h2>11. Ley aplicable y controversias</h2>
+<p>Rige la ley chilena. Las partes intentarán resolver cualquier diferencia de buena fe durante 30 días; si
+no lo logran, se someten a los tribunales ordinarios de Concepción.</p>
+
+<h2>12. Comunicaciones</h2>
+<p>Los avisos se envían a los correos indicados al inicio. Los cambios a este contrato constan por escrito
+(se acepta el correo electrónico con confirmación de ambas partes).</p>
+
+<h2>Anexo A — Contrato de encargo de tratamiento de datos personales</h2>
+<p>Conforme a la Ley N° 19.628, modificada por la Ley N° 21.719 (vigente desde el 1 de diciembre de 2026, según
+BCN, idNorma 1209272):</p>
+<ol>
+  <li><b>Partes y roles.</b> El Local es el <b>responsable</b> de los datos de sus clientes y trabajadores. 8vobit
+    es el <b>encargado</b>: los trata solo por cuenta del Local y siguiendo sus instrucciones, que son las de
+    este contrato y la configuración que el Local hace en el sistema.</li>
+  <li><b>Datos y titulares.</b>
+    <ul>
+      <li>Clientes del Local: nombre, celular, dirección, referencia y ubicación de entrega, comentarios,
+        detalle, monto y medio de pago de los pedidos.</li>
+      <li>Personal del Local: nombre, RUT, rol, PIN (guardado con hash), turnos, sueldo, contrato y marcas de
+        entrada y salida.</li>
+      <li>Usuarios del panel: registros de quién cobró, anuló o movió la caja.</li>
+    </ul></li>
+  <li><b>Finalidad.</b> Solo hacer funcionar el sistema: recibir y gestionar pedidos, despachos, caja,
+    estadísticas internas del Local y estimaciones laborales. 8vobit <b>no usa los datos para fines
+    propios</b>, no los vende, no hace publicidad con ellos ni los cruza con otros locales. Puede usar
+    cifras agregadas y anónimas (por ejemplo, el total de pedidos de la plataforma).</li>
+  <li><b>Seguridad.</b> Conexión cifrada (HTTPS), contraseñas y PIN con hash, sesiones con cookie protegida,
+    permisos por rol, límites de intentos, respaldos diarios y copia fuera del servidor, servidor en Chile.</li>
+  <li><b>Confidencialidad.</b> Solo acceden a los datos las personas de 8vobit que lo necesitan para dar
+    soporte, con deber de reserva.</li>
+  <li><b>Subencargados.</b> El Local autoriza a: Cloudflare, Inc. (red y protección del sitio; recibe datos
+    técnicos de conexión, fuera de Chile) y la Fundación OpenStreetMap (búsqueda de direcciones; recibe el
+    texto de la dirección buscada, fuera de Chile). 8vobit avisará con 30 días de anticipación cualquier
+    subencargado nuevo, y el Local puede oponerse terminando el contrato sin costo.</li>
+  <li><b>Plazos.</b> Los datos de clientes en los pedidos se anonimizan automáticamente a los 24 meses, o
+    antes a pedido del Local (función de borrado en el panel). Los respaldos se renuevan y eliminan a más
+    tardar a los 30 días.</li>
+  <li><b>Derechos de los titulares.</b> 8vobit ayuda al Local a responder solicitudes de acceso, rectificación,
+    supresión, oposición y portabilidad, en un plazo de 5 días hábiles desde que el Local lo pida.</li>
+  <li><b>Incidentes.</b> 8vobit avisa al Local cualquier vulneración de seguridad que afecte datos personales
+    <b>dentro de las 48 horas</b> desde que la detecte, con lo que se sepa del alcance y las medidas tomadas,
+    para que el Local cumpla su deber de informar a la Agencia y a los afectados.</li>
+  <li><b>Término.</b> Al terminar el contrato, 8vobit entrega los datos al Local si los pide (cláusula 7) y
+    luego los elimina, incluidas las copias, salvo obligación legal de conservarlos.</li>
+  <li><b>Auditoría.</b> El Local puede pedir, una vez al año, información sobre las medidas de seguridad.</li>
+</ol>
+
+<h2>Aceptación</h2>
+<p>El Cliente acepta este contrato y su Anexo A en línea, desde el panel del Local. Queda registro de la versión,
+la fecha y hora, el nombre y RUT de quien acepta en su representación, la dirección IP y la huella (SHA-256) de este texto.</p>

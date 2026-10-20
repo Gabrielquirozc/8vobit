@@ -1,16 +1,27 @@
-// Autoservicio del local: primeros pasos de un local recién creado (con su avance) e importación
+// Autoservicio del local: primeros pasos en dos niveles (con su avance) e importación
 // de la carta desde una planilla (CSV o celdas copiadas de Excel). La meta es que el dueño deje
 // el local andando sin ayuda (VIABILIDAD.md §4–5: soporte ≤ 0,5 h por local al mes).
 const texto = (v, max) => String(v ?? '').replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-// Pasos del asistente, en orden. `omitible`: el dueño puede decir "no aplica" (sin logo, sin transferencias).
+// Pasos del asistente en dos niveles. "recibir": el mínimo para abrir la carta a los clientes (sin esto
+// la carta de un local nuevo no sale de la pausa). "controlar": lo que hace falta para que los números
+// del panel (costos, despacho, caja, equipo) sean reales y no supuestos.
+// `omitible`: el dueño puede decir "no aplica". `ir`: pestaña (y sección) donde se completa.
+export const NIVELES = { recibir: 'Para recibir pedidos', controlar: 'Para controlar tu local' };
 export const PASOS = [
-  { id: 'contacto', titulo: 'Datos de contacto', detalle: 'WhatsApp o teléfono y la dirección del local.' },
-  { id: 'horario', titulo: 'Horario de atención', detalle: 'Los días y horas en que se pueden pedir.' },
-  { id: 'logo', titulo: 'Logo', detalle: 'Aparece en la carta, el seguimiento y el cartel con QR.', omitible: true },
-  { id: 'transferencias', titulo: 'Datos para transferencias', detalle: 'El cliente los ve al pagar.', omitible: true },
-  { id: 'producto', titulo: 'Primer producto con precio', detalle: 'Uno a mano o la carta entera desde una planilla.' },
+  { id: 'contacto', nivel: 'recibir', titulo: 'Datos de contacto', detalle: 'WhatsApp o teléfono y la dirección del local.', ir: 'local#s-contacto' },
+  { id: 'horario', nivel: 'recibir', titulo: 'Horario de atención', detalle: 'Los días y horas en que se pueden pedir.', ir: 'local#s-horario' },
+  { id: 'transferencias', nivel: 'recibir', titulo: 'Datos para transferencias', detalle: 'El cliente los ve al pagar.', omitible: true, ir: 'local#s-pagos' },
+  { id: 'producto', nivel: 'recibir', titulo: 'Carta con precios', detalle: 'Al menos un producto a la venta y ninguno disponible "sin precio".', ir: 'carta' },
+  { id: 'despacho', nivel: 'recibir', titulo: 'Despacho', detalle: 'Revisa costos, zonas y horario, o desactívalo si solo hay retiro.', ir: 'despacho' },
+  { id: 'legal', nivel: 'recibir', titulo: 'Datos legales', detalle: 'Razón social, RUT, giro, domicilio y representante: arman tus Términos y tu Privacidad.', ir: 'local#s-legal' },
+  { id: 'contrato', nivel: 'recibir', titulo: 'Contrato de servicio', detalle: 'El dueño lo acepta en línea, con los datos legales del local.', ir: 'local#s-contrato' },
+  { id: 'vehiculo', nivel: 'controlar', titulo: 'Vehículo y repartidor', detalle: 'Con qué y quién reparte: calcula si cada despacho sale a cuenta.', ir: 'despacho' },
+  { id: 'costos', nivel: 'controlar', titulo: 'Costos de insumos', detalle: 'El costo de tus productos; sin él, el margen se estima.', ir: 'carta' },
+  { id: 'equipo', nivel: 'controlar', titulo: 'Equipo con PIN', detalle: 'Cada persona entra con su PIN y queda registrado quién cobra.', ir: 'local#s-usuarios' },
+  { id: 'caja', nivel: 'controlar', titulo: 'Primera caja', detalle: 'Abre la caja con el fondo inicial y ciérrala al final del día.', ir: 'cierre' },
+  { id: 'logo', nivel: 'controlar', titulo: 'Logo', detalle: 'Aparece en la carta, el seguimiento y el cartel con QR.', omitible: true, ir: 'local#s-logo' },
 ];
 export const MAX_FILAS = 500;
 export const MAX_TEXTO = 200e3;
@@ -77,33 +88,75 @@ export function filasDeTexto(txt) {
   return { filas: filas.map((f) => ({ linea: f.linea, categoria: de(f, 'categoria'), nombre: de(f, 'nombre'), precio: de(f, 'precio'), descripcion: de(f, 'descripcion') })), con_titulos: conTitulos };
 }
 
-export function crearAutoservicio(db) {
+export function crearAutoservicio(db, { legalCompleto = () => false, contratoVigente = () => false } = {}) {
   // Estado del asistente por local: { hechos: ['horario'], omitidos: ['logo'], cerrado: true }.
   // Los locales que ya existían al crear la columna se armaron a mano: no ven el asistente.
-  if (!db.prepare('PRAGMA table_info(locales)').all().some((c) => c.name === 'inicio')) {
+  const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
+  if (!lcols.has('inicio')) {
     db.exec('ALTER TABLE locales ADD COLUMN inicio TEXT');
     db.exec(`UPDATE locales SET inicio='{"cerrado":true}'`);
   }
+  // Despacho revisado por el local (guardó la pestaña Despacho o lo desactivó): mientras no, la
+  // configuración es la de ejemplo y no cuenta para publicar.
+  if (!lcols.has('despacho_confirmado')) db.exec('ALTER TABLE locales ADD COLUMN despacho_confirmado INTEGER NOT NULL DEFAULT 0');
+  // Carta publicada alguna vez: a esos locales no se les bloquea la pausa (solo ven el aviso).
+  if (!lcols.has('publicado')) {
+    db.exec('ALTER TABLE locales ADD COLUMN publicado INTEGER NOT NULL DEFAULT 0');
+    // Los que ya recibían pedidos usan su horario de verdad: no se les pide "revisarlo" otra vez.
+    for (const l of db.prepare('SELECT id, inicio FROM locales WHERE pausa=0').all()) {
+      let e = {}; try { e = JSON.parse(l.inicio || '{}') || {}; } catch {}
+      e.hechos = [...new Set([...(e.hechos || []), 'horario'])];
+      db.prepare('UPDATE locales SET inicio=? WHERE id=?').run(JSON.stringify(e), l.id);
+    }
+  }
+  db.exec('UPDATE locales SET publicado=1 WHERE pausa=0 AND publicado=0'); // si hoy recibe pedidos, ya está publicado
   const leer = (lid) => { try { return { hechos: [], omitidos: [], cerrado: false, ...JSON.parse(db.prepare('SELECT inicio FROM locales WHERE id=?').get(lid)?.inicio || '{}') }; } catch { return { hechos: [], omitidos: [], cerrado: false }; } };
   const guardar = (lid, e) => db.prepare('UPDATE locales SET inicio=? WHERE id=?').run(JSON.stringify(e), lid);
+  const json = (v) => { try { return JSON.parse(v || '{}') || {}; } catch { return {}; } };
 
-  function estado(lid) {
-    const l = db.prepare('SELECT whatsapp, telefono, direccion, logo, transferencia FROM locales WHERE id=?').get(lid);
-    const e = leer(lid);
-    let t = {}; try { t = JSON.parse(l.transferencia || '{}') || {}; } catch {}
-    const hecho = {
+  function hechos(lid, e) {
+    const l = db.prepare('SELECT whatsapp, telefono, direccion, logo, transferencia, despacho, despacho_confirmado, equipo FROM locales WHERE id=?').get(lid);
+    const t = json(l.transferencia), d = json(l.despacho), eq = json(l.equipo);
+    const hay = (sql) => !!db.prepare(sql).get(lid);
+    const reps = (eq.trabajadores || []).some((x) => x.rol === 'repartidor' && x.activo !== false);
+    const vehiculos = Array.isArray(d.vehiculos) ? d.vehiculos : [];
+    return {
       contacto: !!((l.whatsapp || l.telefono) && l.direccion),
       horario: e.hechos.includes('horario'),
-      logo: !!l.logo,
       transferencias: !!(t.numero && t.banco && t.titular),
-      producto: !!db.prepare('SELECT 1 FROM productos WHERE local_id=? AND archivado=0 AND activo=1 AND precio>0 AND precio_pendiente=0').get(lid),
+      producto: hay('SELECT 1 FROM productos WHERE local_id=? AND archivado=0 AND activo=1 AND precio>0 AND precio_pendiente=0')
+        && !hay('SELECT 1 FROM productos WHERE local_id=? AND archivado=0 AND activo=1 AND (precio_pendiente=1 OR precio<=0)'),
+      despacho: !!l.despacho_confirmado,
+      legal: !!legalCompleto(lid),
+      contrato: !!contratoVigente(lid),
+      // Sin despacho no hay vehículo que cargar: el paso no aplica.
+      vehiculo: d.activo ? vehiculos.length > 0 && (reps || vehiculos.some((v) => v.repartidorId)) : 'no_aplica',
+      costos: hay('SELECT 1 FROM productos WHERE local_id=? AND archivado=0 AND costo IS NOT NULL'),
+      equipo: hay('SELECT 1 FROM usuarios WHERE local_id=? AND activo=1'),
+      caja: hay('SELECT 1 FROM caja_movimientos WHERE local_id=?') || hay('SELECT 1 FROM caja_cierres WHERE local_id=?'),
+      logo: !!l.logo,
     };
-    const pasos = PASOS.map((p) => ({ ...p, hecho: hecho[p.id], omitido: !hecho[p.id] && !!p.omitible && e.omitidos.includes(p.id) }));
-    const listos = pasos.filter((p) => p.hecho || p.omitido).length;
-    return { pasos, listos, total: pasos.length, completo: listos === pasos.length, cerrado: !!e.cerrado };
   }
+  function estado(lid) {
+    const e = leer(lid), h = hechos(lid, e);
+    const l = db.prepare('SELECT pausa, publicado FROM locales WHERE id=?').get(lid);
+    const pasos = PASOS.map((p) => ({ ...p, hecho: !!h[p.id], no_aplica: h[p.id] === 'no_aplica', omitido: !h[p.id] && !!p.omitible && e.omitidos.includes(p.id) }));
+    const listo = (p) => p.hecho || p.omitido;
+    const niveles = Object.fromEntries(Object.entries(NIVELES).map(([k, titulo]) => {
+      const ps = pasos.filter((p) => p.nivel === k);
+      return [k, { titulo, listos: ps.filter(listo).length, total: ps.length, completo: ps.every(listo), faltan: ps.filter((p) => !listo(p)).map((p) => p.id) }];
+    }));
+    const listos = pasos.filter(listo).length;
+    return { pasos, niveles, listos, total: pasos.length, completo: listos === pasos.length, cerrado: !!e.cerrado,
+      listo_publicar: niveles.recibir.completo, publicado: !!l.publicado, pausa: !!l.pausa };
+  }
+  // Lo que falta para abrir la carta (nivel "Para recibir pedidos"), con dónde se completa.
+  const faltanRecibir = (lid) => estado(lid).pasos.filter((p) => p.nivel === 'recibir' && !p.hecho && !p.omitido).map((p) => ({ id: p.id, titulo: p.titulo, detalle: p.detalle, ir: p.ir }));
   // Avance corto para la consola de administración.
-  const corto = (lid) => { const e = estado(lid); return { listos: e.listos, total: e.total, cerrado: e.cerrado }; };
+  const corto = (lid) => {
+    const e = estado(lid), r = e.niveles.recibir;
+    return { listos: e.listos, total: e.total, cerrado: e.cerrado, publicado: e.publicado, recibir: { listos: r.listos, total: r.total, faltan: r.faltan } };
+  };
 
   function marcar(lid, id) {
     const e = leer(lid);
@@ -209,5 +262,5 @@ export function crearAutoservicio(db) {
     return { ok: true, nuevos: a.nuevos, actualizados: a.actualizados, categorias_nuevas: a.categorias_nuevas, archivados: a.archivados.length };
   }
 
-  return { estado, corto, marcar, actualizar, analizar, importar };
+  return { estado, corto, marcar, actualizar, analizar, importar, faltanRecibir };
 }

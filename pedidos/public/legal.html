@@ -42,10 +42,10 @@
 </div></header>
 <main><div class="in" id="doc"><p class="msg">Cargando…</p></div></main>
 <script type="module">
-import { api, esc, BASE, fmtTel } from './comun.js';
+import { api, esc, BASE } from './comun.js';
 import { LEGAL_VIGENCIA as VIGENCIA } from './legal-version.js';
-// Borradores de Términos y condiciones y Política de privacidad, armados con los datos del local.
-// Fecha de la versión: en legal-version.js (cambiarla cada vez que cambie el texto).
+// Términos y condiciones y Política de privacidad del local.
+// Fecha de la versión: en legal-version.js (cambiarla cada vez que cambie lib/plantillas/terminos.html o privacidad.html).
 const slug = new URLSearchParams(location.search).get('l') || '';
 const priv = location.pathname.endsWith('/privacidad');
 const $ = (id) => document.getElementById(id);
@@ -55,133 +55,16 @@ for (const [id, ruta, act] of [['t-term', 'terminos', !priv], ['t-priv', 'privac
 }
 $('volver').href = `${BASE}/${slug}`;
 
-let L;
-try { L = (await api(`locales/${encodeURIComponent(slug)}`)).local; }
-catch { $('doc').innerHTML = '<p class="msg">No encontramos el local. Vuelve a la carta y abre el enlace desde ahí.</p>'; throw new Error('sin local'); }
+let L, T;
+try {
+  [L, T] = await Promise.all([api(`locales/${encodeURIComponent(slug)}`).then((m) => m.local), api(`locales/${encodeURIComponent(slug)}/legal/${priv ? 'privacidad' : 'terminos'}`)]);
+} catch { $('doc').innerHTML = '<p class="msg">No encontramos el local. Vuelve a la carta y abre el enlace desde ahí.</p>'; throw new Error('sin local'); }
 
-const g = L.legal || {};
-const falta = (txt) => `<span class="falta">[${txt}]</span>`;
-const dato = (v, txt) => (v ? esc(v) : falta(txt));
-const faltan = [!g.razon_social && 'razón social', !g.rut && 'RUT', !g.correo && 'correo de contacto'].filter(Boolean);
-const quien = g.razon_social ? `${esc(g.razon_social)}${g.rut ? `, RUT ${esc(g.rut)}` : ''}` : esc(L.nombre);
-const contactos = [
-  L.whatsapp && `WhatsApp <a href="https://wa.me/${esc(L.whatsapp)}">${esc(fmtTel(L.whatsapp))}</a>`,
-  L.telefono && `teléfono <a href="tel:+${esc(L.telefono)}">${esc(fmtTel(L.telefono))}</a>`,
-  g.correo && `correo <a href="mailto:${esc(g.correo)}">${esc(g.correo)}</a>`,
-].filter(Boolean);
-const contacto = contactos.length ? contactos.join(', ') : falta('datos de contacto');
-const ficha = `<div class="ficha"><dl>
-  <dt>Local</dt><dd>${esc(L.nombre)}</dd>
-  <dt>Razón social</dt><dd>${dato(g.razon_social, 'pendiente')}</dd>
-  <dt>RUT</dt><dd>${dato(g.rut, 'pendiente')}</dd>
-  <dt>Domicilio</dt><dd>${dato(L.direccion, 'pendiente')}</dd>
-  <dt>Contacto</dt><dd>${contacto}</dd></dl></div>`;
-const desp = L.despacho?.activo;
-
-const TERMINOS = `
-<h2>1. Quién vende</h2>
-<p>Los productos de esta carta los prepara y vende:</p>${ficha}
-
-<h2>2. Qué son estos términos</h2>
-<p>Estas condiciones rigen los pedidos que haces en esta carta en línea. Al tocar <b>Enviar pedido</b> declaras haberlas leído y aceptado; junto a tu pedido guardamos la fecha de la versión que aceptaste.
-Puedes guardarlas o imprimirlas desde tu navegador. Nada de lo que dicen limita los derechos que te da la Ley N° 19.496 sobre Protección de los Derechos de los Consumidores.</p>
-
-<h2>3. Cómo funciona un pedido</h2>
-<ul>
-  <li>Eliges los productos, ${desp ? 'si lo retiras en el local o te lo enviamos, ' : ''}para cuándo lo quieres, y nos dejas tu nombre y celular${desp ? ' (y tu dirección, si es con despacho)' : ''}.</li>
-  <li>Al enviarlo te mostramos el número de pedido y un enlace para ver su estado en todo momento.</li>
-  <li>El local revisa cada pedido. Si no podemos prepararlo (por ejemplo, se acabó un ingrediente${desp ? ' o la dirección queda fuera de la zona de despacho' : ''}), te avisamos por tu celular y lo anulamos o te proponemos un cambio, que puedes rechazar. Un pedido anulado no se cobra.</li>
-  <li>La hora elegida es una estimación: en horas de alta demanda puede haber atrasos, y te avisaremos si son importantes.</li>
-</ul>
-
-<h2>4. Precios</h2>
-<ul>
-  <li>Los precios están en pesos chilenos e incluyen IVA. Vale el precio que muestra la carta cuando envías el pedido.</li>
-  ${desp ? '<li>El costo de despacho depende de la zona de entrega y se muestra, junto al total, antes de enviar el pedido. Puede existir un monto mínimo de compra para despacho, que también se indica antes.</li>' : ''}
-  <li>Las fotos son referenciales: la presentación puede variar levemente.</li>
-</ul>
-
-<h2>5. Pago y boleta</h2>
-<p>Pagas al retirar${desp ? ' o recibir' : ''} tu pedido, con efectivo, tarjeta o transferencia, sin cargos adicionales. Si pagas por transferencia, usa solo los datos que muestra la carta.
-Por cada venta el local emite boleta electrónica, según la normativa del Servicio de Impuestos Internos.</p>
-
-${desp ? `<h2>6. Retiro y despacho</h2>
-<ul>
-  <li>Despachamos solo dentro de la zona y en los días y horarios que indica la carta.</li>
-  <li>Revisa que tu dirección y el pin del mapa sean correctos y que haya alguien para recibir. Si no logramos entregar después de llamarte, el pedido queda para retiro en el local.</li>
-  <li>Si retiras en el local, muestra tu número de pedido.</li>
-</ul>` : `<h2>6. Retiro</h2><p>Retiras tu pedido en el local mostrando tu número de pedido.</p>`}
-
-<h2>7. Cambios, cancelación y derecho a retracto</h2>
-<p>Puedes cancelar o cambiar tu pedido sin costo mientras no hayamos empezado a prepararlo, escribiéndonos o llamándonos (${contacto}).</p>
-<p>Conforme al artículo 3 bis, letra b), de la Ley N° 19.496, <b>el local excluye expresamente el derecho a retracto</b> en estas compras: son alimentos perecibles preparados a pedido, que no pueden devolverse ni volver a venderse.</p>
-
-<h2>8. Si algo sale mal</h2>
-<p>Si falta un producto, llegó uno equivocado o en mal estado, avísanos el mismo día por WhatsApp o teléfono, idealmente con una foto. Te lo reponemos o te devolvemos lo pagado por ese producto, a tu elección, sin perjuicio de tus demás derechos legales.</p>
-
-<h2>9. Alergias e intolerancias</h2>
-<p>En nuestra cocina se usan, entre otros, pan con gluten, lácteos, huevo y salsas como mayonesa y mostaza. Aunque tomamos precauciones, no podemos garantizar que un producto no tenga trazas. Si tienes una alergia, indícalo en el comentario del pedido y pregúntanos antes de pedir.</p>
-
-<h2>10. Uso correcto</h2>
-<p>Te pedimos datos verdaderos y que no envíes pedidos que no vayas a retirar o recibir. El local puede rechazar pedidos que parezcan falsos o malintencionados.</p>
-
-<h2>11. Tus datos personales</h2>
-<p>Usamos tus datos solo para tu pedido, como explica nuestra <a href="${BASE}/privacidad?l=${encodeURIComponent(slug)}">Política de privacidad</a>.</p>
-
-<h2>12. Consultas y reclamos</h2>
-<p>Escríbenos o llámanos: ${contacto}. Si no quedas conforme con nuestra respuesta, puedes acudir al Servicio Nacional del Consumidor (<a href="https://www.sernac.cl" rel="noopener">sernac.cl</a>) o al Juzgado de Policía Local que corresponda, según la Ley N° 19.496.</p>
-
-<h2>13. Cambios a estos términos</h2>
-<p>Podemos actualizar estas condiciones. Cada pedido se rige por la versión vigente al momento de enviarlo, cuya fecha aparece arriba. Se aplica la ley chilena.</p>`;
-
-const PRIVACIDAD = `
-<h2>1. Responsable de tus datos</h2>${ficha}
-<p>La carta en línea funciona sobre una plataforma tecnológica que opera 8vobit por encargo del local. 8vobit trata los datos solo para que el sistema funcione, siguiendo las instrucciones del local, y no los usa para nada más.</p>
-
-<h2>2. Qué datos guardamos y para qué</h2>
-<table>
-  <tr><th>Dato</th><th>Para qué</th></tr>
-  <tr><td>Nombre y celular</td><td>Identificar tu pedido y avisarte si hay un cambio o un problema.</td></tr>
-  ${desp ? `<tr><td>Dirección, referencia y ubicación del pin en el mapa</td><td>Calcular el costo del despacho y llevarte el pedido. Solo si eliges despacho.</td></tr>` : ''}
-  <tr><td>Productos, comentario, monto, medio de pago y fecha</td><td>Preparar el pedido, cobrar, emitir la boleta y llevar las cuentas del local.</td></tr>
-  <tr><td>Tu nombre, celular y última dirección, solo si dejas marcado "Recordar mis datos", guardados en tu propio navegador (no en nuestro servidor)</td><td>No tener que escribirlos en cada pedido. Los borras con "Olvidar" en el carro o limpiando los datos del sitio.</td></tr>
-  <tr><td>Número y enlace de seguimiento, guardados en tu propio navegador</td><td>Que puedas volver a ver el estado de tu último pedido. Puedes borrarlo limpiando los datos del sitio en tu navegador.</td></tr>
-</table>
-<p>No te pedimos RUT, correo ni datos de tarjetas. No usamos cookies en la carta, no enviamos publicidad y no armamos perfiles. Con los pedidos el local saca estadísticas internas (por ejemplo, cuántos clientes vuelven a pedir), sin compartirlas con nadie.</p>
-
-<h2>3. Por qué podemos usarlos</h2>
-<p>Porque son necesarios para preparar y entregar el pedido que tú solicitas, y para cumplir las obligaciones tributarias del local. Las estadísticas internas se basan en el interés legítimo del local de conocer sus ventas.</p>
-
-<h2>4. Quién más los ve</h2>
-<ul>
-  <li><b>El personal del local</b>, incluido quien te lleva el pedido: ve tu nombre, celular y dirección solo para atenderte.</li>
-  <li><b>Proveedores técnicos</b>, que no reciben tu nombre ni tu celular:
-    <ul>
-      <li>Cloudflare, que protege y entrega el sitio y mide visitas sin cookies.</li>
-      <li>OpenStreetMap: tu navegador descarga desde ahí los mapas, y nuestro servidor le envía el texto de la dirección que buscas para ubicarla.</li>
-    </ul>
-    Estos servicios funcionan fuera de Chile y reciben datos técnicos de tu conexión (como tu dirección IP).</li>
-  <li><b>WhatsApp</b>: si usas el botón para escribirnos, el mensaje viaja por WhatsApp (Meta), según sus propias políticas.</li>
-</ul>
-<p>Nunca vendemos ni cedemos tus datos. Solo los entregaríamos a una autoridad que los pida conforme a la ley.</p>
-
-<h2>5. Cuánto tiempo los guardamos</h2>
-<p>Tu nombre, celular, dirección, ubicación y comentario se borran automáticamente <b>24 meses</b> después del pedido. Lo que queda (productos, montos y fechas, sin datos tuyos) se conserva para la contabilidad del local. Las copias de respaldo se renuevan a diario y cada una se elimina a más tardar a los 30 días.</p>
-
-<h2>6. Tus derechos</h2>
-<p>Puedes pedirnos, gratis, ver qué datos tenemos de ti, corregirlos, borrarlos, oponerte a su uso o recibirlos en un formato que puedas llevarte. Escríbenos o llámanos (${contacto}) desde el celular con que hiciste el pedido, para que podamos confirmar que eres tú. Respondemos lo antes posible y siempre dentro del plazo legal.</p>
-<p>Si no quedas conforme, puedes reclamar ante la Agencia de Protección de Datos Personales, conforme a la Ley N° 21.719, o ante los tribunales de justicia.</p>
-
-<h2>7. Cómo los protegemos</h2>
-<p>Tus datos se guardan en un servidor ubicado en Chile, con copias de respaldo cifradas en tránsito y guardadas también en Chile. El sitio funciona solo con conexión cifrada (HTTPS). El panel del local, donde se ven los pedidos, requiere clave. Los datos de pago de transferencias que ves son los del local; nunca te pediremos claves ni códigos.</p>
-
-<h2>8. Cambios a esta política</h2>
-<p>Si cambiamos esta política, publicaremos aquí la nueva versión con su fecha. Se rige por la Ley N° 19.628 sobre Protección de la Vida Privada y sus modificaciones, incluida la Ley N° 21.719.</p>`;
-
+// El texto es la plantilla fija de 8vobit con los datos del local, armada en el servidor (lib/legal.mjs).
 document.title = `${priv ? 'Privacidad' : 'Términos y condiciones'} · ${L.nombre}`;
 $('titulo').textContent = priv ? 'Política de privacidad' : 'Términos y condiciones';
-$('doc').innerHTML = (faltan.length ? `<div class="borrador" role="note"><b>Borrador.</b> Falta completar en el panel (Datos del local → Datos legales): ${faltan.join(', ')}.</div>` : '')
-  + `<p class="vig">${esc(L.nombre)} · Vigente desde el ${VIGENCIA}</p>` + (priv ? PRIVACIDAD : TERMINOS);
+$('doc').innerHTML = (T.faltan.length ? `<div class="borrador" role="note"><b>Borrador.</b> Falta completar en el panel (Datos del local → Datos legales): ${T.faltan.map((f) => esc(f.toLowerCase())).join(', ')}.</div>` : '')
+  + `<p class="vig">${esc(L.nombre)} · Vigente desde el ${esc(T.vigencia || VIGENCIA)}</p>` + T.html;
 </script>
 </body>
 </html>

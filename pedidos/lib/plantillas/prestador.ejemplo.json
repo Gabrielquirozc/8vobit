@@ -1,0 +1,7 @@
+{
+  "_nota": "Copia este archivo como prestador.json, o usa las variables PRESTADOR_NOMBRE, PRESTADOR_RUT, PRESTADOR_CORREO y PRESTADOR_DOMICILIO (mandan sobre el archivo). No es secreto: son los datos de 8vobit que aparecen en el contrato.",
+  "nombre": "",
+  "rut": "",
+  "correo": "",
+  "domicilio": ""
+}

@@ -21,6 +21,7 @@ import { crearPromos } from './lib/promos.mjs';
 import { crearInventario } from './lib/inventario.mjs';
 import { crearClientes } from './lib/clientes.mjs';
 import { crearMensajes } from './lib/mensajes.mjs';
+import * as LG from './lib/legal.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -110,6 +111,9 @@ let ubicacionSeed = false, contactoSeed = false, salsasSeed = false, sugerirSeed
   // Datos legales del local (razón social, RUT, correo): se muestran en Términos y Privacidad.
   if (!lcols.has('legal')) db.exec('ALTER TABLE locales ADD COLUMN legal TEXT');
   if (!lcols.has('comision_app')) db.exec('ALTER TABLE locales ADD COLUMN comision_app INTEGER NOT NULL DEFAULT 25');
+  // Canales de contacto que la carta y el seguimiento muestran: { whatsapp, telefono, instagram }.
+  // Sin dato (NULL) se muestran todos los que existan, como antes.
+  if (!lcols.has('canales')) db.exec('ALTER TABLE locales ADD COLUMN canales TEXT');
   const pcols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
   if (!pcols.has('destacado')) db.exec('ALTER TABLE productos ADD COLUMN destacado INTEGER NOT NULL DEFAULT 0');
   if (!pcols.has('imagen')) db.exec('ALTER TABLE productos ADD COLUMN imagen TEXT');
@@ -482,7 +486,17 @@ function serveFile(res, file, versionado = false) {
   fs.createReadStream(p).pipe(res);
 }
 
-function menu(local) {
+// Canales visibles para el cliente. Por defecto se muestra lo que exista (no cambia a los locales actuales).
+const CANALES = ['whatsapp', 'telefono', 'instagram'];
+function canalesDe(local) {
+  let c = {}; try { c = JSON.parse(local.canales || '{}') || {}; } catch {}
+  return Object.fromEntries(CANALES.map((k) => [k, c[k] !== false]));
+}
+// Datos de contacto que salen en páginas públicas: los canales ocultos no viajan.
+const contactoPublico = (local) => { const c = canalesDe(local); return Object.fromEntries(CANALES.map((k) => [k, c[k] ? local[k] || null : null])); };
+
+// Carta. `publico` (carta y legal): sin canales ocultos ni datos legales privados. El panel la pide completa.
+function menu(local, publico = true) {
   const cats = db.prepare('SELECT id, nombre, salsas FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
   const cmb = PROMOS.combos(local.id);
   const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir FROM productos WHERE local_id=? AND archivado=0 ORDER BY orden, id').all(local.id)
@@ -495,11 +509,14 @@ function menu(local) {
   const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
   const ok = new Set(prods.filter(vendible).map((p) => p.id));
   const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
+  const legal = LG.leerDatos(local.legal);
+  const privado = publico ? {} : { canales: canalesDe(local), despacho_confirmado: !!local.despacho_confirmado, publicado: !!local.publicado };
   return {
-    local: { slug: local.slug, nombre: local.nombre, instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono, modo_boleta: local.modo_boleta,
+    local: { slug: local.slug, nombre: local.nombre, ...(publico ? contactoPublico(local) : { instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono }), ...privado, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
       logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local), ubicacion: ubicacionDe(local),
-      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null, legal: local.legal ? JSON.parse(local.legal) : null },
+      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null,
+      legal: publico ? (Object.keys(LG.publicos(legal)).length ? LG.publicos(legal) : null) : legal },
     mas_pedidos: mas,
     promociones: LIC.puede(local.id, 'combos') ? PROMOS.enCarta(local.id, ahoraDe(local)) : [],
     categorias: cats.map((c) => ({ ...c, productos: prods.filter((p) => p.categoria_id === c.id) })),
@@ -680,15 +697,8 @@ function guardarPedido(local, d, { items, total }) {
 }
 
 // Valida y guarda los datos del local. Solo se tocan los campos enviados.
-// RUT chileno con dígito verificador (módulo 11).
-function rutValido(r) {
-  const m = String(r).replace(/[.\s]/g, '').toUpperCase().match(/^(\d{7,8})-?([\dK])$/);
-  if (!m) return false;
-  let s = 0, k = 2;
-  for (const d of [...m[1]].reverse()) { s += Number(d) * k; k = k === 7 ? 2 : k + 1; }
-  const dv = 11 - (s % 11);
-  return m[2] === (dv === 11 ? '0' : dv === 10 ? 'K' : String(dv));
-}
+// RUT chileno con dígito verificador (módulo 11): lib/legal.mjs.
+const rutValido = LG.rutValido;
 function actualizarLocal(local, b) {
   const txt = (v, max) => String(v ?? '').trim().slice(0, max);
   const c = {};
@@ -705,7 +715,7 @@ function actualizarLocal(local, b) {
     c.cupo_franja = Math.round(Number(b.cupo_franja));
     if (!(c.cupo_franja >= 1 && c.cupo_franja <= 200)) return { error: 'El cupo por franja debe estar entre 1 y 200.' };
   }
-  if (b.pausa !== undefined) c.pausa = b.pausa ? 1 : 0;
+  if (b.pausa !== undefined) { c.pausa = b.pausa ? 1 : 0; if (!c.pausa) c.publicado = 1; }
   if (b.costo_pct !== undefined) {
     c.costo_pct = Math.round(Number(b.costo_pct));
     if (!(c.costo_pct >= 0 && c.costo_pct <= 90)) return { error: 'El costo estimado debe estar entre 0 y 90 %.' };
@@ -797,12 +807,17 @@ function actualizarLocal(local, b) {
     c.transferencia = Object.values(v).some(Boolean) ? JSON.stringify(v) : null;
   }
   if (b.legal !== undefined) {
-    const t = b.legal || {};
-    const v = { razon_social: txt(t.razon_social, 100), rut: txt(t.rut, 12), correo: txt(t.correo, 80) };
-    if (v.rut && !rutValido(v.rut)) return { error: 'RUT de la empresa inválido: revisa el dígito verificador.' };
-    if (v.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.correo)) return { error: 'Correo de contacto inválido.' };
-    c.legal = Object.values(v).some(Boolean) ? JSON.stringify(v) : null;
+    // Mismos validadores para el dueño (panel) y el gestor (/admin): lib/legal.mjs.
+    const v = LG.validar(b.legal);
+    if (v.error) return { error: v.error };
+    c.legal = Object.keys(v.datos).length ? JSON.stringify(v.datos) : null;
   }
+  if (b.canales !== undefined) {
+    const k = b.canales && typeof b.canales === 'object' ? b.canales : {};
+    c.canales = JSON.stringify(Object.fromEntries(CANALES.map((x) => [x, k[x] !== false])));
+  }
+  // Guardar la pestaña Despacho (o desactivarlo) confirma que ya no es la configuración de ejemplo.
+  if (b.despacho !== undefined) c.despacho_confirmado = 1;
   const keys = Object.keys(c);
   if (keys.length) db.prepare(`UPDATE locales SET ${keys.map((k) => `${k}=?`).join(', ')} WHERE id=?`).run(...keys.map((k) => c[k]), local.id);
   return { ok: true };
@@ -924,7 +939,8 @@ const LIC = crearLicencias(db, { hoy: today });
 const USU = crearUsuarios(db);
 const ADMIN = crearAdmin(db, { LIC, USU, crearLocal, hoy: today });
 const resultados = crearResultados(db, { equipoMes: (local, mes) => equipoMes(local, mes) });
-const AUTO = crearAutoservicio(db);
+const LEGAL = LG.crearLegal(db, { hoy: today, licencia: (lid) => LIC.estado(lid) });
+const AUTO = crearAutoservicio(db, { legalCompleto: (lid) => LG.completo(LEGAL.datosDe(lid)), contratoVigente: (lid) => LEGAL.vigente(lid) });
 const PROMOS = crearPromos(db);
 const INV = crearInventario(db, { combos: (lid) => PROMOS.combos(lid) });
 const CLI = crearClientes(db);
@@ -962,6 +978,24 @@ function permisoRuta(m, parts) {
   if (a === 'licencia' || a === 'yo' || a === 'logout') return null;
   return 'local';
 }
+// ---------- textos legales (panel y /admin comparten validadores y vista previa) ----------
+// Vista previa con los datos del formulario, antes de guardarlos.
+function vistaLegal(local, b) {
+  const v = LG.validar(b?.legal);
+  if (v.error) return v;
+  const doc = ['terminos', 'privacidad'].includes(b?.doc) ? b.doc : 'contrato';
+  if (doc !== 'contrato') return LG.documento(doc, menu(local).local, LG.publicos(v.datos), BASE);
+  const e = LIC.estado(local.id);
+  return { html: LG.contrato({ local, datos: v.datos, plan: e?.plan_nombre || '', ciclo: e?.ciclo || '', fecha: today() }).html, faltan: LG.faltan(v.datos).map((c) => c.nombre), version: LG.CONTRATO_VERSION };
+}
+// Texto aceptado como página (para ver o guardar). Sin scripts y con una CSP que no deja cargar nada.
+function enviarAceptado(res, url, local, a) {
+  if (!a) return send(res, 404, { error: 'Todavía no hay un contrato aceptado.' });
+  const nombre = `contrato-${local.slug}-${a.version}.html`;
+  return send(res, 200, LG.paginaAceptada(a, local.nombre), { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+    ...(url.searchParams.get('descargar') ? { 'Content-Disposition': `attachment; filename="${nombre}"` } : {}) });
+}
+
 // Función del plan que pide cada ruta.
 const FUNCION_RUTA = { exportar: 'exportar', resultados: 'resultados', equipo: 'equipo', turnos: 'equipo', promos: 'combos', combos: 'combos', inventario: 'inventario', clientes: 'clientes' };
 
@@ -975,6 +1009,9 @@ async function api(req, res, url) {
     if (!local) return send(res, 404, { error: 'Local no encontrado' });
     if (m === 'GET' && parts.length === 2) return send(res, 200, menu(local));
     if (m === 'GET' && parts[2] === 'franjas') return send(res, 200, franjas(local));
+    // Términos y Privacidad: plantilla fija de 8vobit con los datos públicos del local.
+    if (m === 'GET' && parts[2] === 'legal' && ['terminos', 'privacidad'].includes(parts[3]))
+      return send(res, 200, LG.documento(parts[3], menu(local).local, LG.publicos(LG.leerDatos(local.legal)), BASE));
     if (m === 'POST' && parts[2] === 'cotizar') {
       const b = await readJson(req);
       return send(res, 200, cotizarDespacho(local, Number(b.lat), Number(b.lng)));
@@ -1005,8 +1042,9 @@ async function api(req, res, url) {
   if (m === 'GET' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '')) {
     const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
     if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
-    const l = db.prepare('SELECT slug, nombre, whatsapp, telefono, transferencia, logo FROM locales WHERE id=?').get(p.local_id);
-    const local = { slug: l.slug, nombre: l.nombre, whatsapp: l.whatsapp, telefono: l.telefono, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null, logo: l.logo ? `${BASE}/img/${l.logo}` : null };
+    const l = db.prepare('SELECT slug, nombre, whatsapp, telefono, instagram, canales, transferencia, logo FROM locales WHERE id=?').get(p.local_id);
+    const cp = contactoPublico(l); // sin los canales que el local ocultó
+    const local = { slug: l.slug, nombre: l.nombre, whatsapp: cp.whatsapp, telefono: cp.telefono, transferencia: l.transferencia ? JSON.parse(l.transferencia) : null, logo: l.logo ? `${BASE}/img/${l.logo}` : null };
     const items = db.prepare('SELECT nombre, agregados, salsas, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(p.id)
       .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
@@ -1038,7 +1076,7 @@ async function api(req, res, url) {
     if (m === 'POST' && parts[1] === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': cookie(req, 'admin', '', 0) });
     if (m === 'GET' && parts[1] === 'resumen') {
       const r = ADMIN.resumen();
-      for (const l of r.locales) l.inicio = AUTO.corto(l.id); // avance de los primeros pasos de cada local
+      for (const l of r.locales) { l.inicio = AUTO.corto(l.id); l.contrato = LEGAL.corto(l.id); } // primeros pasos y contrato de cada local
       r.gestion = gestion(r.locales, { hoy: r.hoy,
         primeros: db.prepare('SELECT local_id, substr(MIN(fecha),1,7) mes FROM licencia_pagos WHERE anulado=0 GROUP BY local_id').all(),
         inicio: db.prepare('SELECT MIN(inicio) i FROM licencias').get().i });
@@ -1052,6 +1090,14 @@ async function api(req, res, url) {
       if (m === 'PATCH' && parts[3] === 'licencia') { const r = LIC.actualizar(id, await readJson(req)); return send(res, r.error ? 400 : 200, r.error ? r : ADMIN.detalle(id)); }
       if (m === 'POST' && parts[3] === 'pagos') { const r = LIC.registrarPago(id, await readJson(req)); return send(res, r.error ? 400 : 201, r); }
       if (m === 'POST' && parts[3] === 'clave') { const r = ADMIN.nuevaClave(id); return send(res, r.error ? r.status || 400 : 200, r); }
+      // Datos legales del local cargados por el gestor: mismo formulario y validadores que el panel.
+      const fila = () => db.prepare('SELECT * FROM locales WHERE id=?').get(id);
+      if (parts[3] === 'legal' && !parts[4]) {
+        if (m === 'GET') { const d = LEGAL.datosDe(id); return send(res, 200, { datos: d, campos: LG.CAMPOS, faltan: LG.faltan(d), contrato: { ...LEGAL.corto(id), historial: LEGAL.historial(id) } }); }
+        if (m === 'PATCH') { const r = actualizarLocal(fila(), { legal: (await readJson(req)).legal }); return r.error ? send(res, 400, r) : send(res, 200, { datos: LEGAL.datosDe(id), faltan: LG.faltan(LEGAL.datosDe(id)) }); }
+      }
+      if (m === 'POST' && parts[3] === 'legal' && parts[4] === 'vista') { const r = vistaLegal(fila(), await readJson(req)); return send(res, r.error ? 400 : 200, r); }
+      if (m === 'GET' && parts[3] === 'contrato') return enviarAceptado(res, url, fila(), LEGAL.aceptadoTexto(id, Number(url.searchParams.get('id')) || null));
     }
     return send(res, 404, { error: 'No encontrado' });
   }
@@ -1123,10 +1169,11 @@ async function api(req, res, url) {
     if (m === 'GET' && parts[1] === 'carta') {
       // Costos de insumos: solo para el panel (nunca en la carta pública).
       const costos = new Map(db.prepare('SELECT id, costo FROM productos WHERE local_id=?').all(lid).map((r) => [r.id, r.costo]));
-      const mm = menu(local);
+      const mm = menu(local, false);
       const verCostos = puede('costos') && conPlan('costos');
       mm.categorias = mm.categorias.map((c) => ({ ...c, productos: c.productos.map((p) => ({ ...p, costo: verCostos ? costos.get(p.id) ?? null : null })) }));
-      mm.local = { ...mm.local, costo_pct: verCostos ? local.costo_pct : null };
+      // Representante legal y su RUT: solo quien edita los datos del local.
+      mm.local = { ...mm.local, costo_pct: verCostos ? local.costo_pct : null, legal: puede('local') ? mm.local.legal : LG.publicos(mm.local.legal) };
       // Sueldos y datos laborales: solo el dueño. El resto ve los nombres (para asignar repartidor).
       const eq = equipoDe(local);
       return send(res, 200, { ...mm, equipo: puede('equipo') ? eq : { trabajadores: eq.trabajadores.map((t) => ({ id: t.id, nombre: t.nombre, rol: t.rol, activo: t.activo })) } });
@@ -1348,9 +1395,15 @@ async function api(req, res, url) {
       if (!puede(perm)) return sinPermiso();
       if ((b.equipo !== undefined && !conPlan('equipo'))) return sinPlan('equipo');
       if (b.costo_pct !== undefined && !conPlan('costos')) return sinPlan('costos');
+      // Bloqueo suave: un local que nunca publicó no abre la carta mientras falte el mínimo. Al que ya
+      // recibe pedidos no se le bloquea (el panel le muestra el aviso de lo que falta).
+      if (b.pausa !== undefined && !b.pausa && local.pausa && !local.publicado) {
+        const faltan = AUTO.faltanRecibir(lid);
+        if (faltan.length) return send(res, 409, { error: `Para abrir la carta falta: ${faltan.map((f) => f.titulo.toLowerCase()).join(', ')}.`, faltan });
+      }
       const r = actualizarLocal(local, b);
       if (!r.error && b.horario !== undefined) AUTO.marcar(lid, 'horario');
-      return r.error ? send(res, 400, r) : send(res, 200, menu(db.prepare('SELECT * FROM locales WHERE id=?').get(lid)).local);
+      return r.error ? send(res, 400, r) : send(res, 200, menu(db.prepare('SELECT * FROM locales WHERE id=?').get(lid), false).local);
     }
     // Venta de mostrador: se cobra al momento; opcionalmente pasa a cocina con comanda.
     if (m === 'POST' && parts[1] === 'venta') {
@@ -1462,6 +1515,17 @@ async function api(req, res, url) {
         b.disponible === undefined ? a.disponible : (b.disponible ? 1 : 0), nombre, b.archivado === undefined ? a.archivado : (b.archivado ? 1 : 0), a.id);
       return send(res, 200, { ok: true });
     }
+    // Contrato de servicio + Anexo A: lo ve quien edita el local; lo acepta solo el dueño.
+    if (parts[1] === 'contrato' && !parts[2]) {
+      if (m === 'GET') return send(res, 200, LEGAL.estado(lid));
+      if (m === 'POST') {
+        if (yo.rol !== 'dueno') return send(res, 403, { error: 'El contrato lo acepta el dueño del local.' });
+        const r = LEGAL.aceptar(lid, await readJson(req), { ip: ipDe(req), usuarioId: yo.id });
+        return send(res, r.error ? r.status || 400 : 201, r);
+      }
+    }
+    if (m === 'GET' && parts[1] === 'contrato' && parts[2] === 'aceptado') return enviarAceptado(res, url, local, LEGAL.aceptadoTexto(lid));
+    if (m === 'POST' && parts[1] === 'legal' && parts[2] === 'vista') { const r = vistaLegal(local, await readJson(req)); return send(res, r.error ? 400 : 200, r); }
     // Primeros pasos del local (solo el dueño): avance, omitir un paso, cerrar el asistente.
     if (parts[1] === 'inicio' && !parts[2]) {
       if (m === 'GET') return send(res, 200, AUTO.estado(lid));

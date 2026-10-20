@@ -483,6 +483,13 @@
   .eqnum dd { margin: 2px 0 0; font: 800 1.05rem var(--font-display); font-variant-numeric: tabular-nums; } .eqnum dd small { display: block; font: 600 .74rem var(--font-body); color: var(--ink-2); }
   .eqavisos { margin: 10px 0 0; padding-left: 18px; color: #8a5a00; font-size: .85rem; } .eqavisos .grave { color: var(--danger); font-weight: 700; }
   .ok-legal { color: var(--ok); font-weight: 600; font-size: .88rem; margin: 8px 0 0; }
+  .legal-prev { max-height: 55vh; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 14px 12px; margin: 10px 0; font-size: .9rem; overflow-wrap: anywhere; }
+  .legal-prev h1 { font-size: 1.15rem; } .legal-prev h2 { font-size: 1rem; margin: 16px 0 4px; } .legal-prev .falta { background: #fff3cd; color: #5c4300; padding: 0 4px; border-radius: 4px; }
+  .legal-prev .ficha dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; } .legal-prev .ficha dd { margin: 0; font-weight: 600; }
+  .legal-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+  .canales { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 4px 18px; } .canales legend { font-weight: 600; font-size: .9rem; margin-bottom: 4px; padding: 0; }
+  .canales .ck { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; } .canales .ayuda { flex-basis: 100%; }
+  .nota a, .nota .link { color: inherit; font-weight: 700; }
   .kpis .alerta { border: 1.5px solid #f5c6c1; }
   .turnot .ck { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-weight: 600; } .turnot .ck input { width: 22px; height: 22px; accent-color: var(--brand); }
   .turnot input[type=time] { width: 100%; min-width: 0; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
@@ -507,6 +514,7 @@
   #inicio, #ayudaTab { max-width: 1100px; margin: 0 auto 12px; }
   .ini h3 { margin: 0; display: flex; align-items: center; gap: 8px; } .ini .sh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .ini .sp { flex: 1; }
   .ini-n { font-weight: 700; color: var(--ink-2); }
+  .ini-niv { margin: 16px 0 2px; font-size: .95rem; display: flex; gap: 8px; align-items: baseline; } .ini-niv .num { color: var(--ink-2); font-weight: 600; font-size: .85rem; }
   .ini-barra { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: 10px 0 4px; }
   .ini-barra span { display: block; height: 100%; background: var(--ok); border-radius: 999px; transition: width .3s; }
   .ini-pasos { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
@@ -614,6 +622,7 @@
   <main>
     <div id="inicio" hidden></div>
     <div id="ayudaTab" hidden></div>
+    <div id="supuestos" hidden></div>
     <div id="v-pedidos" class="cols"></div>
     <div id="v-venta" class="venta" hidden>
       <section>
@@ -738,6 +747,7 @@ import * as LB from './laboral.js';
 import { crearCajaUI } from './panel-caja.js';
 import { crearCuentaUI } from './panel-cuenta.js';
 import { crearInicioUI } from './panel-inicio.js';
+import { crearLegalUI } from './panel-legal.js';
 import { crearPromosUI } from './panel-promos.js';
 import { crearInventarioUI } from './panel-inventario.js';
 import { crearClientesUI } from './panel-clientes.js';
@@ -1080,7 +1090,28 @@ let ticket = [], vcat = null;
 const prods = () => M.categorias.flatMap((c, i) => c.productos.map((p) => ({ ...p, cat: c, ci: i })));
 const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-async function cargarCarta() { M = await api('panel/carta'); }
+async function cargarCarta() { M = await api('panel/carta'); supuestos(); }
+// Avisos de valores supuestos: en cada pestaña que usa uno, una nota breve con enlace a dónde corregirlo.
+function supuestos() {
+  const el = $('supuestos');
+  if (!el || !M) return;
+  const L = M.local, d = L.despacho || {}, veh = d.vehiculos || [], notas = [];
+  const ir = (a, t) => `<button type="button" class="link" data-ir-a="${a}">${t}</button>`;
+  const prods = M.categorias.flatMap((c) => c.productos).filter((p) => p.precio > 0 && p.activo);
+  const sinCosto = prods.filter((p) => p.costo == null).length;
+  if (['carta', 'resumen', 'resultados'].includes(vista) && L.costo_pct != null && sinCosto)
+    notas.push(`${sinCosto} de ${prods.length} productos sin costo de insumos: se supone ${L.costo_pct}% del precio. ${ir('carta', 'Cargar costos en Carta y precios')}`);
+  if (['despacho', 'pedidos'].includes(vista) && d.activo && !L.despacho_confirmado)
+    notas.push(`El despacho usa la configuración de ejemplo (costo, zona y horario) y no la has revisado. ${ir('despacho', 'Revisar y guardar en Despacho')}`);
+  if (['despacho', 'pedidos'].includes(vista) && d.activo && !veh.length)
+    notas.push(`Sin vehículo cargado: el orden de entrega supone 25 km/h y no se calcula el costo de cada viaje. ${ir('despacho', 'Agregar un vehículo')}`);
+  else if (vista === 'despacho' && veh.length)
+    notas.push(`La velocidad en ciudad (${veh.map((v) => `${esc(v.nombre)}: ${v.velocidad} km/h`).join(', ')}) es un supuesto: ajústala a lo que de verdad tarda tu repartidor.`);
+  if (vista === 'equipo' && CUENTA.puede('equipo') && CUENTA.tiene('equipo'))
+    notas.push(`Los parámetros laborales marcados ⚠️ (recargo dominical, aporte Ley 21.735) son supuestos por confirmar con tu contador. ${ir('equipo#eqparams', 'Revisarlos')}`);
+  el.hidden = !notas.length;
+  el.innerHTML = notas.map((n) => `<p class="nota">⚠️ <span>${n}</span></p>`).join('');
+}
 function pintarVenta() {
   const cats = M.categorias.filter((c) => c.productos.some(vendible));
   if (!vcat || !cats.some((c) => c.id === vcat)) vcat = cats[0]?.id;
@@ -1544,8 +1575,14 @@ function marcarPausa(on) {
 $('pausa').onclick = async () => {
   const on = $('pausa').getAttribute('aria-pressed') !== 'true';
   if (on && !confirm('¿Pausar los pedidos por la web? Los clientes verán que el local no está recibiendo pedidos en línea. El mostrador sigue funcionando.')) return;
-  await api('panel/local', { method: 'PATCH', body: { pausa: on } });
+  try { await api('panel/local', { method: 'PATCH', body: { pausa: on } }); }
+  catch (e) {
+    // Bloqueo suave: un local nuevo no abre la carta mientras falte el mínimo (el servidor dice qué).
+    if (e.status === 409 && e.data?.faltan) return INICIO.mostrarFaltan(e.data.faltan, e.message);
+    return alert(e.message);
+  }
   marcarPausa(on); toast(on ? 'Pedidos web en pausa' : 'Pedidos web reanudados');
+  INICIO.cargar().catch(() => {});
 };
 
 // ---------- datos del local ----------
@@ -1570,6 +1607,9 @@ function rutValido(v) {
 const INICIO = crearInicioUI({ $, ico, toast, api, clp, esc, fmtTel, BASE, aWebp, tablaHorario, DIAS, BANCOS, TIPOS, rutFormato, rutValido,
   carta: () => M, puede: (x) => CUENTA.puede(x),
   alCambiar: async () => { await cargarCarta(); if (vista === 'carta') await pintarCarta(); else if (vista === 'local' && !localSucio) await pintarLocal(); refrescar().catch(() => {}); } });
+// Datos legales guiados y contrato de servicio (public/panel-legal.js).
+const LEGALUI = crearLegalUI({ $, esc, api, toast, BASE, rutFormato, rutValido, fmtTel, esDueno: () => CUENTA.yo()?.rol === 'dueno', local: () => M.local,
+  alCambiar: async () => { await cargarCarta(); INICIO.cargar().catch(() => {}); } });
 let localSucio = false;
 const marcarSucio = (on) => { localSucio = on; $('lbar')?.classList.toggle('on', on); };
 function tablaHorario(pre, hor, base) {
@@ -1582,7 +1622,7 @@ async function pintarLocal() {
   await cargarCarta();
   const L = M.local, t = L.transferencia || {}, g = L.legal || {};
   const campo = (id, label, val, extra = '', ayuda = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}<div class="err" id="${id}-err"></div></div>`;
-  const SEC = [['s-plan', 'Tu plan'], ['s-usuarios', 'Usuarios y PIN'], ['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-legal', 'Datos legales'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
+  const SEC = [['s-plan', 'Tu plan'], ['s-usuarios', 'Usuarios y PIN'], ['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-legal', 'Datos legales'], ['s-contrato', 'Contrato'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
   const tipoOk = !t.tipo || TIPOS.includes(t.tipo);
   $('v-local').innerHTML = `<div class="lwrap">
     <nav class="lnav" aria-label="Secciones">${SEC.map(([id, n]) => `<a href="#${id}" data-sec="${id}">${n}</a>`).join('')}</nav>
@@ -1596,7 +1636,10 @@ async function pintarLocal() {
         ${campo('l-whatsapp', 'WhatsApp para pedidos', fmtTel(L.whatsapp), 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"', 'Botón "Avisar por WhatsApp" al confirmar.')}
         ${campo('l-telefono', 'Teléfono para llamadas', fmtTel(L.telefono), 'type="tel" inputmode="tel" placeholder="+56 9 1234 5678"', 'Botón "Llamar". Vacío si no atienden llamadas.')}
         ${campo('l-instagram', 'Instagram', L.instagram ? '@' + L.instagram : '', 'placeholder="@tulocal" autocapitalize="off"')}
-      </div></section>
+      </div>
+      <fieldset class="canales"><legend>Mostrar en la carta y el seguimiento</legend>
+        ${[['whatsapp', 'WhatsApp'], ['telefono', 'Teléfono'], ['instagram', 'Instagram']].map(([k, n]) => `<label class="ck"><input type="checkbox" data-canal="${k}" ${L.canales?.[k] !== false ? 'checked' : ''}> ${n}</label>`).join('')}
+        <p class="ayuda">Desmarcado, el dato queda guardado pero el cliente no lo ve. Si no muestras ninguno, el cliente te escribe por los mensajes del pedido.</p></fieldset></section>
     <section class="cardf" id="s-horario"><header class="sh"><h3>Horario de atención</h3><span class="sp"></span><button type="button" class="ghostb" id="h-copiar">Copiar el lunes a todos</button></header>
       ${tablaHorario('', L.horario)}
       <p class="ayuda">Si cierra después de medianoche (ej. 02:00) cuenta como la madrugada siguiente. Misma hora de apertura y cierre = abierto 24 horas.
@@ -1611,15 +1654,12 @@ async function pintarLocal() {
         ${campo('t-email', 'Correo para el comprobante', t.email, 'type="email" maxlength="80" autocomplete="off"')}
       </div><datalist id="bancos">${BANCOS.map((b) => `<option value="${b}">`).join('')}</datalist></section>
     <section class="cardf" id="s-legal"><h3>Datos legales y privacidad</h3><p class="ayuda top">Aparecen en los <a href="${BASE}/terminos?l=${esc(L.slug)}" target="_blank">Términos y condiciones</a> y la <a href="${BASE}/privacidad?l=${esc(L.slug)}" target="_blank">Política de privacidad</a> que la carta muestra al cliente. Mientras falten, esas páginas dicen "Borrador".</p>
-      <div class="dos">
-        ${campo('g-razon', 'Razón social', g.razon_social, 'maxlength="100" placeholder="Como figura en el SII"')}
-        ${campo('g-rut', 'RUT de la empresa', g.rut, 'maxlength="12" placeholder="76.123.456-7" autocomplete="off"')}
-        ${campo('g-correo', 'Correo de contacto', g.correo, 'type="email" maxlength="80"', 'Para consultas, reclamos y solicitudes sobre datos personales.')}
-      </div>
+      ${LEGALUI.campos(g)}
       <div class="field"><label for="g-borrar">Borrar los datos de un cliente</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="g-borrar" type="tel" inputmode="tel" placeholder="Celular del cliente" style="flex:1;min-width:180px"><button type="button" class="ghostb" id="g-borrarB">Borrar sus datos</button></div>
         <p class="ayuda">Si un cliente lo pide: se borran su nombre, celular, dirección y comentarios de todos sus pedidos; las ventas quedan. Además se borran solos a los 24 meses.</p><div class="err" id="g-borrar-err"></div></div>
     </section>
+    <section class="cardf" id="s-contrato"><h3>Contrato de servicio</h3><p class="ayuda">Cargando…</p></section>
     <section class="cardf" id="s-pedidos"><h3>Pedidos en línea</h3>
       <div class="dos">
         ${campo('l-cupo', 'Pedidos web por franja de 30 min', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"', 'Al llenarse, la franja aparece como "completo".')}
@@ -1635,9 +1675,10 @@ async function pintarLocal() {
       <button type="button" class="ghost" id="l-descartar">Descartar</button><button class="primary" id="l-guardar">Guardar cambios</button></div>`;
   marcarSucio(false);
   CUENTA.pintarPlan($('s-plan')).catch(() => {}); CUENTA.pintarUsuarios($('s-usuarios')).catch(() => {});
+  LEGALUI.enlazar(); LEGALUI.pintarContrato($('s-contrato')).catch((e) => { $('s-contrato').innerHTML = `<p class="formerr">${esc(e.message)}</p>`; });
   const v = $('v-local'), q = (sel) => v.querySelector(sel);
   // Plan y usuarios se guardan al tiro: no cuentan como cambios del formulario.
-  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar' && !e.target.closest('#s-usuarios, #s-plan')) marcarSucio(true); };
+  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar' && !e.target.closest('#s-usuarios, #s-plan, #s-contrato')) marcarSucio(true); };
   const enlazar = (pre) => v.querySelectorAll(`[data-${pre}abre]`).forEach((c) => c.addEventListener('change', () => {
     const d = c.dataset[`${pre}abre`]; for (const k of ['desde', 'hasta']) q(`[data-${pre}${k}="${d}"]`).disabled = !c.checked;
   }));
@@ -1679,14 +1720,14 @@ async function pintarLocal() {
     const val = (id) => $(id).value;
     const hor = (pre) => Object.fromEntries(DIAS.map(([d]) => [d, q(`[data-${pre}abre="${d}"]`).checked ? [q(`[data-${pre}desde="${d}"]`).value, q(`[data-${pre}hasta="${d}"]`).value] : null]));
     if (val('t-rut') && !rutValido(val('t-rut'))) { $('t-rut-err').textContent = 'Revisa el RUT: el dígito verificador no coincide.'; $('t-rut').focus(); return; }
-    if (val('g-rut') && !rutValido(val('g-rut'))) { $('g-rut-err').textContent = 'Revisa el RUT: el dígito verificador no coincide.'; $('g-rut').focus(); return; }
+    if (LEGALUI.revisar()) return;
     $('l-guardar').disabled = true; $('l-err').textContent = '';
     try {
       await api('panel/local', { method: 'PATCH', body: {
         nombre: val('l-nombre'), whatsapp: val('l-whatsapp'), telefono: val('l-telefono'), instagram: val('l-instagram'), direccion: val('l-direccion'),
         cupo_franja: val('l-cupo'), comision_app: val('l-comision'), horario: hor(''),
         transferencia: { titular: val('t-titular'), rut: rutFormato(val('t-rut')), banco: val('t-banco'), tipo: val('t-tipo'), numero: val('t-numero'), email: val('t-email') },
-        legal: { razon_social: val('g-razon'), rut: val('g-rut') ? rutFormato(val('g-rut')) : '', correo: val('g-correo') },
+        legal: LEGALUI.valores(), canales: Object.fromEntries([...q('.canales').querySelectorAll('[data-canal]')].map((x) => [x.dataset.canal, x.checked])),
       } });
       marcarSucio(false); toast('✓ Datos del local guardados'); pintarLocal(); refrescar();
     } catch (e) { $('l-err').textContent = e.message; }
@@ -2328,7 +2369,7 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   document.querySelectorAll('[data-v]').forEach((x) => x.setAttribute('aria-selected', x === b));
   b.scrollIntoView({ inline: 'center', block: 'nearest' }); // en pantallas angostas las pestañas se desplazan
   for (const v of ['pedidos', 'venta', 'cierre', 'gastos', 'carta', 'local', 'resumen', 'resultados', 'despacho', 'equipo', 'promos', 'inventario', 'clientes']) $('v-' + v).hidden = v !== vista;
-  INICIO.ayuda(vista); avisos();
+  INICIO.ayuda(vista); avisos(); supuestos();
   const bloq = CUENTA.bloqueada(vista);
   if (bloq) { $('v-' + vista).innerHTML = CUENTA.vistaBloqueada(bloq); return; }
   if (vista === 'carta') pintarCarta();

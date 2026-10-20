@@ -56,7 +56,8 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `lib/promos.mjs` + `public/panel-promos.js` | Promociones (automáticas por día y horario, por código, por categoría), combos y cupón de vuelta (plan Pro; el cupón, Gestión) |
 | `lib/inventario.mjs` + `public/panel-inventario.js` | Insumos, recetas, compras (costo promedio, opcional como gasto), conteo y merma; la venta descuenta y la anulación devuelve (plan Pro) |
 | `lib/clientes.mjs` + `public/panel-clientes.js` | Clientes de la carta online: frecuentes, nuevos, dormidos, historial (plan Gestión) |
-| `lib/autoservicio.mjs` + `public/panel-inicio.js` | Primeros pasos del local nuevo, importar la carta desde planilla, ayudas por pestaña |
+| `lib/autoservicio.mjs` + `public/panel-inicio.js` | Primeros pasos en dos niveles (recibir pedidos / controlar el local), bloqueo suave de la pausa, importar la carta, ayudas por pestaña |
+| `lib/legal.mjs` + `lib/plantillas/` + `public/panel-legal.js` | Textos legales como plantilla fija ({{campo}}): Términos, Privacidad, Contrato + Anexo A; datos legales validados (RUT módulo 11); aceptación del contrato en línea (tabla `contrato_aceptaciones`) |
 | `deploy/probar-respaldo.mjs`, `deploy/MONITOREO.md` | Prueba de restauración de respaldos y guía de monitoreo |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |
 | `public/seguimiento.html`, `comanda.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, carta PDF, cartel/tarjetas con QR |
@@ -83,8 +84,9 @@ toquemos servidor ni base; a nosotros solo nos queda autorizarlo y cobrarle.
       + autorización del gestor. Sin WhatsApp.
 - [ ] A3 Prueba de 14 días con límites claros; termina en pausa, nunca en cobro. Avisos por panel y correo.
 - [ ] A4 Cobro que inicia el cliente (link Flow) y que se registra solo.
-- [ ] A5 Contrato de servicio + encargo de datos aceptado en línea al darse de alta, con versión guardada
-      (obligatorio desde el 1-dic-2026).
+- [x] A5 Contrato de servicio + encargo de datos aceptado en línea, con versión, hash SHA-256, IP, nombre y RUT
+      (2026-10-20, `lib/legal.mjs`, `CONTRATO_VERSION`). **Falta en producción**: poner `PRESTADOR_NOMBRE`,
+      `PRESTADOR_RUT`, `PRESTADOR_CORREO` y `PRESTADOR_DOMICILIO` en el `.env` del servidor (sin ellos no se puede aceptar).
 - [ ] A6 Página de venta con planes y botón "Contratar".
 - [ ] A7 Soporte que escala: ayudas, preguntas frecuentes, canal de soporte y horas por local (SPEC-002).
 - [ ] A8 Operación: monitor activo, respaldos probados, carga medida para 10+ locales.
@@ -94,11 +96,12 @@ toquemos servidor ni base; a nosotros solo nos queda autorizarlo y cobrarle.
 Todo lo que el sistema necesita del local se ingresa desde el panel, guiado, y el sistema avisa qué
 falta para cada función. Nada queda "de prueba" sin que el local lo sepa.
 
-- [ ] Primeros pasos en dos niveles. **Para recibir pedidos** (mínimo para publicar): contacto, horario,
+- [x] (2026-10-20) Primeros pasos en dos niveles. **Para recibir pedidos** (mínimo para publicar): contacto, horario,
       transferencias, carta sin productos "sin precio", despacho real, datos legales. **Para controlar tu
       local**: vehículo y repartidor, costos e insumos, equipo y PIN, equipos (impresora, sonido, QR), caja.
-- [ ] Bloqueo suave: la carta no sale en vivo mientras falte el mínimo; el panel dice qué falta.
-- [ ] Aviso en cada pantalla que use un valor supuesto (despacho de demo, costo estimado 35 %, etc.).
+- [x] Bloqueo suave (2026-10-20): un local que nunca publicó recibe 409 al quitar la pausa con la lista de lo que falta;
+      los ya publicados (`locales.publicado`) solo ven el aviso. Despacho de ejemplo: `locales.despacho_confirmado`.
+- [x] Aviso en cada pantalla que use un valor supuesto (2026-10-20, `supuestos()` en panel.html).
 - [ ] Pedido de prueba guiado de punta a punta (impresora, aviso, caja) sin ensuciar las ventas.
 - [x] **Mensajes del pedido** (2026-10-20, `lib/mensajes.mjs`, tabla `pedido_mensajes`): el cliente escribe
       desde seguimiento y el local responde desde la tarjeta del pedido (botón con el último mensaje, franja
@@ -106,7 +109,8 @@ falta para cada función. Nada queda "de prueba" sin que el local lo sepa.
       se cierra al entregar o anular; el cliente no ve qué usuario respondió. Construido desde cero (no usa Códice).
       Falta: web push para avisar fuera de la página.
 - [ ] Notificaciones del navegador (web push) para el cliente (estado del pedido) y el local (pedido nuevo).
-- [ ] WhatsApp, teléfono e Instagram del local: opcionales, el local decide si se muestran.
+- [x] WhatsApp, teléfono e Instagram del local: opcionales (`locales.canales`, 2026-10-20); /admin ya no abre WhatsApp
+      (copiar mensaje o correo).
 
 La prueba en terreno con Gassuso es la **validación** de la meta B, no un pendiente aparte.
 Orden: meta B primero; de la A, antes del 2º local A5, A6, A1 y A8; A2–A4 entre el 5º y el 10º local.

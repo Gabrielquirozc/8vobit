@@ -19,7 +19,7 @@ before(async () => {
   fs.writeFileSync(path.join(dir, 'seed.json'), JSON.stringify(seed));
   srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server.mjs'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: '0', HOST: '127.0.0.1', DATA_DIR: path.join(dir, 'data'), SEED_FILE: path.join(dir, 'seed.json'), PANEL_PASSWORD: 'clave-de-prueba', ADMIN_PASSWORD: 'admin-de-prueba', SESSION_SECRET: 'x'.repeat(64) },
+    env: { ...process.env, PORT: '0', HOST: '127.0.0.1', DATA_DIR: path.join(dir, 'data'), SEED_FILE: path.join(dir, 'seed.json'), PANEL_PASSWORD: 'clave-de-prueba', ADMIN_PASSWORD: 'admin-de-prueba', PRESTADOR_NOMBRE: 'Prestador de Prueba', PRESTADOR_RUT: '11.111.111-1', PRESTADOR_CORREO: 'hola@8vobit.xyz', PRESTADOR_DOMICILIO: 'Concepción', SESSION_SECRET: 'x'.repeat(64) },
     stdio: ['ignore', 'pipe', 'inherit'],
   });
   B = await new Promise((ok, fail) => {
@@ -46,6 +46,24 @@ const menu = async () => (await req('GET', '/api/locales/gassuso')).body;
 const prod = async (nombre) => (await menu()).categorias.flatMap((c) => c.productos).find((p) => p.nombre === nombre);
 const pedir = (items, extra = {}) => req('POST', '/api/locales/gassuso/pedidos', { cliente: 'Ana', telefono: '+56 9 1111 2222', franja: 'Lo antes posible', items, ...extra });
 const login = async () => { cookie = ''; return req('POST', '/api/panel/login', { slug: 'gassuso', password: 'clave-de-prueba' }); };
+// Datos legales completos de prueba (RUT con dígito verificador válido).
+const LEGAL_OK = { razon_social: 'Comercial Prueba SpA', rut: '76.086.428-5', giro: 'Venta de comida preparada', domicilio: 'Freire 145', comuna: 'Concepción',
+  representante: 'Ana Pérez Soto', representante_rut: '12.345.678-5', correo: 'hola@prueba.cl', telefono: '+56 9 1234 5678' };
+// Lo que hace el dueño de un local nuevo antes de abrir su carta: el mínimo "Para recibir pedidos".
+async function dejarListo(d) {
+  const r = await d('PATCH', '/api/panel/local', { direccion: 'Freire 145, Concepción', whatsapp: '+56 9 1234 5678', despacho: { activo: false }, legal: LEGAL_OK,
+    horario: Object.fromEntries([...'0123456'].map((x) => [x, ['00:00', '00:00']])) });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  await d('PATCH', '/api/panel/inicio', { omitir: 'transferencias' });
+  for (const p of (await d('GET', '/api/panel/carta')).body.categorias.flatMap((c) => c.productos))
+    if (p.activo && (p.precio_pendiente || !p.precio)) await d('PATCH', `/api/panel/productos/${p.id}`, { activo: false });
+  const k = (await d('GET', '/api/panel/contrato')).body;
+  if (!k.vigente) {
+    const a = await d('POST', '/api/panel/contrato', { nombre: 'Ana Pérez Soto', rut: '12.345.678-5', acepto: true, hash: k.hash });
+    assert.equal(a.status, 201, JSON.stringify(a.body));
+  }
+  assert.deepEqual((await d('GET', '/api/panel/inicio')).body.niveles.recibir.faltan, []);
+}
 
 // ---------- carta ----------
 test('la carta trae categorías, productos con foto y "los más pedidos"', async () => {
@@ -776,6 +794,66 @@ test('legal: páginas públicas, datos legales validados y borrado de datos de u
   await req('PATCH', '/api/panel/local', { legal: null });
 });
 
+// ---------- textos legales y canales de contacto ----------
+test('legal: RUT con dígito verificador y plantillas con y sin datos', async () => {
+  const LG = await import('../lib/legal.mjs');
+  for (const r of ['76.086.428-5', '76086428-5', '760864285', '12.345.678-5', '11.111.111-1', '9.999.999-3']) assert.equal(LG.rutValido(r), true, r);
+  for (const r of ['76.086.428-4', '12.345.678-K', '1-9', '', 'abc', '123456789012-3', null]) assert.equal(LG.rutValido(r), false, String(r));
+  // Validación: formatea el RUT, normaliza el teléfono y rechaza lo inválido.
+  assert.deepEqual(LG.validar({ rut: '760864285', telefono: '912345678', correo: ' x@y.cl ' }).datos, { rut: '76.086.428-5', correo: 'x@y.cl', telefono: '56912345678' });
+  assert.equal(LG.validar({ correo: 'malo' }).campo, 'correo');
+  assert.equal(LG.validar({ representante_rut: '12.345.678-9' }).campo, 'representante_rut');
+  // Render: marcadores con escape, bloques y faltantes marcados.
+  assert.equal(LG.render('Hola {{a}}{{#b}} sí{{/b}}{{^b}} no{{/b}}', { a: '<x>' }), 'Hola &lt;x&gt; no');
+  assert.equal(LG.render('{{a}}', {}), '<span class="falta">[a]</span>');
+  assert.equal(LG.render('{{{c}}}', { c: '<b>ok</b>' }), '<b>ok</b>');
+  const local = { slug: 'x', nombre: 'Mi Local', whatsapp: '56912345678', telefono: null, despacho: { activo: true } };
+  const sin = LG.documento('terminos', local, {});
+  assert.ok(sin.faltan.includes('Razón social'));
+  assert.match(sin.html, /class="falta"/);
+  assert.match(sin.html, /Retiro y despacho/);
+  const con = LG.documento('privacidad', { ...local, despacho: { activo: false } }, LG.publicos(LEGAL_OK));
+  assert.deepEqual(con.faltan, []);
+  assert.doesNotMatch(con.html, /class="falta"/);
+  assert.match(con.html, /Comercial Prueba SpA/);
+  assert.doesNotMatch(con.html, /pin en el mapa/); // sin despacho no habla de la dirección de entrega
+  assert.doesNotMatch(con.html, /12\.345\.678-5/); // el RUT del representante no sale al público
+  const c1 = LG.contrato({ local, datos: LEGAL_OK, plan: 'Gestión', ciclo: 'mensual', fecha: '2026-10-20', prest: { nombre: 'P', rut: '11.111.111-1', correo: 'p@x.cl', domicilio: 'Conce' } });
+  assert.match(c1.html, /20 de octubre de 2026/);
+  assert.match(c1.html, /Ana Pérez Soto, RUT 12\.345\.678-5/);
+  assert.doesNotMatch(c1.html, /class="falta"/);
+  assert.equal(c1.hash, LG.hash(c1.html));
+  assert.match(LG.contrato({ local, datos: {}, fecha: '2026-10-20', prest: {} }).html, /\[Razón social\]/);
+  // Páginas públicas: el texto viene del servidor con los datos del local.
+  const t = (await req('GET', '/api/locales/gassuso/legal/terminos')).body;
+  assert.match(t.html, /Gassuso/);
+  assert.ok(Array.isArray(t.faltan));
+  assert.equal((await req('GET', '/api/locales/gassuso/legal/otro')).status, 404);
+});
+
+test('canales de contacto: el local decide qué muestra la carta y el seguimiento', async () => {
+  await login();
+  await req('PATCH', '/api/panel/local', { whatsapp: '+56 9 8765 4321', telefono: '+56 9 8450 6842', instagram: '@gassuso' });
+  // Por defecto se muestran los que existen.
+  let l = (await menu()).local;
+  assert.deepEqual([l.whatsapp, l.telefono, l.instagram], ['56987654321', '56984506842', 'gassuso']);
+  assert.equal(l.canales, undefined); // la configuración es del panel
+  assert.equal((await req('PATCH', '/api/panel/local', { canales: { whatsapp: false, instagram: false } })).status, 200);
+  l = (await menu()).local;
+  assert.deepEqual([l.whatsapp, l.telefono, l.instagram], [null, '56984506842', null]);
+  const p = await pedir([{ producto_id: (await prod('Italiano')).id }]);
+  const s = (await req('GET', `/api/seguimiento/${p.body.token}`)).body;
+  assert.equal(s.local.whatsapp, null);
+  assert.equal(s.local.telefono, '56984506842');
+  assert.doesNotMatch((await req('GET', '/api/locales/gassuso/legal/terminos')).body.html, /wa\.me/);
+  // El panel sigue viendo y editando los datos.
+  const pc = (await req('GET', '/api/panel/carta')).body.local;
+  assert.equal(pc.whatsapp, '56987654321');
+  assert.deepEqual(pc.canales, { whatsapp: false, telefono: true, instagram: false });
+  await req('PATCH', '/api/panel/local', { canales: {} });
+  assert.equal((await menu()).local.whatsapp, '56987654321');
+});
+
 // ---------- resumen semanal ----------
 test('resumen semanal: los 6 números cuadran entre sí', async () => {
   await login();
@@ -1116,6 +1194,8 @@ test('multi-local: cada dueño entra con su clave y no ve datos del otro', async
   assert.equal((await pic('POST', '/api/panel/login', { password: clave })).status, 401); // hay 2 locales: falta el código
   assert.equal((await pic('POST', '/api/panel/login', { slug, password: 'clave-de-prueba' })).status, 401); // la clave general no vale para un local con clave propia
   assert.equal((await pic('POST', '/api/panel/login', { slug, password: clave })).status, 200);
+  await dejarListo(pic);
+  assert.equal((await pic('PATCH', '/api/panel/local', { pausa: false })).status, 200); // completo: se publica
   const ped = (await pic('GET', '/api/panel/pedidos')).body;
   assert.equal(ped.local, 'La Picada');
   assert.equal(ped.pedidos.length, 0);
@@ -1320,7 +1400,7 @@ test('planilla: separadores, comillas, títulos y precios a la chilena', async (
 });
 
 const rincon = {};
-test('primeros pasos: un local nuevo ve su avance hasta completarlo; Gassuso no', async () => {
+test('primeros pasos: dos niveles, bloqueo suave de la pausa y Gassuso sin asistente', async () => {
   const ad = cliente();
   await ad('POST', '/api/admin/login', { password: 'admin-de-prueba' });
   const n = await ad('POST', '/api/admin/locales', { slug: 'el-rincon', nombre: 'El Rincón', plan: 'gestion' });
@@ -1329,13 +1409,20 @@ test('primeros pasos: un local nuevo ve su avance hasta completarlo; Gassuso no'
   assert.equal((await dueno('POST', '/api/panel/login', { slug: 'el-rincon', password: n.body.clave })).status, 200);
   const e0 = (await dueno('GET', '/api/panel/inicio')).body;
   assert.equal(e0.cerrado, false);
-  assert.equal(e0.listos, 0);
-  assert.deepEqual(e0.pasos.map((p) => p.id), ['contacto', 'horario', 'logo', 'transferencias', 'producto']);
-  // La consola muestra el avance de cada local.
-  assert.deepEqual((await ad('GET', '/api/admin/resumen')).body.locales.find((l) => l.slug === 'el-rincon').inicio, { listos: 0, total: 5, cerrado: false });
-  // Gassuso se armó antes del asistente: no lo ve.
+  assert.deepEqual(e0.pasos.filter((p) => p.nivel === 'recibir').map((p) => p.id), ['contacto', 'horario', 'transferencias', 'producto', 'despacho', 'legal', 'contrato']);
+  assert.deepEqual(e0.pasos.filter((p) => p.nivel === 'controlar').map((p) => p.id), ['vehiculo', 'costos', 'equipo', 'caja', 'logo']);
+  assert.equal(e0.niveles.recibir.listos, 0);
+  assert.equal(e0.pasos.find((p) => p.id === 'vehiculo').no_aplica, true); // sin despacho no hay vehículo que cargar
+  assert.equal(e0.listo_publicar, false);
+  // La consola muestra el avance de cada local y si aceptó el contrato.
+  const fila = async () => (await ad('GET', '/api/admin/resumen')).body.locales.find((l) => l.slug === 'el-rincon');
+  let f = await fila();
+  assert.deepEqual([f.inicio.recibir.listos, f.inicio.recibir.total, f.inicio.total, f.inicio.cerrado, f.inicio.publicado], [0, 7, 12, false, false]);
+  assert.deepEqual(f.contrato, { datos_completos: false, aceptado: null, vigente: false });
+  // Gassuso se armó antes del asistente: no lo ve, y como ya recibe pedidos no se bloquea.
   await login();
   assert.equal((await req('GET', '/api/panel/inicio')).body.cerrado, true);
+  assert.equal((await req('GET', '/api/panel/inicio')).body.publicado, true);
 
   // Contacto: con WhatsApp y dirección queda listo.
   assert.equal((await dueno('PATCH', '/api/panel/local', { whatsapp: '912345678' })).status, 200);
@@ -1350,23 +1437,97 @@ test('primeros pasos: un local nuevo ve su avance hasta completarlo; Gassuso no'
   assert.equal((await dueno('PATCH', '/api/panel/local', { transferencia: { titular: 'Ana Pérez', rut: '76.123.456-0', banco: 'BCI', tipo: 'Cuenta vista', numero: '123-45' } })).status, 200);
   // Logo: se puede omitir; un paso obligatorio no.
   assert.equal((await dueno('PATCH', '/api/panel/inicio', { omitir: 'contacto' })).status, 400);
+  assert.equal((await dueno('PATCH', '/api/panel/inicio', { omitir: 'legal' })).status, 400);
   let e = (await dueno('PATCH', '/api/panel/inicio', { omitir: 'logo' })).body;
-  assert.deepEqual(e.pasos.map((p) => [p.id, p.hecho || p.omitido]), [['contacto', true], ['horario', true], ['logo', true], ['transferencias', true], ['producto', false]]);
-  assert.equal(e.listos, 4);
-  assert.equal(e.completo, false);
-  // Primer producto (desde el asistente): un producto "sin precio" no cuenta.
+  assert.equal(e.pasos.find((p) => p.id === 'logo').omitido, true);
+  assert.deepEqual(e.niveles.recibir.faltan, ['producto', 'despacho', 'legal', 'contrato']);
+  // Carta: un producto "sin precio" disponible no cuenta.
   const uno = (precio) => dueno('POST', '/api/panel/importar', { modo: 'agregar', confirmar: true, filas: [{ categoria: 'Sándwiches', nombre: 'Lomito', precio }] });
   assert.equal((await uno('')).status, 201);
-  assert.equal((await dueno('GET', '/api/panel/inicio')).body.completo, false);
+  assert.equal((await dueno('GET', '/api/panel/inicio')).body.pasos.find((p) => p.id === 'producto').hecho, false);
   assert.equal((await uno('$6.500')).status, 201); // misma categoría y nombre: actualiza el precio
   e = (await dueno('GET', '/api/panel/inicio')).body;
-  assert.equal(e.completo, true);
+  assert.equal(e.pasos.find((p) => p.id === 'producto').hecho, true);
   const m = (await req('GET', '/api/locales/el-rincon')).body;
   assert.deepEqual(m.categorias.filter((c) => c.productos.length).map((c) => [c.nombre, c.productos.map((p) => [p.nombre, p.precio, p.precio_pendiente])]), [['Sándwiches', [['Lomito', 6500, 0]]]]);
-  // Cerrar el asistente; se puede volver a abrir.
-  assert.equal((await dueno('PATCH', '/api/panel/inicio', { cerrado: true })).body.cerrado, true);
-  assert.equal((await dueno('PATCH', '/api/panel/inicio', { cerrado: false })).body.cerrado, false);
-  Object.assign(rincon, { dueno, ad });
+
+  // Bloqueo suave: un local nuevo no sale de la pausa mientras falte algo del primer nivel.
+  let r = await dueno('PATCH', '/api/panel/local', { pausa: false });
+  assert.equal(r.status, 409);
+  assert.deepEqual(r.body.faltan.map((x) => x.id), ['despacho', 'legal', 'contrato']);
+  assert.equal(r.body.faltan[1].ir, 'local#s-legal');
+  assert.equal((await req('GET', '/api/locales/el-rincon')).body.local.pausa, true);
+  // Despacho: desactivarlo (o guardar la pestaña) lo confirma; la config de ejemplo no cuenta.
+  assert.equal((await dueno('PATCH', '/api/panel/local', { despacho: { activo: false } })).status, 200);
+  // Datos legales: mismos validadores que el gestor; incompletos se guardan, pero el paso sigue pendiente.
+  assert.equal((await dueno('PATCH', '/api/panel/local', { legal: { ...LEGAL_OK, representante_rut: '12.345.678-9' } })).status, 400);
+  assert.equal((await dueno('PATCH', '/api/panel/local', { legal: { ...LEGAL_OK, telefono: '12' } })).status, 400);
+  assert.equal((await dueno('PATCH', '/api/panel/local', { legal: { razon_social: LEGAL_OK.razon_social } })).status, 200);
+  assert.equal((await dueno('GET', '/api/panel/inicio')).body.pasos.find((p) => p.id === 'legal').hecho, false);
+  assert.match((await dueno('GET', '/api/panel/contrato')).body.html, /class="falta"/); // borrador
+  // El gestor completa los mismos datos desde /admin.
+  assert.equal((await ad('PATCH', `/api/admin/locales/${n.body.id}/legal`, { legal: { ...LEGAL_OK, rut: '76.086.428-4' } })).status, 400);
+  const al = await ad('PATCH', `/api/admin/locales/${n.body.id}/legal`, { legal: LEGAL_OK });
+  assert.equal(al.status, 200);
+  assert.deepEqual(al.body.faltan, []);
+  assert.equal((await dueno('GET', '/api/panel/inicio')).body.pasos.find((p) => p.id === 'legal').hecho, true);
+  // Vista previa con datos sin guardar (panel y admin).
+  const vp = await dueno('POST', '/api/panel/legal/vista', { doc: 'terminos', legal: { razon_social: 'Otra SpA' } });
+  assert.match(vp.body.html, /Otra SpA/);
+  assert.ok(vp.body.faltan.length > 0);
+  assert.equal((await dueno('POST', '/api/panel/legal/vista', { legal: { rut: '1-2' } })).status, 400);
+  assert.match((await ad('POST', `/api/admin/locales/${n.body.id}/legal/vista`, { legal: LEGAL_OK })).body.html, /Ana Pérez Soto/);
+  // La carta pública no lleva al representante ni su RUT.
+  const pub = (await req('GET', '/api/locales/el-rincon')).body.local.legal;
+  assert.equal(pub.razon_social, LEGAL_OK.razon_social);
+  assert.equal(pub.representante, undefined);
+  assert.equal(pub.representante_rut, undefined);
+  r = await dueno('PATCH', '/api/panel/local', { pausa: false });
+  assert.equal(r.status, 409);
+  assert.deepEqual(r.body.faltan.map((x) => x.id), ['contrato']);
+  Object.assign(rincon, { dueno, ad, id: n.body.id });
+});
+
+test('contrato: el dueño lo acepta en línea con sus datos y queda registrado con versión y huella', async () => {
+  const { dueno, ad, id } = rincon;
+  const { CONTRATO_VERSION } = await import('../lib/legal.mjs');
+  const k = (await dueno('GET', '/api/panel/contrato')).body;
+  assert.equal(k.version, CONTRATO_VERSION);
+  assert.equal(k.aceptado, null);
+  assert.deepEqual(k.faltan, []);
+  assert.equal(k.prestador_ok, true);
+  assert.match(k.html, /Comercial Prueba SpA/);
+  assert.match(k.html, /Prestador de Prueba/);
+  assert.doesNotMatch(k.html, /class="falta"/);
+  assert.match(k.hash, /^[0-9a-f]{64}$/);
+  const acepta = (b) => dueno('POST', '/api/panel/contrato', { nombre: 'Ana Pérez Soto', rut: '12.345.678-5', acepto: true, hash: k.hash, ...b });
+  assert.equal((await acepta({ acepto: false })).status, 400);
+  assert.equal((await acepta({ rut: '12.345.678-9' })).status, 400);
+  assert.equal((await acepta({ nombre: 'A' })).status, 400);
+  assert.equal((await acepta({ hash: 'otro' })).status, 409); // aceptó un texto distinto del vigente
+  const a = await acepta();
+  assert.equal(a.status, 201);
+  assert.equal(a.body.aceptado.version, CONTRATO_VERSION);
+  assert.equal(a.body.aceptado.hash, k.hash);
+  assert.equal(a.body.aceptado.rut, '12.345.678-5');
+  const k2 = (await dueno('GET', '/api/panel/contrato')).body;
+  assert.equal(k2.vigente, true);
+  assert.equal((await dueno('GET', '/api/panel/inicio')).body.listo_publicar, true);
+  // El texto aceptado se puede ver y descargar, igual al que se aceptó.
+  assert.equal((await cliente()('GET', '/api/panel/contrato/aceptado')).status, 401); // sin sesión no se ve
+  const ver = await dueno('GET', '/api/panel/contrato/aceptado');
+  assert.equal(ver.status, 200);
+  assert.match(ver.body, /Comercial Prueba SpA/);
+  assert.match(ver.body, new RegExp(k.hash));
+  const va = await ad('GET', `/api/admin/locales/${id}/contrato`);
+  assert.equal(va.status, 200);
+  assert.match(va.body, /Ana Pérez Soto/);
+  // La consola muestra si aceptó y qué versión.
+  const f = (await ad('GET', '/api/admin/resumen')).body.locales.find((l) => l.slug === 'el-rincon');
+  assert.equal(f.contrato.vigente, true);
+  assert.equal(f.contrato.aceptado.version, CONTRATO_VERSION);
+  assert.equal((await ad('GET', `/api/admin/locales/${id}/legal`)).body.contrato.historial.length, 1);
+  assert.equal((await cliente()('GET', '/api/panel/contrato')).status, 401);
 });
 
 test('importar carta: vista previa, errores por fila, agregar y reemplazar sin perder pedidos', async () => {
@@ -1410,6 +1571,7 @@ test('importar carta: vista previa, errores por fila, agregar y reemplazar sin p
   const chac = ps.find((x) => x.nombre === 'Chacarero');
   // Un local creado desde la administración parte en pausa hasta que el dueño abre la carta.
   assert.equal((await req('GET', '/api/locales/el-rincon')).body.local.pausa, true);
+  await dejarListo(dueno); // sin el mínimo para publicar, la carta no sale de la pausa (409)
   assert.equal((await dueno('PATCH', '/api/panel/local', { pausa: false, horario: Object.fromEntries([...'0123456'].map((d) => [d, ['00:00', '00:00']])) })).status, 200); // 24 h: la prueba no depende de la hora
   assert.equal((await req('POST', '/api/locales/el-rincon/pedidos', { cliente: 'Ana', telefono: '+56 9 1111 2222', franja: 'Lo antes posible', items: [{ producto_id: chac.id }] })).status, 201);
   const prev = await imp('Sándwiches\tLomito\t7200\nPostres\tKuchen\t2500', { modo: 'reemplazar' });
@@ -1436,6 +1598,7 @@ test('importar carta y primeros pasos: permisos y límites', async () => {
   assert.equal((await dueno('POST', '/api/panel/pin', { pin: '5827' })).status, 200);
   assert.equal((await dueno('POST', '/api/panel/importar', { texto: 'Postres\tKuchen\t2600' })).status, 200); // encargado sí
   assert.equal((await dueno('PATCH', '/api/panel/inicio', { cerrado: true })).status, 403); // pero los primeros pasos son del dueño
+  assert.equal((await dueno('POST', '/api/panel/contrato', { nombre: 'Eli Soto', rut: '12.345.678-5', acepto: true })).status, 403); // el contrato lo acepta el dueño
   // Planilla gigante: 413 con un mensaje claro.
   const r = await dueno('POST', '/api/panel/importar', { texto: 'x'.repeat(310e3) });
   assert.equal(r.status, 413);

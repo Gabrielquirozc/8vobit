@@ -1,4 +1,4 @@
-// Panel: autoservicio del local. Primeros pasos de un local nuevo (con su avance), importar la carta
+// Panel: autoservicio del local. Primeros pasos en dos niveles (con su avance), importar la carta
 // desde una planilla (Excel/CSV) con vista previa, y ayudas cortas en cada pestaña.
 // Las utilidades llegan desde el panel (ctx) para no cargar comun.js dos veces.
 export function crearInicioUI(ctx) {
@@ -53,43 +53,84 @@ export function crearInicioUI(ctx) {
     E = await api('panel/inicio');
     pintar();
   }
+  // Pasos que se completan en un diálogo propio; el resto lleva a su pestaña (campo `ir`).
+  const CON_DIALOGO = new Set(['contacto', 'horario', 'transferencias', 'producto', 'logo']);
+  const enPausa = () => $('pausa').getAttribute('aria-pressed') === 'true';
+  const listo = (p) => p.hecho || p.omitido;
+  // Lleva a la pestaña (y sección) donde se completa algo: "local#s-legal", "despacho"…
+  function irA(ir) {
+    const [v, sec] = String(ir || '').split('#');
+    const tab = document.querySelector(`[data-v="${v}"]`);
+    if (!tab || tab.hidden) return;
+    if ($('dlgInicio').open) $('dlgInicio').close();
+    tab.click();
+    if (!sec) { scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    let n = 0;
+    const buscar = () => { const el = $(sec); if (el?.tagName === 'DETAILS') el.open = true; if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else if (n++ < 20) setTimeout(buscar, 100); };
+    buscar();
+  }
+  const lista = (ps, sig) => `<ol class="ini-pasos">${ps.map((p) => `<li class="${listo(p) ? (p.hecho ? 'ok' : 'omit') : ''} ${p === sig ? 'sig' : ''}">
+    <span class="ini-ico" aria-hidden="true">${p.hecho ? ico('check') : p.omitido ? '–' : ''}</span>
+    <span class="ini-t"><b>${esc(p.titulo)}</b><small>${p.no_aplica ? 'No aplica: sin despacho' : p.hecho ? 'Listo' : p.omitido ? 'Omitido' : esc(p.detalle)}</small></span>
+    <button type="button" class="${p === sig ? 'primary chico' : 'ghostb'}" data-paso="${p.id}">${p.hecho ? 'Revisar' : p.omitido ? 'Retomar' : 'Completar'}</button></li>`).join('')}</ol>`;
   function pintar() {
     const el = $('inicio');
-    el.hidden = !E || E.cerrado;
-    if (el.hidden) return;
+    if (!E) { el.hidden = true; return; }
+    const R = E.niveles.recibir, C = E.niveles.controlar;
+    const falta = E.pasos.filter((p) => p.nivel === 'recibir' && !listo(p));
+    // Asistente cerrado (o local armado antes de él): solo el aviso de lo mínimo que falte.
+    if (E.cerrado) {
+      el.hidden = !falta.length;
+      if (falta.length) el.innerHTML = `<p class="nota">⚠️ <span><b>${E.publicado ? 'Tu carta recibe pedidos, pero falta' : 'Para abrir tu carta falta'}:</b>
+        ${falta.map((p) => `<button type="button" class="link" data-ir-a="${esc(p.ir)}">${esc(p.titulo)}</button>`).join(' · ')}</span></p>`;
+      return;
+    }
+    el.hidden = false;
     const min = guardado('inicio-min') === '1' && !E.completo, pct = Math.round((E.listos / E.total) * 100);
     const barra = `<div class="ini-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${E.total}" aria-valuenow="${E.listos}" aria-label="Avance de los primeros pasos"><span style="width:${pct}%"></span></div>`;
     if (E.completo) {
       const slug = carta()?.local?.slug || '';
-      const pausa = $('pausa').getAttribute('aria-pressed') === 'true';
-      el.innerHTML = `<section class="cardf ini listo"><header class="sh"><h3>${ico('check')}${pausa ? '¡Tu carta está lista!' : '¡Tu local está listo para recibir pedidos!'}</h3></header>${barra}
-        ${pausa ? '<p class="ayuda"><b>Tu carta todavía está en pausa: los clientes la ven pero no pueden pedir.</b> Revísala, haz un pedido de ensayo y ábrela cuando quieras.</p><p><button type="button" class="primary" data-ini-abrir>Abrir mi carta a los clientes</button></p>' : ''}
-        <p class="ayuda">Antes del primer servicio: deja el panel abierto en la tablet con el sonido activo (campana arriba), haz un pedido de ensayo desde tu celular, imprime el cartel con el QR y compártelo en tus redes. Si trabajas con más personas, crea sus PIN en Datos del local.</p>
+      el.innerHTML = `<section class="cardf ini listo"><header class="sh"><h3>${ico('check')}${enPausa() ? '¡Tu carta está lista!' : '¡Tu local está listo para recibir pedidos!'}</h3></header>${barra}
+        ${enPausa() ? '<p class="ayuda"><b>Tu carta todavía está en pausa: los clientes la ven pero no pueden pedir.</b> Revísala, haz un pedido de ensayo y ábrela cuando quieras.</p><p><button type="button" class="primary" data-ini-abrir>Abrir mi carta a los clientes</button></p>' : ''}
+        <p class="ayuda">Antes del primer servicio: deja el panel abierto en la tablet con el sonido activo (campana arriba), haz un pedido de ensayo desde tu celular, imprime el cartel con el QR y compártelo en tus redes.</p>
         <div class="ini-acc"><a class="ghostb fuerte" href="${BASE}/${esc(slug)}" target="_blank">Ver mi carta</a><a class="ghostb" href="cartel" target="_blank">Cartel y tarjetas con QR</a>
         <span class="sp"></span><button type="button" class="primary chico" data-ini-cerrar>Terminar</button></div></section>`;
-    } else if (min) {
-      el.innerHTML = `<section class="cardf ini mini"><b>Primeros pasos</b><span class="num">${E.listos} de ${E.total}</span>${barra}<button type="button" class="ghostb fuerte" data-ini-min="0">Continuar</button></section>`;
-    } else {
-      const sig = E.pasos.find((p) => !p.hecho && !p.omitido);
-      el.innerHTML = `<section class="cardf ini"><header class="sh"><h3>Primeros pasos para dejar tu local andando</h3><span class="sp"></span>
-          <span class="num ini-n">${E.listos} de ${E.total}</span><button type="button" class="link" data-ini-min="1">Ocultar</button></header>${barra}
-        ${$('pausa').getAttribute('aria-pressed') === 'true' ? '<p class="ayuda">Tu carta está en pausa mientras completas estos pasos: los clientes todavía no pueden pedir.</p>' : ''}
-        <ol class="ini-pasos">${E.pasos.map((p) => `<li class="${p.hecho ? 'ok' : p.omitido ? 'omit' : ''} ${p === sig ? 'sig' : ''}">
-          <span class="ini-ico" aria-hidden="true">${p.hecho ? ico('check') : p.omitido ? '–' : ''}</span>
-          <span class="ini-t"><b>${esc(p.titulo)}</b><small>${p.hecho ? 'Listo' : p.omitido ? 'Omitido' : esc(p.detalle)}</small></span>
-          <button type="button" class="${p === sig ? 'primary chico' : 'ghostb'}" data-paso="${p.id}">${p.hecho ? 'Revisar' : p.omitido ? 'Retomar' : 'Completar'}</button></li>`).join('')}</ol></section>`;
+      return;
     }
+    if (min) {
+      el.innerHTML = `<section class="cardf ini mini"><b>Primeros pasos</b><span class="num">${R.completo ? `${E.listos} de ${E.total}` : `Para recibir pedidos: ${R.listos} de ${R.total}`}</span>${barra}<button type="button" class="ghostb fuerte" data-ini-min="0">Continuar</button></section>`;
+      return;
+    }
+    const sig = E.pasos.find((p) => !listo(p));
+    const abrir = R.completo && enPausa() ? '<p class="ayuda"><b>Ya puedes recibir pedidos.</b> Tu carta sigue en pausa hasta que la abras.</p><p><button type="button" class="primary" data-ini-abrir>Abrir mi carta a los clientes</button></p>' : '';
+    el.innerHTML = `<section class="cardf ini"><header class="sh"><h3>Primeros pasos para dejar tu local andando</h3><span class="sp"></span>
+        <span class="num ini-n">${E.listos} de ${E.total}</span><button type="button" class="link" data-ini-min="1">Ocultar</button></header>${barra}
+      <h4 class="ini-niv">1. ${esc(R.titulo)} <span class="num">${R.listos} de ${R.total}</span></h4>
+      ${!R.completo && enPausa() ? '<p class="ayuda">Tu carta está en pausa hasta completar estos pasos: los clientes todavía no pueden pedir.</p>' : ''}
+      ${lista(E.pasos.filter((p) => p.nivel === 'recibir'), sig)}${abrir}
+      <h4 class="ini-niv">2. ${esc(C.titulo)} <span class="num">${C.listos} de ${C.total}</span></h4>
+      <p class="ayuda">No bloquean la carta, pero sin ellos los costos, márgenes y la caja usan valores supuestos.</p>
+      ${lista(E.pasos.filter((p) => p.nivel === 'controlar'), sig)}</section>`;
+  }
+  // La carta no se abrió: el servidor dice qué falta (409). Se muestra con enlaces a cada pestaña.
+  function mostrarFaltan(faltan, msg) {
+    hoja('Antes de abrir tu carta', `<p class="ayuda top">${esc(msg || 'Para recibir pedidos por la web falta completar:')}</p>
+      <ol class="ini-pasos">${faltan.map((f) => `<li><span class="ini-ico" aria-hidden="true"></span><span class="ini-t"><b>${esc(f.titulo)}</b><small>${esc(f.detalle || '')}</small></span>
+        <button type="button" class="primary chico" data-ir-a="${esc(f.ir)}">Completar</button></li>`).join('')}</ol>`, {});
   }
   document.addEventListener('click', async (e) => {
+    const ir = e.target.closest('[data-ir-a]');
+    if (ir) { irA(ir.dataset.irA); return; }
     const ab = e.target.closest('[data-ini-abrir]');
-    if (ab) { $('pausa').click(); setTimeout(pintar, 600); return; }
+    if (ab) { $('pausa').click(); setTimeout(() => cargar().catch(() => {}), 600); return; }
     const t = e.target.closest('[data-ini-min], [data-ini-cerrar], [data-inicio-abrir], [data-paso]');
     if (!t) return;
     try {
       if (t.dataset.iniMin) { guardado('inicio-min', t.dataset.iniMin); pintar(); }
       else if (t.matches('[data-ini-cerrar]')) { E = await api('panel/inicio', { method: 'PATCH', body: { cerrado: true } }); pintar(); toast('Listo. Las ayudas siguen en cada pestaña.'); }
       else if (t.matches('[data-inicio-abrir]')) { guardado('inicio-min', '0'); E = await api('panel/inicio', { method: 'PATCH', body: { cerrado: false } }); pintar(); scrollTo({ top: 0, behavior: 'smooth' }); }
-      else abrirPaso(t.dataset.paso);
+      else if (CON_DIALOGO.has(t.dataset.paso)) abrirPaso(t.dataset.paso);
+      else irA(E.pasos.find((p) => p.id === t.dataset.paso)?.ir);
     } catch (err) { alert(err.message); }
   });
 
@@ -254,5 +295,5 @@ export function crearInicioUI(ctx) {
     $('imOk').disabled = false;
   }
 
-  return { cargar, ayuda, abrirImportar };
+  return { cargar, ayuda, abrirImportar, irA, mostrarFaltan };
 }
