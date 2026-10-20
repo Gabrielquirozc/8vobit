@@ -16,6 +16,49 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     $('v-cierre').classList.toggle('ciego-on', !!(C && !C.cierre && v && !v.value.trim() && ciegoOn()));
   };
 
+  // ---------- fiado: cobrar lo que alguien quedó debiendo ----------
+  const dlgF = document.createElement('dialog');
+  dlgF.className = 'sheet'; dlgF.id = 'dlgFiado'; dlgF.setAttribute('aria-labelledby', 'fdTitulo');
+  dlgF.innerHTML = `<div class="sh-head"><h2 id="fdTitulo"></h2><button class="close" data-close aria-label="Cerrar">${ico('x')}</button></div>
+    <form class="sh-body" id="fdForm" novalidate></form>
+    <div class="sh-foot"><button class="ghost" data-close type="button">Cancelar</button><button class="primary" id="fdOk" form="fdForm">Cobrar</button></div>`;
+  document.body.append(dlgF);
+  dlgF.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => dlgF.close());
+  let fd = null;
+  function abrirFiado(f, alGuardar) {
+    fd = { id: f.id, medio: 'efectivo', alGuardar };
+    $('fdTitulo').textContent = `Cobrar a ${f.nombre}`;
+    $('fdForm').innerHTML = `<p class="ayuda" style="margin:0 0 10px">Pedido #${f.numero} del ${esc(fechaLarga(f.dia))} · total ${clp(f.total)} · abonado ${clp(f.abonado)}</p>
+      <div class="field"><label for="fdMonto">Monto que paga ahora <span class="opc">(saldo ${clp(f.saldo)})</span></label>${dinero('fdMonto', f.saldo, 'placeholder="0" required')}</div>
+      <div class="field"><span class="lbl">Cómo pagó</span><div class="medios" role="group" aria-label="Cómo pagó">${Object.entries(MEDIOS).map(([k, [n, i]]) =>
+        `<button type="button" data-fdmedio="${k}" aria-pressed="${k === 'efectivo'}">${ico(i)}${n}</button>`).join('')}</div></div>
+      <div class="formerr" id="fdErr" role="alert"></div>`;
+    dlgF.showModal(); $('fdMonto').select?.();
+  }
+  dlgF.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fdmedio]'); if (!b) return;
+    fd.medio = b.dataset.fdmedio; dlgF.querySelectorAll('[data-fdmedio]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  });
+  $('fdForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const monto = digitos($('fdMonto').value);
+    if (!monto) { $('fdErr').textContent = 'Escribe el monto.'; return $('fdMonto').focus(); }
+    $('fdOk').disabled = true;
+    try { await api(`panel/fiados/${fd.id}/abonos`, { method: 'POST', body: { monto, medio: fd.medio } }); dlgF.close(); toast(`✓ Cobro de fiado de ${clp(monto)} anotado`); fd.alGuardar?.(); }
+    catch (err) { $('fdErr').textContent = err.message; } finally { $('fdOk').disabled = false; }
+  };
+  // Sección "Fiado": lo que está pendiente (fuera de "Por cobrar") y lo cobrado hoy.
+  function seccionFiado(C) {
+    const F = C.fiado; if (!F) return '';
+    const hoyCobrado = Object.entries(F.cobros).filter(([, v]) => v).map(([k, v]) => `${MEDIOS[k]?.[0] || k} ${clp(v)}`).join(' · ');
+    if (!F.pendientes.length && !hoyCobrado) return '';
+    return `<section class="cardf cj" id="cjFiado"><div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Fiado</h3><span class="num"><b>Se debe ${clp(F.adeudado)}</b></span></div>
+      <p class="ayuda">No es plata de caja hasta que paguen: cada cobro entra a la caja del día en que se hace. ${hoyCobrado ? `Cobrado este día: ${hoyCobrado}.` : ''}</p>
+      ${F.pendientes.length ? `<div class="cj-scroll"><table><tr><th>Quién</th><th>Fecha</th><th class="r">Total</th><th class="r">Abonado</th><th class="r">Saldo</th><th class="noprint"></th></tr>
+        ${F.pendientes.map((f) => `<tr><td><b>${esc(f.nombre)}</b><br><span class="opc">#${f.numero}</span></td><td>${esc(fechaLarga(f.dia))}</td><td class="r">${clp(f.total)}</td><td class="r">${clp(f.abonado)}</td><td class="r"><b>${clp(f.saldo)}</b></td>
+          <td class="noprint r">${puede('cobrar') && !C.cierre ? `<button class="ghostb fuerte" data-cj="fiado" data-id="${f.id}">${ico('cash')}Cobrar</button>` : ''}</td></tr>`).join('')}</table></div>` : '<p class="ayuda">Nadie debe nada.</p>'}</section>`;
+  }
+
   // ---------- diálogo de movimiento ----------
   const dlg = document.createElement('dialog');
   dlg.className = 'sheet'; dlg.id = 'dlgMov'; dlg.setAttribute('aria-labelledby', 'mvTitulo');
@@ -85,7 +128,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   function bloqueCaja(C) {
     CATS = C.categorias;
     const E = C.esperado, K = C.cierre;
-    const filas = [['Fondo inicial', E.fondo, 'fondo'], [`Ventas en efectivo (${E.ventas_n})`, E.ventas], ...(E.propinas ? [['Propinas en efectivo', E.propinas]] : []), ['Ingresos', E.ingresos], ['Retiros', -E.retiros], ['Gastos pagados en efectivo', -E.gastos]];
+    const filas = [['Fondo inicial', E.fondo, 'fondo'], [`Ventas en efectivo (${E.ventas_n})`, E.ventas], ...(E.propinas ? [['Propinas en efectivo', E.propinas]] : []), ...(E.fiado_cobros ? [['Cobros de fiado', E.fiado_cobros]] : []), ['Ingresos', E.ingresos], ['Retiros', -E.retiros], ['Gastos pagados en efectivo', -E.gastos]];
     const dif = K ? K.diferencia : null;
     // Hoy, sin cerrar, con movimiento y sin fondo anotado: falta abrir la caja.
     const sinAbrir = !K && C.dia === C.hoy && !E.fondo && (E.ventas_n > 0 || C.movimientos.some((m) => !m.anulado));
@@ -131,7 +174,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <td>${esc(m.descripcion || '')}${m.documento ? ` <span class="opc">(${esc(m.documento)})</span>` : ''}</td><td>${MEDIOS[m.medio]?.[0] || ''}</td>
           <td class="r">${['retiro', 'gasto'].includes(m.tipo) ? '−' : ''}${clp(m.monto)}</td>
           <td class="noprint r">${m.anulado ? `Anulado${m.anulado_por ? ` por ${esc(m.anulado_por)}` : ''}` : (K && m.medio === 'efectivo') ? '' : `<button class="link peligro" data-cj="anular" data-id="${m.id}">Anular</button>`}</td></tr>`).join('')}</table></div>` : ''}
-    </section>`;
+    </section>${seccionFiado(C)}`;
   }
   function difTxt(C) {
     const v = $('cjContado'); aplicarCiego(C); if (!v) return;
@@ -147,6 +190,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       const C = actual();
       try {
         if (b.dataset.cj === 'mov') { const q = RAPIDOS[b.dataset.rapido]; abrirEnDia(b.dataset.tipo, C, recargar, b.dataset.propinas ? { propinas: Math.max(0, C.propinas.efectivo - C.propinas.retiradas) } : q && { txt: q[0], cat: q[1] }); }
+        else if (b.dataset.cj === 'fiado') abrirFiado(C.fiado.pendientes.find((f) => f.id === Number(b.dataset.id)), recargar);
         else if (b.dataset.cj === 'anular') {
           if (!confirm('¿Anular este movimiento? Queda en el registro como anulado.')) return;
           await api(`panel/caja/movimientos/${b.dataset.id}`, { method: 'DELETE' }); toast('Movimiento anulado'); recargar();

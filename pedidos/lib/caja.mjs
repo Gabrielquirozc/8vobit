@@ -43,6 +43,12 @@ CREATE TABLE IF NOT EXISTS caja_movimientos (
 CREATE INDEX IF NOT EXISTS caja_mov_dia ON caja_movimientos(local_id, dia);
 CREATE TABLE IF NOT EXISTS pedido_pagos (
   pedido_id INTEGER NOT NULL, medio TEXT NOT NULL, monto INTEGER NOT NULL, PRIMARY KEY (pedido_id, medio));
+CREATE TABLE IF NOT EXISTS fiado_pagos (
+  id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id), pedido_id INTEGER NOT NULL REFERENCES pedidos(id),
+  monto INTEGER NOT NULL, medio TEXT NOT NULL, dia TEXT NOT NULL, usuario TEXT, anulado INTEGER NOT NULL DEFAULT 0,
+  creado TEXT NOT NULL DEFAULT (datetime('now','localtime')), anulado_en TEXT);
+CREATE INDEX IF NOT EXISTS fiado_pagos_dia ON fiado_pagos(local_id, dia);
+CREATE INDEX IF NOT EXISTS fiado_pagos_pedido ON fiado_pagos(pedido_id);
 CREATE TABLE IF NOT EXISTS caja_cortes (
   id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id), dia TEXT NOT NULL,
   esperado INTEGER NOT NULL, contado INTEGER NOT NULL, diferencia INTEGER NOT NULL, nota TEXT, usuario TEXT,
@@ -69,6 +75,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
 
   // Propina del cobro: NO es venta (no suma al total, a Resumen ni a la boleta). Va a un solo medio.
   const pcols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
+  // Fiado: la venta se entrega a nombre de alguien y se cobra después (pagado=0, así no entra a la caja de su día).
+  if (!pcols.has('fiado_nombre')) db.exec('ALTER TABLE pedidos ADD COLUMN fiado_nombre TEXT');
   if (!pcols.has('propina')) { db.exec('ALTER TABLE pedidos ADD COLUMN propina INTEGER NOT NULL DEFAULT 0'); db.exec('ALTER TABLE pedidos ADD COLUMN propina_medio TEXT'); }
 
   const cierreDe = (lid, dia) => db.prepare('SELECT * FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
@@ -79,6 +87,41 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const a = db.prepare("SELECT COALESCE(SUM(total),0) s, COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND medio_pago=?").get(lid, dia, medio);
     const b = db.prepare("SELECT COALESCE(SUM(pp.monto),0) s, COUNT(*) n FROM pedido_pagos pp JOIN pedidos p ON p.id=pp.pedido_id WHERE p.local_id=? AND p.dia=? AND p.estado!='anulado' AND p.pagado=1 AND p.medio_pago='mixto' AND pp.medio=?").get(lid, dia, medio);
     return { s: a.s + b.s, n: a.n + b.n };
+  }
+
+  // ---------- fiado ----------
+  // Abonos de fiado cobrados ese día en un medio: entran a la caja del día en que se cobran, no a las ventas.
+  const fiadoCobros = (lid, dia, medio) => db.prepare('SELECT COALESCE(SUM(monto),0) s FROM fiado_pagos WHERE local_id=? AND dia=? AND medio=? AND anulado=0').get(lid, dia, medio).s;
+  const abonado = (pid) => db.prepare('SELECT COALESCE(SUM(monto),0) s FROM fiado_pagos WHERE pedido_id=? AND anulado=0').get(pid).s;
+  const nombreFiado = (v) => texto(v, 40);
+  // Fiados con saldo: nombre, fecha, total, abonado y saldo.
+  function fiadosLista(lid) {
+    const filas = db.prepare(`SELECT p.id, p.numero, p.fiado_nombre nombre, p.dia, p.total,
+        COALESCE((SELECT SUM(f.monto) FROM fiado_pagos f WHERE f.pedido_id=p.id AND f.anulado=0),0) abonado
+        FROM pedidos p WHERE p.local_id=? AND p.fiado_nombre IS NOT NULL AND p.estado!='anulado' ORDER BY p.dia, p.id`).all(lid)
+      .map((f) => ({ ...f, saldo: f.total - f.abonado })).filter((f) => f.saldo > 0);
+    return { pendientes: filas, adeudado: filas.reduce((t, f) => t + f.saldo, 0) };
+  }
+  function abonarFiado(local, pid, b, quien = null) {
+    const lid = local.id, dia = hoy(local);
+    const p = db.prepare('SELECT id, total, estado, fiado_nombre FROM pedidos WHERE id=? AND local_id=?').get(pid, lid);
+    if (!p || !p.fiado_nombre) return { error: 'Ese fiado no existe', status: 404 };
+    if (p.estado === 'anulado') return { error: 'Ese pedido está anulado', status: 409 };
+    const saldo = p.total - abonado(p.id), monto = Number(b.monto);
+    if (!Number.isInteger(monto) || monto <= 0) return { error: 'Escribe un monto entero mayor a 0' };
+    if (monto > saldo) return { error: `El abono no puede pasar del saldo ($${saldo.toLocaleString('es-CL')})` };
+    if (!MEDIOS.includes(b.medio)) return { error: 'Elige el medio de pago' };
+    if (b.medio === 'efectivo' && cierreDe(lid, dia)) return { error: 'La caja de hoy ya está cerrada. Reábrela para cobrar en efectivo.', status: 409 };
+    const { lastInsertRowid: id } = db.prepare('INSERT INTO fiado_pagos (local_id,pedido_id,monto,medio,dia,usuario) VALUES (?,?,?,?,?,?)').run(lid, p.id, monto, b.medio, dia, quien);
+    return { id: Number(id), saldo: saldo - monto };
+  }
+  function anularAbono(local, id, quien = null) {
+    const f = db.prepare('SELECT * FROM fiado_pagos WHERE id=? AND local_id=?').get(id, local.id);
+    if (!f) return { error: 'No existe', status: 404 };
+    if (f.anulado) return { ok: true };
+    if (f.medio === 'efectivo' && cierreDe(local.id, f.dia)) return { error: 'La caja de ese día ya está cerrada. Reábrela para anular el cobro.', status: 409 };
+    db.prepare("UPDATE fiado_pagos SET anulado=1, anulado_en=datetime('now','localtime') WHERE id=?").run(f.id);
+    return { ok: true };
   }
 
   // Propinas cobradas ese día en un medio (los pedidos anulados no cuentan).
@@ -122,13 +165,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const ventas = ventasMedio(lid, dia, 'efectivo');
     const d = {
       propinas: propinasMedio(lid, dia, 'efectivo'),
+      fiado_cobros: fiadoCobros(lid, dia, 'efectivo'),
       fondo: suma((m) => m.tipo === 'fondo'),
       ventas: ventas.s, ventas_n: ventas.n,
       ingresos: suma((m) => m.tipo === 'ingreso'),
       retiros: suma((m) => m.tipo === 'retiro'),
       gastos: suma((m) => m.tipo === 'gasto' && m.medio === 'efectivo'),
     };
-    return { ...d, total: d.fondo + d.ventas + d.propinas + d.ingresos - d.retiros - d.gastos };
+    return { ...d, total: d.fondo + d.ventas + d.propinas + d.fiado_cobros + d.ingresos - d.retiros - d.gastos };
   }
 
   function caja(local, dia) {
@@ -140,6 +184,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       dia, hoy: hoy(local), categorias: CATEGORIAS,
       movimientos: db.prepare('SELECT id, tipo, categoria, descripcion, monto, medio, documento, anulado, creado, usuario, anulado_por FROM caja_movimientos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       esperado: esperado(lid, dia),
+      fiado: { ...fiadosLista(lid), cobros: Object.fromEntries(MEDIOS.map((m) => [m, fiadoCobros(lid, dia, m)])) },
       propinas: { ...Object.fromEntries(MEDIOS.map((m) => [m, propinasMedio(lid, dia, m)])),
         retiradas: db.prepare("SELECT COALESCE(SUM(monto),0) s FROM caja_movimientos WHERE local_id=? AND dia=? AND anulado=0 AND tipo='retiro' AND categoria='propinas'").get(lid, dia).s },
       cortes: db.prepare('SELECT id, esperado, contado, diferencia, nota, usuario, creado FROM caja_cortes WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
@@ -200,9 +245,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const nota = texto(b.nota, 300), dif = contado - e.total;
     const falta = notaFaltante(dif, nota, 'cerrar');
     if (falta) return falta;
-    const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0").get(lid, dia).n;
+    const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0 AND fiado_nombre IS NULL").get(lid, dia).n;
     db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario,contado_tarjeta,contado_transferencia) VALUES (?,?,?,?,?,?,?,?,?,?)')
-      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar, sistema_tarjeta: vendidoMedio('tarjeta') + propinasMedio(lid, dia, 'tarjeta'), sistema_transferencia: vendidoMedio('transferencia') + propinasMedio(lid, dia, 'transferencia') }), nota, quien, tarjeta, transf);
+      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar, sistema_tarjeta: vendidoMedio('tarjeta') + propinasMedio(lid, dia, 'tarjeta') + fiadoCobros(lid, dia, 'tarjeta'), sistema_transferencia: vendidoMedio('transferencia') + propinasMedio(lid, dia, 'transferencia') + fiadoCobros(lid, dia, 'transferencia') }), nota, quien, tarjeta, transf);
     return caja(local, dia);
   }
 
@@ -241,5 +286,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       anterior: { mes: ant, total: anterior.reduce((s, g) => s + g.monto, 0), por_categoria: porCat(anterior) } };
   }
 
-  return { propina: { validar: validarPropina }, pagos: { validar: validarPagos, guardar: guardarPagos, de: pagosDe }, caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
+  return { fiados: { lista: fiadosLista, abonar: abonarFiado, anular: anularAbono, nombre: nombreFiado, abonado }, propina: { validar: validarPropina }, pagos: { validar: validarPagos, guardar: guardarPagos, de: pagosDe }, caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
 }

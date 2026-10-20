@@ -22,10 +22,10 @@ const csv = (cab, filas) => '﻿' + [cab, ...filas].map((f) => f.map(celda).join
 export function crearExportar(db, { caja }) {
   function ventas(lid, desde, hasta) {
     const filas = db.prepare(`SELECT id, dia, numero, substr(creado,12,5) hora, canal, modalidad, cliente, estado, medio_pago, cobrado_en,
-        total, costo_despacho, folio_boleta, propina, propina_medio FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ? ORDER BY dia, numero`).all(lid, desde, hasta);
+        total, costo_despacho, folio_boleta, propina, propina_medio, fiado_nombre FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ? ORDER BY dia, numero`).all(lid, desde, hasta);
     return csv(['Fecha', 'N° pedido', 'Hora', 'Canal', 'Modalidad', 'Cliente', 'Estado', 'Medio de pago', 'Hora de cobro', 'Total', 'Despacho incluido', 'Folio boleta', 'Propina (no es venta)'],
       filas.map((p) => [p.dia, p.numero, p.hora, p.canal === 'mostrador' ? 'Mostrador' : 'Web', p.modalidad === 'despacho' ? 'Despacho' : 'Retiro',
-        p.cliente, p.estado, (p.medio_pago === 'mixto' ? `Mixto: ${caja.pagos.de(p.id).map((x) => `${MEDIO[x.medio]} ${x.monto}`).join(' + ')}` : MEDIO[p.medio_pago]) || (p.estado === 'anulado' ? '' : 'Por cobrar'), p.cobrado_en, p.total, p.costo_despacho, p.folio_boleta, p.estado === 'anulado' ? 0 : p.propina]));
+        p.cliente, p.estado, (p.medio_pago === 'mixto' ? `Mixto: ${caja.pagos.de(p.id).map((x) => `${MEDIO[x.medio]} ${x.monto}`).join(' + ')}` : MEDIO[p.medio_pago]) || (p.fiado_nombre ? 'Fiado' : p.estado === 'anulado' ? '' : 'Por cobrar'), p.cobrado_en, p.total, p.costo_despacho, p.folio_boleta, p.estado === 'anulado' ? 0 : p.propina]));
   }
   function productos(lid, desde, hasta) {
     const filas = db.prepare(`SELECT p.dia, p.numero, i.nombre, i.cantidad, i.precio_unitario, i.costo_unitario FROM pedido_items i
@@ -39,12 +39,12 @@ export function crearExportar(db, { caja }) {
     const dias = db.prepare(`SELECT dia FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ?
         UNION SELECT dia FROM caja_movimientos WHERE local_id=? AND dia BETWEEN ? AND ? AND anulado=0 AND (tipo!='gasto' OR medio='efectivo')
         UNION SELECT dia FROM caja_cierres WHERE local_id=? AND dia BETWEEN ? AND ? AND anulado=0 ORDER BY dia`).all(lid, desde, hasta, lid, desde, hasta, lid, desde, hasta);
-    return csv(['Fecha', 'Vendido (cobrado)', 'Ventas en efectivo', 'Fondo inicial', 'Ingresos', 'Retiros', 'Gastos en efectivo', 'Efectivo esperado', 'Efectivo contado', 'Diferencia', 'Nota del cierre', 'Tarjeta según voucher', 'Transferencias según cartola', 'Propinas en efectivo'],
+    return csv(['Fecha', 'Vendido (cobrado)', 'Ventas en efectivo', 'Fondo inicial', 'Ingresos', 'Retiros', 'Gastos en efectivo', 'Efectivo esperado', 'Efectivo contado', 'Diferencia', 'Nota del cierre', 'Tarjeta según voucher', 'Transferencias según cartola', 'Propinas en efectivo', 'Cobros de fiado en efectivo'],
       dias.map(({ dia }) => {
         const e = caja.esperado(lid, dia);
         const vendido = db.prepare("SELECT COALESCE(SUM(total),0) s FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1").get(lid, dia).s;
         const k = db.prepare('SELECT contado, diferencia, nota, contado_tarjeta, contado_transferencia FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
-        return [dia, vendido, e.ventas, e.fondo, e.ingresos, e.retiros, e.gastos, e.total, k?.contado, k?.diferencia, k?.nota, k?.contado_tarjeta, k?.contado_transferencia, e.propinas];
+        return [dia, vendido, e.ventas, e.fondo, e.ingresos, e.retiros, e.gastos, e.total, k?.contado, k?.diferencia, k?.nota, k?.contado_tarjeta, k?.contado_transferencia, e.propinas, e.fiado_cobros];
       }));
   }
   function gastos(lid, desde, hasta) {

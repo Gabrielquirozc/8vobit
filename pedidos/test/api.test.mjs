@@ -1143,6 +1143,7 @@ test('PIN y roles: la tablet del local, permisos por rol y turnos', async () => 
   {
     assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'tarjeta', monto: sinPagar.total - 1 }] })).status, 403);
     assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { medio_pago: 'efectivo', propina: 1000 })).status, 403); // ni con propina
+    assert.equal((await pic('GET', '/api/panel/fiados')).status, 403); assert.equal((await pic('POST', '/api/panel/venta', { items: [], fiado: 'X' })).status, 403);
     const desp = (await pic('GET', `/api/panel/pedidos/${sinPagar.id}`)).body;
     assert.equal(desp.medio_pago, 'efectivo'); assert.deepEqual(desp.pagos, []);
   }
@@ -1503,4 +1504,72 @@ test('propina: no es venta; la de efectivo entra a la caja, se retira aparte y a
   assert.equal((await req('PATCH', `/api/panel/pedidos/${w.body.id}`, { medio_pago: 'efectivo', propina: 5000, recibido: a.precio })).status, 400);
   assert.equal((await req('PATCH', `/api/panel/pedidos/${w.body.id}`, { medio_pago: 'efectivo', propina: 5000, recibido: a.precio + 5000 })).status, 200);
   assert.equal((await req('GET', `/api/panel/pedidos/${w.body.id}`)).body.propina, 5000);
+});
+
+// ---------- fiado ----------
+test('fiado: es venta del día pero no entra a la caja; cada abono entra a la caja del día en que se cobra', async () => {
+  await login();
+  await req('DELETE', '/api/panel/caja/cierre'); // por si otro test dejó la caja cerrada
+  const a = await prod('Italiano');
+  const mes = new Date().toISOString().slice(0, 7);
+  const C0 = (await req('GET', '/api/panel/caja')).body, R0 = (await req('GET', '/api/panel/resumen')).body;
+  const F0 = (await req('GET', '/api/panel/fiados')).body;
+  // Sin nombre no se fía.
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], fiado: ' ' })).status, 400);
+  assert.equal((await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], fiado: 'Don Luis', medio_pago: 'efectivo' })).status, 400);
+  const f = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], fiado: 'Don Luis' });
+  assert.equal(f.status, 201, JSON.stringify(f.body));
+  // Suma a las ventas (Resumen) pero no a la caja ni a "por cobrar".
+  const C1 = (await req('GET', '/api/panel/caja')).body, R1 = (await req('GET', '/api/panel/resumen')).body;
+  assert.equal(R1.ventas - R0.ventas, a.precio);
+  assert.equal(C1.esperado.total, C0.esperado.total);
+  assert.equal(C1.esperado.ventas, C0.esperado.ventas);
+  assert.equal(C1.fiado.adeudado - C0.fiado.adeudado, a.precio);
+  const ped = (await req('GET', `/api/panel/pedidos/${f.body.id}`)).body;
+  assert.equal(ped.fiado_nombre, 'Don Luis'); assert.equal(ped.pagado, 0); assert.equal(ped.fiado_saldo, a.precio);
+  // Un fiado no se cobra por el camino normal.
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${f.body.id}`, { medio_pago: 'efectivo' })).status, 409);
+  const fila = (await req('GET', '/api/panel/fiados')).body.pendientes.find((x) => x.id === f.body.id);
+  assert.deepEqual([fila.nombre, fila.total, fila.abonado, fila.saldo], ['Don Luis', a.precio, 0, a.precio]);
+  // Abonos inválidos: mayor al saldo, cero, medio raro.
+  const abonar = (monto, medio = 'efectivo') => req('POST', `/api/panel/fiados/${f.body.id}/abonos`, { monto, medio });
+  assert.equal((await abonar(a.precio + 1)).status, 400);
+  assert.equal((await abonar(0)).status, 400);
+  assert.equal((await abonar(100.5)).status, 400);
+  assert.equal((await abonar(100, 'cripto')).status, 400);
+  // Abono parcial en efectivo: sube la caja de hoy (no las ventas) y baja el saldo.
+  const ab = await abonar(1000);
+  assert.equal(ab.status, 201); assert.equal(ab.body.saldo, a.precio - 1000);
+  const C2 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C2.esperado.fiado_cobros - C0.esperado.fiado_cobros, 1000);
+  assert.equal(C2.esperado.total - C0.esperado.total, 1000);
+  assert.equal(C2.esperado.ventas, C0.esperado.ventas);
+  assert.equal((await req('GET', '/api/panel/resumen')).body.ventas, R1.ventas); // el cobro no vuelve a contar como venta
+  // Anular el pedido con cobros vigentes no se puede; sin cobros, sí.
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${f.body.id}`, { estado: 'anulado' })).status, 409);
+  // Con tarjeta no toca el efectivo, y pagar todo el saldo lo saca de pendientes.
+  assert.equal((await abonar(a.precio - 1000, 'tarjeta')).status, 201);
+  const C3 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C3.esperado.total, C2.esperado.total);
+  assert.equal(C3.fiado.cobros.tarjeta - C0.fiado.cobros.tarjeta, a.precio - 1000);
+  assert.equal((await req('GET', '/api/panel/fiados')).body.pendientes.some((x) => x.id === f.body.id), false);
+  assert.equal((await abonar(1)).status, 400); // ya sin saldo
+  // Resultados cuenta el fiado como venta del mes.
+  assert.ok((await req('GET', `/api/panel/resultados?mes=${mes}`)).status === 200);
+  // Fiado anulado: deja de deberse y no cuenta en Resumen.
+  const g = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], fiado: 'Doña Rosa' });
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${g.body.id}`, { estado: 'anulado' })).status, 200);
+  assert.equal((await req('GET', '/api/panel/fiados')).body.pendientes.some((x) => x.id === g.body.id), false);
+  // Anular un abono en efectivo devuelve el efectivo esperado.
+  const h = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], fiado: 'Pedro' });
+  const e1 = (await req('GET', '/api/panel/caja')).body.esperado.total;
+  const ab2 = await req('POST', `/api/panel/fiados/${h.body.id}/abonos`, { monto: 500, medio: 'efectivo' });
+  assert.equal((await req('GET', '/api/panel/caja')).body.esperado.total, e1 + 500);
+  assert.equal((await req('DELETE', `/api/panel/fiados/abonos/${ab2.body.id}`)).status, 200);
+  assert.equal((await req('GET', '/api/panel/caja')).body.esperado.total, e1);
+  // CSV de ventas lo marca como Fiado.
+  const hoy = C0.hoy;
+  const csv = await (await fetch(`${B}/api/panel/exportar?tipo=ventas&desde=${hoy}&hasta=${hoy}`, { headers: { Cookie: cookie } })).text();
+  assert.match(csv, /;Fiado;/);
+  assert.ok(F0.pendientes);
 });

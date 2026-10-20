@@ -580,6 +580,9 @@
       <button type="button" data-medio="otro" aria-pressed="false"><svg class="ico"><use href="#i-dots"/></svg>Otro</button>
     </div>
     <button type="button" class="link" id="btnDividir" style="margin:8px 0">Dividir pago</button>
+    <button type="button" class="link" id="btnFiado" style="margin:8px 0 8px 14px">Fiar (cobra después)</button>
+    <div id="fiadoBox" hidden><div class="field"><label for="fiadoNombre">¿Quién queda debiendo?</label><input id="fiadoNombre" maxlength="40" autocomplete="off" placeholder="Ej. Don Luis, el vecino"></div>
+      <p class="ayuda">Se entrega sin cobrar. Cuenta como venta de hoy, pero no entra a la caja hasta que pague (Caja del día, sección Fiado).</p></div>
     <div id="divBox" hidden>
       <div class="dos"><select id="dm1" aria-label="Primer medio de pago"></select><div class="money"><span aria-hidden="true">$</span><input id="da1" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Monto del primer medio"></div></div>
       <div class="dos"><select id="dm2" aria-label="Segundo medio de pago"></select><div class="money"><span aria-hidden="true">$</span><input id="da2" inputmode="numeric" autocomplete="off" placeholder="0" readonly aria-label="Lo que falta"></div></div>
@@ -744,8 +747,8 @@ function tarjeta(p) {
   const pasos = {
     nuevo: `<button class="paso" data-acc="aceptar" data-id="${p.id}">${ico('printer')}Aceptar e imprimir comanda</button>`,
     preparacion: `<button class="paso" data-acc="listo" data-id="${p.id}">${ico('check')}Listo para entregar</button>`,
-    listo: p.pagado
-      ? `<button class="paso verde" data-acc="entregar" data-id="${p.id}">${ico('check')}Entregar (ya pagado)</button>`
+    listo: p.pagado || p.fiado_nombre
+      ? `<button class="paso verde" data-acc="entregar" data-id="${p.id}">${ico('check')}Entregar (${p.fiado_nombre ? 'fiado' : 'ya pagado'})</button>`
       : CUENTA.puede('cobrar') ? `<button class="paso verde" data-acc="cobrar" data-id="${p.id}">${ico('cash')}Cobrar ${clp(p.total)}</button>` : '<p class="ayuda" style="text-align:center">Listo: lo cobra caja.</p>',
   };
   const seg = `${location.origin}${BASE}/seguimiento?p=${p.token}`;
@@ -758,7 +761,7 @@ function tarjeta(p) {
     <div class="meta">
       ${mostrador ? `<span class="chip2 mos">${ico('store')}Mostrador</span>` : `<span class="chip2">${ico(p.modalidad === 'despacho' ? 'bike' : 'store')}${p.modalidad === 'despacho' ? 'Despacho' : 'Retiro'}</span>`}
       ${mostrador ? '' : `<span class="chip2">${ico('clock')}${p.franja === 'Lo antes posible' ? 'Lo antes posible' : esc(p.franja)}</span>`}
-      ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : `<span class="chip2 warn">Por cobrar</span>`}
+      ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : p.fiado_nombre ? `<span class="chip2">Fiado: ${esc(p.fiado_nombre)}</span>` : `<span class="chip2 warn">Por cobrar</span>`}
     </div>
     ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}${p.lat != null ? ` · <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener">Ver en el mapa (${(p.distancia_m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km)</a>` : ''}</div>` : ''}
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
@@ -769,7 +772,7 @@ function tarjeta(p) {
     <div class="acc">
       ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
       <button data-acc="comanda" data-id="${p.id}">${ico('printer')}Comanda</button>
-      ${!p.pagado && CUENTA.puede('cobrar') ? `<button data-acc="pagado" data-id="${p.id}">${ico('cash')}Ya pagó</button>` : '<span aria-hidden="true" style="border:0"></span>'}
+      ${!p.pagado && !p.fiado_nombre && CUENTA.puede('cobrar') ? `<button data-acc="pagado" data-id="${p.id}">${ico('cash')}Ya pagó</button>` : '<span aria-hidden="true" style="border:0"></span>'}
       ${CUENTA.puede('anular') ? `<button class="peligro" data-acc="anular" data-id="${p.id}">${ico('ban')}Anular</button>` : '<span aria-hidden="true" style="border:0"></span>'}
     </div></article>`;
 }
@@ -833,9 +836,10 @@ $('v-pedidos').onclick = async (e) => {
 // ---------- cobro (pedidos y venta rápida) ----------
 let cobro = null;
 function abrirCobro(c) {
-  cobro = { ...c, medio: null, dividir: false, propina: 0, propMedio: 'efectivo', propManual: false };
+  cobro = { ...c, medio: null, dividir: false, fiado: false, propina: 0, propMedio: 'efectivo', propManual: false };
   document.querySelectorAll('[data-prop]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.prop === '0')); $('propOtro').hidden = true; $('propMonto').value = ''; $('propBox').open = false; pintarPropina();
   $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago';
+  $('fiadoBox').hidden = true; $('fiadoNombre').value = ''; $('propBox').hidden = false; $('btnDividir').hidden = false; $('btnFiado').textContent = 'Fiar (cobra después)'; $('btnFiado').hidden = !CUENTA.puede('cobrar');
   $('cobTitulo').textContent = c.titulo;
   $('cobTotal').textContent = clp(c.total);
   $('cobOk').textContent = c.boton;
@@ -884,6 +888,22 @@ $('propBox').addEventListener('click', (e) => {
 $('propMonto').addEventListener('input', () => { cobro.propina = digitos($('propMonto').value); pintarPropina(); });
 $('propMedio').addEventListener('change', () => { cobro.propMedio = $('propMedio').value; cobro.propManual = true; pintarPropina(); });
 $('dm1').innerHTML = $('dm2').innerHTML = MEDIOS_COBRO.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
+// Fiado: se entrega sin cobrar; pide el nombre y no toca medio, propina ni vuelto.
+function ponerFiado(on) {
+  cobro.fiado = on;
+  $('fiadoBox').hidden = !on; $('propBox').hidden = on; $('btnDividir').hidden = on;
+  $('btnFiado').textContent = on ? 'Mejor cobrar ahora' : 'Fiar (cobra después)';
+  if (on) {
+    cobro.medio = null; cobro.dividir = false; cobro.propina = 0; $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago';
+    document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+    document.querySelectorAll('[data-prop]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.prop === '0')); $('propOtro').hidden = true; pintarPropina();
+    $('fiadoNombre').focus();
+  }
+  $('cobOk').textContent = on ? 'Fiar y entregar' : cobro.boton;
+  calcVuelto();
+}
+$('btnFiado').onclick = () => ponerFiado(!cobro.fiado);
+$('fiadoNombre').addEventListener('input', calcVuelto);
 $('btnDividir').onclick = () => {
   cobro.dividir = !cobro.dividir;
   $('divBox').hidden = !cobro.dividir; $('btnDividir').textContent = cobro.dividir ? 'Pagar con un solo medio' : 'Dividir pago';
@@ -894,6 +914,7 @@ $('btnDividir').onclick = () => {
 };
 ['dm1', 'dm2', 'da1'].forEach((id) => $(id).addEventListener('input', actualizarDiv));
 document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
+  if (cobro.fiado) ponerFiado(false);
   if (cobro.dividir) { cobro.dividir = false; $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago'; $('recibido').value = ''; }
   cobro.medio = b.dataset.medio; medioPropinaPorDefecto(); $('propMedio').value = cobro.propMedio; pintarRapidos();
   document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', x === b));
@@ -908,7 +929,7 @@ function calcVuelto() {
   const falta = ef && rec < aEf;
   $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(aEf - rec)}` : `Vuelto ${clp(rec - aEf)}`;
   const divOk = cobro.dividir && montoDiv() > 0 && montoDiv() < cobro.total && $('dm1').value !== $('dm2').value;
-  $('cobOk').disabled = (cobro.dividir ? !divOk : !cobro.medio) || (ef && (!rec || falta));
+  $('cobOk').disabled = cobro.fiado ? $('fiadoNombre').value.trim().length < 2 : (cobro.dividir ? !divOk : !cobro.medio) || (ef && (!rec || falta));
 }
 $('cobOk').onclick = async () => {
   $('cobOk').disabled = true;
@@ -918,8 +939,10 @@ $('cobOk').onclick = async () => {
     else body.medio_pago = cobro.medio;
     if (cobro.propina > 0) { body.propina = cobro.propina; body.propina_medio = cobro.propMedio; }
     if (D.modo_boleta === 2 && $('folio').value.trim()) body.folio_boleta = $('folio').value;
+    if (cobro.fiado) { for (const k of Object.keys(body)) delete body[k]; body.fiado = $('fiadoNombre').value.trim(); }
     const r = await cobro.enviar(body);
     $('dlgCobro').close();
+    if (cobro.fiado) { toast(`Fiado anotado a nombre de ${body.fiado}`); await refrescar(); return; }
     const vuelto = efMonto() > 0 ? digitos($('recibido').value) - efMonto() : 0;
     const prop = cobro.propina > 0 ? ` + propina ${clp(cobro.propina)}` : '';
     toast(vuelto > 0 ? `Cobrado ${clp(cobro.total)}${prop} · vuelto ${clp(vuelto)}` : `Cobrado ${clp(cobro.total)}${prop}`);
@@ -1040,7 +1063,7 @@ function pintarCierre() {
   const billetesAbierto = $('v-cierre').querySelector('.cj-bill')?.open;
   cierreFirma = JSON.stringify([cajaD || DD(), CJ]);
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
-  const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado);
+  const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado && !p.fiado_nombre);
   const suma = (l) => l.reduce((s, p) => s + p.total, 0), total = suma(cobrados);
   // Un pedido con pago dividido aporta cada parte a su medio.
   const partes = cobrados.flatMap((p) => (p.medio_pago === 'mixto' ? p.pagos : [{ medio: p.medio_pago, monto: p.total }]));
@@ -1078,7 +1101,7 @@ function pintarCierre() {
         : '<p style="color:var(--ink-2)">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
     <h3>Detalle</h3>
     <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
-    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
+    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : p.fiado_nombre ? 'Fiado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
     </table>`;
   const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, #cjTarjeta, #cjTransf, [data-bill]')];
   if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); }

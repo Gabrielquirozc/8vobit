@@ -518,6 +518,7 @@ function pedidoCompleto(id, localId) {
   const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(id, localId);
   if (!p) return null;
   p.pagos = p.medio_pago === 'mixto' ? CAJA.pagos.de(id) : [];
+  if (p.fiado_nombre) p.fiado_saldo = p.total - CAJA.fiados.abonado(id);
   p.items = db.prepare('SELECT nombre, agregados, salsas, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(id)
     .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
   return p;
@@ -665,6 +666,7 @@ function guardarPedido(local, d, { items, total }) {
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido,costo_unitario) VALUES (?,?,?,?,?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0, conInv ? INV.costo(local.id, i.p.id) ?? costoDe(local, i.p) : costoDe(local, i.p));
+    if (d.fiado) db.prepare('UPDATE pedidos SET fiado_nombre=? WHERE id=?').run(d.fiado, pid);
     if (d.propina) db.prepare('UPDATE pedidos SET propina=?, propina_medio=? WHERE id=?').run(d.propina, d.propina_medio, pid);
     if (d.pagos) CAJA.pagos.guardar(Number(pid), d.pagos); // pago dividido, dentro de la misma transacción
     // Inventario: cada venta descuenta lo que lleva según su receta.
@@ -937,6 +939,7 @@ function permisoRuta(m, parts) {
   if (a === 'pedidos') return m === 'GET' ? 'ver_pedidos' : null;
   if (a === 'carta') return 'ver_pedidos';
   if (a === 'venta') return 'venta';
+  if (a === 'fiados') return 'cobrar';
   if (a === 'caja') return m === 'DELETE' && b === 'cierre' ? 'reabrir_caja' : 'caja';
   if (a === 'gastos') return 'gastos';
   if (a === 'exportar') return 'exportar';
@@ -1134,13 +1137,22 @@ async function api(req, res, url) {
       const b = await readJson(req);
       const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
       if (!p) return send(res, 404, { error: 'No existe' });
-      if ((b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null) || b.pagado !== undefined || b.folio_boleta !== undefined || b.propina !== undefined) && !puede('cobrar')) return sinPermiso();
+      if ((b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null) || b.pagado !== undefined || b.folio_boleta !== undefined || b.propina !== undefined || b.fiado !== undefined) && !puede('cobrar')) return sinPermiso();
       if (b.estado === 'anulado' && !puede('anular')) return sinPermiso();
       const estado = ESTADOS.includes(b.estado) ? b.estado : p.estado;
       const pagado = b.pagado === undefined ? p.pagado : (b.pagado ? 1 : 0);
       const folio = b.folio_boleta === undefined ? p.folio_boleta : (String(b.folio_boleta).replace(/\D/g, '').slice(0, 12) || null);
       let { medio_pago, recibido, cobrado_en } = p;
-      let pagosNuevos, propina = p.propina, propina_medio = p.propina_medio;
+      let pagosNuevos, propina = p.propina, propina_medio = p.propina_medio, fiado_nombre = p.fiado_nombre;
+      const cobrando = b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null);
+      if (p.fiado_nombre && (cobrando || b.pagado)) return send(res, 409, { error: 'Es un fiado: el cobro se registra como abono en Caja, sección Fiado' });
+      if (b.fiado !== undefined && b.fiado !== null && b.fiado !== '') {
+        if (cobrando || b.propina) return send(res, 400, { error: 'Un fiado no se cobra ahora: anota los abonos después' });
+        if (p.pagado || p.estado === 'anulado' || estado === 'anulado') return send(res, 409, { error: 'Ese pedido ya está cobrado o anulado' });
+        fiado_nombre = CAJA.fiados.nombre(b.fiado);
+        if (!fiado_nombre || fiado_nombre.replace(/[^\p{L}\p{N}]/gu, '').length < 2) return send(res, 400, { error: 'Escribe el nombre de quien queda debiendo' });
+      }
+      if (estado === 'anulado' && p.fiado_nombre && CAJA.fiados.abonado(p.id) > 0) return send(res, 409, { error: 'Ese fiado tiene cobros: anúlalos primero en Caja, sección Fiado' });
       if (b.propina !== undefined && b.medio_pago === undefined && !(b.pagos !== undefined && b.pagos !== null)) return send(res, 400, { error: 'La propina se registra al cobrar' });
       if (b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null)) {
         if (p.estado === 'anulado' || estado === 'anulado') return send(res, 409, { error: 'Un pedido anulado no se puede cobrar' });
@@ -1166,8 +1178,8 @@ async function api(req, res, url) {
       // El pedido y sus pagos se guardan juntos: nunca queda un pedido 'mixto' sin sus partes.
       db.exec('BEGIN IMMEDIATE');
       try {
-        db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, repartidor_id=?, propina=?, propina_medio=?, actualizado=? WHERE id=?')
-          .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, propina, propina_medio, Date.now(), p.id);
+        db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, repartidor_id=?, propina=?, propina_medio=?, fiado_nombre=?, actualizado=? WHERE id=?')
+          .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, propina, propina_medio, fiado_nombre, Date.now(), p.id);
         if (pagosNuevos) CAJA.pagos.guardar(p.id, pagosNuevos);
         db.exec('COMMIT');
       } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -1241,6 +1253,13 @@ async function api(req, res, url) {
       const mes = /^\d{4}-\d{2}$/.test(url.searchParams.get('mes') || '') ? url.searchParams.get('mes') : franjas(local).dia.slice(0, 7);
       return send(res, 200, { mes, horas: USU.horasMes(lid, mes) });
     }
+    // Fiado: pendientes y abonos (cobrar).
+    if (parts[1] === 'fiados') {
+      const r = (x, ok = 200) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, ok, x));
+      if (m === 'GET' && !parts[2]) return send(res, 200, CAJA.fiados.lista(lid));
+      if (m === 'POST' && /^\d+$/.test(parts[2] || '') && parts[3] === 'abonos') return r(CAJA.fiados.abonar(local, Number(parts[2]), await readJson(req), yo.nombre), 201);
+      if (m === 'DELETE' && parts[2] === 'abonos' && /^\d+$/.test(parts[3] || '')) return r(CAJA.fiados.anular(local, Number(parts[3]), yo.nombre));
+    }
     // Caja: movimientos (fondo, ingresos, retiros, gastos), arqueo al cierre y gastos del mes.
     if (parts[1] === 'caja') {
       const r = (x) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, 200, x));
@@ -1300,6 +1319,18 @@ async function api(req, res, url) {
       const b = await readJson(req);
       const v = validarItems(local, b.items);
       if (v.error) return send(res, 400, v);
+      // Fiado: se entrega sin cobrar, a nombre de alguien. Es venta de hoy, pero no entra a la caja.
+      if (b.fiado !== undefined && b.fiado !== null && b.fiado !== '') {
+        const nombre = CAJA.fiados.nombre(b.fiado);
+        if (!nombre || nombre.replace(/[^\p{L}\p{N}]/gu, '').length < 2) return send(res, 400, { error: 'Escribe el nombre de quien queda debiendo' });
+        if (b.propina || b.medio_pago || b.pagos) return send(res, 400, { error: 'Un fiado no se cobra ahora: anota los abonos después' });
+        const rf = guardarPedido(local, {
+          cliente: String(b.cliente || '').trim().slice(0, 80) || nombre, telefono: '', franja: 'Mostrador', modalidad: 'retiro',
+          notas: limpiarNota(b.notas, 300), dia: franjas(local).dia, canal: 'mostrador',
+          estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: null, fiado: nombre,
+        }, v);
+        return send(res, 201, { ...rf, vuelto: 0 });
+      }
       const vp = CAJA.pagos.validar(b.pagos, v.total);
       if (vp.error) return send(res, 400, { error: vp.error });
       const medioVenta = vp.pagos ? 'mixto' : (vp.medio || b.medio_pago);

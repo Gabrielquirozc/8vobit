@@ -11,12 +11,12 @@ const mesDe = (mes, n) => { const [y, m] = mes.split('-').map(Number); const d =
 export function crearResultados(db, { equipoMes }) {
   function calcular(local, mes) {
     const lid = local.id, pct = local.costo_pct ?? 35;
-    const peds = db.prepare("SELECT id, total, canal, costo_despacho FROM pedidos WHERE local_id=? AND substr(dia,1,7)=? AND estado!='anulado' AND pagado=1").all(lid, mes);
+    const peds = db.prepare("SELECT id, total, canal, costo_despacho FROM pedidos WHERE local_id=? AND substr(dia,1,7)=? AND estado!='anulado' AND (pagado=1 OR fiado_nombre IS NOT NULL)").all(lid, mes);
     const ventas = peds.reduce((s, p) => s + p.total, 0);
     const web = peds.filter((p) => p.canal !== 'mostrador').reduce((s, p) => s + p.total, 0);
     const despacho = peds.reduce((s, p) => s + (p.costo_despacho || 0), 0);
     const items = db.prepare(`SELECT i.cantidad, i.precio_unitario, i.costo_unitario FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id
-      WHERE p.local_id=? AND substr(p.dia,1,7)=? AND p.estado!='anulado' AND p.pagado=1`).all(lid, mes);
+      WHERE p.local_id=? AND substr(p.dia,1,7)=? AND p.estado!='anulado' AND (p.pagado=1 OR p.fiado_nombre IS NOT NULL)`).all(lid, mes);
     const costoComida = Math.round(items.reduce((s, i) => s + i.cantidad * (i.costo_unitario ?? (i.precio_unitario * pct) / 100), 0));
     const estimadas = items.filter((i) => i.costo_unitario == null).length;
 
