@@ -180,6 +180,58 @@
   .tabs-nav::-webkit-scrollbar { display: none; }
   .tab { flex: none; }
   .cj-rapidos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; } .cj-rapidos .ghostb { min-height: 44px; }
+  /* Caja del día (rediseño): una pregunta (¿cuánto debería haber?) y una acción (Cerrar caja). */
+  #v-cierre { font-variant-numeric: tabular-nums; }
+  #v-cierre button:not(:disabled):active { transform: scale(.97); } #v-cierre button { transition: transform .1s ease; }
+  @media (prefers-reduced-motion: reduce) { #v-cierre button { transition: none; } #v-cierre button:not(:disabled):active { transform: none; } }
+  .cjx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
+  .cjx-dia { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; } .cjx-hacc { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cjx-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: .85rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); }
+  .cjx-chip.abierta { background: #e6f4e7; color: #1d5e21; border-color: transparent; } .cjx-chip.cerrada { background: var(--surface-2); color: var(--ink-2); }
+  @media (prefers-color-scheme: dark) { .cjx-chip.abierta { background: #1d3320; color: #9fdaa3; } }
+  .cjx-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  .cjx-grid > .cardf { margin: 0; padding: 16px; } .cjx-side { display: grid; gap: 16px; }
+  .cjx-grid h3, .cjx-resumen h3 { margin: 0 0 8px; } .cjx-resumen h3 { margin-top: 32px; } .cjx-resumen h4, .cjx-mov h4 { font: 700 .95rem var(--font-display); margin: 24px 0 8px; }
+  @media (min-width: 1024px) {
+    .cjx-grid { grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "hero side" "mov side" "fiado side"; }
+    .cjx-hero { grid-area: hero; } .cjx-mov { grid-area: mov; } .cjx-fiado { grid-area: fiado; }
+    .cjx-side { grid-area: side; position: sticky; top: 112px; }
+    .cjx-grid > .cjx-hero:last-child, .cjx-grid > .cjx-side:last-child { grid-column: auto; }
+  }
+  .cjx-q { font-size: .9rem; color: var(--ink-2); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .cjx-big { display: flex; flex-direction: column; margin-bottom: 16px; } .cjx-cap { font-size: .9rem; color: var(--ink-2); }
+  .cjx-big b { font: 800 clamp(2.4rem, 7vw, 3.5rem)/1.05 var(--font-display); letter-spacing: -.02em; } .cjx-big .sub { color: var(--ink-2); font-size: .85rem; margin-top: 4px; }
+  .cjx-eq { margin: 0; display: grid; gap: 0; } .cjx-l { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); min-height: 36px; }
+  .cjx-l dt { margin: 0; } .cjx-l dd { margin: 0; font-weight: 700; } .cjx-l .sg { display: inline-block; width: 20px; color: var(--ink-2); }
+  .cjx-l.cero { color: var(--ink-2); } .cjx-l.tot { border-top: 2px solid var(--ink); font-weight: 800; } .cjx-l.tot dd { font-weight: 800; }
+  .cjx-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .cjx-3 .ghostb { justify-content: center; padding: 0 8px; }
+  .cjx-acc .cj-rapidos { margin: 12px 0 0; } .cjx-text { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; } .cjx-text .link { min-height: 44px; font-size: .9rem; }
+  .cjx-contado { font-size: 1.6rem !important; font-weight: 800; min-height: 56px; }
+  .cjx-cerrar { width: 100%; min-height: 52px; margin-top: 16px; font-size: 1.05rem; }
+  .cjx-cierre .cj-dif { margin: 4px 0; min-height: 0; }
+  #cjNotaBox.req { border: 2px solid var(--danger); border-radius: var(--r-sm); padding: 8px 12px; } #cjNotaBox input { width: 100%; min-height: 44px; margin: 4px 0 8px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 16px; background: var(--surface); color: var(--ink); }
+  .cjx-cierre .cj-bill { margin-top: 0; border-top: 1px solid var(--line); }
+  .cjx-cierre .cj-bill summary { min-height: 44px; display: flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; padding: 0 4px; border-radius: var(--r-sm); font-size: .95rem; font-weight: 600; color: var(--ink); transition: background .15s ease; }
+  .cjx-cierre .cj-bill summary::-webkit-details-marker { display: none; }
+  .cjx-cierre .cj-bill summary::after { content: ""; margin-left: auto; flex: none; width: 8px; height: 8px; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg) translate(-2px, -2px); transition: transform .18s ease; }
+  .cjx-cierre .cj-bill[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+  .cjx-cierre .cj-bill summary:hover { background: var(--surface-2); } .cjx-cierre .cj-bill summary:active { background: var(--line); }
+  .cjx-cierre .cj-bill summary .opc { font-size: .82rem; font-weight: 400; color: var(--ink-2); }
+  .cjx-cierre .cj-bill > :not(summary) { margin-bottom: 8px; }
+  @media (prefers-reduced-motion: reduce) { .cjx-cierre .cj-bill summary, .cjx-cierre .cj-bill summary::after { transition: none; } }
+  .cj-bill summary { min-height: 44px; display: flex; align-items: center; }
+  .cjx-list { list-style: none; margin: 0; padding: 0; } .cjx-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 4px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); min-height: 44px; }
+  .cjx-fiado .cjx-list li { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .cjx-list .h { color: var(--ink-2); font-size: .85rem; } .cjx-list .d small { display: block; color: var(--ink-2); font-size: .8rem; } .cjx-list .m { font-weight: 700; text-align: right; } .cjx-list .x { text-align: right; font-size: .8rem; color: var(--ink-2); }
+  .cjx-list li.anulada .d, .cjx-list li.anulada .m { text-decoration: line-through; color: var(--ink-2); }
+  .cjx-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; } .cjx-hd h3 { margin: 0; }
+  .cjx-metrics { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-bottom: 16px; } .cjx-metrics div { display: flex; flex-direction: column; min-width: 96px; }
+  .cjx-metrics span { font-size: .8rem; color: var(--ink-2); } .cjx-metrics b { font: 800 1.25rem var(--font-display); } .cjx-metrics small { color: var(--ink-2); font-size: .78rem; }
+  .cjx-detalle { margin-top: 24px; } .cjx-detalle summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  @media print {
+    #v-cierre .cjx-grid { display: block; } #v-cierre .cjx-grid > *, #v-cierre .cjx-side > * { margin-bottom: 12px; } #v-cierre .cjx-side { position: static; }
+    #v-cierre details:not([open]):not(#cjDetalle), #v-cierre .cjx-head .cjx-hacc { display: none; } #v-cierre .cjx-cerrar { display: none; }
+  }
   .cj-ciegomsg { display: none; } #v-cierre.ciego-on .cj-ciegomsg { display: block; } #v-cierre.ciego-on .cj-esp { display: none; }
   .bar .quien { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
   @media (max-width: 900px) { .bar .kpi { display: none; } }
@@ -1060,7 +1112,7 @@ function pintarCierre() {
   const C = CJ && CJ.dia === D.dia ? CJ : null;
   // Lo que se esté escribiendo en el arqueo no se pierde cuando el panel se actualiza solo.
   const guardado = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, #cjTarjeta, #cjTransf, [data-bill]')].map((i) => i.value);
-  const billetesAbierto = $('v-cierre').querySelector('.cj-bill')?.open;
+  const abiertos = new Set([...$('v-cierre').querySelectorAll('details[id]')].filter((d) => d.open).map((d) => d.id));
   cierreFirma = JSON.stringify([cajaD || DD(), CJ]);
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
   const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado && !p.fiado_nombre);
@@ -1072,43 +1124,45 @@ function pintarCierre() {
   const efectivo = partes.filter((x) => x.medio === 'efectivo');
   const sinFolio = cobrados.filter((p) => !p.folio_boleta);
   const tabla = (filas) => `<table><tr><th></th><th class="r">Ventas</th><th class="r">Monto</th></tr>${filas.map(([n, c, s]) => `<tr><td>${n}</td><td class="r">${c}</td><td class="r">${clp(s)}</td></tr>`).join('')}<tr><th>Total</th><th class="r">${cobrados.length}</th><th class="r">${clp(total)}</th></tr></table>`;
+  const estado = !C ? '' : C.cierre ? `<span class="cjx-chip cerrada">Cerrada a las ${esc(C.cierre.creado.slice(11, 16))}${C.cierre.usuario ? ` por ${esc(C.cierre.usuario)}` : ''}</span>` : '<span class="cjx-chip abierta">Abierta</span>';
+  const metrica = (n, v, sub = '') => `<div><span>${n}</span><b class="num">${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
   $('v-cierre').innerHTML = `
-    <div class="res-head"><div style="display:flex;align-items:center;gap:8px">
-        <button class="ghost ico-b noprint" data-caja="-1" aria-label="Día anterior">${ico('left')}</button>
+    <div class="cjx-head">
+      <div class="cjx-dia"><button class="ghost ico-b noprint" data-caja="-1" aria-label="Día anterior">${ico('left')}</button>
         <h2 class="t" style="margin:0">${cajaDia ? 'Caja del' : 'Caja de hoy ·'} ${esc(fechaLarga(D.dia))}</h2>
         <button class="ghost ico-b noprint" data-caja="1" aria-label="Día siguiente" ${cajaDia ? '' : 'disabled'}>${ico('right')}</button>
-        ${cajaDia ? '<button class="ghostb noprint" data-caja="hoy">Volver a hoy</button>' : ''}</div>
-      <button class="ghost noprint" data-print style="display:inline-flex;align-items:center;gap:6px;width:auto">${ico('printer')}Imprimir cierre</button></div>
-    <div class="kpis">
-      <div>Cobrado<b class="num">${clp(total)}</b></div>
-      <div class="cj-ciegomsg">Debería haber en caja<b class="num">—</b><span class="sub">Se muestra al escribir lo contado</span></div>
-      <div class="cj-esp">Debería haber en caja<b class="num">${clp(C ? C.esperado.total : efectivo.reduce((t, x) => t + x.monto, 0))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Efectivo de hoy, sin cerrar'}</span>` : ''}</div>
-      <div>Ventas<b class="num">${cobrados.length}</b></div>
-      <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
-      <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b><span class="sub">${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos</span></div>
-      <div>Anulados<b class="num">${D.pedidos.length - ok.length}</b></div>
-    </div>
+        ${cajaDia ? '<button class="ghostb noprint" data-caja="hoy">Volver a hoy</button>' : ''}${estado}</div>
+      <div class="cjx-hacc noprint"><button class="ghostb" data-cj-ayuda type="button">${ico('note')}¿Cómo funciona?</button>
+        <button class="ghostb" data-print type="button">${ico('printer')}Imprimir cierre</button></div></div>
     ${C ? CAJA.bloqueCaja(C) : ''}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
-      <div><h3>Por medio de pago</h3>${tabla(porMedio)}</div>
-      <div><h3>Por canal</h3>${tabla(porCanal)}</div>
-    </div>
-    ${D.modo_boleta === 2 ? `<h3>Boletas por emitir (${sinFolio.length})</h3>
-      ${sinFolio.length ? `<p class="ayuda noprint" style="margin:-4px 0 8px">Emite la e-Boleta en el SII y escribe aquí su folio (Enter guarda y pasa a la siguiente).</p>
-        <table class="folios"><tr><th>#</th><th>Cliente</th><th>Medio</th><th class="r">Monto</th><th class="noprint">Folio</th></tr>${sinFolio.map((p) =>
-        `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td>${MEDIO[p.medio_pago] || ''}</td><td class="r">${clp(p.total)}</td>
-          <td class="noprint"><form class="folio-f" data-folio="${p.id}"><input inputmode="numeric" placeholder="N° de folio" aria-label="Folio de la venta ${p.numero}" maxlength="20"><button class="ghostb fuerte">Guardar</button></form></td></tr>`).join('')}</table>`
-        : '<p style="color:var(--ink-2)">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
-    <h3>Detalle</h3>
-    <table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
-    ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : p.fiado_nombre ? 'Fiado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
-    </table>`;
+    <section class="cjx-resumen"><h3>Resumen de ventas del día</h3>
+      <div class="cjx-metrics">${metrica('Cobrado', clp(total))}${metrica('Ventas', cobrados.length)}${metrica('Ticket promedio', clp(cobrados.length ? total / cobrados.length : 0))}${metrica('Por cobrar', clp(suma(porCobrar)), `${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos`)}${metrica('Anulados', D.pedidos.length - ok.length)}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+        <div><h4>Por medio de pago</h4>${tabla(porMedio)}</div>
+        <div><h4>Por canal</h4>${tabla(porCanal)}</div>
+      </div>
+      ${D.modo_boleta === 2 ? `<h4>Boletas por emitir (${sinFolio.length})</h4>
+        ${sinFolio.length ? `<p class="ayuda noprint" style="margin:-4px 0 8px">Emite la e-Boleta en el SII y escribe aquí su folio (Enter guarda y pasa a la siguiente).</p>
+          <div class="cj-scroll"><table class="folios"><tr><th>#</th><th>Cliente</th><th>Medio</th><th class="r">Monto</th><th class="noprint">Folio</th></tr>${sinFolio.map((p) =>
+          `<tr><td>${p.numero}</td><td>${esc(p.cliente)}</td><td>${MEDIO[p.medio_pago] || ''}</td><td class="r">${clp(p.total)}</td>
+            <td class="noprint"><form class="folio-f" data-folio="${p.id}"><input inputmode="numeric" placeholder="N° de folio" aria-label="Folio de la venta ${p.numero}" maxlength="20"><button class="ghostb fuerte">Guardar</button></form></td></tr>`).join('')}</table></div>`
+          : '<p style="color:var(--ink-2)">Todas las ventas cobradas tienen su boleta registrada.</p>'}` : ''}
+      <details class="cjx-detalle" id="cjDetalle"><summary>Detalle de pedidos (${D.pedidos.length})</summary>
+        <div class="cj-scroll"><table><tr><th>#</th><th>Hora</th><th>Canal</th><th>Cliente</th><th>Medio</th><th>Boleta</th><th class="r">Total</th></tr>
+        ${D.pedidos.map((p) => `<tr${p.estado === 'anulado' ? ' style="text-decoration:line-through;color:var(--ink-2)"' : ''}><td>${p.numero}</td><td>${p.cobrado_en || p.creado.slice(11, 16)}</td><td>${p.canal === 'mostrador' ? 'Mostrador' : 'Web'}</td><td>${esc(p.cliente)}</td><td>${p.medio_pago ? MEDIO[p.medio_pago] : (p.estado === 'anulado' ? 'Anulado' : p.fiado_nombre ? 'Fiado' : 'Por cobrar')}${p.cobrado_por || p.anulado_por ? `<br><span class="opc">${esc(p.anulado_por || p.cobrado_por)}</span>` : ''}</td><td>${esc(p.folio_boleta || '—')}</td><td class="r">${clp(p.total)}</td></tr>`).join('')}
+        </table></div></details>
+    </section>`;
   const campos = [...$('v-cierre').querySelectorAll('#cjContado, #cjNota, #cjTarjeta, #cjTransf, [data-bill]')];
   if (C && !C.cierre && campos.length === guardado.length) { campos.forEach((i, k) => { i.value = guardado[k]; }); }
+  $('v-cierre').querySelectorAll('details[id]').forEach((d) => { if (abiertos.has(d.id)) d.open = true; });
   CAJA.difTxt(C);
-  if (billetesAbierto && $('v-cierre').querySelector('.cj-bill')) $('v-cierre').querySelector('.cj-bill').open = true;
 }
+// Al imprimir, el detalle de pedidos siempre sale abierto.
+let detalleAbierto = false;
+window.addEventListener('beforeprint', () => { const d = $('cjDetalle'); if (d) { detalleAbierto = d.open; d.open = true; } });
+window.addEventListener('afterprint', () => { const d = $('cjDetalle'); if (d) d.open = detalleAbierto; });
 $('v-cierre').onclick = (e) => {
+  if (e.target.closest('[data-cj-ayuda]')) { const d = $('ayudaTab').querySelector('details'); if (d) { d.open = true; d.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
   const b = e.target.closest('[data-caja]'); if (!b) return;
   const D = cajaD || DD();
   irCaja(b.dataset.caja === 'hoy' ? null : otroDia(D.dia, Number(b.dataset.caja)));

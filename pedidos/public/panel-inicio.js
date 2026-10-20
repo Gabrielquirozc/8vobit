@@ -38,7 +38,8 @@ export function crearInicioUI(ctx) {
   function ayuda(vista) {
     const el = $('ayudaTab'), txt = AYUDAS[vista];
     if (!txt) { el.hidden = true; return; }
-    const cerrada = guardado(`ayuda-${vista}`) === '0';
+    // En Caja del día la ayuda empieza plegada (se abre con "¿Cómo funciona?").
+    const cerrada = vista === 'cierre' ? guardado(`ayuda-${vista}`) !== '1' : guardado(`ayuda-${vista}`) === '0';
     el.hidden = false;
     el.innerHTML = `<details class="ayudatab" ${cerrada ? '' : 'open'}><summary>${ico('note')}Cómo funciona esta pestaña</summary>
       <ul>${txt.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>

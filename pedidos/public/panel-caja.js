@@ -52,11 +52,12 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     const F = C.fiado; if (!F) return '';
     const hoyCobrado = Object.entries(F.cobros).filter(([, v]) => v).map(([k, v]) => `${MEDIOS[k]?.[0] || k} ${clp(v)}`).join(' · ');
     if (!F.pendientes.length && !hoyCobrado) return '';
-    return `<section class="cardf cj" id="cjFiado"><div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Fiado</h3><span class="num"><b>Se debe ${clp(F.adeudado)}</b></span></div>
+    return `<section class="cardf cjx-fiado" id="cjFiado"><div class="cjx-hd"><h3>Fiado pendiente</h3><span class="num"><b>Se debe ${clp(F.adeudado)}</b></span></div>
       <p class="ayuda">No es plata de caja hasta que paguen: cada cobro entra a la caja del día en que se hace. ${hoyCobrado ? `Cobrado este día: ${hoyCobrado}.` : ''}</p>
-      ${F.pendientes.length ? `<div class="cj-scroll"><table><tr><th>Quién</th><th>Fecha</th><th class="r">Total</th><th class="r">Abonado</th><th class="r">Saldo</th><th class="noprint"></th></tr>
-        ${F.pendientes.map((f) => `<tr><td><b>${esc(f.nombre)}</b><br><span class="opc">#${f.numero}</span></td><td>${esc(fechaLarga(f.dia))}</td><td class="r">${clp(f.total)}</td><td class="r">${clp(f.abonado)}</td><td class="r"><b>${clp(f.saldo)}</b></td>
-          <td class="noprint r">${puede('cobrar') && !C.cierre ? `<button class="ghostb fuerte" data-cj="fiado" data-id="${f.id}">${ico('cash')}Cobrar</button>` : ''}</td></tr>`).join('')}</table></div>` : '<p class="ayuda">Nadie debe nada.</p>'}</section>`;
+      ${F.pendientes.length ? `<ul class="cjx-list">${F.pendientes.map((f) => `<li><span class="d"><b>${esc(f.nombre)}</b> <span class="opc">#${f.numero}</span>
+          <small>${esc(fechaLarga(f.dia))} · total ${clp(f.total)}${f.abonado ? ` · abonado ${clp(f.abonado)}` : ''}</small></span>
+        <span class="m num">${clp(f.saldo)}</span>
+        <span class="x noprint">${puede('cobrar') && !C.cierre ? `<button class="ghostb fuerte" data-cj="fiado" data-id="${f.id}">${ico('cash')}Cobrar</button>` : ''}</span></li>`).join('')}</ul>` : '<p class="ayuda">Nadie debe nada.</p>'}</section>`;
   }
 
   // ---------- diálogo de movimiento ----------
@@ -125,63 +126,81 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   const RAPIDOS = { bolsas: ['Bolsas', 'envases'], guantes: ['Guantes', 'envases'], gas: ['Gas', 'servicios'], hielo: ['Hielo', 'insumos'], super: ['Súper', 'insumos'], repartidor: ['Pago repartidor', 'despacho'] };
 
   // ---------- bloque de caja dentro de "Caja del día" ----------
+  // Orden en el DOM (es el del celular): En caja ahora, anotar y cerrar (lateral), movimientos, fiado.
+  // En escritorio el grid de #v-cierre pone el lateral a la derecha (ver .cjx-grid en panel.html).
+  const lineaEq = (sg, nombre, v, extra = '', atenuar = true) => `<div class="cjx-l${v || !atenuar ? '' : ' cero'}"><dt><span class="sg" aria-hidden="true">${sg}</span>${nombre}${extra}</dt><dd class="num">${clp(v)}</dd></div>`;
   function bloqueCaja(C) {
     CATS = C.categorias;
-    const E = C.esperado, K = C.cierre;
-    const filas = [['Fondo inicial', E.fondo, 'fondo'], [`Ventas en efectivo (${E.ventas_n})`, E.ventas], ...(E.propinas ? [['Propinas en efectivo', E.propinas]] : []), ...(E.fiado_cobros ? [['Cobros de fiado', E.fiado_cobros]] : []), ['Ingresos', E.ingresos], ['Retiros', -E.retiros], ['Gastos pagados en efectivo', -E.gastos]];
-    const dif = K ? K.diferencia : null;
+    const E = C.esperado, K = C.cierre, dif = K ? K.diferencia : null;
     // Hoy, sin cerrar, con movimiento y sin fondo anotado: falta abrir la caja.
     const sinAbrir = !K && C.dia === C.hoy && !E.fondo && (E.ventas_n > 0 || C.movimientos.some((m) => !m.anulado));
-    return `${sinAbrir ? `<div class="banner aviso noprint" role="status" style="border-radius:var(--r-sm);margin-bottom:12px"><strong>Caja sin abrir:</strong> anota el fondo inicial para que el efectivo cuadre.
+    const pendProp = C.propinas.efectivo - C.propinas.retiradas;
+    const eq = [
+      lineaEq('', 'Fondo inicial', E.fondo, K ? '' : ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>`, false),
+      lineaEq('+', `Ventas en efectivo <span class="opc">(${E.ventas_n})</span>`, E.ventas),
+      E.propinas ? lineaEq('+', 'Propinas en efectivo', E.propinas) : '',
+      E.fiado_cobros ? lineaEq('+', 'Cobros de fiado', E.fiado_cobros) : '',
+      lineaEq('+', 'Ingresos', E.ingresos), lineaEq('−', 'Retiros', E.retiros), lineaEq('−', 'Gastos en efectivo', E.gastos)].join('');
+
+    const hero = `<section class="cardf cjx-hero" aria-labelledby="cjxHeroT"><h3 id="cjxHeroT" class="cjx-q">En caja ahora</h3>
+      ${sinAbrir ? `<div class="banner aviso noprint" role="status" style="border-radius:var(--r-sm);margin-bottom:8px"><strong>Caja sin abrir:</strong> anota el fondo inicial para que el efectivo cuadre.
         <button class="ghostb" data-cj="mov" data-tipo="fondo" style="margin-left:8px">Anotar fondo inicial</button></div>` : ''}
-    <section class="cardf cj">
-      <div class="res-head" style="margin-bottom:6px"><h3 style="margin:0">Cuadre del efectivo</h3>
-        <div class="cj-acc noprint">${K ? '' : `<button class="ghostb" data-cj="mov" data-tipo="gasto">${ico('plus')}Gasto</button>
-          <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
-          <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>
-          ${C.propinas.efectivo - C.propinas.retiradas > 0 ? `<button class="ghostb" data-cj="mov" data-tipo="retiro" data-propinas="1">${ico('minus')}Retiro de propinas</button>` : ''}
-          <button class="ghostb" data-cj="mov" data-tipo="corte">${ico('note')}Entregar la caja</button>`}</div></div>
-      ${K ? '' : `<div class="cj-rapidos noprint" role="group" aria-label="Gastos rápidos"><span class="opc">Gasto rápido:</span>${Object.entries(RAPIDOS).map(([k, [n]]) => `<button class="ghostb" data-cj="mov" data-tipo="gasto" data-rapido="${k}">${n}</button>`).join('')}</div>`}
-      ${Object.values(C.propinas).some((v) => v) ? `<p class="ayuda">Propinas del día (no son venta): ${['efectivo', 'tarjeta', 'transferencia', 'otro'].filter((m) => C.propinas[m]).map((m) => `${MEDIOS[m]?.[0] || m} ${clp(C.propinas[m])}`).join(' · ')}${C.propinas.retiradas ? ` · repartidas ${clp(C.propinas.retiradas)}` : ''}</p>` : ''}
-      <div class="cj-grid">
-        <table class="cj-cuenta cj-esp">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
-          <p class="cj-ciegomsg ayuda">Debería haber en caja: se muestra al escribir lo contado.</p>
-          <div class="cj-tot cj-esp"><span>Debería haber en caja</span><b class="num">${clp(E.total)}</b></div>
-        <div class="cj-arqueo">${K ? `
-          <div class="cj-res ${dif === 0 ? 'ok' : 'mal'}"><span>${dif === 0 ? 'Caja cuadrada' : dif > 0 ? 'Sobra' : 'Falta'}</span><b class="num">${dif === 0 ? clp(K.contado) : clp(Math.abs(dif))}</b>
-            <span class="sub">Contado ${clp(K.contado)} · debía haber ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
-          ${['tarjeta', 'transferencia'].map((m) => { const v = K[`contado_${m}`], sis = K.detalle[`sistema_${m}`]; if (v == null || sis == null) return '';
-            const d = v - sis; return `<p class="ayuda">${m === 'tarjeta' ? 'Tarjeta (voucher)' : 'Transferencias (cartola)'}: ${clp(v)} · sistema ${clp(sis)} · ${d === 0 ? 'cuadra' : `${d > 0 ? 'sobran' : 'faltan'} ${clp(Math.abs(d))}`}</p>`; }).join('')}
-          ${K.nota ? `<p class="nota" style="margin-top:8px">${ico('note')}<span>${esc(K.nota)}</span></p>` : ''}
-          ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Debería haber en caja ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
-          ${K.detalle.por_cobrar ? `<p class="ayuda">Al cerrar quedaban ${K.detalle.por_cobrar} pedido(s) por cobrar.</p>` : ''}
-          ${puede('reabrir_caja') ? '<button class="ghostb noprint" data-cj="reabrir" style="margin-top:10px">Reabrir caja</button>' : ''}` : `
-          <form id="cjForm"><label class="noprint" style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.88rem;color:var(--ink-2)"><input type="checkbox" data-cj-ciego ${ciegoOn() ? 'checked' : ''}>Contar sin ver lo que debería haber en caja</label><div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'placeholder="Cuenta billetes y monedas"')}</div>
-          <details class="cj-bill"><summary>Contar por billetes y monedas</summary><div class="cj-bills">${BILLETES.map((b) =>
-            `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
-          <details class="cj-bill"><summary>Voucher y cartola <span class="opc">(opcional)</span></summary><div class="cj-bills">
-            <label><span>Tarjeta</span>${dinero('cjTarjeta', 0, 'placeholder="Según voucher"')}</label>
-            <label><span>Transferencias</span>${dinero('cjTransf', 0, 'placeholder="Según cartola"')}</label></div></details>
-          <div class="cj-dif num" id="cjDif" aria-live="polite"></div>
-          <div class="field"><label for="cjNota">Nota <span class="opc">(obligatoria si la diferencia pasa de ${clp(UMBRAL_NOTA)})</span></label><input id="cjNota" maxlength="300" placeholder="Ej. se pagó al gásfiter con plata de la caja"></div>
-          <div class="formerr" id="cjErr" role="alert"></div>
-          <button class="primary" style="width:100%;margin-top:10px">Cerrar caja</button></form>`}
-        </div></div>
-      ${C.cortes.length ? `<h3>Entregas de caja</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Quién</th><th class="r">Contado</th><th class="r">Debería haber en caja</th><th class="r">Diferencia</th></tr>
-        ${C.cortes.map((t) => `<tr><td>${esc(t.creado.slice(11, 16))}</td><td>${esc(t.usuario || '')}${t.nota ? `<br><span class="opc">${esc(t.nota)}</span>` : ''}</td><td class="r">${clp(t.contado)}</td><td class="r">${clp(t.esperado)}</td><td class="r">${t.diferencia === 0 ? 'Cuadra' : signo(t.diferencia)}</td></tr>`).join('')}</table></div>` : ''}
-      ${C.movimientos.length ? `<h3>Movimientos</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Tipo</th><th>Detalle</th><th>Medio</th><th class="r">Monto</th><th class="noprint"></th></tr>
-        ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}${m.usuario ? `<br><span class="opc">${esc(m.usuario)}</span>` : ''}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(m.categoria === 'propinas' ? 'Propinas' : CATS[m.categoria] || m.categoria)}` : ''}</td>
-          <td>${esc(m.descripcion || '')}${m.documento ? ` <span class="opc">(${esc(m.documento)})</span>` : ''}</td><td>${MEDIOS[m.medio]?.[0] || ''}</td>
-          <td class="r">${['retiro', 'gasto'].includes(m.tipo) ? '−' : ''}${clp(m.monto)}</td>
-          <td class="noprint r">${m.anulado ? `Anulado${m.anulado_por ? ` por ${esc(m.anulado_por)}` : ''}` : (K && m.medio === 'efectivo') ? '' : `<button class="link peligro" data-cj="anular" data-id="${m.id}">Anular</button>`}</td></tr>`).join('')}</table></div>` : ''}
-    </section>${seccionFiado(C)}`;
+      <div class="cjx-big cj-esp"><span class="cjx-cap">Debería haber en caja</span><b class="num">${clp(E.total)}</b></div>
+      <div class="cjx-big cj-ciegomsg"><span class="cjx-cap">Debería haber en caja</span><b class="num">—</b><span class="sub">Se muestra al escribir lo contado</span></div>
+      <dl class="cjx-eq cj-esp">${eq}<div class="cjx-l tot"><dt><span class="sg" aria-hidden="true">=</span>Debería haber</dt><dd class="num">${clp(E.total)}</dd></div></dl></section>`;
+
+    const acciones = K ? '' : `<section class="cardf cjx-acc noprint"><h3>Anotar</h3>
+      <div class="cjx-3">${[['gasto', 'Gasto', 'plus'], ['ingreso', 'Ingreso', 'plus'], ['retiro', 'Retiro', 'minus']].map(([t, n, i]) => `<button class="ghostb" data-cj="mov" data-tipo="${t}">${ico(i)}${n}</button>`).join('')}</div>
+      <div class="cj-rapidos" role="group" aria-label="Gastos rápidos"><span class="opc">Gasto rápido:</span>${Object.entries(RAPIDOS).map(([k, [n]]) => `<button class="ghostb" data-cj="mov" data-tipo="gasto" data-rapido="${k}">${n}</button>`).join('')}</div>
+      <div class="cjx-text"><button class="link" data-cj="mov" data-tipo="corte">Entregar la caja</button>${pendProp > 0 ? `<button class="link" data-cj="mov" data-tipo="retiro" data-propinas="1">Retiro de propinas</button>` : ''}</div></section>`;
+
+    const cierre = K ? `<section class="cardf cjx-cierre"><h3>Caja cerrada</h3>
+        <div class="cj-res ${dif === 0 ? 'ok' : 'mal'}"><span>${dif === 0 ? 'Caja cuadrada' : dif > 0 ? 'Sobra' : 'Falta'}</span><b class="num">${dif === 0 ? clp(K.contado) : clp(Math.abs(dif))}</b>
+          <span class="sub">Contado ${clp(K.contado)} · debía haber ${clp(K.esperado)} · cerrada a las ${esc(K.creado.slice(11, 16))}${K.usuario ? ` por ${esc(K.usuario)}` : ''}</span></div>
+        ${['tarjeta', 'transferencia'].map((m) => { const v = K[`contado_${m}`], sis = K.detalle[`sistema_${m}`]; if (v == null || sis == null) return '';
+          const d = v - sis; return `<p class="ayuda">${m === 'tarjeta' ? 'Tarjeta (voucher)' : 'Transferencias (cartola)'}: ${clp(v)} · sistema ${clp(sis)} · ${d === 0 ? 'cuadra' : `${d > 0 ? 'sobran' : 'faltan'} ${clp(Math.abs(d))}`}</p>`; }).join('')}
+        ${K.nota ? `<p class="nota" style="margin-top:8px">${ico('note')}<span>${esc(K.nota)}</span></p>` : ''}
+        ${K.esperado !== E.total ? `<p class="ayuda">Ojo: después del cierre cambiaron ventas en efectivo. Debería haber en caja ${clp(E.total)}; reabre la caja y vuelve a contar.</p>` : ''}
+        ${K.detalle.por_cobrar ? `<p class="ayuda">Al cerrar quedaban ${K.detalle.por_cobrar} pedido(s) por cobrar.</p>` : ''}
+        ${puede('reabrir_caja') ? '<button class="ghostb noprint" data-cj="reabrir" style="margin-top:8px">Reabrir caja</button>' : ''}</section>`
+      : `<section class="cardf cjx-cierre"><form id="cjForm"><h3>Cerrar caja</h3>
+        <div class="field" style="margin-top:0"><label for="cjContado">Efectivo contado</label>${dinero('cjContado', 0, 'class="cjx-contado" placeholder="0"')}<p class="ayuda" style="margin:4px 0 0">Cuenta billetes y monedas.</p></div>
+        <div class="cj-dif num" id="cjDif" aria-live="polite"></div>
+        <details class="cj-bill" id="cjNotaBox"><summary><span>Nota</span><span class="opc">(obligatoria si la diferencia pasa de ${clp(UMBRAL_NOTA)})</span></summary>
+          <input id="cjNota" maxlength="300" aria-label="Nota del cierre" placeholder="Ej. se pagó al gásfiter con plata de la caja"></details>
+        <details class="cj-bill" id="cjBill"><summary><span>Contar por billetes y monedas</span></summary><div class="cj-bills">${BILLETES.map((b) =>
+          `<label><span>${clp(b)}</span><input inputmode="numeric" data-bill="${b}" placeholder="0" aria-label="Cantidad de ${clp(b)}"></label>`).join('')}</div></details>
+        <details class="cj-bill" id="cjVou"><summary><span>Voucher y cartola</span><span class="opc">(opcional)</span></summary><div class="cj-bills">
+          <label><span>Tarjeta</span>${dinero('cjTarjeta', 0, 'placeholder="Según voucher"')}</label>
+          <label><span>Transferencias</span>${dinero('cjTransf', 0, 'placeholder="Según cartola"')}</label></div></details>
+        <details class="cj-bill" id="cjOpc"><summary><span>Más opciones</span></summary>
+          <label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:.88rem;color:var(--ink-2)"><input type="checkbox" data-cj-ciego ${ciegoOn() ? 'checked' : ''}>Contar sin ver lo que debería haber en caja</label></details>
+        <div class="formerr" id="cjErr" role="alert"></div>
+        <button class="primary cjx-cerrar">Cerrar caja</button></form></section>`;
+
+    const hora = (m) => esc(m.creado.slice(11, 16));
+    const movs = C.movimientos.length ? `<ul class="cjx-list">${C.movimientos.map((m) => `<li${m.anulado ? ' class="anulada"' : ''}><span class="h num">${hora(m)}</span>
+        <span class="d"><b>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(m.categoria === 'propinas' ? 'Propinas' : CATS[m.categoria] || m.categoria)}` : ''}</b>${m.descripcion ? ` ${esc(m.descripcion)}` : ''}${m.documento ? ` <span class="opc">(${esc(m.documento)})</span>` : ''}
+          <small>${MEDIOS[m.medio]?.[0] || ''}${m.usuario ? ` · ${esc(m.usuario)}` : ''}</small></span>
+        <span class="m num">${['retiro', 'gasto'].includes(m.tipo) ? '−' : ''}${clp(m.monto)}</span>
+        <span class="x noprint">${m.anulado ? `Anulado${m.anulado_por ? ` por ${esc(m.anulado_por)}` : ''}` : (K && m.medio === 'efectivo') ? '' : `<button class="link peligro" data-cj="anular" data-id="${m.id}">Anular</button>`}</span></li>`).join('')}</ul>` : '';
+    const cortes = C.cortes.length ? `<h4>Entregas de caja</h4><ul class="cjx-list">${C.cortes.map((t) => `<li><span class="h num">${hora(t)}</span>
+        <span class="d"><b>${esc(t.usuario || 'Entrega')}</b>${t.nota ? ` ${esc(t.nota)}` : ''}<small>Contado ${clp(t.contado)} · debía haber ${clp(t.esperado)}</small></span>
+        <span class="m num">${t.diferencia === 0 ? 'Cuadra' : signo(t.diferencia)}</span><span class="x noprint"></span></li>`).join('')}</ul>` : '';
+    const mov = movs || cortes ? `<section class="cardf cjx-mov"><h3>Movimientos del día</h3>${movs || '<p class="ayuda">Sin movimientos todavía.</p>'}${cortes}</section>` : '';
+
+    return `<div class="cjx-grid">${hero}<div class="cjx-side">${acciones}${cierre}</div>${mov}${seccionFiado(C)}</div>`;
   }
   function difTxt(C) {
     const v = $('cjContado'); aplicarCiego(C); if (!v) return;
-    if (!v.value) { $('cjDif').textContent = ''; $('cjDif').className = 'cj-dif num'; return; }
+    const nb = $('cjNotaBox');
+    if (!v.value) { $('cjDif').textContent = ''; $('cjDif').className = 'cj-dif num'; nb?.classList.remove('req'); return; }
     const d = digitos(v.value) - C.esperado.total;
     $('cjDif').textContent = d === 0 ? '✓ Cuadra' : `${d > 0 ? 'Sobran' : 'Faltan'} ${clp(Math.abs(d))}`;
     $('cjDif').className = `cj-dif num ${d === 0 ? 'ok' : 'mal'}`;
+    // La nota se destaca solo cuando se exige.
+    const exige = Math.abs(d) > UMBRAL_NOTA;
+    nb?.classList.toggle('req', exige); if (exige && nb) nb.open = true;
   }
   // Conecta los eventos del bloque (se llama una vez con el contenedor y cómo leer la caja actual).
   function conectar(cont, actual, recargar) {
