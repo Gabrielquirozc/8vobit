@@ -8,3 +8,4 @@ backups/snapshots/*
 .env
 **/.env
 infra/n8n/chats/
+capturas/

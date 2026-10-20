@@ -4,9 +4,52 @@
     {
       "name": "pedidos",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--disable-warning=ExperimentalWarning", "pedidos/server.mjs"],
-      "env": { "PANEL_PASSWORD": "demo", "ADMIN_PASSWORD": "admin-local", "DATA_DIR": "pedidos/data" },
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "pedidos/server.mjs"
+      ],
+      "env": {
+        "PANEL_PASSWORD": "demo",
+        "ADMIN_PASSWORD": "admin-local",
+        "DATA_DIR": "pedidos/data"
+      },
       "port": 8099
+    },
+    {
+      "name": "pedidos-autoservicio",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "pedidos/server.mjs"
+      ],
+      "env": {
+        "PANEL_PASSWORD": "demo",
+        "ADMIN_PASSWORD": "admin-local",
+        "DATA_DIR": "C:/Users/hpvictus/AppData/Local/Temp/claude/D--8vobit/3ba5af4c-ffa1-434e-a64b-0922a06d6b64/scratchpad/data2",
+        "PORT": "8111"
+      },
+      "port": 8111
+    },
+    {
+      "name": "pedidos-pro",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "pedidos/server.mjs"
+      ],
+      "env": {
+        "PANEL_PASSWORD": "demo",
+        "ADMIN_PASSWORD": "admin-local",
+        "DATA_DIR": "C:/Users/hpvictus/AppData/Local/Temp/claude/D--8vobit/d60de544-1f4d-467b-a8a2-380e64aed9f8/scratchpad/data-pro",
+        "PORT": "8123"
+      },
+      "port": 8123
+    },
+    {
+      "name": "propuesta-8vobit",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8130", "--bind", "127.0.0.1", "--directory", "D:/VPS/home-8vobit/site"],
+      "port": 8130
     }
   ]
 }

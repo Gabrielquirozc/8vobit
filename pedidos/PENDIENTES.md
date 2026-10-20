@@ -94,9 +94,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
   prueba → pagando) y **horas de soporte por local**; ambos necesitan tablas nuevas. Las bajas se cuentan como
   canceladas que alguna vez pagaron (no hay fecha de baja).
 - **Idea por definir: contratar online desde 8vobit.xyz (2026-10-20).** Botón "Contratar" con los planes y
-  formulario corto (nombre, WhatsApp, plan) → local en **prueba de 14 días** + clave + primeros pasos. Por definir:
-  alta automática o revisada por nosotros (sugerido al principio: el formulario avisa por WhatsApp y el alta se da
-  desde /admin), y si se cobra al inicio o al terminar la prueba (Flow/Mercado Pago, ver ESTRATEGIA.md).
+  formulario corto (nombre, WhatsApp, plan) → local en **prueba de 14 días** + clave + primeros pasos.
+  **Decidido (2026-10-20): alta automática, pero avisa a Gabriel** (ntfy, como el bot de DM: `NTFY_URL`; el local
+  aparece en /admin). Falta definir si se cobra al inicio o al terminar la prueba (Flow/Mercado Pago, ver ESTRATEGIA.md).
 
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
