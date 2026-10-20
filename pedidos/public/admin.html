@@ -4,11 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Administración · Pedidos</title>
+<title>Administración · 8vobit</title>
+<link rel="icon" href="isotipo-8vobit.png">
 <link rel="stylesheet" href="carta.css">
 <style>
   /* Consola interna (solo nosotros): locales, licencias, pagos y números del negocio. */
-  body { background: var(--surface-2); }
+  /* Marca 8vobit (manual de index.html): morados de fondo, cian de acento. Siempre oscuro. */
+  :root, :root:not([data-theme]) {
+    --bg: #120136; --surface: #1e0258; --surface-2: #2a0375; --ink: #F4F0FF; --ink-2: #9B8FB5;
+    --line: #3a1590; --brand: #4BB8D4; --brand-ink: #120136; --brand-soft: #1b3f5c;
+    --danger: #ff8a7a; --shadow: 0 4px 18px rgb(0 0 0 / .35); color-scheme: dark;
+  }
+  body { background: radial-gradient(1200px 600px at 80% -10%, #2a0375 0%, transparent 60%), #120136; color: var(--ink); min-height: 100dvh; }
+  .marca { display: flex; align-items: center; gap: 10px; color: var(--cyan-light, #7DD4E8); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .8rem; }
+  .marca img { width: 34px; height: 34px; }
+  .btn:hover { border-color: #4BB8D4; } .btn.pri:hover { background: #7DD4E8; }
+  tbody tr:hover { background: #2a0375 !important; }
+  input, select, textarea { background: #120136 !important; color: var(--ink) !important; border-color: var(--line) !important; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #4BB8D4; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
   .top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
   .top h1 { font: 800 1.4rem var(--font-display); margin: 0; flex: 1; }
@@ -25,8 +38,7 @@
   tbody tr { cursor: pointer; } tbody tr:hover { background: var(--surface-2); }
   .chip { display: inline-block; font-size: .78rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); }
   .chip.activa, .chip.prueba { background: #e6f4e7; color: #1d5e21; } .chip.gracia { background: #fff3cd; color: #7a5200; }
-  .chip.suspendida, .chip.cancelada { background: #fde2df; color: #8a1c12; }
-  @media (prefers-color-scheme: dark) {
+  @media all {
     .chip.activa, .chip.prueba { background: #1d3320; color: #9fdaa3; } .chip.gracia { background: #3a2e14; color: #f5cf7a; }
     .chip.suspendida, .chip.cancelada { background: #3a1d1a; color: #f3a59b; }
   }
@@ -46,13 +58,14 @@
 </head>
 <body>
 <section id="login" hidden>
+  <div class="marca" style="margin-bottom:14px"><img src="isotipo-8vobit.png" alt="">8vobit</div>
   <h1 style="font:800 1.4rem var(--font-display);margin:0 0 8px">Administración</h1>
   <div class="field"><label for="clave">Clave de administración</label><input id="clave" type="password" autocomplete="current-password"></div>
   <div class="formerr" id="loginErr" role="alert"></div>
   <button class="btn pri" id="entrar" style="width:100%;margin-top:12px">Entrar</button>
 </section>
 <div class="wrap" id="app" hidden>
-  <div class="top"><h1>Locales y licencias</h1><button class="btn pri" id="nuevo">+ Nuevo local</button><button class="btn" id="salir">Salir</button></div>
+  <div class="top"><span class="marca"><img src="isotipo-8vobit.png" alt="8vobit"></span><h1>Locales y licencias</h1><button class="btn pri" id="nuevo">+ Nuevo local</button><button class="btn" id="salir">Salir</button></div>
   <div class="kpis" id="kpis"></div>
   <div class="tabla"><table><thead><tr><th>Local</th><th>Plan</th><th>Estado</th><th>Hasta</th><th class="r">Ingreso mensual</th><th class="r">Pedidos 30 d (web)</th><th class="r">Tarifa del mes</th><th>Último pedido</th><th class="r">Usuarios</th><th>Primeros pasos</th></tr></thead><tbody id="filas"></tbody></table></div>
   <p class="opc" style="margin-top:10px">Ingreso mensual = lo que paga cada local por mes según su ciclo y descuento (solo cuentas activas o con pago pendiente). La tarifa por pedido se cobra a mes vencido.</p>
