@@ -108,6 +108,7 @@
   .kpis .kpi-b.on { border-color: var(--brand, currentColor); }
   .kpis .kpi-b b { display: block; font: 800 1.6rem var(--font-display); color: var(--ink); }
   tr.off td { opacity: .55; }
+  .propbox { margin: 8px 0; } .propbox summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; font-weight: 600; } .propbox .segn { margin-bottom: 8px; }
   .prtipos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
   .prtipo { display: flex; flex-direction: column; gap: 4px; text-align: left; min-height: 96px; padding: 14px; border-radius: var(--r-sm); border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
   .prtipo b { font-size: 1rem; } .prtipo span { color: var(--ink-2); font-size: .85rem; } .prtipo em { font-style: normal; font-size: .85rem; font-weight: 600; }
@@ -584,6 +585,13 @@
       <div class="dos"><select id="dm2" aria-label="Segundo medio de pago"></select><div class="money"><span aria-hidden="true">$</span><input id="da2" inputmode="numeric" autocomplete="off" placeholder="0" readonly aria-label="Lo que falta"></div></div>
       <p class="ayuda">Escribe cuánto paga con el primero; el resto queda en el segundo.</p>
     </div>
+    <details id="propBox" class="propbox"><summary>Propina <span class="opc" id="propRes"></span></summary>
+      <div class="segn" role="group" aria-label="Propina">
+        <button type="button" data-prop="0" aria-pressed="true">Sin propina</button><button type="button" data-prop="10" aria-pressed="false">10 %</button><button type="button" data-prop="otro" aria-pressed="false">Otro</button></div>
+      <div class="dos" id="propOtro" hidden><div class="money"><span aria-hidden="true">$</span><input id="propMonto" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Monto de la propina"></div>
+        <select id="propMedio" aria-label="Medio de la propina"></select></div>
+      <p class="ayuda">La propina no es venta: no suma al total ni a la boleta. En efectivo, queda en la caja hasta que la repartas.</p>
+    </details>
     <div id="efBox" hidden>
       <div class="field"><label for="recibido">Recibido</label><div class="money"><span aria-hidden="true">$</span><input id="recibido" inputmode="numeric" autocomplete="off" placeholder="0"></div></div>
       <div class="rapidos" id="rapidos"></div>
@@ -825,7 +833,8 @@ $('v-pedidos').onclick = async (e) => {
 // ---------- cobro (pedidos y venta rápida) ----------
 let cobro = null;
 function abrirCobro(c) {
-  cobro = { ...c, medio: null, dividir: false };
+  cobro = { ...c, medio: null, dividir: false, propina: 0, propMedio: 'efectivo', propManual: false };
+  document.querySelectorAll('[data-prop]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.prop === '0')); $('propOtro').hidden = true; $('propMonto').value = ''; $('propBox').open = false; pintarPropina();
   $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago';
   $('cobTitulo').textContent = c.titulo;
   $('cobTotal').textContent = clp(c.total);
@@ -846,13 +855,34 @@ function pintarRapidos() {
 // Pago dividido: dos medios; el segundo es siempre "lo que falta".
 const MEDIOS_COBRO = [['efectivo', 'Efectivo'], ['tarjeta', 'Tarjeta (POS)'], ['transferencia', 'Transferencia'], ['otro', 'Otro']];
 const montoDiv = () => Math.min(digitos($('da1').value), cobro.total);
-const efMonto = () => (cobro.dividir ? ($('dm1').value === 'efectivo' ? montoDiv() : $('dm2').value === 'efectivo' ? cobro.total - montoDiv() : 0) : cobro.medio === 'efectivo' ? cobro.total : 0);
+const efPago = () => (cobro.dividir ? ($('dm1').value === 'efectivo' ? montoDiv() : $('dm2').value === 'efectivo' ? cobro.total - montoDiv() : 0) : cobro.medio === 'efectivo' ? cobro.total : 0);
+// Efectivo a cobrar = parte pagada en efectivo + propina en efectivo.
+const efMonto = () => efPago() + (cobro.propina > 0 && cobro.propMedio === 'efectivo' ? cobro.propina : 0);
+$('propMedio').innerHTML = MEDIOS_COBRO.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
+function pintarPropina() {
+  $('propMedio').value = cobro.propMedio;
+  $('propRes').textContent = cobro.propina > 0 ? `· ${clp(cobro.propina)} en ${MEDIO[cobro.propMedio].toLowerCase()}` : '';
+  $('efBox').hidden = efMonto() === 0; $('recibido').value = ''; pintarRapidos(); calcVuelto();
+}
+// El medio de la propina sigue al del cobro mientras no se elija a mano.
+function medioPropinaPorDefecto() { if (!cobro.propManual) cobro.propMedio = cobro.dividir ? $('dm1').value : cobro.medio || 'efectivo'; }
 function actualizarDiv() {
+  medioPropinaPorDefecto(); $('propMedio').value = cobro.propMedio;
   const a = montoDiv(); $('da2').value = miles(cobro.total - a);
   $('recibido').value = ''; pintarRapidos();
   $('efBox').hidden = efMonto() === 0;
   calcVuelto();
 }
+$('propBox').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-prop]'); if (!b) return;
+  document.querySelectorAll('[data-prop]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  $('propOtro').hidden = b.dataset.prop !== 'otro';
+  medioPropinaPorDefecto();
+  if (b.dataset.prop === 'otro') { $('propMonto').value = ''; cobro.propina = 0; $('propMonto').focus(); } else cobro.propina = b.dataset.prop === '0' ? 0 : Math.round(cobro.total * Number(b.dataset.prop) / 100);
+  pintarPropina();
+});
+$('propMonto').addEventListener('input', () => { cobro.propina = digitos($('propMonto').value); pintarPropina(); });
+$('propMedio').addEventListener('change', () => { cobro.propMedio = $('propMedio').value; cobro.propManual = true; pintarPropina(); });
 $('dm1').innerHTML = $('dm2').innerHTML = MEDIOS_COBRO.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
 $('btnDividir').onclick = () => {
   cobro.dividir = !cobro.dividir;
@@ -865,9 +895,9 @@ $('btnDividir').onclick = () => {
 ['dm1', 'dm2', 'da1'].forEach((id) => $(id).addEventListener('input', actualizarDiv));
 document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
   if (cobro.dividir) { cobro.dividir = false; $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago'; $('recibido').value = ''; }
-  cobro.medio = b.dataset.medio; pintarRapidos();
+  cobro.medio = b.dataset.medio; medioPropinaPorDefecto(); $('propMedio').value = cobro.propMedio; pintarRapidos();
   document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', x === b));
-  $('efBox').hidden = cobro.medio !== 'efectivo';
+  $('efBox').hidden = efMonto() === 0; $('propRes').textContent = cobro.propina > 0 ? `· ${clp(cobro.propina)} en ${MEDIO[cobro.propMedio].toLowerCase()}` : '';
   if (cobro.medio === 'efectivo') $('recibido').focus();
   calcVuelto();
 });
@@ -886,11 +916,13 @@ $('cobOk').onclick = async () => {
     const body = { recibido: digitos($('recibido').value) || undefined };
     if (cobro.dividir) body.pagos = [{ medio: $('dm1').value, monto: montoDiv() }, { medio: $('dm2').value, monto: cobro.total - montoDiv() }];
     else body.medio_pago = cobro.medio;
+    if (cobro.propina > 0) { body.propina = cobro.propina; body.propina_medio = cobro.propMedio; }
     if (D.modo_boleta === 2 && $('folio').value.trim()) body.folio_boleta = $('folio').value;
     const r = await cobro.enviar(body);
     $('dlgCobro').close();
     const vuelto = efMonto() > 0 ? digitos($('recibido').value) - efMonto() : 0;
-    toast(vuelto > 0 ? `Cobrado ${clp(cobro.total)} · vuelto ${clp(vuelto)}` : `Cobrado ${clp(cobro.total)}`);
+    const prop = cobro.propina > 0 ? ` + propina ${clp(cobro.propina)}` : '';
+    toast(vuelto > 0 ? `Cobrado ${clp(cobro.total)}${prop} · vuelto ${clp(vuelto)}` : `Cobrado ${clp(cobro.total)}${prop}`);
     await refrescar();
   } catch (err) { $('cobErr').textContent = err.message; $('cobOk').disabled = false; }
 };

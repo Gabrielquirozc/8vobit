@@ -18,6 +18,7 @@ export const CATEGORIAS = {
 };
 const TIPOS = ['fondo', 'ingreso', 'retiro', 'gasto'];
 const MONTO_MAX = 50_000_000;
+export const PROPINA_MAX = 200_000;
 // Diferencia (en pesos, sobra o falta) desde la cual cerrar la caja exige explicar qué pasó en la nota.
 // Pendiente: hacerlo ajustable por local.
 export const UMBRAL_NOTA = 5000;
@@ -66,6 +67,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (!cols.has(c)) db.exec(`ALTER TABLE caja_cierres ADD COLUMN ${c} INTEGER`);
   }
 
+  // Propina del cobro: NO es venta (no suma al total, a Resumen ni a la boleta). Va a un solo medio.
+  const pcols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
+  if (!pcols.has('propina')) { db.exec('ALTER TABLE pedidos ADD COLUMN propina INTEGER NOT NULL DEFAULT 0'); db.exec('ALTER TABLE pedidos ADD COLUMN propina_medio TEXT'); }
+
   const cierreDe = (lid, dia) => db.prepare('SELECT * FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
 
   // Cobrado en un medio ese día: pedidos de un solo medio (como siempre) más la parte de ese
@@ -74,6 +79,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const a = db.prepare("SELECT COALESCE(SUM(total),0) s, COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND medio_pago=?").get(lid, dia, medio);
     const b = db.prepare("SELECT COALESCE(SUM(pp.monto),0) s, COUNT(*) n FROM pedido_pagos pp JOIN pedidos p ON p.id=pp.pedido_id WHERE p.local_id=? AND p.dia=? AND p.estado!='anulado' AND p.pagado=1 AND p.medio_pago='mixto' AND pp.medio=?").get(lid, dia, medio);
     return { s: a.s + b.s, n: a.n + b.n };
+  }
+
+  // Propinas cobradas ese día en un medio (los pedidos anulados no cuentan).
+  const propinasMedio = (lid, dia, medio) => db.prepare("SELECT COALESCE(SUM(propina),0) s FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND propina>0 AND propina_medio=?").get(lid, dia, medio).s;
+  // { propina, propina_medio } o { error }. Sin propina no hay nada que validar. El medio es el que se elige (por defecto, el del cobro).
+  function validarPropina(b, medioDefecto) {
+    if (b.propina === undefined || b.propina === null || b.propina === '' || Number(b.propina) === 0) return { propina: 0, propina_medio: null };
+    const propina = Number(b.propina);
+    if (!Number.isInteger(propina) || propina < 0 || propina > PROPINA_MAX) return { error: `La propina debe ser un monto entero entre $0 y $${PROPINA_MAX.toLocaleString('es-CL')}` };
+    const medio = b.propina_medio ?? medioDefecto;
+    if (!MEDIOS.includes(medio)) return { error: 'Medio de la propina inválido' };
+    return { propina, propina_medio: medio };
   }
 
   // Pago dividido en varios medios. Devuelve { pagos } (lista unida por medio) si hay más de un medio,
@@ -104,13 +121,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const suma = (f) => movs.filter(f).reduce((s, m) => s + m.monto, 0);
     const ventas = ventasMedio(lid, dia, 'efectivo');
     const d = {
+      propinas: propinasMedio(lid, dia, 'efectivo'),
       fondo: suma((m) => m.tipo === 'fondo'),
       ventas: ventas.s, ventas_n: ventas.n,
       ingresos: suma((m) => m.tipo === 'ingreso'),
       retiros: suma((m) => m.tipo === 'retiro'),
       gastos: suma((m) => m.tipo === 'gasto' && m.medio === 'efectivo'),
     };
-    return { ...d, total: d.fondo + d.ventas + d.ingresos - d.retiros - d.gastos };
+    return { ...d, total: d.fondo + d.ventas + d.propinas + d.ingresos - d.retiros - d.gastos };
   }
 
   function caja(local, dia) {
@@ -122,6 +140,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       dia, hoy: hoy(local), categorias: CATEGORIAS,
       movimientos: db.prepare('SELECT id, tipo, categoria, descripcion, monto, medio, documento, anulado, creado, usuario, anulado_por FROM caja_movimientos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       esperado: esperado(lid, dia),
+      propinas: { ...Object.fromEntries(MEDIOS.map((m) => [m, propinasMedio(lid, dia, m)])),
+        retiradas: db.prepare("SELECT COALESCE(SUM(monto),0) s FROM caja_movimientos WHERE local_id=? AND dia=? AND anulado=0 AND tipo='retiro' AND categoria='propinas'").get(lid, dia).s },
       cortes: db.prepare('SELECT id, esperado, contado, diferencia, nota, usuario, creado FROM caja_cortes WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       cierre: c ? { ...c, detalle: JSON.parse(c.detalle) } : null,
       fondo_sugerido: previo ? { dia: previo.dia, monto: previo.contado } : null,
@@ -141,7 +161,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (!Number.isInteger(monto) || monto <= 0 || monto > MONTO_MAX) return { error: 'Escribe un monto válido, en pesos y sin decimales' };
     const medio = tipo === 'gasto' ? b.medio ?? 'efectivo' : 'efectivo';
     if (!MEDIOS.includes(medio)) return { error: 'Medio de pago inválido' };
-    const categoria = tipo === 'gasto' ? b.categoria : null;
+    const categoria = tipo === 'gasto' ? b.categoria : tipo === 'retiro' && b.categoria === 'propinas' ? 'propinas' : null;
     if (tipo === 'gasto' && !CATEGORIAS[categoria]) return { error: 'Elige la categoría del gasto' };
     const descripcion = texto(b.descripcion, 120);
     if ((tipo === 'retiro' || tipo === 'ingreso') && !descripcion) return { error: 'Anota el motivo (por ejemplo: "retiro del dueño" o "sencillo")' };
@@ -182,7 +202,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (falta) return falta;
     const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0").get(lid, dia).n;
     db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario,contado_tarjeta,contado_transferencia) VALUES (?,?,?,?,?,?,?,?,?,?)')
-      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar, sistema_tarjeta: vendidoMedio('tarjeta'), sistema_transferencia: vendidoMedio('transferencia') }), nota, quien, tarjeta, transf);
+      .run(lid, dia, e.total, contado, contado - e.total, JSON.stringify({ ...e, por_cobrar: porCobrar, sistema_tarjeta: vendidoMedio('tarjeta') + propinasMedio(lid, dia, 'tarjeta'), sistema_transferencia: vendidoMedio('transferencia') + propinasMedio(lid, dia, 'transferencia') }), nota, quien, tarjeta, transf);
     return caja(local, dia);
   }
 
@@ -221,5 +241,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       anterior: { mes: ant, total: anterior.reduce((s, g) => s + g.monto, 0), por_categoria: porCat(anterior) } };
   }
 
-  return { pagos: { validar: validarPagos, guardar: guardarPagos, de: pagosDe }, caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
+  return { propina: { validar: validarPropina }, pagos: { validar: validarPagos, guardar: guardarPagos, de: pagosDe }, caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
 }

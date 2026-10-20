@@ -43,6 +43,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
         <div class="field"><label for="mvDia">Fecha</label><input id="mvDia" type="date" value="${dia}" max="${hoy}"></div></div>` : ''}
       <div class="formerr" id="mvErr" role="alert"></div>`;
     dlg.showModal();
+    if (rapido?.propinas !== undefined) { mv.categoria = 'propinas'; $('mvDesc').value = 'Retiro de propinas'; if (rapido.propinas) $('mvMonto').value = rapido.propinas.toLocaleString('es-CL'); }
     if (rapido && CATS[rapido.cat]) { $('mvCat').value = rapido.cat; $('mvDesc').value = rapido.txt; }
     $('mvMonto').focus();
   }
@@ -57,6 +58,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     const body = { tipo: mv.tipo, monto: digitos($('mvMonto').value), descripcion: $('mvDesc')?.value };
     if (mv.tipo === 'gasto') Object.assign(body, { categoria: $('mvCat').value, medio: mv.medio, documento: $('mvDoc').value, dia: $('mvDia').value });
     else if (mv.dia) body.dia = mv.dia;
+    if (mv.categoria) body.categoria = mv.categoria;
     if (mv.tipo === 'corte') {
       if (!$('mvMonto').value.trim()) { $('mvErr').textContent = 'Cuenta el efectivo y escribe el total (si no hay nada, escribe 0).'; return $('mvMonto').focus(); }
       $('mvOk').disabled = true;
@@ -83,7 +85,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   function bloqueCaja(C) {
     CATS = C.categorias;
     const E = C.esperado, K = C.cierre;
-    const filas = [['Fondo inicial', E.fondo, 'fondo'], [`Ventas en efectivo (${E.ventas_n})`, E.ventas], ['Ingresos', E.ingresos], ['Retiros', -E.retiros], ['Gastos pagados en efectivo', -E.gastos]];
+    const filas = [['Fondo inicial', E.fondo, 'fondo'], [`Ventas en efectivo (${E.ventas_n})`, E.ventas], ...(E.propinas ? [['Propinas en efectivo', E.propinas]] : []), ['Ingresos', E.ingresos], ['Retiros', -E.retiros], ['Gastos pagados en efectivo', -E.gastos]];
     const dif = K ? K.diferencia : null;
     // Hoy, sin cerrar, con movimiento y sin fondo anotado: falta abrir la caja.
     const sinAbrir = !K && C.dia === C.hoy && !E.fondo && (E.ventas_n > 0 || C.movimientos.some((m) => !m.anulado));
@@ -94,8 +96,10 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
         <div class="cj-acc noprint">${K ? '' : `<button class="ghostb" data-cj="mov" data-tipo="gasto">${ico('plus')}Gasto</button>
           <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
           <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>
+          ${C.propinas.efectivo - C.propinas.retiradas > 0 ? `<button class="ghostb" data-cj="mov" data-tipo="retiro" data-propinas="1">${ico('minus')}Retiro de propinas</button>` : ''}
           <button class="ghostb" data-cj="mov" data-tipo="corte">${ico('note')}Entregar la caja</button>`}</div></div>
       ${K ? '' : `<div class="cj-rapidos noprint" role="group" aria-label="Gastos rápidos"><span class="opc">Gasto rápido:</span>${Object.entries(RAPIDOS).map(([k, [n]]) => `<button class="ghostb" data-cj="mov" data-tipo="gasto" data-rapido="${k}">${n}</button>`).join('')}</div>`}
+      ${Object.values(C.propinas).some((v) => v) ? `<p class="ayuda">Propinas del día (no son venta): ${['efectivo', 'tarjeta', 'transferencia', 'otro'].filter((m) => C.propinas[m]).map((m) => `${MEDIOS[m]?.[0] || m} ${clp(C.propinas[m])}`).join(' · ')}${C.propinas.retiradas ? ` · repartidas ${clp(C.propinas.retiradas)}` : ''}</p>` : ''}
       <div class="cj-grid">
         <table class="cj-cuenta cj-esp">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
           <p class="cj-ciegomsg ayuda">Debería haber en caja: se muestra al escribir lo contado.</p>
@@ -123,7 +127,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       ${C.cortes.length ? `<h3>Entregas de caja</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Quién</th><th class="r">Contado</th><th class="r">Debería haber en caja</th><th class="r">Diferencia</th></tr>
         ${C.cortes.map((t) => `<tr><td>${esc(t.creado.slice(11, 16))}</td><td>${esc(t.usuario || '')}${t.nota ? `<br><span class="opc">${esc(t.nota)}</span>` : ''}</td><td class="r">${clp(t.contado)}</td><td class="r">${clp(t.esperado)}</td><td class="r">${t.diferencia === 0 ? 'Cuadra' : signo(t.diferencia)}</td></tr>`).join('')}</table></div>` : ''}
       ${C.movimientos.length ? `<h3>Movimientos</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Tipo</th><th>Detalle</th><th>Medio</th><th class="r">Monto</th><th class="noprint"></th></tr>
-        ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}${m.usuario ? `<br><span class="opc">${esc(m.usuario)}</span>` : ''}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(CATS[m.categoria] || m.categoria)}` : ''}</td>
+        ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}${m.usuario ? `<br><span class="opc">${esc(m.usuario)}</span>` : ''}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(m.categoria === 'propinas' ? 'Propinas' : CATS[m.categoria] || m.categoria)}` : ''}</td>
           <td>${esc(m.descripcion || '')}${m.documento ? ` <span class="opc">(${esc(m.documento)})</span>` : ''}</td><td>${MEDIOS[m.medio]?.[0] || ''}</td>
           <td class="r">${['retiro', 'gasto'].includes(m.tipo) ? '−' : ''}${clp(m.monto)}</td>
           <td class="noprint r">${m.anulado ? `Anulado${m.anulado_por ? ` por ${esc(m.anulado_por)}` : ''}` : (K && m.medio === 'efectivo') ? '' : `<button class="link peligro" data-cj="anular" data-id="${m.id}">Anular</button>`}</td></tr>`).join('')}</table></div>` : ''}
@@ -142,7 +146,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       const b = e.target.closest('[data-cj]'); if (!b) return;
       const C = actual();
       try {
-        if (b.dataset.cj === 'mov') { const q = RAPIDOS[b.dataset.rapido]; abrirEnDia(b.dataset.tipo, C, recargar, q && { txt: q[0], cat: q[1] }); }
+        if (b.dataset.cj === 'mov') { const q = RAPIDOS[b.dataset.rapido]; abrirEnDia(b.dataset.tipo, C, recargar, b.dataset.propinas ? { propinas: Math.max(0, C.propinas.efectivo - C.propinas.retiradas) } : q && { txt: q[0], cat: q[1] }); }
         else if (b.dataset.cj === 'anular') {
           if (!confirm('¿Anular este movimiento? Queda en el registro como anulado.')) return;
           await api(`panel/caja/movimientos/${b.dataset.id}`, { method: 'DELETE' }); toast('Movimiento anulado'); recargar();

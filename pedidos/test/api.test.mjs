@@ -1142,6 +1142,7 @@ test('PIN y roles: la tablet del local, permisos por rol y turnos', async () => 
   const sinPagar = (await pic('GET', '/api/panel/pedidos')).body.pedidos.find((x) => x.id === pedPic.body.id);
   {
     assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'tarjeta', monto: sinPagar.total - 1 }] })).status, 403);
+    assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { medio_pago: 'efectivo', propina: 1000 })).status, 403); // ni con propina
     const desp = (await pic('GET', `/api/panel/pedidos/${sinPagar.id}`)).body;
     assert.equal(desp.medio_pago, 'efectivo'); assert.deepEqual(desp.pagos, []);
   }
@@ -1446,4 +1447,60 @@ test('pago mixto: se divide entre medios, la caja suma cada parte y anular revie
   // Cobro de un pedido existente con pago dividido.
   const w = await req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], medio_pago: 'efectivo', recibido: total });
   assert.equal((await req('PATCH', `/api/panel/pedidos/${w.body.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'otro', monto: total - 1 }] })).status, 200);
+});
+
+// ---------- propina ----------
+test('propina: no es venta; la de efectivo entra a la caja, se retira aparte y anular la revierte', async () => {
+  await login();
+  const a = await prod('Italiano');
+  const mes = new Date().toISOString().slice(0, 7);
+  const venta = (extra) => req('POST', '/api/panel/venta', { items: [{ producto_id: a.id }], ...extra });
+  const C0 = (await req('GET', '/api/panel/caja')).body, R0 = (await req('GET', '/api/panel/resumen')).body, T0 = (await req('GET', `/api/panel/resultados?mes=${mes}`)).body;
+  // Propina inválida: 400 (no entero, negativa, sobre el tope, medio raro).
+  for (const propina of [1.5, -100, 200001, 'mucha']) assert.equal((await venta({ medio_pago: 'efectivo', propina })).status, 400, String(propina));
+  assert.equal((await venta({ medio_pago: 'efectivo', propina: 500, propina_medio: 'cripto' })).status, 400);
+  // En efectivo: el recibido debe cubrir total + propina.
+  assert.equal((await venta({ medio_pago: 'efectivo', propina: 1000, recibido: a.precio })).status, 400);
+  const r = await venta({ medio_pago: 'efectivo', propina: 1000, recibido: a.precio + 2000 });
+  assert.equal(r.status, 201); assert.equal(r.body.vuelto, 1000);
+  assert.equal(r.body.total, a.precio); // la propina no entra al total del pedido
+  const C1 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C1.esperado.propinas - C0.esperado.propinas, 1000);
+  assert.equal(C1.esperado.total - C0.esperado.total, a.precio + 1000); // lo que debería haber en caja sube
+  assert.equal(C1.esperado.ventas - C0.esperado.ventas, a.precio); // las ventas solo suben el precio
+  // Resumen y Resultados cuentan solo la venta.
+  const R1 = (await req('GET', '/api/panel/resumen')).body, T1 = (await req('GET', `/api/panel/resultados?mes=${mes}`)).body;
+  assert.equal(R1.ventas - R0.ventas, a.precio);
+  assert.equal(JSON.stringify(T1).includes('propina'), false);
+  // Propina con tarjeta: no toca el efectivo, se muestra aparte.
+  const t = await venta({ medio_pago: 'tarjeta', propina: 700 });
+  assert.equal(t.status, 201);
+  const C2 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C2.esperado.total, C1.esperado.total);
+  assert.equal(C2.propinas.tarjeta - C0.propinas.tarjeta, 700);
+  // Pago mixto: la propina va a un solo medio (el elegido).
+  const m = await venta({ pagos: [{ medio: 'efectivo', monto: 1000 }, { medio: 'tarjeta', monto: a.precio - 1000 }], propina: 300, propina_medio: 'tarjeta', recibido: 1000 });
+  assert.equal(m.status, 201);
+  assert.equal((await req('GET', '/api/panel/caja')).body.propinas.tarjeta - C0.propinas.tarjeta, 1000);
+  // Retiro de propinas: descuenta del efectivo esperado.
+  const antesRet = (await req('GET', '/api/panel/caja')).body;
+  await req('DELETE', '/api/panel/caja/cierre'); // por si otro test dejó la caja cerrada
+  const ret = await req('POST', '/api/panel/caja/movimientos', { tipo: 'retiro', monto: 1000, descripcion: 'Retiro de propinas', categoria: 'propinas' });
+  assert.equal(ret.status, 201);
+  const C3 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C3.propinas.retiradas - C0.propinas.retiradas, 1000);
+  assert.equal(C3.esperado.total, antesRet.esperado.total - 1000);
+  // CSV: columna Propina al final y las ventas siguen sin sumarla.
+  const hoy = C0.hoy;
+  const csv = await (await fetch(`${B}/api/panel/exportar?tipo=ventas&desde=${hoy}&hasta=${hoy}`, { headers: { Cookie: cookie } })).text();
+  assert.match(csv.split('\r\n')[0], /;Propina \(no es venta\)$/);
+  // Anular el pedido: su propina deja de contar.
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${r.body.id}`, { estado: 'anulado' })).status, 200);
+  const C4 = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C4.esperado.propinas, C0.esperado.propinas);
+  // Cobrar un pedido ya creado con propina (PATCH).
+  const w = await venta({ medio_pago: 'efectivo' });
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${w.body.id}`, { medio_pago: 'efectivo', propina: 5000, recibido: a.precio })).status, 400);
+  assert.equal((await req('PATCH', `/api/panel/pedidos/${w.body.id}`, { medio_pago: 'efectivo', propina: 5000, recibido: a.precio + 5000 })).status, 200);
+  assert.equal((await req('GET', `/api/panel/pedidos/${w.body.id}`)).body.propina, 5000);
 });

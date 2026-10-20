@@ -109,7 +109,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
       arqueo al cierre. Pestaña Gastos y bloque "Cuadre del efectivo" en Caja del día.
 - [x] Review de caja (2026-10-19, `REVIEW-CAJA.md`): menú en dos líneas, pasos del turno en la ayuda,
-      aviso "Caja sin abrir", arqueo ciego opcional (por dispositivo) y nombres unificados, nota obligatoria si la diferencia pasa de $5.000, voucher y cartola opcionales al cierre y "Entregar la caja" (corte de turno; en el código: cortes). Review completo. Siguiente: `REVIEW-UX-CAJERO.md` (hecho: gastos rápidos, renombre, pago mixto (tabla pedido_pagos) y Promociones en dos pasos; falta propina y fiado).
+      aviso "Caja sin abrir", arqueo ciego opcional (por dispositivo) y nombres unificados, nota obligatoria si la diferencia pasa de $5.000, voucher y cartola opcionales al cierre y "Entregar la caja" (corte de turno; en el código: cortes). Review completo. Siguiente: `REVIEW-UX-CAJERO.md` (hecho: gastos rápidos, renombre, pago mixto (tabla pedido_pagos) y Promociones en dos pasos y propina (columnas pedidos.propina y propina_medio; no es venta; va a un solo medio; la en efectivo entra a "Debería haber en caja" y se reparte con "Retiro de propinas" = retiro con categoría propinas); falta fiado).
 - [x] Exportar a CSV para el contador (2026-10-14): ventas, productos, caja diaria y gastos.
 - [x] Monitoreo (2026-10-14): `/salud/completo` (base, respaldo del día, disco) y guía de UptimeRobot en
       `deploy/MONITOREO.md`. **Falta que el dueño cree el monitor** (5 min).

@@ -505,6 +505,15 @@ function menu(local) {
   };
 }
 
+// Efectivo que entra a la caja en un cobro: lo pagado en efectivo + la propina en efectivo.
+// Devuelve lo recibido (por defecto, justo ese efectivo) y el efectivo total a cobrar.
+function cobroEfectivo(b, total, medio, pagos, pr) {
+  const parte = medio === 'efectivo' ? total : pagos ? (pagos.find((x) => x.medio === 'efectivo')?.monto || 0) : 0;
+  const efT = parte + (pr.propina_medio === 'efectivo' ? pr.propina : 0);
+  const recibido = efT > 0 ? Math.round(Number(b.recibido) || efT) : pagos ? Math.round(Number(b.recibido) || 0) : total;
+  return { efT, recibido };
+}
+
 function pedidoCompleto(id, localId) {
   const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(id, localId);
   if (!p) return null;
@@ -656,6 +665,7 @@ function guardarPedido(local, d, { items, total }) {
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido,costo_unitario) VALUES (?,?,?,?,?,?,?,?,?,?)'
     ).run(pid, i.p.id, i.p.nombre, JSON.stringify(i.agNames), JSON.stringify(i.salsas || []), i.cant, i.p.precio, i.nota, i.sugerido || 0, conInv ? INV.costo(local.id, i.p.id) ?? costoDe(local, i.p) : costoDe(local, i.p));
+    if (d.propina) db.prepare('UPDATE pedidos SET propina=?, propina_medio=? WHERE id=?').run(d.propina, d.propina_medio, pid);
     if (d.pagos) CAJA.pagos.guardar(Number(pid), d.pagos); // pago dividido, dentro de la misma transacción
     // Inventario: cada venta descuenta lo que lleva según su receta.
     if (conInv) INV.descontarPedido(local.id, Number(pid), items.map((i) => ({ producto_id: i.p.id, cantidad: i.cant })));
@@ -1124,13 +1134,14 @@ async function api(req, res, url) {
       const b = await readJson(req);
       const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
       if (!p) return send(res, 404, { error: 'No existe' });
-      if ((b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null) || b.pagado !== undefined || b.folio_boleta !== undefined) && !puede('cobrar')) return sinPermiso();
+      if ((b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null) || b.pagado !== undefined || b.folio_boleta !== undefined || b.propina !== undefined) && !puede('cobrar')) return sinPermiso();
       if (b.estado === 'anulado' && !puede('anular')) return sinPermiso();
       const estado = ESTADOS.includes(b.estado) ? b.estado : p.estado;
       const pagado = b.pagado === undefined ? p.pagado : (b.pagado ? 1 : 0);
       const folio = b.folio_boleta === undefined ? p.folio_boleta : (String(b.folio_boleta).replace(/\D/g, '').slice(0, 12) || null);
       let { medio_pago, recibido, cobrado_en } = p;
-      let pagosNuevos;
+      let pagosNuevos, propina = p.propina, propina_medio = p.propina_medio;
+      if (b.propina !== undefined && b.medio_pago === undefined && !(b.pagos !== undefined && b.pagos !== null)) return send(res, 400, { error: 'La propina se registra al cobrar' });
       if (b.medio_pago !== undefined || (b.pagos !== undefined && b.pagos !== null)) {
         if (p.estado === 'anulado' || estado === 'anulado') return send(res, 409, { error: 'Un pedido anulado no se puede cobrar' });
         const vp = CAJA.pagos.validar(b.pagos, p.total);
@@ -1138,10 +1149,12 @@ async function api(req, res, url) {
         const medioCobro = vp.pagos ? 'mixto' : (vp.medio || b.medio_pago);
         if (medioCobro !== 'mixto' && !MEDIOS.includes(medioCobro)) return send(res, 400, { error: 'Medio de pago inválido' });
         medio_pago = medioCobro; pagosNuevos = vp.pagos || [];
-        const ef = vp.pagos ? (vp.pagos.find((x) => x.medio === 'efectivo')?.monto || 0) : p.total;
-        recibido = medio_pago === 'efectivo' ? Math.round(Number(b.recibido) || p.total) : vp.pagos ? Math.round(Number(b.recibido) || ef) : p.total;
-        if (medio_pago === 'efectivo' && recibido < p.total) return send(res, 400, { error: 'El monto recibido es menor al total' });
-        if (vp.pagos && ef && recibido < ef) return send(res, 400, { error: 'El monto recibido es menor a la parte en efectivo' });
+        const pr = b.propina === undefined ? { propina: p.propina, propina_medio: p.propina_medio } : CAJA.propina.validar(b, vp.pagos ? vp.pagos[0].medio : medio_pago);
+        if (pr.error) return send(res, 400, { error: pr.error });
+        propina = pr.propina; propina_medio = pr.propina_medio;
+        const ce = cobroEfectivo(b, p.total, medio_pago, vp.pagos, pr);
+        recibido = ce.recibido;
+        if (ce.efT > 0 && recibido < ce.efT) return send(res, 400, { error: pr.propina && pr.propina_medio === 'efectivo' ? 'El monto recibido es menor al efectivo a cobrar (con la propina)' : medio_pago === 'efectivo' ? 'El monto recibido es menor al total' : 'El monto recibido es menor a la parte en efectivo' });
         cobrado_en = cobrado_en || new Date().toTimeString().slice(0, 5);
       }
       const pagadoFinal = medio_pago ? 1 : pagado;
@@ -1153,8 +1166,8 @@ async function api(req, res, url) {
       // El pedido y sus pagos se guardan juntos: nunca queda un pedido 'mixto' sin sus partes.
       db.exec('BEGIN IMMEDIATE');
       try {
-        db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, repartidor_id=?, actualizado=? WHERE id=?')
-          .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, Date.now(), p.id);
+        db.prepare('UPDATE pedidos SET estado=?, pagado=?, folio_boleta=?, medio_pago=?, recibido=?, cobrado_en=?, repartidor_id=?, propina=?, propina_medio=?, actualizado=? WHERE id=?')
+          .run(estado, pagadoFinal, folio, medio_pago, recibido, cobrado_en, repartidor, propina, propina_medio, Date.now(), p.id);
         if (pagosNuevos) CAJA.pagos.guardar(p.id, pagosNuevos);
         db.exec('COMMIT');
       } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -1291,17 +1304,18 @@ async function api(req, res, url) {
       if (vp.error) return send(res, 400, { error: vp.error });
       const medioVenta = vp.pagos ? 'mixto' : (vp.medio || b.medio_pago);
       if (medioVenta !== 'mixto' && !MEDIOS.includes(medioVenta)) return send(res, 400, { error: 'Elige el medio de pago' });
-      const ef = vp.pagos ? (vp.pagos.find((x) => x.medio === 'efectivo')?.monto || 0) : v.total;
-      const recibido = medioVenta === 'efectivo' ? Math.round(Number(b.recibido) || v.total) : vp.pagos ? Math.round(Number(b.recibido) || ef) : v.total;
-      if (recibido < (vp.pagos ? ef : medioVenta === 'efectivo' ? v.total : 0)) return send(res, 400, { error: 'El monto recibido es menor al total' });
+      const pr = CAJA.propina.validar(b, vp.pagos ? vp.pagos[0].medio : medioVenta);
+      if (pr.error) return send(res, 400, { error: pr.error });
+      const { efT, recibido } = cobroEfectivo(b, v.total, medioVenta, vp.pagos, pr);
+      if (efT > 0 && recibido < efT) return send(res, 400, { error: pr.propina && pr.propina_medio === 'efectivo' ? 'El monto recibido es menor al efectivo a cobrar (con la propina)' : 'El monto recibido es menor al total' });
       const r = guardarPedido(local, {
         cliente: String(b.cliente || '').trim().slice(0, 80) || 'Mostrador', telefono: '', franja: 'Mostrador', modalidad: 'retiro',
         notas: limpiarNota(b.notas, 300), dia: franjas(local).dia, canal: 'mostrador',
         estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: medioVenta, recibido,
-        pagos: vp.pagos || null, cobrado_en: new Date().toTimeString().slice(0, 5), folio: String(b.folio_boleta || '').replace(/\D/g, '').slice(0, 12) || null,
+        pagos: vp.pagos || null, propina: pr.propina, propina_medio: pr.propina_medio, cobrado_en: new Date().toTimeString().slice(0, 5), folio: String(b.folio_boleta || '').replace(/\D/g, '').slice(0, 12) || null,
       }, v);
       db.prepare('UPDATE pedidos SET cobrado_por=? WHERE id=?').run(yo.nombre, r.id);
-      return send(res, 201, { ...r, vuelto: recibido - (vp.pagos ? ef : v.total) });
+      return send(res, 201, { ...r, vuelto: recibido - (efT > 0 ? efT : vp.pagos ? 0 : v.total) });
     }
     if (m === 'POST' && parts[1] === 'productos' && !parts[2]) {
       const bp = await readJson(req);
