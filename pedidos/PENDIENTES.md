@@ -93,6 +93,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
   hitos con semáforo, cobranza de la semana y riesgo de baja. Falta: **embudo de prospectos** (contactado → demo →
   prueba → pagando) y **horas de soporte por local**; ambos necesitan tablas nuevas. Las bajas se cuentan como
   canceladas que alguna vez pagaron (no hay fecha de baja).
+- **Specs y dimensionamiento (2026-10-20): `pedidos/specs/`** — SPEC-001 alta online con prueba y Flow, SPEC-002 embudo y soporte, `PLAN.md` con ≈ 68 h (≈ 85 h con margen, 4–5 semanas a medio tiempo) y orden por semanas.
 - **Contratar online desde 8vobit.xyz (idea 2026-10-20).** Botón "Contratar" con los planes y formulario corto
   (nombre, WhatsApp, plan) → local en **prueba de 14 días** + clave + primeros pasos.
   **Decidido:** el alta la autoriza el gestor desde /admin, y antes se valida identidad para que no usen la prueba
