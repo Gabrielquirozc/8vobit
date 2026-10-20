@@ -69,6 +69,54 @@ Convenciones: sin dependencias externas; textos y comentarios en español; migra
 `ALTER TABLE` idempotente (nunca borrar columnas); todo lo del cliente se valida de nuevo en el
 servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desplegar, `npm test`.
 
+## Criterios de entrega (decididos el 2026-10-20; son la vara fija)
+
+Dos metas distintas. Lo que el local debe rellenar **no** es un pendiente del producto: el producto
+debe estar preparado para recibirlo y guiarlo.
+
+### Meta A: listo para distribuir (para nosotros)
+Un local desconocido encuentra 8vobit, se da de alta, arma su carta y recibe su primer pedido sin que
+toquemos servidor ni base; a nosotros solo nos queda autorizarlo y cobrarle.
+
+- [ ] A1 Alta sin consola: solicitud desde 8vobit.xyz → autorizar en /admin → clave al local (SPEC-001).
+- [ ] A2 Identidad: RUT con dígito verificador + código por **correo** + tarjeta inscrita en Flow (sin cobro)
+      + autorización del gestor. Sin WhatsApp.
+- [ ] A3 Prueba de 14 días con límites claros; termina en pausa, nunca en cobro. Avisos por panel y correo.
+- [ ] A4 Cobro que inicia el cliente (link Flow) y que se registra solo.
+- [ ] A5 Contrato de servicio + encargo de datos aceptado en línea al darse de alta, con versión guardada
+      (obligatorio desde el 1-dic-2026).
+- [ ] A6 Página de venta con planes y botón "Contratar".
+- [ ] A7 Soporte que escala: ayudas, preguntas frecuentes, canal de soporte y horas por local (SPEC-002).
+- [ ] A8 Operación: monitor activo, respaldos probados, carga medida para 10+ locales.
+- [x] A9 Aislamiento entre locales por `local_id` (falta una prueba específica que lo asegure).
+
+### Meta B: el local puede usarlo de forma plena
+Todo lo que el sistema necesita del local se ingresa desde el panel, guiado, y el sistema avisa qué
+falta para cada función. Nada queda "de prueba" sin que el local lo sepa.
+
+- [ ] Primeros pasos en dos niveles. **Para recibir pedidos** (mínimo para publicar): contacto, horario,
+      transferencias, carta sin productos "sin precio", despacho real, datos legales. **Para controlar tu
+      local**: vehículo y repartidor, costos e insumos, equipo y PIN, equipos (impresora, sonido, QR), caja.
+- [ ] Bloqueo suave: la carta no sale en vivo mientras falte el mínimo; el panel dice qué falta.
+- [ ] Aviso en cada pantalla que use un valor supuesto (despacho de demo, costo estimado 35 %, etc.).
+- [ ] Pedido de prueba guiado de punta a punta (impresora, aviso, caja) sin ensuciar las ventas.
+- [ ] **Mensajes del pedido**: el cliente escribe desde seguimiento, el local responde desde la tarjeta
+      del pedido en el panel (aviso + sonido), queda guardado; se cierra al entregar o anular. Revisar
+      qué se puede rescatar del chat construido para Códice (codice.8vobit.xyz, puerto 8093 en lenovo-edge).
+- [ ] Notificaciones del navegador (web push) para el cliente (estado del pedido) y el local (pedido nuevo).
+- [ ] WhatsApp, teléfono e Instagram del local: opcionales, el local decide si se muestran.
+
+La prueba en terreno con Gassuso es la **validación** de la meta B, no un pendiente aparte.
+Orden: meta B primero; de la A, antes del 2º local A5, A6, A1 y A8; A2–A4 entre el 5º y el 10º local.
+
+### Regla de mensajería (Meta va a cobrar cada vez más)
+- Ninguna función depende de un servicio de mensajería pagado (WhatsApp API, SMS).
+- 8vobit ↔ locales: WhatsApp **solo entrante** (el local nos escribe); nosotros nunca iniciamos por
+  WhatsApp. Avisos, cobros y novedades van por panel y correo. Cambiar el botón WhatsApp de
+  `/admin` (`admin.html:251`) por correo o "copiar mensaje".
+- Los enlaces `wa.me` del producto (carta, seguimiento, panel) no pasan por la API: se mantienen como
+  opción del local.
+
 ## Pendiente con el dueño (antes de mostrar/lanzar)
 
 1. **Datos de transferencia** (titular, RUT, banco, tipo y n° de cuenta, correo) → Datos del local.
