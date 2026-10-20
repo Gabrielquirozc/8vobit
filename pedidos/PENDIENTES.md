@@ -96,9 +96,9 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
 - **Contratar online desde 8vobit.xyz (idea 2026-10-20).** Botón "Contratar" con los planes y formulario corto
   (nombre, WhatsApp, plan) → local en **prueba de 14 días** + clave + primeros pasos.
   **Decidido:** el alta la autoriza el gestor desde /admin, y antes se valida identidad para que no usen la prueba
-  gratis para scrapear o abusar: tarjeta inscrita (suscripción de Mercado Pago o Flow con prueba gratis; se cobra
+  gratis para scrapear o abusar: tarjeta inscrita (**Flow**: registro de tarjeta del cliente + suscripción con días de prueba; se cobra
   sola al día 15 si no cancela) + código por WhatsApp + RUT del local. Sin validación no se crea el local.
-  Pendiente: elegir proveedor (Flow vs Mercado Pago) y límites durante la prueba (pedidos, productos, exportar).
+  Proveedor: **Flow** (decidido 2026-10-20). Pendiente: cuenta Flow de 8vobit y límites durante la prueba.
 
 - [x] Costo de productos y margen por pedido (hecho el 2026-10-14). Falta que el dueño cargue los
       costos reales de insumos (filtro *Sin costo* en Carta y precios).
