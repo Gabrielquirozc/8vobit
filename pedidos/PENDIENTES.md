@@ -139,7 +139,7 @@ servidor; datos sensibles (sueldos, RUT) solo en `/api/panel/*`; antes de desple
       grupo de WhatsApp de clientes y avisos automáticos cuando algo falla.
 - [ ] Siguientes etapas del control: combos y promociones (etapa 6), inventario simple (5), SII directo (7).
       Cobro automático de licencias con Flow o Mercado Pago (fase 2), cuando haya ~10 locales.
-- [ ] Combos/promociones (necesita precios del dueño).
+- [x] Combos y promociones (2026-10-20): combos con precio propio desde Promociones e ideas según ventas. Ver `.aura/docs/report-pedidos-caja-promos-2026-10-20.md`.
 - [ ] Al lanzar: `INDEXAR=1` en el `.env` del servidor y desplegar.
 - [x] Borradores de Términos y Privacidad (`public/legal.html`, rutas `/terminos` y `/privacidad`,
       enlazados desde la carta). Faltan: razón social, RUT y correo del local (Datos del local →
