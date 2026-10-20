@@ -25,9 +25,9 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   document.body.append(dlg);
   dlg.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => dlg.close());
   let mv = null;
-  function abrirMov(tipo, { dia, hoy, sugerido, alGuardar }) {
+  function abrirMov(tipo, { dia, hoy, sugerido, alGuardar, rapido }) {
     mv = { tipo, medio: 'efectivo', alGuardar };
-    $('mvTitulo').textContent = { fondo: 'Anotar fondo inicial', ingreso: 'Anotar ingreso', corte: 'Corte de turno', retiro: 'Anotar retiro', gasto: 'Anotar gasto' }[tipo];
+    $('mvTitulo').textContent = { fondo: 'Anotar fondo inicial', ingreso: 'Anotar ingreso', corte: 'Entregar la caja', retiro: 'Anotar retiro', gasto: 'Anotar gasto' }[tipo];
     const g = tipo === 'gasto';
     $('mvForm').innerHTML = `
       <div class="field"><label for="mvMonto">${tipo === 'corte' ? 'Efectivo contado' : 'Monto'}</label>${dinero('mvMonto', tipo === 'fondo' ? sugerido?.monto : 0, 'placeholder="0" required')}
@@ -36,13 +36,14 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
         <div class="field"><span class="lbl">Cómo se pagó</span><div class="medios" role="group" aria-label="Cómo se pagó">${Object.entries(MEDIOS).map(([k, [n, i]]) =>
           `<button type="button" data-mvmedio="${k}" aria-pressed="${k === 'efectivo'}">${ico(i)}${n}</button>`).join('')}</div>
           <p class="ayuda" id="mvMedioAyuda">Sale del efectivo de la caja.</p></div>` : ''}
-      ${tipo === 'corte' ? `<p class="ayuda" style="margin:0 0 10px">Cuenta el efectivo de la caja. El día sigue abierto; queda anotado quién entregó y cuánto había.</p>` : ''}
+      ${tipo === 'corte' ? `<p class="ayuda" style="margin:0 0 10px">Cuenta la plata antes de pasarle la caja a otra persona. El día sigue abierto.</p>` : ''}
       ${tipo === 'corte' ? `<div class="field"><label for="mvDesc">Nota <span class="opc">(obligatoria si la diferencia pasa de ${clp(UMBRAL_NOTA)})</span></label><input id="mvDesc" maxlength="300" autocomplete="off" placeholder="Ej. entrega de turno a Juan"></div>` : ''}
       ${tipo !== 'fondo' && tipo !== 'corte' ? `<div class="field"><label for="mvDesc">${g ? 'Detalle <span class="opc">(opcional)</span>' : 'Motivo'}</label><input id="mvDesc" maxlength="120" autocomplete="off" placeholder="${g ? 'Ej. paltas y tomates de la feria' : tipo === 'retiro' ? 'Ej. retiro del dueño, depósito al banco' : 'Ej. sencillo, aporte del dueño'}"></div>` : ''}
       ${g ? `<div class="dos"><div class="field"><label for="mvDoc">N° de boleta o factura <span class="opc">(opcional)</span></label><input id="mvDoc" maxlength="40" autocomplete="off"></div>
         <div class="field"><label for="mvDia">Fecha</label><input id="mvDia" type="date" value="${dia}" max="${hoy}"></div></div>` : ''}
       <div class="formerr" id="mvErr" role="alert"></div>`;
     dlg.showModal();
+    if (rapido && CATS[rapido.cat]) { $('mvCat').value = rapido.cat; $('mvDesc').value = rapido.txt; }
     $('mvMonto').focus();
   }
   dlg.addEventListener('click', (e) => {
@@ -61,7 +62,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       $('mvOk').disabled = true;
       try {
         await api('panel/caja/cortes', { method: 'POST', body: { dia: mv.dia, contado: body.monto, nota: body.descripcion } });
-        dlg.close(); toast('✓ Corte de turno anotado'); mv.alGuardar?.();
+        dlg.close(); toast('✓ Entrega de caja anotada'); mv.alGuardar?.();
       } catch (err) { $('mvErr').textContent = err.message; } finally { $('mvOk').disabled = false; }
       return;
     }
@@ -74,7 +75,9 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     } catch (err) { $('mvErr').textContent = err.message; } finally { $('mvOk').disabled = false; }
   };
   // Ingreso, retiro o fondo de un día anterior: se guardan en ese día.
-  const abrirEnDia = (tipo, C, alGuardar) => { abrirMov(tipo, { dia: C.dia, hoy: C.hoy, sugerido: C.fondo_sugerido, alGuardar }); mv.dia = C.dia; };
+  const abrirEnDia = (tipo, C, alGuardar, rapido) => { abrirMov(tipo, { dia: C.dia, hoy: C.hoy, sugerido: C.fondo_sugerido, alGuardar, rapido }); mv.dia = C.dia; };
+  // Gastos de un toque: categoría y detalle ya puestos (solo categorías que existen); el medio queda en Efectivo.
+  const RAPIDOS = { bolsas: ['Bolsas', 'envases'], guantes: ['Guantes', 'envases'], gas: ['Gas', 'servicios'], hielo: ['Hielo', 'insumos'], super: ['Súper', 'insumos'], repartidor: ['Pago repartidor', 'despacho'] };
 
   // ---------- bloque de caja dentro de "Caja del día" ----------
   function bloqueCaja(C) {
@@ -91,7 +94,8 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
         <div class="cj-acc noprint">${K ? '' : `<button class="ghostb" data-cj="mov" data-tipo="gasto">${ico('plus')}Gasto</button>
           <button class="ghostb" data-cj="mov" data-tipo="ingreso">${ico('plus')}Ingreso</button>
           <button class="ghostb" data-cj="mov" data-tipo="retiro">${ico('minus')}Retiro</button>
-          <button class="ghostb" data-cj="mov" data-tipo="corte">${ico('note')}Corte de turno</button>`}</div></div>
+          <button class="ghostb" data-cj="mov" data-tipo="corte">${ico('note')}Entregar la caja</button>`}</div></div>
+      ${K ? '' : `<div class="cj-rapidos noprint" role="group" aria-label="Gastos rápidos"><span class="opc">Gasto rápido:</span>${Object.entries(RAPIDOS).map(([k, [n]]) => `<button class="ghostb" data-cj="mov" data-tipo="gasto" data-rapido="${k}">${n}</button>`).join('')}</div>`}
       <div class="cj-grid">
         <table class="cj-cuenta cj-esp">${filas.map(([n, v, t]) => `<tr><td>${n}${t === 'fondo' && !K ? ` <button class="link noprint" data-cj="mov" data-tipo="fondo">${E.fondo ? 'cambiar' : 'anotar'}</button>` : ''}</td><td class="r">${signo(v)}</td></tr>`).join('')}</table>
           <p class="cj-ciegomsg ayuda">Debería haber en caja: se muestra al escribir lo contado.</p>
@@ -116,7 +120,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
           <div class="formerr" id="cjErr" role="alert"></div>
           <button class="primary" style="width:100%;margin-top:10px">Cerrar caja</button></form>`}
         </div></div>
-      ${C.cortes.length ? `<h3>Cortes de turno</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Quién</th><th class="r">Contado</th><th class="r">Debería haber en caja</th><th class="r">Diferencia</th></tr>
+      ${C.cortes.length ? `<h3>Entregas de caja</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Quién</th><th class="r">Contado</th><th class="r">Debería haber en caja</th><th class="r">Diferencia</th></tr>
         ${C.cortes.map((t) => `<tr><td>${esc(t.creado.slice(11, 16))}</td><td>${esc(t.usuario || '')}${t.nota ? `<br><span class="opc">${esc(t.nota)}</span>` : ''}</td><td class="r">${clp(t.contado)}</td><td class="r">${clp(t.esperado)}</td><td class="r">${t.diferencia === 0 ? 'Cuadra' : signo(t.diferencia)}</td></tr>`).join('')}</table></div>` : ''}
       ${C.movimientos.length ? `<h3>Movimientos</h3><div class="cj-scroll"><table><tr><th>Hora</th><th>Tipo</th><th>Detalle</th><th>Medio</th><th class="r">Monto</th><th class="noprint"></th></tr>
         ${C.movimientos.map((m) => `<tr${m.anulado ? ' class="anulada"' : ''}><td>${esc(m.creado.slice(11, 16))}${m.usuario ? `<br><span class="opc">${esc(m.usuario)}</span>` : ''}</td><td>${TIPO[m.tipo]}${m.categoria ? ` · ${esc(CATS[m.categoria] || m.categoria)}` : ''}</td>
@@ -138,7 +142,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
       const b = e.target.closest('[data-cj]'); if (!b) return;
       const C = actual();
       try {
-        if (b.dataset.cj === 'mov') abrirEnDia(b.dataset.tipo, C, recargar);
+        if (b.dataset.cj === 'mov') { const q = RAPIDOS[b.dataset.rapido]; abrirEnDia(b.dataset.tipo, C, recargar, q && { txt: q[0], cat: q[1] }); }
         else if (b.dataset.cj === 'anular') {
           if (!confirm('¿Anular este movimiento? Queda en el registro como anulado.')) return;
           await api(`panel/caja/movimientos/${b.dataset.id}`, { method: 'DELETE' }); toast('Movimiento anulado'); recargar();
