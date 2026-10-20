@@ -499,14 +499,16 @@ const contactoPublico = (local) => { const c = canalesDe(local); return Object.f
 function menu(local, publico = true) {
   const cats = db.prepare('SELECT id, nombre, salsas FROM categorias WHERE local_id=? ORDER BY orden').all(local.id);
   const cmb = PROMOS.combos(local.id);
-  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir FROM productos WHERE local_id=? AND archivado=0 ORDER BY orden, id').all(local.id)
-    .map((p) => ({ ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null, combo: cmb.get(p.id) || null }));
+  const dia = franjas(local).dia;
+  const vend = new Map(db.prepare("SELECT i.producto_id id, SUM(i.cantidad) n FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id WHERE p.local_id=? AND p.dia=? AND p.estado!='anulado' GROUP BY i.producto_id").all(local.id, dia).map((r) => [r.id, r.n]));
+  const prods = db.prepare('SELECT id, categoria_id, nombre, descripcion, precio, activo, precio_pendiente, incluye, destacado, imagen, sugerir, cupo_dia FROM productos WHERE local_id=? AND archivado=0 ORDER BY orden, id').all(local.id)
+    .map((p) => { const quedan = p.cupo_dia ? Math.max(0, p.cupo_dia - (vend.get(p.id) || 0)) : null; return { ...p, imagen: p.imagen ? `${BASE}/img/${p.imagen}` : null, combo: cmb.get(p.id) || null, quedan, agotado: quedan === 0 }; });
   // "Los más pedidos": ventas reales de los últimos 30 días; mientras no haya
   // suficientes, se completa con los destacados elegidos a mano.
   const vendidos = db.prepare(`SELECT i.producto_id id, SUM(i.cantidad) n FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id
     WHERE p.local_id=? AND p.estado!='anulado' AND p.creado >= datetime('now','localtime','-30 days')
     GROUP BY i.producto_id ORDER BY n DESC LIMIT 6`).all(local.id).map((r) => r.id);
-  const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
+  const vendible = (p) => p.activo && !p.agotado && !p.precio_pendiente && p.precio > 0;
   const ok = new Set(prods.filter(vendible).map((p) => p.id));
   const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
   const legal = LG.leerDatos(local.legal);
@@ -617,6 +619,7 @@ function crearPedido(local, body) {
   }
   const r = guardarPedido(local, { cliente: nombre, telefono: tel, franja, modalidad, direccion, notas: limpiarNota(body.notas, 300), dia: f.dia, costo_despacho: costo, geo, promo: pr.promo },
     { ...v, total: v.total - pr.descuento + costo });
+  if (r.error) return r;
   // Fidelización: el cliente se lleva un cupón para su próximo pedido.
   if (LIC.puede(local.id, 'clientes')) r.cupon = PROMOS.cuponVuelta(local, tel, f.dia) ? PROMOS.cuponDe(local.id, tel, f.dia) : null;
   return { ...r, descuento: pr.descuento, promo: pr.promo?.nombre || null };
@@ -634,7 +637,9 @@ function promoPara(local, v, codigo, telefono) {
   if (x.error) return x;
   // Sin el plan Pro solo valen los cupones de vuelta (los que tienen celular).
   if (x.promo && !conPromos && !x.promo.telefono) return sinCodigo();
-  return { promo: x.promo ? { id: x.promo.id, nombre: x.promo.nombre, descuento: x.descuento } : null, descuento: x.descuento };
+  // Con cupo de unidades, el pedido consume las unidades descontadas; si no alcanza para todas, el descuento es parcial y se dice en el nombre.
+  const parcial = !!x.promo && x.unidades < x.alcance;
+  return { promo: x.promo ? { id: x.promo.id, nombre: parcial ? `${x.promo.nombre} (descuento en ${x.unidades} de ${x.alcance} unidades)` : x.promo.nombre, descuento: x.descuento, cupo: !!x.promo.cupo_unidades, unidades: x.unidades } : null, descuento: x.descuento };
 }
 
 // Texto libre del cliente: sin caracteres de control ni saltos raros, largo acotado.
@@ -669,10 +674,21 @@ function validarItems(local, lista) {
   return { items, total };
 }
 
+// Unidades de un producto vendidas en un día (sin pedidos anulados): sirve al cupo diario de los combos.
+const vendidasHoy = (lid, dia, pid) => db.prepare("SELECT COALESCE(SUM(i.cantidad),0) n FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id WHERE p.local_id=? AND p.dia=? AND p.estado!='anulado' AND i.producto_id=?").get(lid, dia, pid).n;
+
 function guardarPedido(local, d, { items, total }) {
   const conInv = LIC.puede(local.id, 'inventario');
   db.exec('BEGIN IMMEDIATE');
   try {
+    // Cupo diario de combos: se revisa con la transacción tomada, así dos pedidos a la vez no venden más de lo que hay.
+    const pedidas = new Map();
+    for (const i of items) pedidas.set(i.p.id, { p: i.p, n: (pedidas.get(i.p.id)?.n || 0) + i.cant });
+    for (const { p, n } of pedidas.values()) {
+      if (!p.cupo_dia) continue;
+      const quedan = Math.max(0, p.cupo_dia - vendidasHoy(local.id, d.dia, p.id));
+      if (n > quedan) { db.exec('ROLLBACK'); return { error: quedan ? `De ${p.nombre} solo quedan ${quedan} por hoy.` : `${p.nombre} está agotado por hoy.` }; }
+    }
     const numero = db.prepare('SELECT COALESCE(MAX(numero),0)+1 n FROM pedidos WHERE local_id=? AND dia=?').get(local.id, d.dia).n;
     const token = crypto.randomBytes(16).toString('base64url');
     const { lastInsertRowid: pid } = db.prepare(
@@ -681,7 +697,13 @@ function guardarPedido(local, d, { items, total }) {
     ).run(local.id, numero, d.cliente, d.telefono, d.franja, d.modalidad, d.direccion ?? null, d.notas ?? null, total, d.dia, Date.now(), token,
       d.canal || 'web', d.estado || 'nuevo', d.medio_pago ? 1 : 0, d.medio_pago ?? null, d.recibido ?? null, d.cobrado_en ?? null, d.folio ?? null, d.costo_despacho || 0);
     if ((d.canal || 'web') === 'web') db.prepare('UPDATE pedidos SET legal_version=? WHERE id=?').run(LEGAL_VERSION, pid);
-    if (d.promo) { db.prepare('UPDATE pedidos SET descuento=?, promo_id=?, promo_nombre=? WHERE id=?').run(d.promo.descuento, d.promo.id, d.promo.nombre, pid); PROMOS.usar(d.promo.id); }
+    if (d.promo) {
+      // Cupo de unidades de la promoción: la reserva es atómica; si se agotó justo ahora, el pedido no se guarda.
+      const unidades = d.promo.cupo ? d.promo.unidades : 0;
+      if (!PROMOS.consumir(d.promo.id, unidades)) { db.exec('ROLLBACK'); return { error: 'Esa promoción se agotó justo ahora. Vuelve a intentarlo.' }; }
+      db.prepare('UPDATE pedidos SET descuento=?, promo_id=?, promo_nombre=?, promo_unidades=? WHERE id=?').run(d.promo.descuento, d.promo.id, d.promo.nombre, unidades, pid);
+      PROMOS.usar(d.promo.id);
+    }
     if (d.geo) db.prepare('UPDATE pedidos SET lat=?, lng=?, distancia_m=?, costo_viaje=?, repartidor_id=? WHERE id=?').run(d.geo.lat, d.geo.lng, d.geo.distancia_m, d.geo.costo_viaje ?? null, d.geo.repartidor_id ?? null, pid);
     for (const i of items) db.prepare(
       'INSERT INTO pedido_items (pedido_id,producto_id,nombre,agregados,salsas,cantidad,precio_unitario,nota,sugerido,costo_unitario) VALUES (?,?,?,?,?,?,?,?,?,?)'
@@ -1265,7 +1287,7 @@ async function api(req, res, url) {
       if (estado === 'anulado' && p.estado !== 'anulado') {
         db.prepare('UPDATE pedidos SET anulado_por=? WHERE id=?').run(yo.nombre, p.id);
         INV.revertirPedido(lid, p.id, yo.nombre); // devuelve al stock lo que se había descontado
-        if (p.promo_id) PROMOS.devolver(p.promo_id);
+        if (p.promo_id) PROMOS.devolver(p.promo_id, p.promo_unidades || 0);
       }
       return send(res, 200, pedidoCompleto(p.id, lid));
     }
@@ -1428,6 +1450,7 @@ async function api(req, res, url) {
           notas: limpiarNota(b.notas, 300), dia: franjas(local).dia, canal: 'mostrador',
           estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: null, fiado: nombre,
         }, v);
+        if (rf.error) return send(res, 400, rf);
         return send(res, 201, { ...rf, vuelto: 0 });
       }
       const vp = CAJA.pagos.validar(b.pagos, v.total);
@@ -1444,6 +1467,7 @@ async function api(req, res, url) {
         estado: b.cocina ? 'preparacion' : 'entregado', medio_pago: medioVenta, recibido,
         pagos: vp.pagos || null, propina: pr.propina, propina_medio: pr.propina_medio, cobrado_en: new Date().toTimeString().slice(0, 5), folio: String(b.folio_boleta || '').replace(/\D/g, '').slice(0, 12) || null,
       }, v);
+      if (r.error) return send(res, 400, r);
       db.prepare('UPDATE pedidos SET cobrado_por=? WHERE id=?').run(yo.nombre, r.id);
       return send(res, 201, { ...r, vuelto: recibido - (efT > 0 ? efT : vp.pagos ? 0 : v.total) });
     }

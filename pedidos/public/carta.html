@@ -150,7 +150,7 @@ const art = (cIdx, cls = '', p = null) => { const t = tipoArt(cIdx); return p?.i
   ? `<div class="art ${cls}"><img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" decoding="async" width="800" height="600"></div>`
   : p ? `<div class="art c${t % 4} ${cls}" aria-hidden="true"><span class="emoji">${emojiDe(p.nombre, M.categorias[cIdx]?.nombre)}</span></div>`
   : `<div class="art c${t % 4} ${cls}" aria-hidden="true">${ART[t]}</div>`; };
-const vendible = (p) => p.activo && !p.precio_pendiente && p.precio > 0;
+const vendible = (p) => p.activo && !p.agotado && !p.precio_pendiente && p.precio > 0;
 
 // ---------- horario ----------
 function estadoLocal(h) {
@@ -174,12 +174,13 @@ function estadoLocal(h) {
 
 // ---------- render ----------
 function itemHtml(p, cIdx) {
+  if (p.agotado) return `<div class="item off"><div><div class="n">${esc(p.nombre)}</div>${comboTxt(p) ? `<div class="d">${comboTxt(p)}</div>` : ''}<div class="meta"><span class="p num">${clp(p.precio)}</span><span class="tag">Agotado</span></div></div></div>`;
   if (!vendible(p)) return `<div class="item off"><div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}
     <div class="meta"><span class="tag">Precio por confirmar · pregunta en el local</span></div></div></div>`;
   const veg = M.categorias[cIdx]?.nombre === 'Vegapletos';
   return `<button class="item" data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
     <div><div class="n">${esc(p.nombre)}</div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}${comboTxt(p) ? `<div class="d">${comboTxt(p)}</div>` : ''}
-      <div class="meta"><span class="p num">${clp(p.precio)}</span>${p.incluye ? `<span class="tag pick">Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</span>` : ''}${veg ? `<span class="tag veg">Vegano</span>` : ''}</div></div>
+      <div class="meta"><span class="p num">${clp(p.precio)}</span>${p.quedan != null && p.quedan <= 10 ? `<span class="tag pick">¡Quedan ${p.quedan}!</span>` : ''}${p.incluye ? `<span class="tag pick">Elige ${p.incluye} ingrediente${p.incluye > 1 ? 's' : ''}</span>` : ''}${veg ? `<span class="tag veg">Vegano</span>` : ''}</div></div>
     <div class="thumb">${art(cIdx, '', p)}<span class="qtyb num" data-qb="${p.id}" hidden></span><span class="plus">${ico('plus')}</span></div>
   </button>`;
 }
@@ -195,7 +196,7 @@ function render() {
   if (!q && M.promociones?.length) html += `<section class="promos" aria-label="Promociones de hoy">${M.promociones.map((x) => `<div class="promo"><b>${esc(x.nombre)}</b><span>${promoTxt(x)}</span></div>`).join('')}</section>`;
   if (!q && M.mas_pedidos.length) {
     html += `<section aria-labelledby="t-fav"><h2 class="sec-t" id="t-fav">Los más pedidos</h2><p class="sec-s">Lo que más sale en ${esc(M.local.nombre)}</p><div class="rail">` +
-      M.mas_pedidos.map((id) => { const { p, i } = prods.get(id); return `<button class="fav" data-p="${p.id}">${art(i, '', p)}<span class="t"><span class="n">${esc(p.nombre)}</span><span class="p num">${clp(p.precio)}</span></span></button>`; }).join('') + `</div></section>`;
+      M.mas_pedidos.filter((id) => vendible(prods.get(id).p)).map((id) => { const { p, i } = prods.get(id); return `<button class="fav" data-p="${p.id}">${art(i, '', p)}<span class="t"><span class="n">${esc(p.nombre)}</span><span class="p num">${clp(p.precio)}</span></span></button>`; }).join('') + `</div></section>`;
   }
   html += cats.map((c) => `<section aria-labelledby="c${c.id}"><h2 class="sec-t" id="c${c.id}">${esc(c.nombre)}</h2><p class="sec-s">${c.ps.filter(vendible).length ? c.ps.filter(vendible).length + ' opciones' : 'Precios por confirmar con el local'}</p><div class="list">${c.ps.map((p) => itemHtml(p, c.i)).join('')}</div></section>`).join('');
   if (!cats.length) html = `<p class="empty">No encontramos “${esc($('q').value)}”.<br><button class="ghost" id="limpiar" style="margin-top:12px">Ver toda la carta</button></p>`;
@@ -289,12 +290,16 @@ function abrirProducto(id) {
     $('pdAdd').innerHTML = M.local.pausa ? 'Pedidos en línea pausados' : falta ? `Elige ${falta} más` : `Agregar <span class="num">${clp(p.precio * pd.qty)}</span>`;
   };
   $('pdMenos').onclick = () => { pd.qty = Math.max(1, pd.qty - 1); pintar(); };
-  $('pdMas').onclick = () => { pd.qty = Math.min(20, pd.qty + 1); pintar(); };
-  $('pdAdd').onclick = () => { meter(p, pd.sel, pd.qty, pd.nota.trim().slice(0, 140), pd.salsas); $('dlgProd').close(); ofrecer(p); };
+  $('pdMas').onclick = () => { pd.qty = Math.min(p.quedan ?? 20, 20, pd.qty + 1); pintar(); };
+  $('pdAdd').onclick = () => { if (!meter(p, pd.sel, pd.qty, pd.nota.trim().slice(0, 140), pd.salsas)) return; $('dlgProd').close(); ofrecer(p); };
   pintar();
   $('dlgProd').showModal(); $('pdBody').scrollTop = 0;
 }
+// Unidades de un producto en el carro (todas sus líneas). Con cupo, no se puede pasar de lo que queda.
+const enCarro = (id) => carro.filter((x) => x.producto_id === id).reduce((t, x) => t + x.cantidad, 0);
+const pasaCupo = (p, n) => { if (p.quedan == null || enCarro(p.id) + n <= p.quedan) return false; toast(`Solo quedan ${p.quedan}`); return true; };
 function meter(p, ags, n, nota = '', salsas = [], sugerido = false) {
+  if (pasaCupo(p, n)) return false;
   // La observación y las salsas separan líneas: un Italiano "sin tomate" no se suma con uno normal.
   const key = p.id + ':' + [...ags].sort().join(',') + ':' + [...salsas].sort().join(',') + ':' + nota.toLowerCase();
   const ex = carro.find((i) => i.key === key);
@@ -302,6 +307,7 @@ function meter(p, ags, n, nota = '', salsas = [], sugerido = false) {
   toast(`${n > 1 ? n + ' × ' : ''}${p.nombre} agregado`);
   navigator.vibrate?.(15);
   barra();
+  return true;
 }
 const total = () => carro.reduce((s, i) => s + prods.get(i.producto_id).p.precio * i.cantidad, 0);
 function barra() {
@@ -369,7 +375,9 @@ function pintarCarro() {
 }
 $('lines').onclick = (e) => {
   const b = e.target.closest('[data-q]'); if (!b) return;
-  const i = carro[b.dataset.q]; i.cantidad += Number(b.dataset.d);
+  const i = carro[b.dataset.q], d = Number(b.dataset.d);
+  if (d > 0 && pasaCupo(prods.get(i.producto_id).p, d)) return;
+  i.cantidad += d;
   if (i.cantidad < 1) carro.splice(b.dataset.q, 1);
   barra(); carro.length ? pintarCarro() : $('dlgCarro').close();
 };

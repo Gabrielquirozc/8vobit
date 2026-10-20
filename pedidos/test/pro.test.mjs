@@ -312,3 +312,75 @@ test('quitar promoción: sin usos se borra; con usos se archiva y libera su cód
   // El pedido conserva el nombre de la promoción usada.
   assert.equal((await panel('GET', `/api/panel/pedidos/${r.body.id}`)).body.promo_nombre, 'Usada');
 });
+
+test('cupo de unidades en promociones: descuento parcial, agotarse, devolver al anular y no pasarse con pedidos seguidos', async () => {
+  await plan('pro');
+  const [a] = (await vendibles()).filter((p) => !p.combo);
+  const pa = a.precio;
+  // Validación del cupo.
+  for (const cupo_unidades of [0, -1, 1.5, 'x']) assert.equal((await panel('POST', '/api/panel/promos', { nombre: 'Mal', tipo: 'pct', valor: 10, codigo: 'MALCUPO', cupo_unidades })).status, 400, String(cupo_unidades));
+  const pr = await panel('POST', '/api/panel/promos', { nombre: 'Cupo tres', tipo: 'pct', valor: 90, codigo: 'CUPO90', cupo_unidades: 3 });
+  assert.equal(pr.status, 201, JSON.stringify(pr.body));
+  const estado = async () => (await panel('GET', '/api/panel/promos')).body.promociones.find((x) => x.id === pr.body.id);
+  // Pedido de 2 unidades: descuento completo y 2 unidades usadas.
+  const p1 = await pedir([{ producto_id: a.id, cantidad: 2 }], { codigo: 'CUPO90' });
+  assert.equal(p1.status, 201, JSON.stringify(p1.body));
+  assert.equal(p1.body.descuento, Math.round(pa * 2 * 0.9));
+  assert.equal((await estado()).unidades_usadas, 2);
+  // Otro de 2: solo queda 1 unidad → descuento parcial, legible en el nombre.
+  const p2 = await pedir([{ producto_id: a.id, cantidad: 2 }], { codigo: 'CUPO90' });
+  assert.equal(p2.status, 201);
+  assert.equal(p2.body.descuento, Math.round(pa * 0.9));
+  assert.match(p2.body.promo, /1 de 2 unidades/);
+  assert.equal((await panel('GET', `/api/panel/pedidos/${p2.body.id}`)).body.promo_nombre, p2.body.promo);
+  // Agotada: deja de aplicar (con código y sola).
+  assert.match((await pedir([{ producto_id: a.id }], { codigo: 'CUPO90' })).body.error, /agot/);
+  assert.equal((await estado()).unidades_usadas, 3);
+  // Anular un pedido devuelve sus unidades.
+  assert.equal((await panel('PATCH', `/api/panel/pedidos/${p1.body.id}`, { estado: 'anulado' })).status, 200);
+  assert.equal((await estado()).unidades_usadas, 1);
+  assert.equal((await pedir([{ producto_id: a.id }], { codigo: 'CUPO90' })).status, 201);
+  // Dos pedidos seguidos con el cupo justo (1 unidad): solo uno se lleva el descuento.
+  const pj = await panel('POST', '/api/panel/promos', { nombre: 'Última', tipo: 'pct', valor: 90, codigo: 'ULTIMA90', cupo_unidades: 1 });
+  const dos = await Promise.all([pedir([{ producto_id: a.id }], { codigo: 'ULTIMA90' }), pedir([{ producto_id: a.id }], { codigo: 'ULTIMA90' })]);
+  assert.deepEqual(dos.map((x) => x.status).sort(), [201, 400]);
+  assert.equal((await panel('GET', '/api/panel/promos')).body.promociones.find((x) => x.id === pj.body.id).unidades_usadas, 1);
+  // Quitar el cupo (editar) la deja sin límite.
+  assert.equal((await panel('PATCH', `/api/panel/promos/${pr.body.id}`, { cupo_unidades: null })).status, 200);
+  assert.equal((await estado()).cupo_unidades, null);
+});
+
+test('cupo diario de combos: se agota, la carta lo marca, se devuelve al anular y se reinicia al día siguiente', async () => {
+  await plan('pro');
+  const [a, b] = (await vendibles()).filter((p) => !p.combo).slice(5);
+  const cuerpo = { nombre: 'Combo limitado', precio: 5000, items: [{ producto_id: a.id }, { producto_id: b.id }] };
+  for (const cupo_dia of [0, -2, 1.5, 'x']) assert.equal((await panel('POST', '/api/panel/combos', { ...cuerpo, cupo_dia })).status, 400, String(cupo_dia));
+  const c = await panel('POST', '/api/panel/combos', { ...cuerpo, cupo_dia: 2 });
+  assert.equal(c.status, 201, JSON.stringify(c.body));
+  const enCarta = async () => (await menu()).categorias.flatMap((x) => x.productos).find((x) => x.id === c.body.id);
+  assert.equal((await enCarta()).quedan, 2);
+  assert.equal((await pedir([{ producto_id: c.body.id, cantidad: 3 }])).status, 400); // pide más de lo que hay
+  const o1 = await pedir([{ producto_id: c.body.id }]);
+  const o2 = await pedir([{ producto_id: c.body.id }]);
+  assert.equal(o1.status, 201); assert.equal(o2.status, 201);
+  const agot = await pedir([{ producto_id: c.body.id }]);
+  assert.equal(agot.status, 400); assert.match(agot.body.error, /agotado/);
+  assert.equal((await enCarta()).agotado, true);
+  assert.equal((await menu()).mas_pedidos.includes(c.body.id), false); // un combo agotado no se ofrece entre los más pedidos
+  // Venta de mostrador: el servidor también lo valida.
+  assert.equal((await panel('POST', '/api/panel/venta', { items: [{ producto_id: c.body.id }], medio_pago: 'efectivo' })).status, 400);
+  // Anular devuelve la unidad.
+  assert.equal((await panel('PATCH', `/api/panel/pedidos/${o1.body.id}`, { estado: 'anulado' })).status, 200);
+  assert.equal((await enCarta()).quedan, 1);
+  // Al día siguiente el cupo se reinicia (los pedidos de ayer ya no cuentan).
+  const sq = new DatabaseSync(path.join(dir, 'data', 'pedidos.db'));
+  sq.exec('PRAGMA busy_timeout = 5000');
+  sq.prepare("UPDATE pedidos SET dia=date(dia,'-1 day') WHERE id=?").run(o2.body.id);
+  sq.close();
+  assert.equal((await enCarta()).quedan, 2);
+  // Editar el cupo; vaciarlo lo deja sin límite.
+  assert.equal((await panel('PATCH', `/api/panel/combos/${c.body.id}`, { cupo_dia: 5 })).status, 200);
+  assert.equal((await enCarta()).quedan, 5);
+  assert.equal((await panel('PATCH', `/api/panel/combos/${c.body.id}`, { cupo_dia: null })).status, 200);
+  assert.equal((await enCarta()).quedan, null);
+});

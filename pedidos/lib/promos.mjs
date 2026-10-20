@@ -29,14 +29,19 @@ CREATE TABLE IF NOT EXISTS combo_items (
   cantidad INTEGER NOT NULL, PRIMARY KEY (producto_id, componente_id));
 `);
   const prcols = new Set(db.prepare('PRAGMA table_info(promociones)').all().map((c) => c.name));
+  if (!prcols.has('cupo_unidades')) { db.exec('ALTER TABLE promociones ADD COLUMN cupo_unidades INTEGER'); db.exec('ALTER TABLE promociones ADD COLUMN unidades_usadas INTEGER NOT NULL DEFAULT 0'); }
   if (!prcols.has('archivada')) db.exec('ALTER TABLE promociones ADD COLUMN archivada INTEGER NOT NULL DEFAULT 0');
   const pcols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
   if (!pcols.has('descuento')) for (const c of ['descuento INTEGER NOT NULL DEFAULT 0', 'promo_id INTEGER', 'promo_nombre TEXT']) db.exec(`ALTER TABLE pedidos ADD COLUMN ${c}`);
+  if (!pcols.has('promo_unidades')) db.exec('ALTER TABLE pedidos ADD COLUMN promo_unidades INTEGER NOT NULL DEFAULT 0');
+  // Cupo de unidades por día de un combo ("disponibles hoy"): se cuenta con lo vendido ese día, así se reinicia solo y la anulación lo devuelve.
+  const procols = new Set(db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name));
+  if (!procols.has('cupo_dia')) db.exec('ALTER TABLE productos ADD COLUMN cupo_dia INTEGER');
   const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
   if (!lcols.has('fidelizacion')) db.exec('ALTER TABLE locales ADD COLUMN fidelizacion TEXT');
 
   const publica = (p) => ({ id: p.id, nombre: p.nombre, tipo: p.tipo, valor: p.valor, codigo: p.codigo, dias: JSON.parse(p.dias), desde: p.desde, hasta: p.hasta,
-    minimo: p.minimo, categoria_id: p.categoria_id, vence: p.vence, usos_max: p.usos_max, usos: p.usos, activa: !!p.activa });
+    minimo: p.minimo, categoria_id: p.categoria_id, vence: p.vence, usos_max: p.usos_max, usos: p.usos, cupo_unidades: p.cupo_unidades, unidades_usadas: p.unidades_usadas, activa: !!p.activa });
 
   // Promociones del panel (sin los cupones de vuelta, que se ven en Clientes).
   const lista = (lid) => db.prepare('SELECT * FROM promociones WHERE local_id=? AND telefono IS NULL AND archivada=0 ORDER BY activa DESC, id DESC').all(lid).map(publica);
@@ -53,7 +58,7 @@ CREATE TABLE IF NOT EXISTS combo_items (
   function guardar(lid, b, id = null) {
     const p = id ? db.prepare('SELECT * FROM promociones WHERE id=? AND local_id=? AND telefono IS NULL AND archivada=0').get(id, lid) : null;
     if (id && !p) return { error: 'No existe', status: 404 };
-    const base = p ? publica(p) : { nombre: '', tipo: 'pct', valor: 0, codigo: null, dias: [], desde: null, hasta: null, minimo: 0, categoria_id: null, vence: null, usos_max: null, activa: true };
+    const base = p ? publica(p) : { nombre: '', tipo: 'pct', valor: 0, codigo: null, dias: [], desde: null, hasta: null, minimo: 0, categoria_id: null, vence: null, usos_max: null, cupo_unidades: null, activa: true };
     const v = { ...base };
     for (const k of Object.keys(base)) if (b[k] !== undefined) v[k] = b[k];
     v.nombre = texto(v.nombre, 60);
@@ -73,44 +78,64 @@ CREATE TABLE IF NOT EXISTS combo_items (
     v.vence = v.vence || null;
     if (v.vence && !esDia(v.vence)) return { error: 'Fecha de término inválida.' };
     v.usos_max = v.usos_max ? Math.max(1, Math.round(Number(v.usos_max))) : null;
-    const fila = [v.nombre, v.tipo, v.valor, v.codigo, JSON.stringify(v.dias), v.desde, v.hasta, v.minimo, v.categoria_id, v.vence, v.usos_max, v.activa ? 1 : 0];
-    if (p) db.prepare('UPDATE promociones SET nombre=?, tipo=?, valor=?, codigo=?, dias=?, desde=?, hasta=?, minimo=?, categoria_id=?, vence=?, usos_max=?, activa=? WHERE id=?').run(...fila, id);
-    else id = Number(db.prepare('INSERT INTO promociones (nombre,tipo,valor,codigo,dias,desde,hasta,minimo,categoria_id,vence,usos_max,activa,local_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...fila, lid).lastInsertRowid);
+    // Cupo de unidades: total de unidades de producto que la promo puede descontar (vacío = sin límite).
+    if (v.cupo_unidades === '' || v.cupo_unidades === undefined) v.cupo_unidades = null;
+    if (v.cupo_unidades !== null && !(Number.isInteger(Number(v.cupo_unidades)) && Number(v.cupo_unidades) >= 1 && Number(v.cupo_unidades) <= 1e6)) return { error: 'El cupo de unidades debe ser un entero mayor a 0.' };
+    v.cupo_unidades = v.cupo_unidades === null ? null : Number(v.cupo_unidades);
+    const fila = [v.nombre, v.tipo, v.valor, v.codigo, JSON.stringify(v.dias), v.desde, v.hasta, v.minimo, v.categoria_id, v.vence, v.usos_max, v.cupo_unidades, v.activa ? 1 : 0];
+    if (p) db.prepare('UPDATE promociones SET nombre=?, tipo=?, valor=?, codigo=?, dias=?, desde=?, hasta=?, minimo=?, categoria_id=?, vence=?, usos_max=?, cupo_unidades=?, activa=? WHERE id=?').run(...fila, id);
+    else id = Number(db.prepare('INSERT INTO promociones (nombre,tipo,valor,codigo,dias,desde,hasta,minimo,categoria_id,vence,usos_max,cupo_unidades,activa,local_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...fila, lid).lastInsertRowid);
     return publica(db.prepare('SELECT * FROM promociones WHERE id=?').get(id));
   }
 
+  const agotada = (p) => !!p.cupo_unidades && p.unidades_usadas >= p.cupo_unidades;
   // ¿Vale ahora? `ahora` = { dia: 'AAAA-MM-DD', hora: 'HH:MM' }.
   function vigente(p, ahora) {
-    if (!p.activa || (p.vence && ahora.dia > p.vence) || (p.usos_max && p.usos >= p.usos_max)) return false;
+    if (!p.activa || (p.vence && ahora.dia > p.vence) || (p.usos_max && p.usos >= p.usos_max) || agotada(p)) return false;
     const dias = JSON.parse(p.dias), dow = new Date(`${ahora.dia}T12:00:00`).getDay();
     if (dias.length && !dias.includes(dow)) return false;
     if (p.desde && p.hasta) return p.desde <= p.hasta ? ahora.hora >= p.desde && ahora.hora < p.hasta : ahora.hora >= p.desde || ahora.hora < p.hasta;
     return true;
   }
+  // Descuento de la promo sobre el pedido. Alcance = unidades de producto a las que apunta (las de la categoría, o todas las del pedido
+  // en las promos de pedido completo y de mínimo de compra). Con cupo de unidades, solo se descuentan las que quedan, las más caras
+  // primero; el monto fijo se prorratea por unidades. Devuelve { descuento, unidades, alcance }.
   function descuentoDe(p, items, subtotal) {
-    if (subtotal < p.minimo) return 0;
-    const base = p.categoria_id ? items.filter((i) => i.p.categoria_id === p.categoria_id).reduce((s, i) => s + i.p.precio * i.cant, 0) : subtotal;
-    return Math.min(base, p.tipo === 'pct' ? Math.round((base * p.valor) / 100) : p.valor);
+    const nada = { descuento: 0, unidades: 0, alcance: 0 };
+    if (subtotal < p.minimo) return nada;
+    const precios = [];
+    for (const i of items) if (!p.categoria_id || i.p.categoria_id === p.categoria_id) for (let k = 0; k < i.cant; k++) precios.push(i.p.precio);
+    const alcance = precios.length;
+    if (!alcance) return nada;
+    const quedan = p.cupo_unidades ? p.cupo_unidades - p.unidades_usadas : Infinity;
+    const unidades = Math.min(alcance, quedan);
+    if (unidades <= 0) return nada;
+    const base = precios.sort((x, y) => y - x).slice(0, unidades).reduce((t, x) => t + x, 0);
+    const bruto = p.tipo === 'pct' ? Math.round((base * p.valor) / 100) : Math.round((p.valor * unidades) / alcance);
+    return { descuento: Math.min(base, bruto), unidades, alcance };
   }
   // Mejor promoción para el pedido. Con código: la del código (y si no sirve, se dice por qué).
   function aplicar(lid, { items, subtotal, codigo, telefono, ahora }) {
     const cod = codigo ? String(codigo).toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
-    let candidatas = db.prepare('SELECT * FROM promociones WHERE local_id=? AND activa=1 AND codigo IS NULL AND telefono IS NULL').all(lid).filter((p) => vigente(p, ahora));
+    let candidatas = db.prepare('SELECT * FROM promociones WHERE local_id=? AND activa=1 AND codigo IS NULL AND telefono IS NULL AND archivada=0').all(lid).filter((p) => vigente(p, ahora));
     if (cod) {
       const p = db.prepare('SELECT * FROM promociones WHERE local_id=? AND codigo=?').get(lid, cod);
+      if (p && agotada(p)) return { error: 'Ese código ya se agotó.' };
       if (!p || !vigente(p, ahora)) return { error: 'Ese código no existe o ya no está vigente.' };
       if (p.telefono && p.telefono !== tel9(telefono)) return { error: 'Ese cupón es para el celular al que se le entregó.' };
       if (subtotal < p.minimo) return { error: `Ese código vale desde ${'$' + p.minimo.toLocaleString('es-CL')}.` };
       candidatas = [p, ...candidatas];
     }
-    let mejor = null, desc = 0;
-    for (const p of candidatas) { const d = descuentoDe(p, items, subtotal); if (d > desc) { mejor = p; desc = d; } }
-    if (cod && mejor?.codigo !== cod) return { error: 'Ese código no mejora el descuento que ya tiene tu pedido.', promo: mejor, descuento: desc };
-    return { promo: mejor, descuento: desc };
+    let mejor = null, det = { descuento: 0, unidades: 0, alcance: 0 };
+    for (const p of candidatas) { const d = descuentoDe(p, items, subtotal); if (d.descuento > det.descuento) { mejor = p; det = d; } }
+    if (cod && mejor?.codigo !== cod) return { error: 'Ese código no mejora el descuento que ya tiene tu pedido.', promo: mejor, descuento: det.descuento };
+    return { promo: mejor, descuento: det.descuento, unidades: det.unidades, alcance: det.alcance };
   }
+  // Reserva las unidades del cupo. Va dentro de la transacción del pedido y es atómica: nunca pasa del cupo.
+  const consumir = (id, unidades) => !unidades || db.prepare('UPDATE promociones SET unidades_usadas=unidades_usadas+? WHERE id=? AND cupo_unidades IS NOT NULL AND unidades_usadas+?<=cupo_unidades').run(unidades, id, unidades).changes === 1;
   // Se cuenta el uso al guardar el pedido (dentro de su transacción).
   const usar = (id) => db.prepare('UPDATE promociones SET usos=usos+1 WHERE id=?').run(id);
-  const devolver = (id) => db.prepare('UPDATE promociones SET usos=MAX(0,usos-1) WHERE id=?').run(id);
+  const devolver = (id, unidades = 0) => db.prepare('UPDATE promociones SET usos=MAX(0,usos-1), unidades_usadas=MAX(0,unidades_usadas-?) WHERE id=?').run(unidades, id);
 
   // Lo que la carta muestra: promociones automáticas que valen hoy (sin las de código).
   const enCarta = (lid, ahora) => db.prepare('SELECT * FROM promociones WHERE local_id=? AND activa=1 AND codigo IS NULL AND telefono IS NULL').all(lid)
@@ -166,6 +191,8 @@ CREATE TABLE IF NOT EXISTS combo_items (
   const precioCombo = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 && n <= 1e6 ? n : null; };
   const comboDe = (lid, pid) => db.prepare('SELECT id, nombre, precio, activo FROM productos WHERE id=? AND local_id=? AND archivado=0 AND EXISTS (SELECT 1 FROM combo_items WHERE producto_id=productos.id)').get(pid, lid);
 
+  // Cupo diario de un combo ("disponibles hoy"): vacío = sin límite.
+  const cupoDia = (v) => { if (v === undefined || v === null || v === '') return { v: null }; const n = Number(v); return Number.isInteger(n) && n >= 1 && n <= 100000 ? { v: n } : { error: 'El cupo de unidades por día debe ser un entero mayor a 0.' }; };
   function crearCombo(lid, b) {
     const nombre = texto(b.nombre, 80);
     if (!nombre) return { error: 'Ponle un nombre al combo.' };
@@ -173,13 +200,15 @@ CREATE TABLE IF NOT EXISTS combo_items (
     if (!precio) return { error: 'El precio del combo debe ser un monto entero mayor a 0.' };
     const it = itemsCombo(lid, b.items);
     if (it.error) return it;
+    const cupo = cupoDia(b.cupo_dia);
+    if (cupo.error) return cupo;
     db.exec('BEGIN');
     try {
       let cat = db.prepare('SELECT id FROM categorias WHERE local_id=? AND lower(nombre)=lower(?)').get(lid, CAT_COMBOS);
       if (!cat) cat = { id: Number(db.prepare('INSERT INTO categorias (local_id,nombre,orden,salsas) VALUES (?,?,(SELECT COALESCE(MAX(orden),-1)+1 FROM categorias WHERE local_id=?),0)').run(lid, CAT_COMBOS, lid).lastInsertRowid) };
       const orden = db.prepare('SELECT COALESCE(MAX(orden),-1)+1 n FROM productos WHERE categoria_id=?').get(cat.id).n;
-      const id = Number(db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir,costo)
-        VALUES (?,?,?,NULL,?,?,0,0,?,0,0,NULL)`).run(lid, cat.id, nombre, precio, b.activo === false ? 0 : 1, orden).lastInsertRowid);
+      const id = Number(db.prepare(`INSERT INTO productos (local_id,categoria_id,nombre,descripcion,precio,activo,precio_pendiente,incluye,orden,destacado,sugerir,costo,cupo_dia)
+        VALUES (?,?,?,NULL,?,?,0,0,?,0,0,NULL,?)`).run(lid, cat.id, nombre, precio, b.activo === false ? 0 : 1, orden, cupo.v).lastInsertRowid);
       for (const [cid, cant] of it.items) db.prepare('INSERT INTO combo_items (producto_id,componente_id,cantidad) VALUES (?,?,?)').run(id, cid, cant);
       db.exec('COMMIT');
       return { id, categoria_id: cat.id };
@@ -194,9 +223,12 @@ CREATE TABLE IF NOT EXISTS combo_items (
     if (!precio) return { error: 'El precio del combo debe ser un monto entero mayor a 0.' };
     const it = b.items === undefined ? null : itemsCombo(lid, b.items, pid);
     if (it?.error) return it;
+    const cupo = b.cupo_dia === undefined ? null : cupoDia(b.cupo_dia);
+    if (cupo?.error) return cupo;
     db.exec('BEGIN');
     try {
       db.prepare('UPDATE productos SET nombre=?, precio=?, activo=? WHERE id=?').run(nombre, precio, b.activo === undefined ? p.activo : (b.activo ? 1 : 0), pid);
+      if (cupo) db.prepare('UPDATE productos SET cupo_dia=? WHERE id=?').run(cupo.v, pid);
       if (precio !== p.precio) db.prepare('INSERT INTO historial_precio (local_id,producto_id,anterior,nuevo) VALUES (?,?,?,?)').run(lid, pid, p.precio, precio);
       if (it) {
         db.prepare('DELETE FROM combo_items WHERE producto_id=?').run(pid);
@@ -310,5 +342,5 @@ CREATE TABLE IF NOT EXISTS combo_items (
   // Derecho a borrar los datos del cliente: sus cupones se van con él.
   const borrarTelefono = (lid, telefono) => db.prepare('DELETE FROM promociones WHERE local_id=? AND telefono=?').run(lid, tel9(telefono));
 
-  return { quitar, crearCombo, editarCombo, quitarCombo, sugerencias, lista, guardar, aplicar, usar, devolver, enCarta, combo, combos, guardarCombo, fidelizacion, guardarFidelizacion, cuponVuelta, cuponDe, cupones, borrarTelefono, tel9 };
+  return { consumir, quitar, crearCombo, editarCombo, quitarCombo, sugerencias, lista, guardar, aplicar, usar, devolver, enCarta, combo, combos, guardarCombo, fidelizacion, guardarFidelizacion, cuponVuelta, cuponDe, cupones, borrarTelefono, tel9 };
 }

@@ -1250,6 +1250,7 @@ test('PIN y roles: la tablet del local, permisos por rol y turnos', async () => 
     assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'tarjeta', monto: sinPagar.total - 1 }] })).status, 403);
     assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { medio_pago: 'efectivo', propina: 1000 })).status, 403); // ni con propina
     assert.equal((await pic('POST', '/api/panel/combos', { nombre: 'X', precio: 1000, items: [] })).status, 403); assert.equal((await pic('GET', '/api/panel/promos/sugerencias')).status, 403);
+    assert.equal((await pic('POST', '/api/panel/promos', { nombre: 'X', tipo: 'pct', valor: 10, cupo_unidades: 5 })).status, 403);
     assert.equal((await pic('GET', '/api/panel/fiados')).status, 403); assert.equal((await pic('POST', '/api/panel/venta', { items: [], fiado: 'X' })).status, 403);
     const desp = (await pic('GET', `/api/panel/pedidos/${sinPagar.id}`)).body;
     assert.equal(desp.medio_pago, 'efectivo'); assert.deepEqual(desp.pagos, []);

@@ -52,3 +52,10 @@ Despliegues: 2026-10-20 00:22 y 01:23 (respaldo previo en `/srv/docker/compose/p
 4. (hecho 2026-10-20) Mejoras menores: quitar promociones (archiva si tiene usos), umbral de nota por local (Datos del local → Caja), entregas de caja en el CSV y costos en bloque en GET promos.
 
 Detalle completo en `pedidos/PENDIENTES.md`, `pedidos/REVIEW-CAJA.md` y `pedidos/REVIEW-UX-CAJERO.md`.
+
+## Agregado 2026-10-20 (tarde): cupos de unidades
+
+- **Promos**: `cupo_unidades` (cuenta unidades, no pedidos; `usos_max` sigue contando pedidos). Si el pedido pasa el cupo, descuenta solo las unidades que quedan, las más caras primero; en monto fijo se prorratea. Reserva atómica dentro de `guardarPedido`; anular devuelve las unidades.
+- **Combos**: `cupo_dia` ("disponibles hoy", se reinicia solo; se calcula con los pedidos no anulados del día). Agotado: "Agotado" en la carta, fuera de "Los más pedidos", y el servidor rechaza el pedido.
+- Carta y Venta rápida muestran "¡Quedan N!" (≤ 10) y el carro no deja pasar el cupo.
+- Por confirmar con el dueño: descuento a las más caras primero y prorrateo del monto fijo.

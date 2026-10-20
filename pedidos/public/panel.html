@@ -1120,10 +1120,10 @@ function pintarVenta() {
   const lista = prods().filter((p) => vendible(p) && (q ? norm(p.nombre).includes(q) : p.cat.id === vcat));
   $('vtiles').innerHTML = lista.map((p) => {
     const n = ticket.filter((t) => t.p.id === p.id).reduce((s, t) => s + t.cantidad, 0);
-    return `<button class="tile" data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
+    return `<button class="tile" ${p.agotado ? "disabled" : ""} data-p="${p.id}" aria-label="${esc(p.nombre)}, ${clp(p.precio)}">
       ${p.imagen ? `<div class="art"><img src="${esc(p.imagen)}" alt="" loading="lazy"></div>` : `<div class="art c${p.ci % 4}"><span class="emoji" aria-hidden="true">${emojiDe(p.nombre, p.cat.nombre)}</span></div>`}
       ${n ? `<span class="q num">${n}</span>` : ''}
-      <span class="t"><span class="n">${esc(p.nombre)}</span><br><span class="p num">${clp(p.precio)}</span>${p.incluye ? ` · <span class="p">+${p.incluye} ingr.</span>` : ''}</span></button>`;
+      <span class="t"><span class="n">${esc(p.nombre)}</span><br><span class="p num">${clp(p.precio)}</span>${p.incluye ? ` · <span class="p">+${p.incluye} ingr.</span>` : ''}${p.agotado ? ' · <b>Agotado</b>' : p.quedan != null && p.quedan <= 10 ? ` · <b>¡Quedan ${p.quedan}!</b>` : ''}</span></button>`;
   }).join('') || '<p class="vacio">No hay productos con ese nombre.</p>';
   const total = ticket.reduce((s, t) => s + t.p.precio * t.cantidad, 0);
   $('vlines').innerHTML = ticket.length ? ticket.map((t, i) => `<div class="line"><div><div class="n">${esc(t.p.nombre)}</div>${t.ags.length || t.salsas.length ? `<div class="d">${esc([...t.ags, ...t.salsas].map((a) => a.nombre).join(', '))}</div>` : ''}${t.nota ? `<div class="d" style="color:var(--brand);font-weight:600">Nota: ${esc(t.nota)}</div>` : ''}<div class="d num">${clp(t.p.precio * t.cantidad)}</div>

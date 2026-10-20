@@ -19,9 +19,9 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
     categoria: { t: 'Descuento en una categoría', d: 'Rebaja solo los productos de una categoría de la carta.', e: 'Ej. "20 % en Bebidas"', main: ['categoria', 'valor'], ph: 'Ej. Bebidas con descuento' },
     minimo: { t: 'Descuento por compra mínima', d: 'Premia los pedidos grandes: se aplica desde cierto monto.', e: 'Ej. "$2.000 de descuento desde $15.000"', main: ['minimo', 'valor'], ph: 'Ej. Pedido grande' }
   };
-  const ORDEN = ['codigo', 'categoria', 'minimo', 'dias', 'horas', 'vence', 'usos'];
+  const ORDEN = ['codigo', 'categoria', 'minimo', 'dias', 'horas', 'vence', 'usos', 'cupo'];
   const tipoDe = (v) => (v.codigo ? 'codigo' : v.categoria_id ? 'categoria' : v.minimo > 0 && !v.dias.length && !v.desde ? 'minimo' : 'auto');
-  const porDefecto = (k, v) => ({ codigo: !v.codigo, categoria: !v.categoria_id, minimo: !v.minimo, dias: !v.dias.length, horas: !v.desde && !v.hasta, vence: !v.vence, usos: !v.usos_max })[k];
+  const porDefecto = (k, v) => ({ codigo: !v.codigo, categoria: !v.categoria_id, minimo: !v.minimo, dias: !v.dias.length, horas: !v.desde && !v.hasta, vence: !v.vence, usos: !v.usos_max, cupo: !v.cupo_unidades })[k];
 
   // Frase de resumen ("15 % de descuento en Sándwiches los martes de 12:00 a 16:00"). Texto plano: se escapa al pintar.
   function resumen(v) {
@@ -30,7 +30,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
     return [`${v.tipo === 'pct' ? `${val} %` : clp(val)} de descuento`, cat ? `en ${cat}` : '', l && v.dias.length < 7 ? `los ${l}` : '',
       v.desde && v.hasta ? `de ${v.desde} a ${v.hasta}` : '', v.minimo ? `desde ${clp(v.minimo)} de pedido` : '',
       v.codigo ? `con el código ${String(v.codigo).toUpperCase()}` : '', v.vence ? `hasta el ${new Date(`${v.vence}T12:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })}` : '',
-      v.usos_max ? `(máx. ${v.usos_max} usos)` : ''].filter(Boolean).join(' ');
+      v.usos_max ? `(máx. ${v.usos_max} usos)` : '', v.cupo_unidades ? `(cupo de ${v.cupo_unidades} unidades)` : ''].filter(Boolean).join(' ');
   }
 
   function campo(k, v) {
@@ -46,7 +46,8 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       categoria: `<div class="field"><label for="prCat">Solo en la categoría <span class="opc">(vacío = todo el pedido)</span></label><select id="prCat">${cats}</select></div>`,
       minimo: `<div class="field"><label for="prMin">Pedido mínimo <span class="opc">($, opcional)</span></label><input id="prMin" inputmode="numeric" value="${v.minimo || ''}"></div>`,
       vence: `<div class="field"><label for="prVence">Termina el <span class="opc">(opcional)</span></label><input id="prVence" type="date" value="${v.vence || ''}"></div>`,
-      usos: `<div class="field"><label for="prUsos">Máximo de usos <span class="opc">(opcional)</span></label><input id="prUsos" inputmode="numeric" value="${v.usos_max || ''}"></div>`
+      usos: `<div class="field"><label for="prUsos">Máximo de usos <span class="opc">(opcional)</span></label><input id="prUsos" inputmode="numeric" value="${v.usos_max || ''}"></div>`,
+      cupo: `<div class="field"><label for="prCupo">Cupo de unidades <span class="opc">(opcional)</span></label><input id="prCupo" inputmode="numeric" value="${v.cupo_unidades || ''}"><p class="ayuda">Cuántas unidades puede descontar en total. Al agotarse, la promoción deja de aplicar. Si un pedido pasa del cupo, solo se descuentan las que quedan (las más caras primero).</p></div>`
     }[k];
   }
 
@@ -83,6 +84,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       <div class="field"><span class="lbl">Qué incluye</span><div id="cfItems"></div>
         <input id="cfBus" type="search" class="cfbus" placeholder="Buscar un producto para agregar…" autocomplete="off" aria-label="Buscar un producto para agregar">
         <div id="cfRes" class="cfres"></div></div>
+      <div class="field"><label for="cfCupo">Cupo de unidades por día <span class="opc">(opcional)</span></label><input id="cfCupo" inputmode="numeric" value="${cf.cupo_dia || ''}" placeholder="Sin límite"><p class="ayuda">Cuántos puedes vender hoy; se reinicia cada día. Al agotarse, la carta lo marca "Agotado".</p></div>
       <div class="field"><label for="cfPrecio">Precio del combo</label><div class="money"><span aria-hidden="true">$</span><input id="cfPrecio" inputmode="numeric" autocomplete="off" value="${cf.precio ? esc(String(cf.precio)) : ''}" placeholder="0"></div></div>
       <div id="cfCalc" class="cfcalc" aria-live="polite"></div>
       <div class="formerr" id="cfErr" role="alert"></div>
@@ -145,7 +147,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       ${edit === null ? '' : edit === 0 && !tipoSel ? pasoTipo() : form(P.find((p) => p.id === edit))}
       ${P.length ? `<div class="cj-scroll"><table><tr><th>Promoción</th><th>Descuento</th><th>Cuándo</th><th class="r">Usos</th><th></th></tr>${P.map((p) => `<tr class="${p.activa ? '' : 'off'}">
         <td><b>${esc(p.nombre)}</b>${p.activa ? '' : ' <span class="opc">(pausada)</span>'}<div class="opc">${esc(resumen(p))}</div></td><td>${desc(p)}${p.categoria_id ? ` <span class="opc">en ${esc(C.categorias.find((c) => c.id === p.categoria_id)?.nombre || '')}</span>` : ''}</td>
-        <td>${cuando(p)}</td><td class="r">${p.usos}${p.usos_max ? ` / ${p.usos_max}` : ''}</td>
+        <td>${cuando(p)}</td><td class="r">${p.usos}${p.usos_max ? ` / ${p.usos_max}` : ''}${p.cupo_unidades ? `<div class="opc">${p.unidades_usadas >= p.cupo_unidades ? 'Agotada' : `Quedan ${p.cupo_unidades - p.unidades_usadas} de ${p.cupo_unidades}`}</div>` : ''}</td>
         <td class="r"><button class="link" data-preditar="${p.id}">Editar</button> <button class="link" data-prpausa="${p.id}">${p.activa ? 'Pausar' : 'Activar'}</button> <button class="link peligro" data-prquitar="${p.id}">Quitar</button></td></tr>`).join('')}</table></div>`
         : edit === null ? '<div class="cardf vacio" style="padding:24px">Aún no hay promociones. Toca "Nueva promoción" y elige un tipo: por ejemplo, 15 % los martes o un código para Instagram.</div>' : ''}
       <div class="res-head" id="cbSec" style="margin-top:32px"><h2 class="t" style="margin:0">Combos</h2>
@@ -153,7 +155,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       ${cf ? formCombo() : ''}
       ${combos.length ? `<div class="cj-scroll"><table><tr><th>Combo</th><th>Incluye</th><th class="r">Precio</th><th class="r">Ahorro</th><th></th></tr>${combos.map((p) => {
         const s = suelto(p.combo), a = s - p.precio;
-        return `<tr class="${p.activo ? '' : 'off'}"><td><b>${esc(p.nombre)}</b>${p.activo ? '' : ' <span class="opc">(pausado)</span>'}</td><td>${p.combo.map((x) => `${x.cantidad > 1 ? x.cantidad + '× ' : ''}${esc(x.nombre)}`).join(' + ')}</td><td class="r">${clp(p.precio)}</td>
+        return `<tr class="${p.activo ? '' : 'off'}"><td><b>${esc(p.nombre)}</b>${p.activo ? '' : ' <span class="opc">(pausado)</span>'}${p.cupo_dia ? `<div class="opc">${p.agotado ? 'Agotado por hoy' : `Quedan ${p.quedan} de ${p.cupo_dia} hoy`}</div>` : ''}</td><td>${p.combo.map((x) => `${x.cantidad > 1 ? x.cantidad + '× ' : ''}${esc(x.nombre)}`).join(' + ')}</td><td class="r">${clp(p.precio)}</td>
           <td class="r opc">${a > 0 ? `${clp(a)} (${Math.round((a / s) * 100)} %)` : '—'}</td>
           <td class="r"><button class="link" data-cfeditar="${p.id}">Editar</button> <button class="link" data-cfpausa="${p.id}">${p.activo ? 'Pausar' : 'Activar'}</button> <button class="link peligro" data-cfquitar="${p.id}">Quitar</button></td></tr>`; }).join('')}</table></div>`
         : cf ? '' : '<div class="cardf vacio" style="padding:24px">Aún no hay combos. Toca "Nuevo combo": le pones nombre y precio, y eliges los productos que incluye.</div>'}`;
@@ -165,12 +167,13 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
     // Lee el formulario tal como lo enviará "Guardar" (mismo payload de siempre) y alimenta la frase de resumen.
     const leer = () => ({ nombre: $('prNom').value, codigo: $('prCod').value.trim() || null, tipo: $('prTipo').value, valor: n('prVal'),
       dias: [...el.querySelectorAll('[data-prdia][aria-pressed="true"]')].map((x) => Number(x.dataset.prdia)), desde: $('prDesde').value || null, hasta: $('prHasta').value || null,
-      categoria_id: $('prCat').value ? Number($('prCat').value) : null, minimo: n('prMin'), vence: $('prVence').value || null, usos_max: n('prUsos') || null, activa: $('prAct').checked });
+      categoria_id: $('prCat').value ? Number($('prCat').value) : null, minimo: n('prMin'), vence: $('prVence').value || null, usos_max: n('prUsos') || null, cupo_unidades: n('prCupo') || null, activa: $('prAct').checked });
     const actualizar = () => { if ($('prResumen')) $('prResumen').textContent = resumen(leer()); };
     el.addEventListener('input', (e) => {
       if (e.target.closest('#prForm')) actualizar();
       if (e.target.id === 'cfBus') pintarCfRes();
       else if (e.target.id === 'cfNom') cf.nombre = e.target.value;
+      else if (e.target.id === 'cfCupo') cf.cupo_dia = n('cfCupo') || null;
       else if (e.target.id === 'cfPrecio') { cf.precio = n('cfPrecio'); calcCf(); }
     });
     el.addEventListener('change', (e) => { if (e.target.closest('#prForm')) actualizar(); });
@@ -212,7 +215,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       }
       // Combos propios
       if (t('[data-cfnuevo]')) return abrirCombo(el, { id: null, nombre: '', precio: 0, items: [] });
-      if ((b = t('[data-cfeditar]'))) { const p = porId(Number(b.dataset.cfeditar)); return abrirCombo(el, { id: p.id, nombre: p.nombre, precio: p.precio, items: p.combo.map((x) => ({ producto_id: x.producto_id, cantidad: x.cantidad })) }); }
+      if ((b = t('[data-cfeditar]'))) { const p = porId(Number(b.dataset.cfeditar)); return abrirCombo(el, { id: p.id, nombre: p.nombre, precio: p.precio, cupo_dia: p.cupo_dia, items: p.combo.map((x) => ({ producto_id: x.producto_id, cantidad: x.cantidad })) }); }
       if (t('[data-cfcancel]')) { cf = null; return pintar(el); }
       if ((b = t('[data-cfadd]'))) { cf.items.push({ producto_id: Number(b.dataset.cfadd), cantidad: 1 }); $('cfBus').value = ''; pintarCfItems(); pintarCfRes(); return $('cfBus').focus(); }
       if ((b = t('[data-cfq]'))) { const x = cf.items.find((i) => i.producto_id === Number(b.dataset.cfq)); x.cantidad = Math.max(1, Math.min(20, x.cantidad + Number(b.dataset.d))); return pintarCfItems(); }
@@ -222,7 +225,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
         if (!cf.nombre.trim()) return err('Ponle un nombre al combo.', 'cfNom');
         if (cf.items.reduce((s, x) => s + x.cantidad, 0) < 2) return err('Agrega al menos 2 productos al combo.', 'cfBus');
         if (!(cf.precio > 0)) return err('Escribe el precio del combo.', 'cfPrecio');
-        const body = { nombre: cf.nombre, precio: cf.precio, items: cf.items };
+        const body = { nombre: cf.nombre, precio: cf.precio, items: cf.items, cupo_dia: cf.cupo_dia || null };
         try { await api(cf.id ? `panel/combos/${cf.id}` : 'panel/combos', { method: cf.id ? 'PATCH' : 'POST', body }); toast('Combo guardado'); cf = null; pintar(el); }
         catch (e2) { $('cfErr').textContent = e2.message; }
         return;
