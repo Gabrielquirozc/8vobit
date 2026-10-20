@@ -27,7 +27,13 @@ before(async () => {
     srv.on('exit', (c) => fail(new Error(`el servidor terminó con código ${c}`)));
   });
 });
-after(() => { srv?.kill(); fs.rmSync(dir, { recursive: true, force: true }); });
+after(async () => {
+  // Espera a que el servidor termine (si no, en Windows la base sigue abierta y rmSync da EPERM).
+  if (srv && srv.exitCode === null) {
+    await new Promise((ok) => { const t = setTimeout(ok, 3000); srv.once('exit', () => { clearTimeout(t); ok(); }); srv.kill(); });
+  }
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
 
 async function req(method, p, body, headers = {}) {
   const raw = body instanceof Uint8Array;
