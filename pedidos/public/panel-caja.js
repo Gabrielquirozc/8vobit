@@ -3,7 +3,7 @@
 export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fechaLarga, BASE, puede = () => true }) {
   const TIPO = { fondo: 'Fondo inicial', ingreso: 'Ingreso', retiro: 'Retiro', gasto: 'Gasto' };
   const MEDIOS = { efectivo: ['Efectivo', 'cash'], transferencia: ['Transferencia', 'bank'], tarjeta: ['Tarjeta', 'card'], otro: ['Otro', 'dots'] };
-  const UMBRAL_NOTA = 5000; // igual que en lib/caja.mjs
+  let UMBRAL_NOTA = 5000; // se actualiza con lo que dice la caja (ajuste del local: C.umbral_nota)
   const BILLETES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
   const signo = (n) => (n > 0 ? '+' : n < 0 ? '−' : '') + clp(Math.abs(n));
   let CATS = {};
@@ -121,7 +121,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
     } catch (err) { $('mvErr').textContent = err.message; } finally { $('mvOk').disabled = false; }
   };
   // Ingreso, retiro o fondo de un día anterior: se guardan en ese día.
-  const abrirEnDia = (tipo, C, alGuardar, rapido) => { abrirMov(tipo, { dia: C.dia, hoy: C.hoy, sugerido: C.fondo_sugerido, alGuardar, rapido }); mv.dia = C.dia; };
+  const abrirEnDia = (tipo, C, alGuardar, rapido) => { UMBRAL_NOTA = C.umbral_nota ?? 5000; abrirMov(tipo, { dia: C.dia, hoy: C.hoy, sugerido: C.fondo_sugerido, alGuardar, rapido }); mv.dia = C.dia; };
   // Gastos de un toque: categoría y detalle ya puestos (solo categorías que existen); el medio queda en Efectivo.
   const RAPIDOS = { bolsas: ['Bolsas', 'envases'], guantes: ['Guantes', 'envases'], gas: ['Gas', 'servicios'], hielo: ['Hielo', 'insumos'], super: ['Súper', 'insumos'], repartidor: ['Pago repartidor', 'despacho'] };
 
@@ -130,7 +130,7 @@ export function crearCajaUI({ $, ico, toast, api, clp, esc, dinero, digitos, fec
   // En escritorio el grid de #v-cierre pone el lateral a la derecha (ver .cjx-grid en panel.html).
   const lineaEq = (sg, nombre, v, extra = '', atenuar = true) => `<div class="cjx-l${v || !atenuar ? '' : ' cero'}"><dt><span class="sg" aria-hidden="true">${sg}</span>${nombre}${extra}</dt><dd class="num">${clp(v)}</dd></div>`;
   function bloqueCaja(C) {
-    CATS = C.categorias;
+    CATS = C.categorias; UMBRAL_NOTA = C.umbral_nota ?? 5000;
     const E = C.esperado, K = C.cierre, dif = K ? K.diferencia : null;
     // Hoy, sin cerrar, con movimiento y sin fondo anotado: falta abrir la caja.
     const sinAbrir = !K && C.dia === C.hoy && !E.fondo && (E.ventas_n > 0 || C.movimientos.some((m) => !m.anulado));

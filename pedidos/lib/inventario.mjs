@@ -135,6 +135,23 @@ CREATE INDEX IF NOT EXISTS inv_mov_pedido ON inv_movimientos(pedido_id);
     for (const [id, cant] of c) s += cant * (db.prepare('SELECT costo FROM insumos WHERE id=?').get(id)?.costo || 0);
     return Math.round(s);
   }
+  // Costo de receta de todos los productos del local (y combos) con 3 consultas; mismo cálculo que costo().
+  function costos(lid) {
+    const ins = new Map(db.prepare('SELECT id, costo FROM insumos WHERE local_id=?').all(lid).map((i) => [i.id, i.costo || 0]));
+    const rec = new Map();
+    for (const x of db.prepare('SELECT r.producto_id, r.insumo_id, r.cantidad FROM recetas r JOIN productos p ON p.id=r.producto_id WHERE p.local_id=?').all(lid)) {
+      if (!rec.has(x.producto_id)) rec.set(x.producto_id, []);
+      rec.get(x.producto_id).push(x);
+    }
+    const cmb = combos(lid), out = new Map();
+    for (const pid of new Set([...rec.keys(), ...cmb.keys()])) {
+      const tot = new Map(), sumar = (id, k) => { for (const x of rec.get(id) || []) tot.set(x.insumo_id, (tot.get(x.insumo_id) || 0) + x.cantidad * k); };
+      sumar(pid, 1);
+      for (const c of cmb.get(pid) || []) sumar(c.producto_id, c.cantidad);
+      if (tot.size) out.set(pid, Math.round([...tot].reduce((s, [id, cant]) => s + cant * (ins.get(id) || 0), 0)));
+    }
+    return out;
+  }
   const recetas = (lid) => {
     const m = {};
     for (const r of db.prepare('SELECT r.producto_id, r.insumo_id, r.cantidad FROM recetas r JOIN productos p ON p.id=r.producto_id WHERE p.local_id=?').all(lid))
@@ -159,5 +176,5 @@ CREATE INDEX IF NOT EXISTS inv_mov_pedido ON inv_movimientos(pedido_id);
     }
   }
 
-  return { lista, guardarInsumo, compra, ajuste, movimientos, receta, recetas, guardarReceta, costo, descontarPedido, revertirPedido, UNIDADES };
+  return { lista, guardarInsumo, compra, ajuste, movimientos, receta, recetas, guardarReceta, costo, costos, descontarPedido, revertirPedido, UNIDADES };
 }

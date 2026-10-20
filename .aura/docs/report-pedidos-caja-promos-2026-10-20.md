@@ -49,6 +49,6 @@ Despliegues: 2026-10-20 00:22 y 01:23 (respaldo previo en `/srv/docker/compose/p
 1. Desplegar el ítem 16 (combos con precio propio e ideas).
 2. Prueba en el local con tablet e impresora: pedido completo, pago mixto, propina, fiado, entregar la caja y cierre con voucher.
 3. Datos del dueño: transferencia, 2 precios faltantes, despacho real, costos de insumos (sin ellos el margen se estima en 35 %).
-4. Mejoras menores anotadas: índice/N+1 de costos en GET promos, umbral de nota por local, borrar promos (hoy solo pausar), cortes de turno en el CSV.
+4. (hecho 2026-10-20) Mejoras menores: quitar promociones (archiva si tiene usos), umbral de nota por local (Datos del local → Caja), entregas de caja en el CSV y costos en bloque en GET promos.
 
 Detalle completo en `pedidos/PENDIENTES.md`, `pedidos/REVIEW-CAJA.md` y `pedidos/REVIEW-UX-CAJERO.md`.

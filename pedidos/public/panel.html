@@ -1665,6 +1665,8 @@ async function pintarLocal() {
         ${campo('l-cupo', 'Pedidos web por franja de 30 min', L.cupo_franja, 'type="number" min="1" max="200" inputmode="numeric"', 'Al llenarse, la franja aparece como "completo".')}
         ${campo('l-comision', 'Comisión de la app de delivery (%)', L.comision_app, 'type="number" min="0" max="50" inputmode="numeric"', 'Para calcular la "comisión ahorrada" del Resumen. Uber Eats: 25% a 29%.')}
       </div></section>
+    <section class="cardf" id="s-caja"><h3>Caja</h3>
+      <div class="dos">${campo('l-umbral', 'Pedir nota al cerrar si la diferencia pasa de ($)', L.umbral_nota, 'type="number" min="0" max="1000000" inputmode="numeric"', '0 = pedir nota siempre que haya diferencia. Hoy: $5.000 por defecto.')}</div></section>
     <section class="cardf" id="s-logo"><h3>Logo</h3>
       <div class="logo-prev">${L.logo ? `<div class="lp oscuro"><img src="${esc(L.logo)}" alt="Logo sobre fondo oscuro"></div><div class="lp claro"><img src="${esc(L.logo)}" alt="Logo sobre fondo claro"></div>` : '<p class="ayuda" style="margin:0">Sin logo: la carta muestra la inicial del nombre.</p>'}</div>
       <label class="ghostb fuerte">${L.logo ? 'Cambiar logo' : 'Subir logo'}<input type="file" accept="image/*" hidden id="l-logo"></label>
@@ -1725,7 +1727,7 @@ async function pintarLocal() {
     try {
       await api('panel/local', { method: 'PATCH', body: {
         nombre: val('l-nombre'), whatsapp: val('l-whatsapp'), telefono: val('l-telefono'), instagram: val('l-instagram'), direccion: val('l-direccion'),
-        cupo_franja: val('l-cupo'), comision_app: val('l-comision'), horario: hor(''),
+        cupo_franja: val('l-cupo'), comision_app: val('l-comision'), umbral_nota: val('l-umbral'), horario: hor(''),
         transferencia: { titular: val('t-titular'), rut: rutFormato(val('t-rut')), banco: val('t-banco'), tipo: val('t-tipo'), numero: val('t-numero'), email: val('t-email') },
         legal: LEGALUI.valores(), canales: Object.fromEntries([...q('.canales').querySelectorAll('[data-canal]')].map((x) => [x.dataset.canal, x.checked])),
       } });

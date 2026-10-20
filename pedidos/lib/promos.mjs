@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS combo_items (
   producto_id INTEGER NOT NULL REFERENCES productos(id), componente_id INTEGER NOT NULL REFERENCES productos(id),
   cantidad INTEGER NOT NULL, PRIMARY KEY (producto_id, componente_id));
 `);
+  const prcols = new Set(db.prepare('PRAGMA table_info(promociones)').all().map((c) => c.name));
+  if (!prcols.has('archivada')) db.exec('ALTER TABLE promociones ADD COLUMN archivada INTEGER NOT NULL DEFAULT 0');
   const pcols = new Set(db.prepare('PRAGMA table_info(pedidos)').all().map((c) => c.name));
   if (!pcols.has('descuento')) for (const c of ['descuento INTEGER NOT NULL DEFAULT 0', 'promo_id INTEGER', 'promo_nombre TEXT']) db.exec(`ALTER TABLE pedidos ADD COLUMN ${c}`);
   const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
@@ -37,10 +39,19 @@ CREATE TABLE IF NOT EXISTS combo_items (
     minimo: p.minimo, categoria_id: p.categoria_id, vence: p.vence, usos_max: p.usos_max, usos: p.usos, activa: !!p.activa });
 
   // Promociones del panel (sin los cupones de vuelta, que se ven en Clientes).
-  const lista = (lid) => db.prepare('SELECT * FROM promociones WHERE local_id=? AND telefono IS NULL ORDER BY activa DESC, id DESC').all(lid).map(publica);
+  const lista = (lid) => db.prepare('SELECT * FROM promociones WHERE local_id=? AND telefono IS NULL AND archivada=0 ORDER BY activa DESC, id DESC').all(lid).map(publica);
+
+  // Quitar una promoción: si nunca se usó se borra; si ya está en pedidos, se archiva (deja de aplicar y de verse, y libera su código).
+  function quitar(lid, id) {
+    const p = db.prepare('SELECT id, usos FROM promociones WHERE id=? AND local_id=? AND telefono IS NULL AND archivada=0').get(id, lid);
+    if (!p) return { error: 'No existe', status: 404 };
+    if (p.usos > 0) { db.prepare('UPDATE promociones SET archivada=1, activa=0, codigo=NULL WHERE id=?').run(p.id); return { ok: true, archivada: true }; }
+    db.prepare('DELETE FROM promociones WHERE id=?').run(p.id);
+    return { ok: true, archivada: false };
+  }
 
   function guardar(lid, b, id = null) {
-    const p = id ? db.prepare('SELECT * FROM promociones WHERE id=? AND local_id=? AND telefono IS NULL').get(id, lid) : null;
+    const p = id ? db.prepare('SELECT * FROM promociones WHERE id=? AND local_id=? AND telefono IS NULL AND archivada=0').get(id, lid) : null;
     if (id && !p) return { error: 'No existe', status: 404 };
     const base = p ? publica(p) : { nombre: '', tipo: 'pct', valor: 0, codigo: null, dias: [], desde: null, hasta: null, minimo: 0, categoria_id: null, vence: null, usos_max: null, activa: true };
     const v = { ...base };
@@ -299,5 +310,5 @@ CREATE TABLE IF NOT EXISTS combo_items (
   // Derecho a borrar los datos del cliente: sus cupones se van con él.
   const borrarTelefono = (lid, telefono) => db.prepare('DELETE FROM promociones WHERE local_id=? AND telefono=?').run(lid, tel9(telefono));
 
-  return { crearCombo, editarCombo, quitarCombo, sugerencias, lista, guardar, aplicar, usar, devolver, enCarta, combo, combos, guardarCombo, fidelizacion, guardarFidelizacion, cuponVuelta, cuponDe, cupones, borrarTelefono, tel9 };
+  return { quitar, crearCombo, editarCombo, quitarCombo, sugerencias, lista, guardar, aplicar, usar, devolver, enCarta, combo, combos, guardarCombo, fidelizacion, guardarFidelizacion, cuponVuelta, cuponDe, cupones, borrarTelefono, tel9 };
 }

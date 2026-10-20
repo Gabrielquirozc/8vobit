@@ -27,8 +27,8 @@ const texto = (v, max) => String(v ?? '').replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' '
 const diasEntre = (a, b) => Math.round((new Date(`${b}T12:00:00`) - new Date(`${a}T12:00:00`)) / 864e5);
 
 // Con una diferencia grande, la nota (mínimo 3 letras o números) es obligatoria.
-function notaFaltante(dif, nota, verbo) {
-  if (Math.abs(dif) > UMBRAL_NOTA && (nota ?? '').replace(/[^\p{L}\p{N}]/gu, '').length < 3)
+function notaFaltante(dif, nota, verbo, umbral = UMBRAL_NOTA) {
+  if (Math.abs(dif) > umbral && (nota ?? '').replace(/[^\p{L}\p{N}]/gu, '').length < 3)
     return { error: `${dif < 0 ? 'Faltan' : 'Sobran'} $${Math.abs(dif).toLocaleString('es-CL')}. Escribe qué pasó en la nota antes de ${verbo}.` };
   return null;
 }
@@ -66,6 +66,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const cols = new Set(db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name));
     if (!cols.has('usuario')) { db.exec(`ALTER TABLE ${t} ADD COLUMN usuario TEXT`); db.exec(`ALTER TABLE ${t} ADD COLUMN anulado_por TEXT`); }
   }
+
+  // Diferencia desde la cual cerrar exige nota: ajuste del local (Datos del local), 0 = siempre.
+  const lcols = new Set(db.prepare('PRAGMA table_info(locales)').all().map((c) => c.name));
+  if (!lcols.has('umbral_nota')) db.exec(`ALTER TABLE locales ADD COLUMN umbral_nota INTEGER NOT NULL DEFAULT ${UMBRAL_NOTA}`);
+  const umbralDe = (local) => (Number.isInteger(local.umbral_nota) ? local.umbral_nota : UMBRAL_NOTA);
 
   // Lo que dicen el voucher de la máquina de tarjetas y la cartola (opcionales, solo informativos).
   for (const c of ['contado_tarjeta', 'contado_transferencia']) {
@@ -181,7 +186,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     // Fondo sugerido: lo que quedó contado en el último cierre anterior a este día.
     const previo = db.prepare('SELECT dia, contado FROM caja_cierres WHERE local_id=? AND dia<? AND anulado=0 ORDER BY dia DESC LIMIT 1').get(lid, dia);
     return {
-      dia, hoy: hoy(local), categorias: CATEGORIAS,
+      dia, hoy: hoy(local), categorias: CATEGORIAS, umbral_nota: umbralDe(local),
       movimientos: db.prepare('SELECT id, tipo, categoria, descripcion, monto, medio, documento, anulado, creado, usuario, anulado_por FROM caja_movimientos WHERE local_id=? AND dia=? ORDER BY id').all(lid, dia),
       esperado: esperado(lid, dia),
       fiado: { ...fiadosLista(lid), cobros: Object.fromEntries(MEDIOS.map((m) => [m, fiadoCobros(lid, dia, m)])) },
@@ -243,7 +248,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const e = esperado(lid, dia);
     const vendidoMedio = (m) => ventasMedio(lid, dia, m).s;
     const nota = texto(b.nota, 300), dif = contado - e.total;
-    const falta = notaFaltante(dif, nota, 'cerrar');
+    const falta = notaFaltante(dif, nota, 'cerrar', umbralDe(local));
     if (falta) return falta;
     const porCobrar = db.prepare("SELECT COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=0 AND fiado_nombre IS NULL").get(lid, dia).n;
     db.prepare('INSERT INTO caja_cierres (local_id,dia,esperado,contado,diferencia,detalle,nota,usuario,contado_tarjeta,contado_transferencia) VALUES (?,?,?,?,?,?,?,?,?,?)')
@@ -261,7 +266,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     if (!Number.isInteger(contado) || contado < 0 || contado > MONTO_MAX) return { error: 'Escribe el efectivo contado, en pesos y sin decimales' };
     if (cierreDe(lid, dia)) return { error: 'La caja de ese día ya está cerrada. Reábrela para hacer un corte.', status: 409 };
     const e = esperado(lid, dia), nota = texto(b.nota, 300), dif = contado - e.total;
-    const falta = notaFaltante(dif, nota, 'hacer el corte');
+    const falta = notaFaltante(dif, nota, 'hacer el corte', umbralDe(local));
     if (falta) return falta;
     db.prepare('INSERT INTO caja_cortes (local_id,dia,esperado,contado,diferencia,nota,usuario) VALUES (?,?,?,?,?,?,?)').run(lid, dia, e.total, contado, dif, nota, quien);
     return caja(local, dia);

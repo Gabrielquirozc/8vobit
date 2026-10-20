@@ -134,6 +134,9 @@ test('inventario: la venta descuenta según la receta (y la de los combos), la a
   const rb = await panel('PUT', `/api/panel/inventario/recetas/${b.id}`, { items: [{ insumo_id: pan.id, cantidad: 1 }, { insumo_id: carne.id, cantidad: 0.15 }] });
   assert.equal(rb.body.costo, 200 + 1500);
   await panel('PUT', `/api/panel/inventario/recetas/${c.id}`, { items: [{ insumo_id: pan.id, cantidad: 2 }] });
+  // GET promos entrega los costos de receta de todos los productos en bloque (incluido el combo).
+  const cs = (await panel('GET', '/api/panel/promos')).body.costos;
+  assert.deepEqual([cs[b.id], cs[c.id], cs[a.id]], [1700, 400, 1700 + 2 * 400]);
   // 1×b + 1×a (combo: 1×b + 2×c) → pan 1 + (1 + 2×2) = 6; carne 0,15 × 2 = 0,3
   const r = await pedir([{ producto_id: b.id }, { producto_id: a.id }]);
   assert.equal(r.status, 201);
@@ -284,4 +287,28 @@ test('ideas según tus ventas: pocas ventas dan estado vacío; con datos detecta
   await plan('canal');
   assert.equal((await panel('GET', '/api/panel/promos/sugerencias')).status, 402);
   await plan('pro');
+});
+
+test('quitar promoción: sin usos se borra; con usos se archiva y libera su código', async () => {
+  await plan('pro');
+  const [a] = (await vendibles()).filter((p) => !p.combo);
+  const lista = async () => (await panel('GET', '/api/panel/promos')).body.promociones;
+  // Sin usos: se borra.
+  const p1 = await panel('POST', '/api/panel/promos', { nombre: 'Borrable', tipo: 'pct', valor: 10 });
+  assert.equal((await panel('DELETE', `/api/panel/promos/${p1.body.id}`)).body.archivada, false);
+  assert.equal((await lista()).some((x) => x.id === p1.body.id), false);
+  assert.equal((await panel('DELETE', `/api/panel/promos/${p1.body.id}`)).status, 404);
+  assert.equal((await panel('DELETE', '/api/panel/promos/999999')).status, 404);
+  // Con usos: se archiva (deja de aplicar y de verse) y el código queda libre.
+  const p2 = await panel('POST', '/api/panel/promos', { nombre: 'Usada', tipo: 'pct', valor: 10, codigo: 'USADA10' });
+  const r = await pedir([{ producto_id: a.id }], { codigo: 'USADA10' });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  const q = await panel('DELETE', `/api/panel/promos/${p2.body.id}`);
+  assert.equal(q.status, 200); assert.equal(q.body.archivada, true);
+  assert.equal((await lista()).some((x) => x.id === p2.body.id), false);
+  assert.match((await pedir([{ producto_id: a.id }], { codigo: 'USADA10' })).body.error, /código/);
+  assert.equal((await panel('PATCH', `/api/panel/promos/${p2.body.id}`, { valor: 20 })).status, 404);
+  assert.equal((await panel('POST', '/api/panel/promos', { nombre: 'Nueva', tipo: 'pct', valor: 5, codigo: 'USADA10' })).status, 201);
+  // El pedido conserva el nombre de la promoción usada.
+  assert.equal((await panel('GET', `/api/panel/pedidos/${r.body.id}`)).body.promo_nombre, 'Usada');
 });

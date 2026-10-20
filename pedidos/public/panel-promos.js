@@ -146,7 +146,7 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       ${P.length ? `<div class="cj-scroll"><table><tr><th>Promoción</th><th>Descuento</th><th>Cuándo</th><th class="r">Usos</th><th></th></tr>${P.map((p) => `<tr class="${p.activa ? '' : 'off'}">
         <td><b>${esc(p.nombre)}</b>${p.activa ? '' : ' <span class="opc">(pausada)</span>'}<div class="opc">${esc(resumen(p))}</div></td><td>${desc(p)}${p.categoria_id ? ` <span class="opc">en ${esc(C.categorias.find((c) => c.id === p.categoria_id)?.nombre || '')}</span>` : ''}</td>
         <td>${cuando(p)}</td><td class="r">${p.usos}${p.usos_max ? ` / ${p.usos_max}` : ''}</td>
-        <td class="r"><button class="link" data-preditar="${p.id}">Editar</button> <button class="link" data-prpausa="${p.id}">${p.activa ? 'Pausar' : 'Activar'}</button></td></tr>`).join('')}</table></div>`
+        <td class="r"><button class="link" data-preditar="${p.id}">Editar</button> <button class="link" data-prpausa="${p.id}">${p.activa ? 'Pausar' : 'Activar'}</button> <button class="link peligro" data-prquitar="${p.id}">Quitar</button></td></tr>`).join('')}</table></div>`
         : edit === null ? '<div class="cardf vacio" style="padding:24px">Aún no hay promociones. Toca "Nueva promoción" y elige un tipo: por ejemplo, 15 % los martes o un código para Instagram.</div>' : ''}
       <div class="res-head" id="cbSec" style="margin-top:32px"><h2 class="t" style="margin:0">Combos</h2>
         <button class="primary chico" data-cfnuevo style="width:auto;flex:none;padding:0 18px">${ico('plus')}Nuevo combo</button></div>
@@ -194,6 +194,12 @@ export function crearPromosUI({ $, ico, toast, api, clp, esc }) {
       if ((b = t('[data-prpausa]'))) {
         const p = P.find((x) => x.id === Number(b.dataset.prpausa));
         try { await api(`panel/promos/${p.id}`, { method: 'PATCH', body: { activa: !p.activa } }); toast(p.activa ? 'Promoción pausada' : 'Promoción activa'); pintar(el); } catch (err) { alert(err.message); }
+        return;
+      }
+      if ((b = t('[data-prquitar]'))) {
+        const p = P.find((x) => x.id === Number(b.dataset.prquitar));
+        if (!confirm(`¿Quitar la promoción "${p.nombre}"?${p.usos ? ' Ya se usó en pedidos: queda en el historial pero deja de aplicar.' : ''}`)) return;
+        try { await api(`panel/promos/${p.id}`, { method: 'DELETE' }); toast('Promoción quitada'); pintar(el); } catch (err) { alert(err.message); }
         return;
       }
       if (t('[data-prguardar]')) {

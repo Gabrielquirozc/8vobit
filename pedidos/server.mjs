@@ -510,7 +510,7 @@ function menu(local, publico = true) {
   const ok = new Set(prods.filter(vendible).map((p) => p.id));
   const mas = [...new Set([...vendidos, ...prods.filter((p) => p.destacado).map((p) => p.id)])].filter((id) => ok.has(id)).slice(0, 6);
   const legal = LG.leerDatos(local.legal);
-  const privado = publico ? {} : { canales: canalesDe(local), despacho_confirmado: !!local.despacho_confirmado, publicado: !!local.publicado };
+  const privado = publico ? {} : { canales: canalesDe(local), umbral_nota: Number.isInteger(local.umbral_nota) ? local.umbral_nota : 5000, despacho_confirmado: !!local.despacho_confirmado, publicado: !!local.publicado };
   return {
     local: { slug: local.slug, nombre: local.nombre, ...(publico ? contactoPublico(local) : { instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono }), ...privado, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
@@ -719,6 +719,10 @@ function actualizarLocal(local, b) {
   if (b.costo_pct !== undefined) {
     c.costo_pct = Math.round(Number(b.costo_pct));
     if (!(c.costo_pct >= 0 && c.costo_pct <= 90)) return { error: 'El costo estimado debe estar entre 0 y 90 %.' };
+  }
+  if (b.umbral_nota !== undefined && b.umbral_nota !== null && b.umbral_nota !== '') {
+    c.umbral_nota = Number(b.umbral_nota);
+    if (!Number.isInteger(c.umbral_nota) || c.umbral_nota < 0 || c.umbral_nota > 1e6) return { error: 'El monto desde el cual se pide nota debe ser un entero entre $0 y $1.000.000.' };
   }
   if (b.comision_app !== undefined) {
     c.comision_app = Math.round(Number(b.comision_app));
@@ -1272,11 +1276,15 @@ async function api(req, res, url) {
       if (m === 'GET' && !parts[2]) {
         // Costos por producto (receta o costo manual), solo para quien ve costos: sirven para el margen estimado de un combo.
         const costos = {};
-        if (puede('costos') && conPlan('costos')) for (const p of db.prepare('SELECT id, costo FROM productos WHERE local_id=? AND archivado=0').all(lid)) { const c = INV.costo(lid, p.id) ?? p.costo; if (c != null) costos[p.id] = c; }
+        if (puede('costos') && conPlan('costos')) {
+          const deReceta = INV.costos(lid); // una consulta para todos, en vez de una por producto
+          for (const p of db.prepare('SELECT id, costo FROM productos WHERE local_id=? AND archivado=0').all(lid)) { const c = deReceta.get(p.id) ?? p.costo; if (c != null) costos[p.id] = c; }
+        }
         return send(res, 200, { promociones: PROMOS.lista(lid), costos });
       }
       if (m === 'POST' && !parts[2]) return r2(PROMOS.guardar(lid, await readJson(req)), 201);
       if (m === 'PATCH' && parts[2]) return r2(PROMOS.guardar(lid, await readJson(req), Number(parts[2])));
+      if (m === 'DELETE' && parts[2]) return r2(PROMOS.quitar(lid, Number(parts[2])));
     }
     // Combos propios (producto de la carta con precio propio + sus componentes).
     if (parts[1] === 'combos') {

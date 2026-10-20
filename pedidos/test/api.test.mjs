@@ -1763,3 +1763,36 @@ test('fiado: es venta del día pero no entra a la caja; cada abono entra a la ca
   assert.match(csv, /;Fiado;/);
   assert.ok(F0.pendientes);
 });
+
+// ---------- umbral de nota por local y entregas de caja en el CSV ----------
+test('caja: el umbral de nota es un ajuste del local y las entregas salen en el CSV', async () => {
+  await login();
+  await req('DELETE', '/api/panel/caja/cierre'); // por si otro test dejó la caja cerrada
+  const C = (await req('GET', '/api/panel/caja')).body;
+  assert.equal(C.umbral_nota, 5000);
+  // Validación del ajuste.
+  for (const umbral_nota of [-1, 1.5, 1000001, 'mucho']) assert.equal((await req('PATCH', '/api/panel/local', { umbral_nota })).status, 400, String(umbral_nota));
+  // Con umbral 100, una diferencia de 200 exige nota; con 5000 no.
+  // Vacío o null = sin cambio (no se convierte en 0).
+  for (const v of ['', null]) { assert.equal((await req('PATCH', '/api/panel/local', { umbral_nota: v })).status, 200); assert.equal((await req('GET', '/api/panel/caja')).body.umbral_nota, 5000); }
+  assert.equal((await req('PATCH', '/api/panel/local', { umbral_nota: 100 })).status, 200);
+  assert.equal((await req('GET', '/api/panel/caja')).body.umbral_nota, 100);
+  const esp = C.esperado.total;
+  const sin = await req('POST', '/api/panel/caja/cierre', { contado: esp + 200 });
+  assert.equal(sin.status, 400); assert.match(sin.body.error, /nota/);
+  // 0 = siempre que haya diferencia.
+  assert.equal((await req('PATCH', '/api/panel/local', { umbral_nota: 0 })).status, 200);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp + 1 })).status, 400);
+  assert.equal((await req('POST', '/api/panel/caja/cierre', { contado: esp })).status, 200); // cuadrada: no pide nota
+  await req('DELETE', '/api/panel/caja/cierre');
+  assert.equal((await req('PATCH', '/api/panel/local', { umbral_nota: 5000 })).status, 200);
+  // Una entrega de caja (corte de turno) aparece en el CSV de caja diaria.
+  assert.equal((await req('POST', '/api/panel/caja/cortes', { contado: esp + 1000 })).status, 200);
+  const csv = await (await fetch(`${B}/api/panel/exportar?tipo=caja&desde=${C.hoy}&hasta=${C.hoy}`, { headers: { Cookie: cookie } })).text();
+  const [cab, fila] = csv.replace(/^﻿/, '').split('\r\n');
+  assert.match(cab, /;Entregas de caja;Suma de diferencias de las entregas$/);
+  const cols = fila.split(';');
+  const cortes = (await req('GET', '/api/panel/caja')).body.cortes;
+  assert.ok(cortes.length >= 1);
+  assert.deepEqual([Number(cols.at(-2)), Number(cols.at(-1))], [cortes.length, cortes.reduce((s, x) => s + x.diferencia, 0)]);
+});
