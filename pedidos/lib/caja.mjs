@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS caja_movimientos (
   documento TEXT, anulado INTEGER NOT NULL DEFAULT 0,
   creado TEXT NOT NULL DEFAULT (datetime('now','localtime')), anulado_en TEXT);
 CREATE INDEX IF NOT EXISTS caja_mov_dia ON caja_movimientos(local_id, dia);
+CREATE TABLE IF NOT EXISTS pedido_pagos (
+  pedido_id INTEGER NOT NULL, medio TEXT NOT NULL, monto INTEGER NOT NULL, PRIMARY KEY (pedido_id, medio));
 CREATE TABLE IF NOT EXISTS caja_cortes (
   id INTEGER PRIMARY KEY, local_id INTEGER NOT NULL REFERENCES locales(id), dia TEXT NOT NULL,
   esperado INTEGER NOT NULL, contado INTEGER NOT NULL, diferencia INTEGER NOT NULL, nota TEXT, usuario TEXT,
@@ -66,11 +68,41 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
 
   const cierreDe = (lid, dia) => db.prepare('SELECT * FROM caja_cierres WHERE local_id=? AND dia=? AND anulado=0').get(lid, dia);
 
+  // Cobrado en un medio ese día: pedidos de un solo medio (como siempre) más la parte de ese
+  // medio en los pedidos con pago mixto. Los pedidos anulados no cuentan, así que anular revierte todo.
+  function ventasMedio(lid, dia, medio) {
+    const a = db.prepare("SELECT COALESCE(SUM(total),0) s, COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND medio_pago=?").get(lid, dia, medio);
+    const b = db.prepare("SELECT COALESCE(SUM(pp.monto),0) s, COUNT(*) n FROM pedido_pagos pp JOIN pedidos p ON p.id=pp.pedido_id WHERE p.local_id=? AND p.dia=? AND p.estado!='anulado' AND p.pagado=1 AND p.medio_pago='mixto' AND pp.medio=?").get(lid, dia, medio);
+    return { s: a.s + b.s, n: a.n + b.n };
+  }
+
+  // Pago dividido en varios medios. Devuelve { pagos } (lista unida por medio) si hay más de un medio,
+  // { medio } si en realidad es uno solo, o { error }. Sin `lista` no hay nada que validar.
+  function validarPagos(lista, total) {
+    if (lista === undefined || lista === null) return {};
+    if (!Array.isArray(lista) || !lista.length || lista.length > 4) return { error: 'Pago dividido inválido' };
+    const por = new Map();
+    for (const x of lista) {
+      const monto = Number(x?.monto);
+      if (!MEDIOS.includes(x?.medio)) return { error: 'Medio de pago inválido' };
+      if (!Number.isInteger(monto) || monto <= 0) return { error: 'Cada parte del pago debe ser un monto entero mayor a 0' };
+      por.set(x.medio, (por.get(x.medio) || 0) + monto);
+    }
+    const pagos = [...por].map(([medio, monto]) => ({ medio, monto }));
+    if (pagos.reduce((s, x) => s + x.monto, 0) !== total) return { error: `Las partes del pago deben sumar el total ($${total.toLocaleString('es-CL')})` };
+    return pagos.length === 1 ? { medio: pagos[0].medio } : { pagos };
+  }
+  const guardarPagos = (pedidoId, pagos) => {
+    db.prepare('DELETE FROM pedido_pagos WHERE pedido_id=?').run(pedidoId);
+    for (const x of pagos || []) db.prepare('INSERT INTO pedido_pagos (pedido_id,medio,monto) VALUES (?,?,?)').run(pedidoId, x.medio, x.monto);
+  };
+  const pagosDe = (pedidoId) => db.prepare('SELECT medio, monto FROM pedido_pagos WHERE pedido_id=? ORDER BY rowid').all(pedidoId);
+
   // Cuánto efectivo debería haber en la caja ese día, con su desglose.
   function esperado(lid, dia) {
     const movs = db.prepare('SELECT tipo, monto, medio FROM caja_movimientos WHERE local_id=? AND dia=? AND anulado=0').all(lid, dia);
     const suma = (f) => movs.filter(f).reduce((s, m) => s + m.monto, 0);
-    const ventas = db.prepare("SELECT COALESCE(SUM(total),0) s, COUNT(*) n FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND medio_pago='efectivo'").get(lid, dia);
+    const ventas = ventasMedio(lid, dia, 'efectivo');
     const d = {
       fondo: suma((m) => m.tipo === 'fondo'),
       ventas: ventas.s, ventas_n: ventas.n,
@@ -144,7 +176,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
     const tarjeta = opc(b.contado_tarjeta), transf = opc(b.contado_transferencia);
     for (const v of [tarjeta, transf]) if (v !== null && (!Number.isInteger(v) || v < 0 || v > MONTO_MAX)) return { error: 'Escribe lo de tarjeta y transferencia en pesos, sin decimales (o déjalo vacío)' };
     const e = esperado(lid, dia);
-    const vendidoMedio = (m) => db.prepare("SELECT COALESCE(SUM(total),0) s FROM pedidos WHERE local_id=? AND dia=? AND estado!='anulado' AND pagado=1 AND medio_pago=?").get(lid, dia, m).s;
+    const vendidoMedio = (m) => ventasMedio(lid, dia, m).s;
     const nota = texto(b.nota, 300), dif = contado - e.total;
     const falta = notaFaltante(dif, nota, 'cerrar');
     if (falta) return falta;
@@ -189,5 +221,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS caja_cierre_dia ON caja_cierres(local_id, dia)
       anterior: { mes: ant, total: anterior.reduce((s, g) => s + g.monto, 0), por_categoria: porCat(anterior) } };
   }
 
-  return { caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
+  return { pagos: { validar: validarPagos, guardar: guardarPagos, de: pagosDe }, caja, corte, esperado, nuevoMovimiento, anularMovimiento, cerrar, reabrir, gastosMes, esDia };
 }

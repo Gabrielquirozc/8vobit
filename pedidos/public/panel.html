@@ -570,6 +570,12 @@
       <button type="button" data-medio="transferencia" aria-pressed="false"><svg class="ico"><use href="#i-bank"/></svg>Transferencia</button>
       <button type="button" data-medio="otro" aria-pressed="false"><svg class="ico"><use href="#i-dots"/></svg>Otro</button>
     </div>
+    <button type="button" class="link" id="btnDividir" style="margin:8px 0">Dividir pago</button>
+    <div id="divBox" hidden>
+      <div class="dos"><select id="dm1" aria-label="Primer medio de pago"></select><div class="money"><span aria-hidden="true">$</span><input id="da1" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Monto del primer medio"></div></div>
+      <div class="dos"><select id="dm2" aria-label="Segundo medio de pago"></select><div class="money"><span aria-hidden="true">$</span><input id="da2" inputmode="numeric" autocomplete="off" placeholder="0" readonly aria-label="Lo que falta"></div></div>
+      <p class="ayuda">Escribe cuánto paga con el primero; el resto queda en el segundo.</p>
+    </div>
     <div id="efBox" hidden>
       <div class="field"><label for="recibido">Recibido</label><div class="money"><span aria-hidden="true">$</span><input id="recibido" inputmode="numeric" autocomplete="off" placeholder="0"></div></div>
       <div class="rapidos" id="rapidos"></div>
@@ -641,7 +647,7 @@ document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.clo
 // Alto real de la barra superior (cambia al pasar a dos líneas): las barras fijas se ubican bajo ella.
 new ResizeObserver(([e]) => document.documentElement.style.setProperty('--barh', `${Math.round(e.target.offsetHeight)}px`)).observe(document.querySelector('.bar'));
 let D = null, M = null, conocidos = null, audio = null, vista = 'pedidos';
-const MEDIO = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', otro: 'Otro' };
+const MEDIO = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', otro: 'Otro', mixto: 'Mixto' };
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
 // Quién usa el panel, permisos y plan (public/panel-cuenta.js).
 const CUENTA = crearCuentaUI({ $, ico, toast, api, clp, esc });
@@ -811,20 +817,47 @@ $('v-pedidos').onclick = async (e) => {
 // ---------- cobro (pedidos y venta rápida) ----------
 let cobro = null;
 function abrirCobro(c) {
-  cobro = { ...c, medio: null };
+  cobro = { ...c, medio: null, dividir: false };
+  $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago';
   $('cobTitulo').textContent = c.titulo;
   $('cobTotal').textContent = clp(c.total);
   $('cobOk').textContent = c.boton;
   document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
   $('efBox').hidden = true; $('folioBox').hidden = D.modo_boleta !== 2; $('ventaBox').hidden = !c.venta;
   $('folio').value = c.folio || ''; $('recibido').value = ''; $('cobErr').textContent = ''; $('vuelto').textContent = '';
-  const billetes = [c.total, ...[1000, 2000, 5000, 10000, 20000].map((b) => Math.ceil(c.total / b) * b)];
-  $('rapidos').innerHTML = [...new Set(billetes)].slice(0, 4).map((v) => `<button type="button" data-r="${v}">${v === c.total ? 'Justo' : clp(v)}</button>`).join('');
+  pintarRapidos();
   $('cobOk').disabled = true;
   $('dlgCobro').showModal();
 }
+// Atajos de "Recibido" sobre lo que se paga en efectivo (el total, o solo la parte en efectivo si se divide).
+function pintarRapidos() {
+  const base = efMonto() || cobro.total;
+  const billetes = [base, ...[1000, 2000, 5000, 10000, 20000].map((b) => Math.ceil(base / b) * b)];
+  $('rapidos').innerHTML = [...new Set(billetes)].slice(0, 4).map((v) => `<button type="button" data-r="${v}">${v === base ? 'Justo' : clp(v)}</button>`).join('');
+}
+// Pago dividido: dos medios; el segundo es siempre "lo que falta".
+const MEDIOS_COBRO = [['efectivo', 'Efectivo'], ['tarjeta', 'Tarjeta (POS)'], ['transferencia', 'Transferencia'], ['otro', 'Otro']];
+const montoDiv = () => Math.min(digitos($('da1').value), cobro.total);
+const efMonto = () => (cobro.dividir ? ($('dm1').value === 'efectivo' ? montoDiv() : $('dm2').value === 'efectivo' ? cobro.total - montoDiv() : 0) : cobro.medio === 'efectivo' ? cobro.total : 0);
+function actualizarDiv() {
+  const a = montoDiv(); $('da2').value = miles(cobro.total - a);
+  $('recibido').value = ''; pintarRapidos();
+  $('efBox').hidden = efMonto() === 0;
+  calcVuelto();
+}
+$('dm1').innerHTML = $('dm2').innerHTML = MEDIOS_COBRO.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
+$('btnDividir').onclick = () => {
+  cobro.dividir = !cobro.dividir;
+  $('divBox').hidden = !cobro.dividir; $('btnDividir').textContent = cobro.dividir ? 'Pagar con un solo medio' : 'Dividir pago';
+  if (cobro.dividir) {
+    cobro.medio = null; document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+    $('dm1').value = 'efectivo'; $('dm2').value = 'tarjeta'; $('da1').value = ''; $('recibido').value = ''; actualizarDiv(); $('da1').focus();
+  } else { $('efBox').hidden = true; $('recibido').value = ''; pintarRapidos(); calcVuelto(); }
+};
+['dm1', 'dm2', 'da1'].forEach((id) => $(id).addEventListener('input', actualizarDiv));
 document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
-  cobro.medio = b.dataset.medio;
+  if (cobro.dividir) { cobro.dividir = false; $('divBox').hidden = true; $('btnDividir').textContent = 'Dividir pago'; $('recibido').value = ''; }
+  cobro.medio = b.dataset.medio; pintarRapidos();
   document.querySelectorAll('[data-medio]').forEach((x) => x.setAttribute('aria-pressed', x === b));
   $('efBox').hidden = cobro.medio !== 'efectivo';
   if (cobro.medio === 'efectivo') $('recibido').focus();
@@ -833,19 +866,22 @@ document.querySelectorAll('[data-medio]').forEach((b) => b.onclick = () => {
 $('rapidos').onclick = (e) => { const r = e.target.closest('[data-r]'); if (r) { $('recibido').value = Number(r.dataset.r).toLocaleString('es-CL'); calcVuelto(); } };
 $('recibido').oninput = calcVuelto;
 function calcVuelto() {
-  const ef = cobro.medio === 'efectivo', rec = digitos($('recibido').value);
-  const falta = ef && rec < cobro.total;
-  $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(cobro.total - rec)}` : `Vuelto ${clp(rec - cobro.total)}`;
-  $('cobOk').disabled = !cobro.medio || (ef && (!rec || falta));
+  const aEf = efMonto(), ef = aEf > 0, rec = digitos($('recibido').value);
+  const falta = ef && rec < aEf;
+  $('vuelto').textContent = !ef ? '' : !rec ? 'Ingresa el monto recibido' : falta ? `Faltan ${clp(aEf - rec)}` : `Vuelto ${clp(rec - aEf)}`;
+  const divOk = cobro.dividir && montoDiv() > 0 && montoDiv() < cobro.total && $('dm1').value !== $('dm2').value;
+  $('cobOk').disabled = (cobro.dividir ? !divOk : !cobro.medio) || (ef && (!rec || falta));
 }
 $('cobOk').onclick = async () => {
   $('cobOk').disabled = true;
   try {
-    const body = { medio_pago: cobro.medio, recibido: digitos($('recibido').value) || undefined };
+    const body = { recibido: digitos($('recibido').value) || undefined };
+    if (cobro.dividir) body.pagos = [{ medio: $('dm1').value, monto: montoDiv() }, { medio: $('dm2').value, monto: cobro.total - montoDiv() }];
+    else body.medio_pago = cobro.medio;
     if (D.modo_boleta === 2 && $('folio').value.trim()) body.folio_boleta = $('folio').value;
     const r = await cobro.enviar(body);
     $('dlgCobro').close();
-    const vuelto = cobro.medio === 'efectivo' ? digitos($('recibido').value) - cobro.total : 0;
+    const vuelto = efMonto() > 0 ? digitos($('recibido').value) - efMonto() : 0;
     toast(vuelto > 0 ? `Cobrado ${clp(cobro.total)} · vuelto ${clp(vuelto)}` : `Cobrado ${clp(cobro.total)}`);
     await refrescar();
   } catch (err) { $('cobErr').textContent = err.message; $('cobOk').disabled = false; }
@@ -966,9 +1002,11 @@ function pintarCierre() {
   const ok = D.pedidos.filter((p) => p.estado !== 'anulado');
   const cobrados = ok.filter((p) => p.pagado), porCobrar = ok.filter((p) => !p.pagado);
   const suma = (l) => l.reduce((s, p) => s + p.total, 0), total = suma(cobrados);
-  const porMedio = Object.keys(MEDIO).map((m) => { const ps = cobrados.filter((p) => p.medio_pago === m); return [MEDIO[m], ps.length, suma(ps)]; }).filter(([n, c]) => c || n !== 'Otro');
+  // Un pedido con pago dividido aporta cada parte a su medio.
+  const partes = cobrados.flatMap((p) => (p.medio_pago === 'mixto' ? p.pagos : [{ medio: p.medio_pago, monto: p.total }]));
+  const porMedio = Object.keys(MEDIO).filter((m) => m !== 'mixto').map((m) => { const ps = partes.filter((x) => x.medio === m); return [MEDIO[m], ps.length, ps.reduce((t, x) => t + x.monto, 0)]; }).filter(([n, c]) => c || n !== 'Otro');
   const porCanal = [['Pedidos web', 'web'], ['Mostrador', 'mostrador']].map(([n, k]) => { const ps = cobrados.filter((p) => (p.canal || 'web') === k); return [n, ps.length, suma(ps)]; });
-  const efectivo = cobrados.filter((p) => p.medio_pago === 'efectivo');
+  const efectivo = partes.filter((x) => x.medio === 'efectivo');
   const sinFolio = cobrados.filter((p) => !p.folio_boleta);
   const tabla = (filas) => `<table><tr><th></th><th class="r">Ventas</th><th class="r">Monto</th></tr>${filas.map(([n, c, s]) => `<tr><td>${n}</td><td class="r">${c}</td><td class="r">${clp(s)}</td></tr>`).join('')}<tr><th>Total</th><th class="r">${cobrados.length}</th><th class="r">${clp(total)}</th></tr></table>`;
   $('v-cierre').innerHTML = `
@@ -981,7 +1019,7 @@ function pintarCierre() {
     <div class="kpis">
       <div>Cobrado<b class="num">${clp(total)}</b></div>
       <div class="cj-ciegomsg">Debería haber en caja<b class="num">—</b><span class="sub">Se muestra al escribir lo contado</span></div>
-      <div class="cj-esp">Debería haber en caja<b class="num">${clp(C ? C.esperado.total : suma(efectivo))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Efectivo de hoy, sin cerrar'}</span>` : ''}</div>
+      <div class="cj-esp">Debería haber en caja<b class="num">${clp(C ? C.esperado.total : efectivo.reduce((t, x) => t + x.monto, 0))}</b>${C ? `<span class="sub">${C.cierre ? (C.cierre.diferencia ? `Cerrada con ${C.cierre.diferencia > 0 ? 'sobrante' : 'faltante'} de ${clp(Math.abs(C.cierre.diferencia))}` : 'Cerrada y cuadrada') : 'Efectivo de hoy, sin cerrar'}</span>` : ''}</div>
       <div>Ventas<b class="num">${cobrados.length}</b></div>
       <div>Ticket promedio<b class="num">${clp(cobrados.length ? total / cobrados.length : 0)}</b></div>
       <div>Por cobrar<b class="num">${clp(suma(porCobrar))}</b><span class="sub">${porCobrar.length} pedido${porCobrar.length === 1 ? '' : 's'} abiertos</span></div>

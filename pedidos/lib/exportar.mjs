@@ -6,7 +6,7 @@ import { CATEGORIAS } from './caja.mjs';
 export const TIPOS_EXPORT = ['ventas', 'productos', 'caja', 'gastos'];
 const MAX_DIAS = 366;
 const esDia = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(`${v}T12:00:00`));
-const MEDIO = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
+const MEDIO = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro', mixto: 'Mixto' };
 
 // Celda de texto: comillas si hace falta, y un apóstrofo delante de =, +, - o @ para que
 // Excel no lo interprete como fórmula (inyección de fórmulas en CSV).
@@ -21,11 +21,11 @@ const csv = (cab, filas) => '﻿' + [cab, ...filas].map((f) => f.map(celda).join
 
 export function crearExportar(db, { caja }) {
   function ventas(lid, desde, hasta) {
-    const filas = db.prepare(`SELECT dia, numero, substr(creado,12,5) hora, canal, modalidad, cliente, estado, medio_pago, cobrado_en,
+    const filas = db.prepare(`SELECT id, dia, numero, substr(creado,12,5) hora, canal, modalidad, cliente, estado, medio_pago, cobrado_en,
         total, costo_despacho, folio_boleta FROM pedidos WHERE local_id=? AND dia BETWEEN ? AND ? ORDER BY dia, numero`).all(lid, desde, hasta);
     return csv(['Fecha', 'N° pedido', 'Hora', 'Canal', 'Modalidad', 'Cliente', 'Estado', 'Medio de pago', 'Hora de cobro', 'Total', 'Despacho incluido', 'Folio boleta'],
       filas.map((p) => [p.dia, p.numero, p.hora, p.canal === 'mostrador' ? 'Mostrador' : 'Web', p.modalidad === 'despacho' ? 'Despacho' : 'Retiro',
-        p.cliente, p.estado, MEDIO[p.medio_pago] || (p.estado === 'anulado' ? '' : 'Por cobrar'), p.cobrado_en, p.total, p.costo_despacho, p.folio_boleta]));
+        p.cliente, p.estado, (p.medio_pago === 'mixto' ? `Mixto: ${caja.pagos.de(p.id).map((x) => `${MEDIO[x.medio]} ${x.monto}`).join(' + ')}` : MEDIO[p.medio_pago]) || (p.estado === 'anulado' ? '' : 'Por cobrar'), p.cobrado_en, p.total, p.costo_despacho, p.folio_boleta]));
   }
   function productos(lid, desde, hasta) {
     const filas = db.prepare(`SELECT p.dia, p.numero, i.nombre, i.cantidad, i.precio_unitario, i.costo_unitario FROM pedido_items i

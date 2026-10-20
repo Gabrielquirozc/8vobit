@@ -1129,17 +1129,21 @@ test('PIN y roles: la tablet del local, permisos por rol y turnos', async () => 
   assert.equal(acc.dispositivo.slug, 'la-picada');
   assert.ok(acc.dispositivo.con_pin);
   assert.equal((await pic('POST', '/api/panel/pin', { pin: '0000' })).status, 401);
+  const mp = (await req('GET', '/api/locales/la-picada')).body;
+  const pedPic = await pic('POST', '/api/panel/venta', { items: [{ producto_id: mp.categorias[0].productos[0].id }], medio_pago: 'efectivo' });
+  assert.equal(pedPic.status, 201, JSON.stringify(pedPic.body));
   // Cocina: ve pedidos y marca agotados; no cobra, no vende, no ve caja ni costos.
   const coc = await pic('POST', '/api/panel/pin', { pin: '7391' });
   assert.equal(coc.status, 200);
   assert.equal(coc.body.rol, 'cocina');
   assert.equal((await pic('GET', '/api/panel/yo')).body.nombre, 'Beto');
   assert.equal((await pic('GET', '/api/panel/pedidos')).status, 200);
-  // Cocina no cobra, tampoco dividiendo el pago: 403 y el pedido queda sin pagar.
-  const sinPagar = (await pic('GET', '/api/panel/pedidos')).body.pedidos.find((x) => !x.pagado && x.estado !== 'anulado');
-  if (sinPagar || console.error("SINPAGAR_NULO")) {
+  // Cocina no cobra, tampoco dividiendo el pago: 403 y el pedido queda como estaba (sin pagos divididos).
+  const sinPagar = (await pic('GET', '/api/panel/pedidos')).body.pedidos.find((x) => x.id === pedPic.body.id);
+  {
     assert.equal((await pic('PATCH', `/api/panel/pedidos/${sinPagar.id}`, { pagos: [{ medio: 'efectivo', monto: 1 }, { medio: 'tarjeta', monto: sinPagar.total - 1 }] })).status, 403);
-    assert.equal((await pic('GET', `/api/panel/pedidos/${sinPagar.id}`)).body.pagado, 0);
+    const desp = (await pic('GET', `/api/panel/pedidos/${sinPagar.id}`)).body;
+    assert.equal(desp.medio_pago, 'efectivo'); assert.deepEqual(desp.pagos, []);
   }
   assert.equal((await pic('GET', '/api/panel/caja')).status, 403);
   assert.equal((await pic('POST', '/api/panel/venta', { items: [], medio_pago: 'efectivo' })).status, 403);
