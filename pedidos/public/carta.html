@@ -128,6 +128,8 @@
 <script type="module">
 import { api, clp, esc, BASE, emojiDe, fmtTel } from './comun.js';
 import * as H from './hex.js';
+// Envuelto en una función async: el await de nivel superior no existe en Chrome < 89 (teléfonos viejos).
+(async () => {
 const $ = (id) => document.getElementById(id);
 const slug = location.pathname.split('/').filter(Boolean).pop();
 const ico = (n) => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -612,6 +614,7 @@ try {
     ${M.local.instagram ? `<a class="fact" href="https://instagram.com/${esc(M.local.instagram)}" target="_blank" rel="noopener">${ico('insta')}@${esc(M.local.instagram)}</a>` : ''}`;
   render();
 } catch (e) { $('nombre').textContent = 'No pudimos cargar la carta'; console.error(e); }
+})();
 </script>
 </body>
 </html>

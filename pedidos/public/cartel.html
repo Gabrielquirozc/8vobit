@@ -60,6 +60,8 @@
 <script src="qrcode.js"></script>
 <script type="module">
 import { api, esc, BASE, fmtTel } from './comun.js';
+// Envuelto en una función async: el await de nivel superior no existe en Chrome < 89 (teléfonos viejos).
+(async () => {
 let M;
 try { M = await api('panel/carta'); }
 catch (e) {
@@ -98,6 +100,7 @@ const pintar = (modo) => {
 };
 document.querySelectorAll('[data-modo]').forEach((b) => b.onclick = () => pintar(b.dataset.modo));
 pintar('cartel');
+})();
 </script>
 </body>
 </html>

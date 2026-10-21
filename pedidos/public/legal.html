@@ -44,6 +44,8 @@
 <script type="module">
 import { api, esc, BASE } from './comun.js';
 import { LEGAL_VIGENCIA as VIGENCIA } from './legal-version.js';
+// Envuelto en una función async: el await de nivel superior no existe en Chrome < 89 (teléfonos viejos).
+(async () => {
 // Términos y condiciones y Política de privacidad del local.
 // Fecha de la versión: en legal-version.js (cambiarla cada vez que cambie lib/plantillas/terminos.html o privacidad.html).
 const slug = new URLSearchParams(location.search).get('l') || '';
@@ -65,6 +67,7 @@ document.title = `${priv ? 'Privacidad' : 'Términos y condiciones'} · ${L.nomb
 $('titulo').textContent = priv ? 'Política de privacidad' : 'Términos y condiciones';
 $('doc').innerHTML = (T.faltan.length ? `<div class="borrador" role="note"><b>Borrador.</b> Falta completar en el panel (Datos del local → Datos legales): ${T.faltan.map((f) => esc(f.toLowerCase())).join(', ')}.</div>` : '')
   + `<p class="vig">${esc(L.nombre)} · Vigente desde el ${esc(T.vigencia || VIGENCIA)}</p>` + T.html;
+})();
 </script>
 </body>
 </html>

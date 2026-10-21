@@ -24,6 +24,8 @@
 <div class="cats" id="cats"></div>
 <script type="module">
 import { api, clp, esc } from './comun.js';
+// Envuelto en una función async: el await de nivel superior no existe en Chrome < 89 (teléfonos viejos).
+(async () => {
 const M = await api('panel/carta');
 if (M.local.logo) document.getElementById('nom').innerHTML = `<img src="${esc(M.local.logo)}" alt="${esc(M.local.nombre)}" style="height:110px;width:auto">`;
 else document.getElementById('nom').textContent = M.local.nombre;
@@ -32,6 +34,7 @@ document.getElementById('cats').innerHTML = M.categorias.map((c) => {
   const ps = c.productos.filter((p) => p.activo);
   return ps.length ? `<section><h2>${esc(c.nombre)}</h2>${ps.map((p) => `<div class="p"><span class="n">${esc(p.nombre)}</span><span class="dots"></span><span>${p.precio_pendiente || !p.precio ? 'Consultar' : clp(p.precio)}</span></div>${p.descripcion ? `<div class="d">${esc(p.descripcion)}</div>` : ''}`).join('')}</section>` : '';
 }).join('');
+})();
 </script>
 </body>
 </html>

@@ -24,6 +24,8 @@
 <div class="ticket" id="t">Cargando…</div>
 <script type="module">
 import { api, clp, esc } from './comun.js';
+// Envuelto en una función async: el await de nivel superior no existe en Chrome < 89 (teléfonos viejos).
+(async () => {
 const id = new URLSearchParams(location.search).get('id');
 try {
   const p = await api(`panel/pedidos/${id}`);
@@ -48,6 +50,7 @@ try {
     ${p.estado === 'anulado' ? '<hr><div class="c big">ANULADO</div>' : ''}`;
   if (new URLSearchParams(location.search).has('auto')) print();
 } catch (e) { document.getElementById('t').textContent = e.message; }
+})();
 </script>
 </body>
 </html>
