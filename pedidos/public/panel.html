@@ -71,7 +71,8 @@
   .acc > * { min-height: 52px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: .9rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; }
   .acc .ico { width: 18px; height: 18px; }
   .acc .peligro { color: var(--danger); }
-  .vacio { color: var(--ink-2); text-align: center; padding: 28px 0; border: 2px dashed var(--line); border-radius: var(--r); }
+  .vacio { color: var(--ink-2); text-align: center; padding: 26px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); font-size: .92rem; }
+  .vacio::before { content: ""; display: block; width: 34px; height: 34px; margin: 0 auto 10px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface-2); }
 
   /* venta rápida */
   .venta { display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }
@@ -190,7 +191,9 @@
   .link { background: none; border: 0; color: var(--ink-2); font-size: .85rem; padding: 6px; text-decoration: underline; }
   td input[type=number] { width: 110px; min-height: 44px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: 16px; }
   td label.ck { display: flex; align-items: center; gap: 8px; min-height: 44px; } td label.ck input { width: 20px; height: 20px; accent-color: var(--brand); }
-  .tile .emoji, .art .emoji { font-size: 44px; line-height: 1; }
+  .tile .emoji, .art .emoji { font-size: 40px; line-height: 1; filter: drop-shadow(0 1px 1px rgb(31 26 23 / .18)); }
+  .tile .art { position: relative; }
+  .tile .art[class*="c"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 85% at 50% 0%, rgb(255 255 255 / .14), transparent 62%); }
   .ped li .ag.obs { color: var(--brand); font-weight: 700; display: flex; align-items: center; gap: 4px; }
   .ped li .ag.obs .ico { width: 14px; height: 14px; }
   /* Barra superior: siempre en dos líneas. Arriba el nombre y las acciones; abajo las
@@ -555,6 +558,42 @@
   .plan-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .plan-cab b { font: 800 1.3rem var(--font-display); }
   .u-form { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
   @media print { .bar, .noprint { display: none !important; } body { background: #fff; } table, .kpis div { box-shadow: none; } }
+
+  /* ---------- Capa de movimiento: app con vida, liviana para gama baja ----------
+     Solo transform/opacity (GPU). La entrada se dispara al cambiar de pestaña,
+     no en cada refresco de pedidos, porque engancha a [hidden] del contenedor. */
+  @keyframes vistaEntra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  div[id^="v-"]:not([hidden]) { animation: vistaEntra .3s var(--ease) both; }
+
+  /* Feedback táctil: el control se hunde al tocar (respuesta inmediata al press). */
+  .tab, .paso, .acc > *, .medios button, .rapidos button, .cat-chips button,
+  .ghostb, .tile, .ped, .prtipo, .mini-btn, .cjx-cerrar, .avisob, .sw {
+    transition: transform .12s var(--ease), box-shadow .2s var(--ease), background .15s var(--ease); }
+  .tab:active, .paso:not(:disabled):active, .acc > *:active, .medios button:not(:disabled):active,
+  .rapidos button:active, .cat-chips button:active, .ghostb:not(:disabled):active,
+  .prtipo:active, .mini-btn:active, .cjx-cerrar:not(:disabled):active, .avisob:active { transform: scale(.97); }
+
+  /* En pantallas con puntero, las tarjetas se elevan suavemente al pasar por encima. */
+  @media (hover: hover) {
+    .tile:hover, .ped:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgb(31 26 23 / .14); }
+    .tab:not([aria-selected="true"]):hover { background: #ffffff1a; }
+  }
+
+  /* Skeleton para cargas: reemplaza la pantalla en blanco del re-render en gama baja. */
+  .sk { background: linear-gradient(100deg, var(--surface) 30%, var(--surface-2) 50%, var(--surface) 70%);
+    background-size: 200% 100%; animation: brillo 1.2s ease-in-out infinite; border-radius: var(--r-sm); }
+  @keyframes brillo { to { background-position: -200% 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    div[id^="v-"]:not([hidden]) { animation: none; }
+    .tab, .paso, .acc > *, .medios button, .rapidos button, .cat-chips button,
+    .ghostb, .tile, .ped, .prtipo, .mini-btn, .cjx-cerrar, .avisob, .sw { transition: none; }
+    .tab:active, .paso:active, .acc > *:active, .medios button:active, .rapidos button:active,
+    .cat-chips button:active, .ghostb:active, .prtipo:active, .mini-btn:active,
+    .cjx-cerrar:active, .avisob:active { transform: none; }
+    .tile:hover, .ped:hover { transform: none; box-shadow: var(--shadow); }
+    .sk { animation: none; }
+  }
 </style>
 </head>
 <body>
