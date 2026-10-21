@@ -594,6 +594,32 @@
     .tile:hover, .ped:hover { transform: none; box-shadow: var(--shadow); }
     .sk { animation: none; }
   }
+
+  /* ---------- Navegación al pie en móvil (Zona del Pulgar + Ley de Fitts) ----------
+     En una mano, la parte de abajo es la cómoda: las pestañas bajan al pie como
+     barra fija con ícono + etiqueta. El contenido y las barras inferiores (ticket
+     de venta, guardar, ruta) se corren para no quedar tapados. */
+  @media (max-width: 760px) {
+    body { --navh: 60px; }
+    .tabs-nav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      order: initial; margin: 0; gap: 2px;
+      padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      background: #1f1a17; border-top: 1px solid #ffffff1f;
+      box-shadow: 0 -6px 20px rgb(0 0 0 / .3); justify-content: flex-start; }
+    .tabs-nav .tab {
+      flex: 0 0 auto; flex-direction: column; gap: 3px; min-width: 60px; min-height: 52px;
+      padding: 5px 8px; border-radius: 12px; font-size: .66rem; line-height: 1.1;
+      position: relative; color: #f6efe6b3; text-align: center; }
+    .tabs-nav .tab .ico { display: block; width: 22px; height: 22px; }
+    .tabs-nav .tab[aria-selected="true"] { background: #ffffff14; color: #fff; }
+    .tabs-nav .tab[aria-selected="true"] .ico { color: var(--brand); }
+    .tabs-nav .tab .badge { position: absolute; top: 2px; right: 8px; margin: 0; }
+    main { padding-bottom: calc(var(--navh) + env(safe-area-inset-bottom) + 10px); }
+    .ticket { bottom: calc(var(--navh) + env(safe-area-inset-bottom)) !important; max-height: 40dvh; }
+    .guardar { bottom: calc(var(--navh) + env(safe-area-inset-bottom)); }
+    .lbar { bottom: calc(14px + var(--navh) + env(safe-area-inset-bottom)); }
+  }
 </style>
 </head>
 <body>
