@@ -20,6 +20,11 @@
   .tab { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; color: #f6efe6cc; font-weight: 600; }
   .tab[aria-selected="true"] { background: #fff; color: #1f1a17; }
   .tab .badge { background: var(--brand); color: #fff; border-radius: 999px; min-width: 22px; padding: 1px 7px; font-size: .78rem; }
+  .tab-mas { display: none; } /* solo aparece en la barra al pie (móvil) */
+  .mas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mas-item { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font-weight: 600; text-align: left; }
+  .mas-item .ico { width: 20px; height: 20px; flex: none; }
+  .mas-item.activa { border-color: var(--brand); color: var(--brand); }
   .bar .sp { flex: 1; }
   .bar .kpi { font-size: .9rem; color: #f6efe6cc; margin-right: 6px; }
   .icobtn { width: 44px; height: 44px; border-radius: 999px; border: 0; background: #ffffff1a; color: #fff; display: grid; place-items: center; }
@@ -606,15 +611,18 @@
       order: initial; margin: 0; gap: 2px;
       padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
       background: #1f1a17; border-top: 1px solid #ffffff1f;
-      box-shadow: 0 -6px 20px rgb(0 0 0 / .3); justify-content: flex-start; }
+      box-shadow: 0 -6px 20px rgb(0 0 0 / .3); justify-content: space-around; }
+    /* Solo 4 primarias + "Más" al pie; el resto vive en la hoja de Más. */
+    .tabs-nav .tab:not([data-primary]):not(.tab-mas) { display: none; }
+    .tabs-nav .tab-mas { display: flex; }
     .tabs-nav .tab {
-      flex: 0 0 auto; flex-direction: column; gap: 3px; min-width: 60px; min-height: 52px;
-      padding: 5px 8px; border-radius: 12px; font-size: .66rem; line-height: 1.1;
+      flex: 1 1 0; min-width: 0; flex-direction: column; gap: 3px; min-height: 52px;
+      padding: 5px 4px; border-radius: 12px; font-size: .66rem; line-height: 1.1;
       position: relative; color: #f6efe6b3; text-align: center; }
     .tabs-nav .tab .ico { display: block; width: 22px; height: 22px; }
-    .tabs-nav .tab[aria-selected="true"] { background: #ffffff14; color: #fff; }
-    .tabs-nav .tab[aria-selected="true"] .ico { color: var(--brand); }
-    .tabs-nav .tab .badge { position: absolute; top: 2px; right: 8px; margin: 0; }
+    .tabs-nav .tab[aria-selected="true"], #tabMas.activa { background: #ffffff14; color: #fff; }
+    .tabs-nav .tab[aria-selected="true"] .ico, #tabMas.activa .ico { color: var(--brand); }
+    .tabs-nav .tab .badge { position: absolute; top: 2px; right: 18%; margin: 0; }
     main { padding-bottom: calc(var(--navh) + env(safe-area-inset-bottom) + 10px); }
     .ticket { bottom: calc(var(--navh) + env(safe-area-inset-bottom)) !important; max-height: 40dvh; }
     .guardar { bottom: calc(var(--navh) + env(safe-area-inset-bottom)); }
@@ -660,10 +668,10 @@
   <header class="bar">
     <span class="marca" id="nomLocal">Pedidos</span>
     <nav class="tabs-nav" role="tablist" aria-label="Secciones">
-      <button class="tab" role="tab" data-v="pedidos" aria-selected="true"><svg class="ico"><use href="#i-list"/></svg>Pedidos<span class="badge" id="bNuevos" hidden></span></button>
-      <button class="tab" role="tab" data-v="venta" aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
-      <button class="tab" role="tab" data-v="cierre" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
-      <button class="tab" role="tab" data-v="gastos" aria-selected="false"><svg class="ico"><use href="#i-receipt"/></svg>Gastos</button>
+      <button class="tab" role="tab" data-v="pedidos" data-primary aria-selected="true"><svg class="ico"><use href="#i-list"/></svg>Pedidos<span class="badge" id="bNuevos" hidden></span></button>
+      <button class="tab" role="tab" data-v="venta" data-primary aria-selected="false"><svg class="ico"><use href="#i-cart"/></svg>Venta rápida</button>
+      <button class="tab" role="tab" data-v="cierre" data-primary aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Caja del día</button>
+      <button class="tab" role="tab" data-v="gastos" data-primary aria-selected="false"><svg class="ico"><use href="#i-receipt"/></svg>Gastos</button>
       <button class="tab" role="tab" data-v="resumen" aria-selected="false"><svg class="ico"><use href="#i-trend"/></svg>Resumen</button>
       <button class="tab" role="tab" data-v="resultados" aria-selected="false"><svg class="ico"><use href="#i-chart"/></svg>Resultados</button>
       <button class="tab" role="tab" data-v="carta" aria-selected="false"><svg class="ico"><use href="#i-book"/></svg>Carta y precios</button>
@@ -673,6 +681,7 @@
       <button class="tab" role="tab" data-v="despacho" aria-selected="false"><svg class="ico"><use href="#i-bike"/></svg>Despacho</button>
       <button class="tab" role="tab" data-v="equipo" aria-selected="false"><svg class="ico"><use href="#i-users"/></svg>Equipo</button>
       <button class="tab" role="tab" data-v="local" aria-selected="false"><svg class="ico"><use href="#i-store"/></svg>Datos del local</button>
+      <button class="tab tab-mas" id="tabMas" type="button" aria-haspopup="dialog"><svg class="ico"><use href="#i-dots"/></svg>Más</button>
     </nav>
     <span class="sp"></span>
     <span class="kpi num" id="kpi"></span>
@@ -765,6 +774,10 @@
   <div class="sh-body"><div id="agIng"><div class="group-h"><h3 style="margin:0" id="agAyuda"></h3><span class="req" id="agReq"></span></div><div class="opts" id="agOpts"></div></div>
     <div id="agSl"><div class="group-h" style="margin-top:16px"><h3 style="margin:0">Salsas</h3><span class="req done">Opcional</span></div><div class="opts" id="agSalsas"></div></div></div>
   <div class="sh-foot"><button class="primary" id="agOk" disabled>Agregar</button></div>
+</dialog>
+<dialog class="sheet" id="dlgMas" aria-labelledby="masTitulo">
+  <div class="sh-head"><h2 id="masTitulo">Más secciones</h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="sh-body"><div class="mas-grid" id="masBody"></div></div>
 </dialog>
 <dialog class="sheet ancho" id="dlgProducto" aria-labelledby="fpTitulo">
   <div class="sh-head"><h2 id="fpTitulo"></h2><button class="close" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button></div>
@@ -2452,6 +2465,19 @@ document.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
   else if (vista === 'venta') { await cargarCarta(); pintarVenta(); }
   else { if (vista === 'cierre') { cajaDia = null; cajaD = null; } refrescar(); }
 });
+
+// Menú "Más" (barra al pie en móvil): 4 primarias fijas y el resto en una hoja.
+const PRIMARIAS = new Set(['pedidos', 'venta', 'cierre', 'gastos']);
+const marcarMas = () => $('tabMas').classList.toggle('activa', !PRIMARIAS.has(vista));
+document.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', marcarMas));
+$('tabMas').onclick = () => {
+  const items = [...document.querySelectorAll('.tabs-nav .tab[data-v]')].filter((b) => !b.hasAttribute('data-primary') && !b.hidden);
+  $('masBody').innerHTML = items.map((b) => `<button type="button" class="mas-item${b.dataset.v === vista ? ' activa' : ''}" data-goto="${b.dataset.v}">${b.querySelector('.ico').outerHTML}<span>${esc(b.textContent.trim())}</span></button>`).join('');
+  $('dlgMas').showModal();
+};
+$('masBody').onclick = (e) => { const b = e.target.closest('[data-goto]'); if (!b) return; $('dlgMas').close(); document.querySelector(`[data-v="${b.dataset.goto}"]`).click(); };
+marcarMas();
+
 $('salir').onclick = async () => { await api('panel/logout', { method: 'POST' }); location.reload(); };
 
 // La tablet del local no debe apagar la pantalla mientras el panel está abierto: si se apaga,
