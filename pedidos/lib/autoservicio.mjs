@@ -9,19 +9,25 @@ const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 // del panel (costos, despacho, caja, equipo) sean reales y no supuestos.
 // `omitible`: el dueño puede decir "no aplica". `ir`: pestaña (y sección) donde se completa.
 export const NIVELES = { recibir: 'Para recibir pedidos', controlar: 'Para controlar tu local' };
+export const ETAPAS = {
+  preparar: { orden: 1, titulo: 'Prepara tu carta', detalle: 'Deja lista la base que verá tu cliente.' },
+  configurar: { orden: 2, titulo: 'Configura la venta', detalle: 'Define cómo, cuándo y con qué condiciones venderás.' },
+  probar: { orden: 3, titulo: 'Haz una prueba real', detalle: 'Comprueba el flujo completo con un pedido operativo.' },
+  operar: { orden: 4, titulo: 'Abre y mejora', detalle: 'Afina el control del local mientras ya estás vendiendo.' },
+};
 export const PASOS = [
-  { id: 'contacto', nivel: 'recibir', titulo: 'Datos de contacto', detalle: 'WhatsApp o teléfono y la dirección del local.', ir: 'local#s-contacto' },
-  { id: 'horario', nivel: 'recibir', titulo: 'Horario de atención', detalle: 'Los días y horas en que se pueden pedir.', ir: 'local#s-horario' },
-  { id: 'transferencias', nivel: 'recibir', titulo: 'Datos para transferencias', detalle: 'El cliente los ve al pagar.', omitible: true, ir: 'local#s-pagos' },
-  { id: 'producto', nivel: 'recibir', titulo: 'Carta con precios', detalle: 'Al menos un producto a la venta y ninguno disponible "sin precio".', ir: 'carta' },
-  { id: 'despacho', nivel: 'recibir', titulo: 'Despacho', detalle: 'Revisa costos, zonas y horario, o desactívalo si solo hay retiro.', ir: 'despacho' },
-  { id: 'legal', nivel: 'recibir', titulo: 'Datos legales', detalle: 'Razón social, RUT, giro, domicilio y representante: arman tus Términos y tu Privacidad.', ir: 'local#s-legal' },
-  { id: 'contrato', nivel: 'recibir', titulo: 'Contrato de servicio', detalle: 'El dueño lo acepta en línea, con los datos legales del local.', ir: 'local#s-contrato' },
-  { id: 'vehiculo', nivel: 'controlar', titulo: 'Vehículo y repartidor', detalle: 'Con qué y quién reparte: calcula si cada despacho sale a cuenta.', ir: 'despacho' },
-  { id: 'costos', nivel: 'controlar', titulo: 'Costos de insumos', detalle: 'El costo de tus productos; sin él, el margen se estima.', ir: 'carta' },
-  { id: 'equipo', nivel: 'controlar', titulo: 'Equipo con PIN', detalle: 'Cada persona entra con su PIN y queda registrado quién cobra.', ir: 'local#s-usuarios' },
-  { id: 'caja', nivel: 'controlar', titulo: 'Primera caja', detalle: 'Abre la caja con el fondo inicial y ciérrala al final del día.', ir: 'cierre' },
-  { id: 'logo', nivel: 'controlar', titulo: 'Logo', detalle: 'Aparece en la carta, el seguimiento y el cartel con QR.', omitible: true, ir: 'local#s-logo' },
+  { id: 'contacto', nivel: 'recibir', etapa: 'preparar', puntos: 10, titulo: 'Datos de contacto', detalle: 'WhatsApp o teléfono y la dirección del local.', ir: 'local#s-contacto' },
+  { id: 'horario', nivel: 'recibir', etapa: 'configurar', puntos: 10, titulo: 'Horario de atención', detalle: 'Los días y horas en que se pueden pedir.', ir: 'local#s-horario' },
+  { id: 'transferencias', nivel: 'recibir', etapa: 'configurar', puntos: 10, titulo: 'Datos para transferencias', detalle: 'El cliente los ve al pagar.', omitible: true, ir: 'local#s-pagos' },
+  { id: 'producto', nivel: 'recibir', etapa: 'preparar', puntos: 20, titulo: 'Carta con precios', detalle: 'Al menos un producto a la venta y ninguno disponible "sin precio".', ir: 'carta' },
+  { id: 'despacho', nivel: 'recibir', etapa: 'configurar', puntos: 10, titulo: 'Despacho', detalle: 'Revisa costos, zonas y horario, o desactívalo si solo hay retiro.', ir: 'despacho' },
+  { id: 'legal', nivel: 'recibir', etapa: 'configurar', puntos: 10, titulo: 'Datos legales', detalle: 'Razón social, RUT, giro, domicilio y representante: arman tus Términos y tu Privacidad.', ir: 'local#s-legal' },
+  { id: 'contrato', nivel: 'recibir', etapa: 'configurar', puntos: 10, titulo: 'Contrato de servicio', detalle: 'El dueño lo acepta en línea, con los datos legales del local.', ir: 'local#s-contrato' },
+  { id: 'vehiculo', nivel: 'controlar', etapa: 'operar', puntos: 5, titulo: 'Vehículo y repartidor', detalle: 'Con qué y quién reparte: calcula si cada despacho sale a cuenta.', ir: 'despacho' },
+  { id: 'costos', nivel: 'controlar', etapa: 'operar', puntos: 5, titulo: 'Costos de insumos', detalle: 'El costo de tus productos; sin él, el margen se estima.', ir: 'carta' },
+  { id: 'equipo', nivel: 'controlar', etapa: 'operar', puntos: 5, titulo: 'Equipo con PIN', detalle: 'Cada persona entra con su PIN y queda registrado quién cobra.', ir: 'local#s-usuarios' },
+  { id: 'caja', nivel: 'controlar', etapa: 'operar', puntos: 5, titulo: 'Primera caja', detalle: 'Abre la caja con el fondo inicial y ciérrala al final del día.', ir: 'cierre' },
+  { id: 'logo', nivel: 'controlar', etapa: 'operar', puntos: 5, titulo: 'Logo', detalle: 'Aparece en la carta, el seguimiento y el cartel con QR.', omitible: true, ir: 'local#s-logo' },
 ];
 export const MAX_FILAS = 500;
 export const MAX_TEXTO = 200e3;
@@ -147,7 +153,24 @@ export function crearAutoservicio(db, { legalCompleto = () => false, contratoVig
       return [k, { titulo, listos: ps.filter(listo).length, total: ps.length, completo: ps.every(listo), faltan: ps.filter((p) => !listo(p)).map((p) => p.id) }];
     }));
     const listos = pasos.filter(listo).length;
-    return { pasos, niveles, listos, total: pasos.length, completo: listos === pasos.length, cerrado: !!e.cerrado,
+    // El hito exige una operación terminada: crear o preparar un pedido todavía no prueba cobro/entrega.
+    const primeraOperacion = !!db.prepare("SELECT 1 FROM pedidos WHERE local_id=? AND estado='entregado' LIMIT 1").get(lid);
+    const puntos = pasos.filter((p) => p.hecho && !p.no_aplica).reduce((n, p) => n + p.puntos, 0) + (primeraOperacion ? 20 : 0);
+    const bloqueantes = pasos.filter((p) => p.nivel === 'recibir' && !listo(p));
+    const mejoras = pasos.filter((p) => p.nivel === 'controlar' && !listo(p));
+    const operacion = { id: 'primera_operacion', etapa: 'probar', titulo: 'Primer pedido operativo', detalle: 'Registra un pedido real desde la carta o Venta rápida y llévalo hasta la operación.', ir: 'venta', puntos: 20, hecho: primeraOperacion };
+    const prioridad = (p) => (ETAPAS[p.etapa]?.orden || 99) * 100 + PASOS.findIndex((x) => x.id === p.id);
+    const siguiente = bloqueantes.sort((a, b) => prioridad(a) - prioridad(b))[0] || (!primeraOperacion && niveles.recibir.completo ? operacion : mejoras[0]) || null;
+    const etapas = Object.fromEntries(Object.entries(ETAPAS).map(([id, meta]) => {
+      const ps = id === 'probar' ? [operacion] : pasos.filter((p) => p.etapa === id);
+      const puntuables = ps.filter((p) => !p.no_aplica && !p.omitido);
+      const hechos = puntuables.filter((p) => p.hecho).length;
+      return [id, { id, ...meta, hechos, total: puntuables.length, completo: ps.every((p) => p.hecho || p.omitido), pasos: ps.map((p) => p.id) }];
+    }));
+    const puntosTotal = pasos.filter((p) => !p.no_aplica && !p.omitido).reduce((n, p) => n + p.puntos, 0) + operacion.puntos;
+    return { pasos, niveles, etapas, puntos, puntos_total: puntosTotal, hito_operativo: operacion, siguiente,
+      bloqueantes: bloqueantes.map((p) => p.id), mejoras: mejoras.map((p) => p.id), listos, total: pasos.length,
+      completo: listos === pasos.length, mision_completa: listos === pasos.length && primeraOperacion, cerrado: !!e.cerrado,
       listo_publicar: niveles.recibir.completo, publicado: !!l.publicado, pausa: !!l.pausa };
   }
   // Lo que falta para abrir la carta (nivel "Para recibir pedidos"), con dónde se completa.

@@ -167,8 +167,11 @@ test('flujo de un pedido: aceptar, listo, cobrar en efectivo con vuelto', async 
   const p = await prod('Barros Luco');
   const { body: { id } } = await pedir([{ producto_id: p.id }]);
   await login();
+  assert.equal((await req('GET', '/api/panel/inicio')).body.hito_operativo.hecho, false); // "nuevo" aún no acredita operación
   assert.equal((await req('PATCH', `/api/panel/pedidos/${id}`, { estado: 'preparacion' })).body.estado, 'preparacion');
+  assert.equal((await req('GET', '/api/panel/inicio')).body.hito_operativo.hecho, false);
   assert.equal((await req('PATCH', `/api/panel/pedidos/${id}`, { estado: 'listo' })).body.estado, 'listo');
+  assert.equal((await req('GET', '/api/panel/inicio')).body.hito_operativo.hecho, false);
   const falta = await req('PATCH', `/api/panel/pedidos/${id}`, { medio_pago: 'efectivo', recibido: 1000, estado: 'entregado' });
   assert.equal(falta.status, 400);
   const ok = await req('PATCH', `/api/panel/pedidos/${id}`, { medio_pago: 'efectivo', recibido: 10000, estado: 'entregado', folio_boleta: 'F-123' });
@@ -177,6 +180,7 @@ test('flujo de un pedido: aceptar, listo, cobrar en efectivo con vuelto', async 
   assert.equal(ok.body.recibido, 10000);
   assert.equal(ok.body.folio_boleta, '123');
   assert.equal(ok.body.estado, 'entregado');
+  assert.equal((await req('GET', '/api/panel/inicio')).body.hito_operativo.hecho, true);
 });
 
 test('mensajes del pedido: el cliente escribe, el local responde y se cierra al entregar', async () => {
@@ -1419,6 +1423,13 @@ test('primeros pasos: dos niveles, bloqueo suave de la pausa y Gassuso sin asist
   assert.deepEqual(e0.pasos.filter((p) => p.nivel === 'recibir').map((p) => p.id), ['contacto', 'horario', 'transferencias', 'producto', 'despacho', 'legal', 'contrato']);
   assert.deepEqual(e0.pasos.filter((p) => p.nivel === 'controlar').map((p) => p.id), ['vehiculo', 'costos', 'equipo', 'caja', 'logo']);
   assert.equal(e0.niveles.recibir.listos, 0);
+  assert.deepEqual(Object.keys(e0.etapas), ['preparar', 'configurar', 'probar', 'operar']);
+  assert.equal(e0.siguiente.id, 'contacto');
+  assert.equal(e0.puntos, 0); // "no aplica" y pasos omitidos no regalan puntos
+  assert.equal(e0.puntos_total, 120); // el vehículo que no aplica tampoco deja una barra inalcanzable
+  assert.equal(e0.hito_operativo.hecho, false);
+  assert.ok(e0.bloqueantes.includes('producto'));
+  assert.ok(e0.mejoras.includes('costos'));
   assert.equal(e0.pasos.find((p) => p.id === 'vehiculo').no_aplica, true); // sin despacho no hay vehículo que cargar
   assert.equal(e0.listo_publicar, false);
   // La consola muestra el avance de cada local y si aceptó el contrato.
@@ -1447,6 +1458,7 @@ test('primeros pasos: dos niveles, bloqueo suave de la pausa y Gassuso sin asist
   assert.equal((await dueno('PATCH', '/api/panel/inicio', { omitir: 'legal' })).status, 400);
   let e = (await dueno('PATCH', '/api/panel/inicio', { omitir: 'logo' })).body;
   assert.equal(e.pasos.find((p) => p.id === 'logo').omitido, true);
+  assert.equal(e.puntos_total, 115); // omitir no da puntos ni deja puntos imposibles en el máximo
   assert.deepEqual(e.niveles.recibir.faltan, ['producto', 'despacho', 'legal', 'contrato']);
   // Carta: un producto "sin precio" disponible no cuenta.
   const uno = (precio) => dueno('POST', '/api/panel/importar', { modo: 'agregar', confirmar: true, filas: [{ categoria: 'Sándwiches', nombre: 'Lomito', precio }] });

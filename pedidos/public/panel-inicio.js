@@ -69,10 +69,10 @@ export function crearInicioUI(ctx) {
     const buscar = () => { const el = $(sec); if (el?.tagName === 'DETAILS') el.open = true; if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else if (n++ < 20) setTimeout(buscar, 100); };
     buscar();
   }
-  const lista = (ps, sig) => `<ol class="ini-pasos">${ps.map((p) => `<li class="${listo(p) ? (p.hecho ? 'ok' : 'omit') : ''} ${p === sig ? 'sig' : ''}">
+  const lista = (ps, sig) => `<ol class="ini-pasos">${ps.map((p) => `<li class="${listo(p) ? (p.hecho ? 'ok' : 'omit') : ''} ${p.id === sig?.id ? 'sig' : ''}">
     <span class="ini-ico" aria-hidden="true">${p.hecho ? ico('check') : p.omitido ? '–' : ''}</span>
     <span class="ini-t"><b>${esc(p.titulo)}</b><small>${p.no_aplica ? 'No aplica: sin despacho' : p.hecho ? 'Listo' : p.omitido ? 'Omitido' : esc(p.detalle)}</small></span>
-    <button type="button" class="${p === sig ? 'primary chico' : 'ghostb'}" data-paso="${p.id}">${p.hecho ? 'Revisar' : p.omitido ? 'Retomar' : 'Completar'}</button></li>`).join('')}</ol>`;
+    <button type="button" class="${p.id === sig?.id ? 'primary chico' : 'ghostb'}" data-paso="${p.id}">${p.hecho ? 'Revisar' : p.omitido ? 'Retomar' : 'Completar'}</button></li>`).join('')}</ol>`;
   function pintar() {
     const el = $('inicio');
     if (!E) { el.hidden = true; return; }
@@ -86,31 +86,35 @@ export function crearInicioUI(ctx) {
       return;
     }
     el.hidden = false;
-    const min = guardado('inicio-min') === '1' && !E.completo, pct = Math.round((E.listos / E.total) * 100);
-    const barra = `<div class="ini-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${E.total}" aria-valuenow="${E.listos}" aria-label="Avance de los primeros pasos"><span style="width:${pct}%"></span></div>`;
-    if (E.completo) {
+    const min = guardado('inicio-min') === '1' && !E.mision_completa, pct = Math.round((E.puntos / E.puntos_total) * 100);
+    const barra = `<div class="ini-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${E.puntos_total}" aria-valuenow="${E.puntos}" aria-label="Avance de la misión"><span style="width:${pct}%"></span></div>`;
+    if (E.mision_completa) {
       const slug = carta()?.local?.slug || '';
-      el.innerHTML = `<section class="cardf ini listo"><header class="sh"><h3>${ico('check')}${enPausa() ? '¡Tu carta está lista!' : '¡Tu local está listo para recibir pedidos!'}</h3></header>${barra}
+      el.innerHTML = `<section class="cardf ini listo"><header class="sh"><h3>${ico('check')}¡Misión cumplida!</h3><span class="sp"></span><b class="ini-puntos">${E.puntos} puntos</b></header>${barra}
         ${enPausa() ? '<p class="ayuda"><b>Tu carta todavía está en pausa: los clientes la ven pero no pueden pedir.</b> Revísala, haz un pedido de ensayo y ábrela cuando quieras.</p><p><button type="button" class="primary" data-ini-abrir>Abrir mi carta a los clientes</button></p>' : ''}
-        <p class="ayuda">Antes del primer servicio: deja el panel abierto en la tablet con el sonido activo (campana arriba), haz un pedido de ensayo desde tu celular, imprime el cartel con el QR y compártelo en tus redes.</p>
+        <p class="ayuda">Tu configuración y tu primera operación están verificadas. Puedes volver a revisar cualquier dato desde su pestaña.</p>
         <div class="ini-acc"><a class="ghostb fuerte" href="${BASE}/${esc(slug)}" target="_blank">Ver mi carta</a><a class="ghostb" href="cartel" target="_blank">Cartel y tarjetas con QR</a>
         <span class="sp"></span><button type="button" class="primary chico" data-ini-cerrar>Terminar</button></div></section>`;
       return;
     }
     if (min) {
-      el.innerHTML = `<section class="cardf ini mini"><b>Primeros pasos</b><span class="num">${R.completo ? `${E.listos} de ${E.total}` : `Para recibir pedidos: ${R.listos} de ${R.total}`}</span>${barra}<button type="button" class="ghostb fuerte" data-ini-min="0">Continuar</button></section>`;
+      el.innerHTML = `<section class="cardf ini mini"><b>Misión de lanzamiento</b><span class="num">${E.puntos} pts</span>${barra}<button type="button" class="ghostb fuerte" data-ini-min="0">Continuar</button></section>`;
       return;
     }
-    const sig = E.pasos.find((p) => !listo(p));
+    const sig = E.siguiente;
     const abrir = R.completo && enPausa() ? '<p class="ayuda"><b>Ya puedes recibir pedidos.</b> Tu carta sigue en pausa hasta que la abras.</p><p><button type="button" class="primary" data-ini-abrir>Abrir mi carta a los clientes</button></p>' : '';
-    el.innerHTML = `<section class="cardf ini"><header class="sh"><h3>Primeros pasos para dejar tu local andando</h3><span class="sp"></span>
-        <span class="num ini-n">${E.listos} de ${E.total}</span><button type="button" class="link" data-ini-min="1">Ocultar</button></header>${barra}
-      <h4 class="ini-niv">1. ${esc(R.titulo)} <span class="num">${R.listos} de ${R.total}</span></h4>
-      ${!R.completo && enPausa() ? '<p class="ayuda">Tu carta está en pausa hasta completar estos pasos: los clientes todavía no pueden pedir.</p>' : ''}
-      ${lista(E.pasos.filter((p) => p.nivel === 'recibir'), sig)}${abrir}
-      <h4 class="ini-niv">2. ${esc(C.titulo)} <span class="num">${C.listos} de ${C.total}</span></h4>
-      <p class="ayuda">No bloquean la carta, pero sin ellos los costos, márgenes y la caja usan valores supuestos.</p>
-      ${lista(E.pasos.filter((p) => p.nivel === 'controlar'), sig)}</section>`;
+    const etapa = (id) => {
+      const x = E.etapas[id];
+      const ps = id === 'probar' ? [E.hito_operativo] : E.pasos.filter((p) => p.etapa === id);
+      return `<section class="ini-etapa ${x.completo ? 'completa' : ''}" aria-labelledby="ini-et-${id}"><header><span class="ini-num" aria-hidden="true">${x.orden}</span><span><h4 id="ini-et-${id}">${esc(x.titulo)}</h4><small>${esc(x.detalle)}</small></span><b>${x.hechos}/${x.total}</b></header>${lista(ps, sig)}</section>`;
+    };
+    el.innerHTML = `<section class="cardf ini ini-mision"><header class="sh"><div><p class="ini-kicker">MISIÓN DE LANZAMIENTO</p><h3>Deja tu primer pedido funcionando</h3></div><span class="sp"></span>
+        <b class="ini-puntos">${E.puntos} puntos</b><button type="button" class="link" data-ini-min="1" aria-label="Ocultar misión">Ocultar</button></header>${barra}
+      ${sig ? `<aside class="ini-siguiente" aria-label="Siguiente paso"><div><small>SIGUIENTE PASO · +${sig.puntos || 0} PTS</small><b>${esc(sig.titulo)}</b><span>${esc(sig.detalle)}</span></div><button type="button" class="primary" ${sig.id === 'primera_operacion' ? `data-ir-a="${esc(sig.ir)}"` : `data-paso="${esc(sig.id)}"`}>Empezar</button></aside>` : ''}
+      <div class="ini-etapas">${['preparar', 'configurar', 'probar', 'operar'].map(etapa).join('')}</div>
+      <section class="ini-publicar ${R.completo ? 'ok' : ''}"><b>${R.completo ? '✓ Sin bloqueantes para publicar' : `${E.bloqueantes.length} bloqueante${E.bloqueantes.length === 1 ? '' : 's'} para publicar`}</b>
+        <span>${R.completo ? 'Las mejoras restantes no impiden abrir tu carta.' : 'Completa los pasos obligatorios marcados antes de abrir la carta.'}</span></section>
+      ${abrir}<p class="ayuda ini-opcional"><b>Mejoras opcionales:</b> ${E.mejoras.length ? `${E.mejoras.length} pendientes. Mejoran costos y control, pero no bloquean la publicación.` : 'listas.'}</p></section>`;
   }
   // La carta no se abrió: el servidor dice qué falta (409). Se muestra con enlaces a cada pestaña.
   function mostrarFaltan(faltan, msg) {
@@ -129,6 +133,7 @@ export function crearInicioUI(ctx) {
       if (t.dataset.iniMin) { guardado('inicio-min', t.dataset.iniMin); pintar(); }
       else if (t.matches('[data-ini-cerrar]')) { E = await api('panel/inicio', { method: 'PATCH', body: { cerrado: true } }); pintar(); toast('Listo. Las ayudas siguen en cada pestaña.'); }
       else if (t.matches('[data-inicio-abrir]')) { guardado('inicio-min', '0'); E = await api('panel/inicio', { method: 'PATCH', body: { cerrado: false } }); pintar(); scrollTo({ top: 0, behavior: 'smooth' }); }
+      else if (t.dataset.paso === 'primera_operacion') irA(E.hito_operativo.ir);
       else if (CON_DIALOGO.has(t.dataset.paso)) abrirPaso(t.dataset.paso);
       else irA(E.pasos.find((p) => p.id === t.dataset.paso)?.ir);
     } catch (err) { alert(err.message); }

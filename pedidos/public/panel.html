@@ -534,6 +534,24 @@
   .ini-pasos .primary.chico { width: auto; flex: none; min-height: 44px; padding: 0 16px; border-radius: 999px; }
   .ini.mini { display: flex; align-items: center; gap: 12px; padding: 10px 16px; } .ini.mini .ini-barra { flex: 1; margin: 0; }
   .ini.listo .ini-acc { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; } .ini.listo .ini-acc a { text-decoration: none; }
+  .ini-kicker { margin: 0 0 3px; color: var(--ink-2); font-size: .72rem; font-weight: 800; letter-spacing: .09em; }
+  .ini-puntos { flex: none; padding: 6px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink); font-size: .86rem; }
+  .ini-siguiente { display: flex; align-items: center; gap: 16px; margin: 16px 0; padding: 16px; border: 2px solid var(--ink); border-radius: var(--r); background: var(--surface-2); }
+  .ini-siguiente div { flex: 1; min-width: 0; display: grid; gap: 3px; } .ini-siguiente small { color: var(--ink-2); font-weight: 800; letter-spacing: .06em; }
+  .ini-siguiente b { font-size: 1.08rem; } .ini-siguiente span { color: var(--ink-2); font-size: .88rem; }
+  .ini-siguiente .primary { width: auto; min-height: 46px; padding-inline: 22px; }
+  .ini-etapas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .ini-etapa { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .ini-etapa > header { display: flex; align-items: center; gap: 9px; } .ini-etapa > header > span:nth-child(2) { flex: 1; min-width: 0; }
+  .ini-etapa h4 { margin: 0; font-size: .96rem; } .ini-etapa header small { display: block; color: var(--ink-2); font-size: .78rem; }
+  .ini-num { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); font-weight: 800; }
+  .ini-etapa.completa .ini-num { background: var(--ok); color: #fff; }
+  .ini-etapa .ini-pasos li { padding: 7px; } .ini-etapa .ini-pasos .ghostb { min-height: 44px; }
+  .ini-mision button.link { min-height: 44px; padding-block: 8px; }
+  .ini-publicar { display: grid; gap: 2px; margin-top: 14px; padding: 11px 13px; border-left: 4px solid var(--danger); background: var(--surface-2); }
+  .ini-publicar.ok { border-left-color: var(--ok); } .ini-publicar span, .ini-opcional { color: var(--ink-2); font-size: .84rem; }
+  @media (max-width: 760px) { .ini-etapas { grid-template-columns: 1fr; } .ini-siguiente { align-items: stretch; flex-direction: column; } .ini-siguiente .primary { width: 100%; } }
+  @media (max-width: 520px) { .ini-mision { padding: 14px; } .ini-pasos li { align-items: flex-start; flex-wrap: wrap; } .ini-pasos li .ini-t { min-width: calc(100% - 42px); } .ini-pasos li button { margin-left: 40px; } }
   .ini.listo .primary.chico { width: auto; flex: none; min-height: 44px; padding: 0 18px; border-radius: 999px; }
   .ayudatab { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 14px; font-size: .9rem; }
   .ayudatab summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink-2); }
