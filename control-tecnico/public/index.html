@@ -7,11 +7,22 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header><div><small>OCTAVOBIT / ADMINISTRACIÓN INTERNA</small><h1>Control técnico</h1><p>Del diagnóstico al cobro, cada encargo en un solo lugar.</p></div><span class="local">Versión local</span></header>
-  <main>
-    <nav aria-label="Secciones"><button data-tab="trabajos" class="active">Trabajos</button><button data-tab="nueva">Nueva cotización</button><button data-tab="caja">Caja y compras</button><button data-tab="mes">Resumen mensual</button></nav>
+  <a class="skip-link" href="#contenido">Ir al contenido</a>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="OctavoBit, inicio"><img src="/isotipo.png" alt="" width="52" height="52"><span>Octavo<span class="cyan">Bit</span><small>CONTROL TÉCNICO</small></span></a>
+    <p class="nav-label">ESPACIO DE TRABAJO</p>
+    <nav aria-label="Secciones"><button data-tab="trabajos" class="active" aria-current="page"><span aria-hidden="true">01</span> Trabajos</button><button data-tab="nueva"><span aria-hidden="true">02</span> Nueva cotización</button><button data-tab="caja"><span aria-hidden="true">03</span> Caja y compras</button><button data-tab="mes"><span aria-hidden="true">04</span> Resumen mensual</button></nav>
+    <div class="sidebar-note"><span class="eyebrow">DEL TALLER AL REGISTRO</span><p>Cada equipo, su historia.<br>Cada movimiento, su respaldo.</p><span class="sidebar-footer">8VOBIT / CONCEPCIÓN</span></div>
+  </aside>
+  <div class="workspace">
+  <header><div><small>OCTAVOBIT / ADMINISTRACIÓN INTERNA</small><h1>Control técnico</h1><p>Del diagnóstico al cobro, cada encargo en un solo lugar.</p></div><span class="local"><span aria-hidden="true">●</span> Versión local</span></header>
+  <main id="contenido" tabindex="-1">
     <p id="mensaje" role="status"></p>
-    <section id="trabajos" class="tab active"><div class="section-head"><div><h2>Trabajos</h2><p>Una orden puede partir desde una cita o crearse manualmente.</p></div><strong id="cuenta-trabajos"></strong></div><div id="lista-trabajos" class="cards"></div></section>
+    <section id="trabajos" class="tab active" aria-labelledby="titulo-trabajos">
+      <div class="overview"><div><span class="eyebrow">VISTA DEL TALLER</span><h2>Todo listo para avanzar.</h2><p>Revisa tus órdenes y encuentra el próximo paso de cada equipo.</p><button class="primary" data-open-tab="nueva">Crear cotización <span aria-hidden="true">↗</span></button></div><div class="overview-mark" aria-hidden="true"><img src="/isotipo.png" alt="" width="150" height="150"></div></div>
+      <div id="taller-metricas" class="taller-metrics" aria-label="Estado de las órdenes"></div>
+      <div class="quick-actions" aria-label="Accesos rápidos"><button data-open-tab="nueva"><span>Nueva cotización</span><small>Cliente, equipo y precio</small><b aria-hidden="true">↗</b></button><button data-open-tab="caja"><span>Registrar movimiento</span><small>Cobros y compras del taller</small><b aria-hidden="true">↗</b></button><button data-open-tab="mes"><span>Revisar el mes</span><small>Resumen y exportaciones</small><b aria-hidden="true">↗</b></button></div>
+      <div class="section-head"><div><span class="eyebrow">SEGUIMIENTO</span><h2 id="titulo-trabajos">Órdenes de trabajo</h2><p>Una orden puede partir desde una cita o crearse manualmente.</p></div><strong id="cuenta-trabajos"></strong></div><div id="lista-trabajos" class="cards"></div></section>
     <section id="nueva" class="tab"><div class="section-head"><div><h2>Nueva cotización</h2><p>El precio de la pieza se calcula con los costos de hoy. Los servicios usan la lista aprobada.</p></div></div>
       <form id="form-orden" class="panel">
         <h3>Cliente y equipo</h3><div class="grid"><label>Cliente <input name="cliente" required maxlength="120"></label><label>ID de cita en agenda (opcional) <input name="agendaId" type="number" min="1"></label><label>Correo <input name="correo" type="email"></label><label>Teléfono <input name="telefono"></label><label>Equipo y modelo exacto <input name="equipo" required></label><label>Falla o solicitud <input name="falla"></label></div>
@@ -28,6 +39,8 @@
     </section>
     <section id="mes" class="tab"><div class="section-head"><div><h2>Resumen mensual</h2><p>Una hoja de trabajo para conciliar con SII y contador/a. La diferencia de IVA es estimada.</p></div><label>Mes <input id="mes-input" type="month"></label></div><div id="resumen" class="metrics"></div><div id="pendientes" class="panel"></div><div class="downloads"><a id="descargar-resumen" href="#">Descargar resumen CSV</a><a id="descargar-movimientos" href="#">Descargar movimientos CSV</a></div></section>
   </main>
+  <footer class="workspace-footer">OCTAVOBIT <span>Control técnico · Registro interno del taller</span></footer>
+  </div>
   <script src="/app.js" defer></script>
 </body>
 </html>

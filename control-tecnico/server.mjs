@@ -97,9 +97,22 @@ function exportar(res, nombre, rows) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
+    const fuentes = new Set([
+      'Montserrat-Regular.woff2', 'Montserrat-Medium.woff2',
+      'Montserrat-SemiBold.woff2', 'Montserrat-Bold.woff2',
+      'JetBrainsMono-Regular.woff2', 'JetBrainsMono-Medium.woff2', 'JetBrainsMono-SemiBold.woff2',
+    ]);
+    if (req.method === 'GET' && url.pathname.startsWith('/fonts/') && fuentes.has(url.pathname.slice('/fonts/'.length))) {
+      res.writeHead(200, { 'content-type': 'font/woff2', 'cache-control': 'public, max-age=604800' });
+      return res.end(readFileSync(join(root, 'public', 'fonts', url.pathname.slice('/fonts/'.length))));
+    }
     if (req.method === 'GET' && url.pathname === '/favicon.ico') { res.writeHead(204); return res.end(); }
+    if (req.method === 'GET' && url.pathname === '/isotipo.png') {
+      res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' });
+      return res.end(readFileSync(join(root, 'public', 'isotipo.png')));
+    }
     if (req.method === 'GET' && url.pathname === '/') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'", 'cache-control': 'no-store' });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'", 'cache-control': 'no-store' });
       return res.end(readFileSync(join(root, 'public', 'index.html')));
     }
     if (req.method === 'GET' && url.pathname === '/app.js') {

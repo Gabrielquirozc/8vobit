@@ -15,7 +15,11 @@ const enviar = value => ({ method: 'POST', headers: { 'content-type': 'applicati
 const valores = form => Object.fromEntries(new FormData(form).entries());
 
 function abrirTab(tab) {
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+    if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === tab));
   if (tab === 'mes') cargarMes();
 }
@@ -40,6 +44,13 @@ async function previsualizar() {
 }
 
 function mostrarTrabajos() {
+  const metricas = [
+    ['En curso', datos.ordenes.filter(o => !['listo', 'entregado', 'cancelado'].includes(o.estado)).length, 'Órdenes activas, desde cotización'],
+    ['Esperando pieza', datos.ordenes.filter(o => o.estado === 'pieza_pedida').length, 'Pedidos pendientes de recibir'],
+    ['Listos para entregar', datos.ordenes.filter(o => o.estado === 'listo').length, 'Equipos con trabajo terminado'],
+    ['Citas vinculadas', datos.ordenes.filter(o => o.agenda_id).length, 'Órdenes con ID de agenda'],
+  ];
+  $('#taller-metricas').innerHTML = metricas.map(([nombre, cantidad, detalle], i) => `<article class="taller-metric"><span class="metric-index" aria-hidden="true">0${i + 1} /</span><span>${nombre}</span><strong>${cantidad}</strong><small>${detalle}</small></article>`).join('');
   $('#cuenta-trabajos').textContent = `${datos.ordenes.length} orden${datos.ordenes.length === 1 ? '' : 'es'}`;
   $('#orden-movimiento').innerHTML = '<option value="">Gasto general</option>' + datos.ordenes.map(o => `<option value="${o.id}">OT-${o.id} · ${escapeHtml(o.cliente)} · ${escapeHtml(o.equipo)}</option>`).join('');
   $('#lista-trabajos').innerHTML = datos.ordenes.length ? datos.ordenes.map(o => `<article class="card">
@@ -86,6 +97,12 @@ async function cargarMes() {
 }
 
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => abrirTab(b.dataset.tab)));
+document.querySelectorAll('[data-open-tab]').forEach(b => b.addEventListener('click', () => {
+  abrirTab(b.dataset.openTab);
+  const titulo = $(`#${b.dataset.openTab} h2`);
+  titulo.setAttribute('tabindex', '-1');
+  titulo.focus();
+}));
 $('#form-orden').addEventListener('input', previsualizar);
 $('#form-orden').addEventListener('change', previsualizar);
 $('#form-orden').addEventListener('submit', async event => {
