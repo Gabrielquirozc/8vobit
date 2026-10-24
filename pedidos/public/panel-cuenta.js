@@ -17,8 +17,12 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
   const verCostos = () => puede('costos') && tiene('costos');
 
   // ---------- entrada ----------
-  let modoClave = false, pin = '';
+  let modoClave = false, pin = '', entradaTeclado = null;
   async function pantallaEntrada(alEntrar) {
+    // El teclado numérico del PIN no puede quedar escuchando cuando se abre
+    // el acceso por clave: de otro modo intercepta Backspace y la escritura.
+    entradaTeclado?.abort();
+    entradaTeclado = null;
     const acc = await api('panel/acceso');
     const el = $('login'); el.hidden = false;
     const dev = acc.dispositivo;
@@ -58,12 +62,20 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
         else if (pin.length < 6) pin += b.dataset.n;
         dots();
       };
-      document.onkeydown = (e) => {
+      entradaTeclado = new AbortController();
+      document.addEventListener('keydown', (e) => {
         if (el.hidden) return;
-        if (/^\d$/.test(e.key)) el.querySelector(`[data-n="${e.key}"]`)?.click();
-        else if (e.key === 'Backspace') el.querySelector('[data-n="borrar"]').click();
-        else if (e.key === 'Enter') el.querySelector('[data-n="ok"]').click();
-      };
+        // El PIN no contiene inputs, pero esta protección mantiene nativa la
+        // edición de cualquier campo que aparezca en la pantalla.
+        if (e.target.matches?.('input, textarea, select, [contenteditable="true"]')) return;
+        if (/^\d$/.test(e.key)) {
+          e.preventDefault(); el.querySelector(`[data-n="${e.key}"]`)?.click();
+        } else if (e.key === 'Backspace') {
+          e.preventDefault(); el.querySelector('[data-n="borrar"]')?.click();
+        } else if (e.key === 'Enter') {
+          e.preventDefault(); el.querySelector('[data-n="ok"]')?.click();
+        }
+      }, { signal: entradaTeclado.signal });
       return;
     }
     el.innerHTML = `<h1>Panel del local</h1>
@@ -73,7 +85,6 @@ export function crearCuentaUI({ $, ico, toast, api, clp, esc }) {
       <button class="primary" id="entrar" style="width:100%;margin-top:12px">Entrar</button>
       ${dev?.con_pin ? '<p style="text-align:center;margin:14px 0 0"><button type="button" class="link" id="aPin">Entrar con PIN</button></p>' : ''}`;
     el.onclick = (e) => { if (e.target.closest('#aPin')) { modoClave = false; pantallaEntrada(alEntrar); } };
-    document.onkeydown = null;
     const entrar = async () => {
       try {
         await api('panel/login', { method: 'POST', body: { slug: $('lslug')?.value.trim() || undefined, password: $('clave').value } });
