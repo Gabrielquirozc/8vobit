@@ -43,6 +43,23 @@ async function previsualizar() {
   }
 }
 
+const estadosOrden = { cotizando: 'Cotizando', esperando_anticipo: 'Esperando anticipo', pieza_pedida: 'Pieza pedida', pieza_recibida: 'Pieza recibida', reparando: 'Reparando', listo: 'Listo para entregar', entregado: 'Entregado', cancelado: 'Cancelado' };
+const pasosOrden = { cotizando: 'Preparar cotización para el cliente', esperando_anticipo: 'Confirmar anticipo antes de pedir', pieza_pedida: 'Seguir pedido y confirmar recepción', pieza_recibida: 'Preparar equipo para reparación', reparando: 'Completar reparación y pruebas', listo: 'Coordinar entrega con el cliente', entregado: 'Revisar respaldo y cierre', cancelado: 'Conservar antecedentes de la orden' };
+
+function tarjetaOrden(o) {
+  return `<article class="job-card status-${escapeHtml(o.estado)}"><div class="job-top"><span class="order-id">OT-${o.id}</span><span class="job-status">${estadosOrden[o.estado] || escapeHtml(o.estado)}</span></div><h3>${escapeHtml(o.equipo)}</h3><p class="job-client">${escapeHtml(o.cliente)}</p><p class="job-service">${escapeHtml(datos.servicios[o.servicio]?.nombre || o.servicio)}</p><div class="job-total"><span>Total cotizado</span><strong>${dinero(o.cotizacion.bruto)}</strong></div><p class="next-step"><span>PRÓXIMO PASO</span>${pasosOrden[o.estado] || 'Revisar orden'}</p><details class="job-details"><summary>Gestionar orden <span aria-hidden="true">＋</span></summary><div class="job-context"><p>${escapeHtml(o.falla) || 'Sin falla registrada'}${o.agenda_id ? ` · Cita #${o.agenda_id}` : ''}</p><p>Pieza neta: ${dinero(o.cotizacion.piezaNeta)}<br>Anticipo sugerido de pieza: ${dinero(Math.round(o.cotizacion.piezaNeta * 1.19))}<br>Costo estimado: ${dinero(o.cotizacion.costoComercial)}<br>Costo registrado provisional: ${o.costoRealProvisional == null ? 'pendiente' : dinero(o.costoRealProvisional)}</p>${o.proveedor ? `<p>Proveedor: ${escapeHtml(o.proveedor)}</p>` : ''}${o.vigencia ? `<p>Vigencia: ${escapeHtml(o.vigencia)}</p>` : ''}</div><form class="actualizar-orden" data-id="${o.id}"><label>Estado<select name="estado">${Object.entries(estadosOrden).map(([e, label]) => `<option value="${e}" ${e === o.estado ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>Folio DTE<input name="folio" value="${escapeHtml(o.folio)}"></label><label>Fecha DTE<input name="fechaDocumento" type="date" value="${escapeHtml(o.fecha_documento)}"></label><label>Servicio en DTE, bruto<input name="servicioDocumento" type="number" min="0" value="${o.servicio_documento ?? o.cotizacion.servicioBruto}"></label><label>Pieza en DTE, bruto<input name="piezaDocumento" type="number" min="0" value="${o.pieza_documento ?? o.cotizacion.bruto - o.cotizacion.servicioBruto}"></label><button class="primary" type="submit">Guardar cambios</button></form></details></article>`;
+}
+
+function mostrarTablero() {
+  const query = $('#buscar-trabajos').value.trim().toLocaleLowerCase('es');
+  const ordenes = datos.ordenes.filter(o => `OT-${o.id} ${o.cliente} ${o.equipo} ${o.falla || ''}`.toLocaleLowerCase('es').includes(query));
+  const etapas = [ ['Cotizar', ['cotizando', 'esperando_anticipo'], 'Precio y aprobación'], ['Pieza en camino', ['pieza_pedida'], 'Seguimiento de pedidos'], ['En taller', ['pieza_recibida', 'reparando'], 'Reparación y pruebas'], ['Listo', ['listo'], 'Coordinar la entrega'] ];
+  const abiertas = [...document.querySelectorAll('.job-details[open]')].map(d => d.querySelector('form').dataset.id);
+  const cerradasAbiertas = $('.closed-orders')?.open;
+  $('#lista-trabajos').innerHTML = `<div class="kanban" aria-label="Órdenes por etapa">${etapas.map(([nombre, estados, descripcion], i) => { const items = ordenes.filter(o => estados.includes(o.estado)); return `<section class="lane lane-${i}"><div class="lane-head"><span class="lane-number">0${i + 1}</span><h3>${nombre}</h3><span class="lane-count">${items.length}</span><p>${descripcion}</p></div><div class="lane-body">${items.length ? items.map(tarjetaOrden).join('') : `<div class="lane-empty"><span aria-hidden="true">${['↗','↝','⌘','✓'][i]}</span><p>${query ? 'Sin coincidencias en esta etapa' : ['Aquí comienza el próximo trabajo', 'Sin piezas pendientes de recibir', 'El banco de trabajo está libre', 'Los próximos equipos listos aparecerán aquí'][i]}</p></div>`}</div></section>`; }).join('')}</div><details class="closed-orders" ${cerradasAbiertas ? 'open' : ''}><summary>Archivo del taller <span>${ordenes.filter(o => ['entregado','cancelado'].includes(o.estado)).length} entregadas o canceladas</span></summary><div class="closed-grid">${ordenes.filter(o => ['entregado','cancelado'].includes(o.estado)).map(tarjetaOrden).join('') || '<p class="empty">Todavía no hay órdenes cerradas.</p>'}</div></details>`;
+  document.querySelectorAll('.job-details').forEach(d => { d.open = abiertas.includes(d.querySelector('form').dataset.id); });
+}
+
 function mostrarTrabajos() {
   const metricas = [
     ['En curso', datos.ordenes.filter(o => !['listo', 'entregado', 'cancelado'].includes(o.estado)).length, 'Órdenes activas, desde cotización'],
@@ -53,12 +70,7 @@ function mostrarTrabajos() {
   $('#taller-metricas').innerHTML = metricas.map(([nombre, cantidad, detalle], i) => `<article class="taller-metric"><span class="metric-index" aria-hidden="true">0${i + 1} /</span><span>${nombre}</span><strong>${cantidad}</strong><small>${detalle}</small></article>`).join('');
   $('#cuenta-trabajos').textContent = `${datos.ordenes.length} orden${datos.ordenes.length === 1 ? '' : 'es'}`;
   $('#orden-movimiento').innerHTML = '<option value="">Gasto general</option>' + datos.ordenes.map(o => `<option value="${o.id}">OT-${o.id} · ${escapeHtml(o.cliente)} · ${escapeHtml(o.equipo)}</option>`).join('');
-  $('#lista-trabajos').innerHTML = datos.ordenes.length ? datos.ordenes.map(o => `<article class="card">
-    <div class="card-head"><div><h3>OT-${o.id} · ${escapeHtml(o.cliente)}</h3><p>${escapeHtml(o.equipo)}${o.agenda_id ? ` · Cita de agenda #${o.agenda_id}` : ''}</p></div><span class="badge">${escapeHtml(o.estado.replaceAll('_', ' '))}</span></div>
-    <div class="facts"><span><b>Servicio:</b> ${escapeHtml(datos.servicios[o.servicio]?.nombre || o.servicio)}</span><span><b>Total cotizado:</b> ${dinero(o.cotizacion.bruto)}</span><span><b>Pieza:</b> ${dinero(o.cotizacion.piezaNeta)}</span><span><b>Anticipo sugerido de pieza:</b> ${dinero(Math.round(o.cotizacion.piezaNeta * 1.19))}</span><span><b>Costo estimado:</b> ${dinero(o.cotizacion.costoComercial)}</span><span><b>Costo registrado provisional:</b> ${o.costoRealProvisional == null ? 'pendiente' : dinero(o.costoRealProvisional)}</span></div>
-    <p>${escapeHtml(o.falla)}${o.proveedor ? ` · Proveedor: ${escapeHtml(o.proveedor)}` : ''}${o.vigencia ? ` · Vigencia: ${escapeHtml(o.vigencia)}` : ''}</p>
-    <form class="actualizar-orden" data-id="${o.id}"><label>Estado<select name="estado">${['cotizando','esperando_anticipo','pieza_pedida','pieza_recibida','reparando','listo','entregado','cancelado'].map(e => `<option value="${e}" ${e === o.estado ? 'selected' : ''}>${e.replaceAll('_',' ')}</option>`).join('')}</select></label><label>Folio DTE<input name="folio" value="${escapeHtml(o.folio)}"></label><label>Fecha DTE<input name="fechaDocumento" type="date" value="${escapeHtml(o.fecha_documento)}"></label><label>Servicio en DTE, bruto<input name="servicioDocumento" type="number" min="0" value="${o.servicio_documento ?? o.cotizacion.servicioBruto}"></label><label>Pieza en DTE, bruto<input name="piezaDocumento" type="number" min="0" value="${o.pieza_documento ?? o.cotizacion.bruto - o.cotizacion.servicioBruto}"></label><button class="primary" type="submit">Guardar</button></form>
-  </article>`).join('') : '<p class="empty">Todavía no hay trabajos. Crea una cotización para comenzar.</p>';
+  mostrarTablero();
 }
 
 function mostrarMovimientos() {
@@ -96,6 +108,7 @@ async function cargarMes() {
   } catch (e) { aviso(e.message); }
 }
 
+$('#buscar-trabajos').addEventListener('input', mostrarTablero);
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => abrirTab(b.dataset.tab)));
 document.querySelectorAll('[data-open-tab]').forEach(b => b.addEventListener('click', () => {
   abrirTab(b.dataset.openTab);

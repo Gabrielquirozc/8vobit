@@ -1,5 +1,13 @@
 # Control Técnico · OctavoBit
 
+## Flujo del taller
+
+En móvil la cabecera, navegación y franja de métricas reducen su espaciado; los controles mantienen objetivos táctiles de 44 px. A 390×844 la primera etapa comienza aproximadamente en y700, visible en la primera pantalla junto con la pista de desplazamiento.
+
+La primera vista es un tablero operativo: Cotizar (cotizando y esperando_anticipo), Pieza en camino (pieza_pedida), En taller (pieza_recibida y reparando) y Listo (listo). Cuatro columnas en escritorio, dos en tablet y recorrido horizontal con scroll-snap y pista visible en móvil. Los conteos reflejan el filtro de búsqueda; las métricas superiores conservan los totales reales. Entregadas y canceladas permanecen en Archivo del taller, plegable y también buscable.
+
+Tarjetas con OT, equipo, cliente, estado exacto, servicio, total y próximo paso orientativo según estado. Gestionar orden despliega antecedentes, costos y formulario completo de Estado/DTE; guardar es una acción explícita. No hay arrastre ni cambios de estado implícitos. La búsqueda conserva las tarjetas desplegadas mientras siguen presentes. Cabecera compacta, métricas en una franja y tres accesos a cotización, caja y mes permiten ver el flujo pronto. Las etapas usan lavanda, ámbar, cian y verde apagados; el morado OctavoBit y el isotipo oficial en navegación mantienen la identidad.
+
 Aura DESIGN. Fuente oficial: marketing/MARCA-8VOBIT.md e ISOTIPO.png.
 
 ## Tokens
