@@ -3,6 +3,9 @@ const dinero = n => new Intl.NumberFormat('es-CL', { style: 'currency', currency
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 let datos = { servicios: {}, categorias: {}, ordenes: [], movimientos: [] };
+let pasoActual = 0;
+let revisionCotizacion = 0;
+let datosRecuperados = {};
 
 async function api(path, options) {
   const response = await fetch(path, options);
@@ -10,7 +13,7 @@ async function api(path, options) {
   if (!response.ok) throw new Error(value.error || 'No se pudo completar la operación');
   return value;
 }
-const aviso = text => { $('#mensaje').textContent = text; if (text) setTimeout(() => { if ($('#mensaje').textContent === text) $('#mensaje').textContent = ''; }, 7000); };
+const aviso = (text, tipo = 'success') => { $('#mensaje').classList.toggle('error', tipo === 'error'); $('#mensaje').setAttribute('role', tipo === 'error' ? 'alert' : 'status'); $('#mensaje').textContent = text; if (text) setTimeout(() => { if ($('#mensaje').textContent === text) $('#mensaje').textContent = ''; }, 7000); };
 const enviar = value => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(value) });
 const valores = form => Object.fromEntries(new FormData(form).entries());
 
@@ -31,16 +34,70 @@ function camposCotizacion() {
 }
 
 async function previsualizar() {
+  const revision = ++revisionCotizacion;
   try {
     const q = await api('/api/cotizar', enviar(camposCotizacion()));
+    if (revision !== revisionCotizacion) return;
     $('#q-costo').textContent = dinero(q.costoComercial);
     $('#q-pieza').textContent = dinero(q.piezaNeta);
     $('#q-servicio').textContent = dinero(q.servicioBruto);
     $('#q-iva').textContent = dinero(q.ivaVentaEstimado);
     $('#q-total').textContent = dinero(q.bruto);
-  } catch {
+    $('#quote-error').textContent = '';
+    actualizarSeleccion(q);
+  } catch (error) {
+    if (revision !== revisionCotizacion) return;
     for (const id of ['q-costo', 'q-pieza', 'q-servicio', 'q-iva', 'q-total']) $(`#${id}`).textContent = '—';
+    $('#quote-error').textContent = error.message;
   }
+}
+
+function actualizarSeleccion(cotizacion = null) {
+  const tienePieza = $('#categoria').value !== 'ninguna';
+  $('#piece-costs').hidden = !tienePieza;
+  $('#no-piece-note').hidden = tienePieza;
+  $('#piece-costs').querySelectorAll('input').forEach(input => { input.disabled = !tienePieza; });
+  const servicio = datos.servicios[$('#servicio').value];
+  const categoria = datos.categorias[$('#categoria').value];
+  $('#service-hint').textContent = servicio ? `${servicio.nombre}: ${dinero(servicio.bruto)}. ${tienePieza ? 'La pieza se cotiza aparte con su costo actual.' : 'Sin costos de pieza para este trabajo.'}` : '';
+  document.querySelectorAll('[data-service]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.service === $('#servicio').value)));
+  const form = $('#form-orden');
+  const recargo = cotizacion?.recargo ?? Number(form.elements.recargo.value === '' ? categoria?.recargo : form.elements.recargo.value);
+  $('#review-context').innerHTML = `<span class="eyebrow">TU COTIZACIÓN</span><h3>${escapeHtml(form.elements.equipo.value) || 'Equipo por completar'}</h3><p>${escapeHtml(form.elements.cliente.value) || 'Cliente por completar'} · ${escapeHtml(servicio?.nombre || '')}</p><span class="review-chip">${escapeHtml(categoria?.nombre || '')}${tienePieza && Number.isFinite(recargo) ? ` · recargo aplicado ${Math.round(recargo * 100)}%` : ''}</span>`;
+}
+
+function mostrarPaso(paso, enfocar = false) {
+  pasoActual = paso;
+  document.querySelectorAll('[data-step]').forEach(button => {
+    const activo = Number(button.dataset.step) === paso;
+    button.setAttribute('aria-selected', String(activo));
+    button.tabIndex = activo ? 0 : -1;
+    if (activo && enfocar) button.focus();
+  });
+  document.querySelectorAll('.wizard-step').forEach((panel, i) => { panel.hidden = i !== paso; });
+  $('#wizard-progress').textContent = `Paso ${paso + 1} de 3 · ${['¿Para quién es el trabajo?', 'Selecciona el servicio y la pieza', 'Revisa antes de guardar'][paso]}`;
+  $('#wizard-back').hidden = paso === 0;
+  $('#wizard-next').hidden = paso === 2;
+  $('#wizard-save').hidden = paso !== 2;
+  $('#wizard-next').textContent = paso === 0 ? 'Elegir servicio →' : 'Revisar precio →';
+  actualizarSeleccion();
+}
+
+function validarCampos(panel = $('#form-orden')) {
+  const invalido = [...panel.querySelectorAll('input,select,textarea')].find(input => !input.disabled && !input.checkValidity());
+  if (!invalido) return true;
+  mostrarPaso(Number(invalido.closest('.wizard-step').id.replace('paso-', '')));
+  invalido.closest('details')?.setAttribute('open', '');
+  invalido.reportValidity();
+  invalido.focus();
+  return false;
+}
+
+function mostrarClientesAnteriores() {
+  const seleccionado = $('#cliente-anterior').value;
+  $('#cliente-anterior').innerHTML = '<option value="">Comenzar con datos nuevos</option>' + datos.ordenes.map(o => `<option value="${o.id}">OT-${o.id} · ${escapeHtml(o.cliente)} · ${escapeHtml(o.equipo)}</option>`).join('');
+  $('#cliente-anterior').value = seleccionado;
+  $('#cliente-anterior').disabled = datos.ordenes.length === 0;
 }
 
 const estadosOrden = { cotizando: 'Cotizando', esperando_anticipo: 'Esperando anticipo', pieza_pedida: 'Pieza pedida', pieza_recibida: 'Pieza recibida', reparando: 'Reparando', listo: 'Listo para entregar', entregado: 'Entregado', cancelado: 'Cancelado' };
@@ -81,12 +138,13 @@ async function cargar() {
   datos = await api('/api/datos');
   $('#servicio').innerHTML = Object.entries(datos.servicios).map(([key, v]) => `<option value="${key}">${escapeHtml(v.nombre)} · ${dinero(v.bruto)}</option>`).join('');
   $('#categoria').innerHTML = Object.entries(datos.categorias).map(([key, v]) => `<option value="${key}">${escapeHtml(v.nombre)} · recargo ${(v.recargo * 100).toFixed(0)}%</option>`).join('');
-  mostrarTrabajos(); mostrarMovimientos(); previsualizar();
+  $('#servicios-rapidos').innerHTML = ['diagnostico', 'formateo', 'limpieza', 'combo', 'instalar_ssd', 'instalar_pantalla'].filter(key => datos.servicios[key]).map(key => `<button type="button" data-service="${key}" aria-pressed="false"><span>${escapeHtml(datos.servicios[key].nombre)}</span><strong>${dinero(datos.servicios[key].bruto)}</strong></button>`).join('');
+  mostrarClientesAnteriores(); actualizarSeleccion(); mostrarTrabajos(); mostrarMovimientos(); previsualizar();
 }
 
 async function refrescar() {
   datos = await api('/api/datos');
-  mostrarTrabajos(); mostrarMovimientos();
+  mostrarClientesAnteriores(); mostrarTrabajos(); mostrarMovimientos();
 }
 
 async function cargarMes() {
@@ -105,7 +163,7 @@ async function cargarMes() {
     $('#pendientes').innerHTML = `<h3>Para resolver este mes</h3><p>Órdenes entregadas sin folio: <b>${r.ordenesSinDocumento.length ? r.ordenesSinDocumento.map(id => 'OT-' + id).join(', ') : 'ninguna'}</b></p><p>Compras del mes sin respaldo o revisión de crédito: <b>${r.comprasPorRevisar.length ? r.comprasPorRevisar.join(', ') : 'ninguna'}</b></p><p>Conciliar con el Registro de Compras y Ventas y F29 antes de declarar. El anticipo cobrado y la fecha de emisión del DTE pueden caer en meses distintos; este cálculo no resuelve el devengo tributario.</p>`;
     $('#descargar-resumen').href = `/exportar/resumen.csv?mes=${encodeURIComponent(mes)}`;
     $('#descargar-movimientos').href = `/exportar/movimientos.csv?mes=${encodeURIComponent(mes)}`;
-  } catch (e) { aviso(e.message); }
+  } catch (e) { aviso(e.message, 'error'); }
 }
 
 $('#buscar-trabajos').addEventListener('input', mostrarTablero);
@@ -116,14 +174,53 @@ document.querySelectorAll('[data-open-tab]').forEach(b => b.addEventListener('cl
   titulo.setAttribute('tabindex', '-1');
   titulo.focus();
 }));
-$('#form-orden').addEventListener('input', previsualizar);
-$('#form-orden').addEventListener('change', previsualizar);
+document.querySelectorAll('[data-step]').forEach(button => {
+  button.addEventListener('click', () => mostrarPaso(Number(button.dataset.step)));
+  button.addEventListener('keydown', event => {
+    const teclas = { ArrowRight: (pasoActual + 1) % 3, ArrowLeft: (pasoActual + 2) % 3, Home: 0, End: 2 };
+    if (event.key in teclas) { event.preventDefault(); mostrarPaso(teclas[event.key], true); }
+  });
+});
+$('#wizard-next').addEventListener('click', () => { if (validarCampos($(`#paso-${pasoActual}`))) mostrarPaso(pasoActual + 1, true); });
+$('#wizard-back').addEventListener('click', () => mostrarPaso(pasoActual - 1, true));
+$('#servicios-rapidos').addEventListener('click', event => {
+  const button = event.target.closest('[data-service]');
+  if (!button) return;
+  $('#servicio').value = button.dataset.service;
+  actualizarSeleccion(); previsualizar();
+});
+$('#cliente-anterior').addEventListener('change', event => {
+  const orden = datos.ordenes.find(o => String(o.id) === event.target.value);
+  if (!orden) {
+    for (const [campo, valor] of Object.entries(datosRecuperados)) {
+      if ($('#form-orden').elements[campo].value === valor) $('#form-orden').elements[campo].value = '';
+    }
+    datosRecuperados = {};
+    actualizarSeleccion();
+    $('#wizard-status').textContent = 'Listo para datos nuevos. Tus cambios manuales se conservan.';
+    return;
+  }
+  datosRecuperados = {};
+  for (const campo of ['cliente', 'equipo', 'correo', 'telefono']) {
+    datosRecuperados[campo] = orden[campo] || '';
+    $('#form-orden').elements[campo].value = datosRecuperados[campo];
+  }
+  actualizarSeleccion();
+  $('#wizard-status').textContent = `Cliente y equipo recuperados desde OT-${orden.id}. Puedes editarlos.`;
+});
+$('#form-orden').addEventListener('input', () => { actualizarSeleccion(); previsualizar(); });
+$('#form-orden').addEventListener('change', () => { actualizarSeleccion(); previsualizar(); });
 $('#form-orden').addEventListener('submit', async event => {
   event.preventDefault();
+  if (!validarCampos()) return;
+  if (pasoActual !== 2) { mostrarPaso(2, true); return; }
   try {
+    $('#wizard-save').disabled = true;
     const result = await api('/api/ordenes', enviar(camposCotizacion()));
-    await refrescar(); $('#form-orden').reset(); previsualizar(); abrirTab('trabajos'); aviso(`Orden OT-${result.id} creada.`);
-  } catch (e) { aviso(e.message); }
+    await refrescar(); $('#form-orden').reset(); datosRecuperados = {}; mostrarPaso(0); previsualizar(); abrirTab('trabajos'); aviso(`Orden OT-${result.id} creada.`);
+    $('#wizard-status').textContent = 'Los datos se conservan al cambiar de paso.';
+  } catch (e) { aviso(e.message, 'error'); }
+  finally { $('#wizard-save').disabled = false; }
 });
 $('#form-movimiento').addEventListener('submit', async event => {
   event.preventDefault();
@@ -132,7 +229,7 @@ $('#form-movimiento').addEventListener('submit', async event => {
     value.creditoValidado = event.target.elements.creditoValidado.checked;
     await api('/api/movimientos', enviar(value));
     await refrescar(); event.target.reset(); event.target.elements.fecha.value = hoy; aviso('Movimiento registrado.');
-  } catch (e) { aviso(e.message); }
+  } catch (e) { aviso(e.message, 'error'); }
 });
 $('#lista-trabajos').addEventListener('submit', async event => {
   if (!event.target.matches('.actualizar-orden')) return;
@@ -141,7 +238,7 @@ $('#lista-trabajos').addEventListener('submit', async event => {
     const id = event.target.dataset.id;
     await api(`/api/ordenes/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(valores(event.target)) });
     await refrescar(); aviso(`Orden OT-${id} actualizada.`);
-  } catch (e) { aviso(e.message); }
+  } catch (e) { aviso(e.message, 'error'); }
 });
 $('#lista-movimientos').addEventListener('submit', async event => {
   if (!event.target.matches('.anular-movimiento')) return;
@@ -149,9 +246,9 @@ $('#lista-movimientos').addEventListener('submit', async event => {
   try {
     await api(`/api/movimientos/${event.target.dataset.id}/anular`, enviar(valores(event.target)));
     await refrescar(); aviso('Movimiento anulado con registro del motivo.');
-  } catch (e) { aviso(e.message); }
+  } catch (e) { aviso(e.message, 'error'); }
 });
 $('#mes-input').addEventListener('change', cargarMes);
 $('#form-movimiento').elements.fecha.value = hoy;
 $('#mes-input').value = hoy.slice(0, 7);
-cargar().catch(e => aviso(e.message));
+cargar().catch(e => aviso(e.message, 'error'));

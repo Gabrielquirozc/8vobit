@@ -8,22 +8,28 @@ La primera vista es un tablero operativo: Cotizar (cotizando y esperando_anticip
 
 Tarjetas con OT, equipo, cliente, estado exacto, servicio, total y próximo paso orientativo según estado. Gestionar orden despliega antecedentes, costos y formulario completo de Estado/DTE; guardar es una acción explícita. No hay arrastre ni cambios de estado implícitos. La búsqueda conserva las tarjetas desplegadas mientras siguen presentes. Cabecera compacta, métricas en una franja y tres accesos a cotización, caja y mes permiten ver el flujo pronto. Las etapas usan lavanda, ámbar, cian y verde apagados; el morado OctavoBit y el isotipo oficial en navegación mantienen la identidad.
 
-Aura DESIGN. Fuente oficial: marketing/MARCA-8VOBIT.md e ISOTIPO.png.
+## Cotización guiada y referencia visual
+
+La consola adopta el estilo oscuro de `pedidos/public/admin.html`: fondo morado, superficies elevadas, acciones cian y botones redondeados. Los estados del tablero conservan acentos suaves sobre superficies oscuras. El isotipo oficial y las fuentes locales permanecen disponibles.
+
+Nueva cotización tiene tres pestañas accesibles: Cliente y equipo, Servicio y pieza, Revisar precio. Selección con teclado (flechas, Inicio/Fin), controles de 44 px y valores conservados al cambiar de paso. Se puede recuperar explícitamente el cliente, contacto y equipo de una orden anterior; no se copian los costos antiguos. Los servicios frecuentes son accesos al catálogo real; el selector completo mantiene todos los servicios. Contacto, cita, proveedor y notas se despliegan cuando se requieren. Para Sin pieza se omiten los campos de costo del envío sin borrar lo escrito; para piezas se muestra compra y se despliegan flete, tributos y ajustes. El resumen usa el cálculo vigente de `/api/cotizar`. Al guardar se valida todo el formulario y se abre el paso y detalle del primer campo inválido. La referencia de agenda sigue siendo manual.
+
+Aura DESIGN. Fuentes: `pedidos/public/admin.html`, marketing/MARCA-8VOBIT.md e ISOTIPO.png.
 
 ## Tokens
 
 | Rol | Valor |
 |---|---|
-| Marca y acciones | #120136 |
-| Acento sobre morado | #40BAD5 |
-| Fondo | #F5F4F8 |
-| Superficie | #FFFFFF |
-| Texto | #241A3D |
-| Texto secundario | #655E75 |
+| Acciones | #4BB8D4, texto #120136 |
+| Acento sobre morado | #7DD4E8 |
+| Fondo | #120136 |
+| Superficie | #1E0258, elevada #2A0375 |
+| Texto | #F4F0FF |
+| Texto secundario | #B6A7CE |
 | Texto sobre morado | #D8D0E8 |
-| Borde | #E1DDEA |
-| Foco | #087C96 |
-| Error | #9D2D34 sobre #FFF0F0 |
+| Borde | #3A1590 |
+| Foco | #7DD4E8 |
+| Error | #FF8A7A sobre #3A1D35 |
 
 Montserrat / Segoe UI / sans-serif en interfaz. JetBrains Mono / Consolas / monospace en etiquetas y cifras. Fuentes WOFF2 servidas localmente desde public/fonts, obtenidas de los repositorios oficiales JulietaUla/Montserrat y JetBrains/JetBrainsMono, con sus licencias OFL incluidas. Montserrat: Regular, Medium, SemiBold y Bold; JetBrains Mono: Regular, Medium y SemiBold. @font-face con font-display:swap y rutas allowlisted del mismo origen; CSP font-src 'self'. No se hacen conexiones externas en tiempo de uso. Isotipo oficial servido desde el mismo origen.
 
