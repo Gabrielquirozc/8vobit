@@ -600,11 +600,10 @@
     .sk { animation: none; }
   }
 
-  /* ---------- Navegación al pie en móvil (Zona del Pulgar + Ley de Fitts) ----------
-     En una mano, la parte de abajo es la cómoda: las pestañas bajan al pie como
-     barra fija con ícono + etiqueta. El contenido y las barras inferiores (ticket
-     de venta, guardar, ruta) se corren para no quedar tapados. */
-  @media (max-width: 760px) {
+  /* ---------- Navegación al pie (Zona del Pulgar + Ley de Fitts) ----------
+     La operación se navega siempre desde una barra fija: en computador elimina la
+     fila superior recortada; en teléfono conserva la zona cómoda del pulgar. */
+  @media (min-width: 0) {
     body { --navh: 60px; }
     .tabs-nav {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;

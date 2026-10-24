@@ -11,6 +11,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <!-- Íconos estilo Lucide (trazo 2px), en línea para no depender de un CDN. -->
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
@@ -47,6 +48,14 @@
 <main id="main"></main>
 <footer class="pie-legal"><a data-legal="terminos">Términos y condiciones</a> · <a data-legal="privacidad">Privacidad</a></footer>
 
+<!-- Navegación persistente para uso con una mano. El pedido se mantiene separado
+     visualmente de la navegación porque es la acción de conversión principal. -->
+<nav class="customer-nav" aria-label="Navegación de la carta">
+  <button type="button" data-nav="carta"><svg class="ico"><use href="#i-store"/></svg><span>Carta</span></button>
+  <button type="button" data-nav="buscar"><svg class="ico"><use href="#i-search"/></svg><span>Buscar</span></button>
+  <button type="button" data-nav="categorias"><svg class="ico"><use href="#i-list"/></svg><span>Categorías</span></button>
+  <button type="button" class="customer-order" data-nav="pedido" id="navPedido" disabled aria-label="Pedido vacío"><svg class="ico"><use href="#i-wallet"/></svg><span>Pedido</span><b class="nav-count" id="navCount" hidden>0</b></button>
+</nav>
 <div class="cartbar"><button class="cartbtn" id="cartbtn" hidden><span class="count num" id="cartCount"></span><span>Ver pedido</span><span class="num" id="cartTotal" style="padding-right:12px"></span></button></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="snack" id="snack" role="status" aria-live="polite" hidden><span id="snackTxt"></span><button type="button" id="snackOk">Agregar</button><button type="button" class="x" id="snackNo" aria-label="No, gracias"><svg class="ico"><use href="#i-x"/></svg></button></div>
@@ -316,11 +325,22 @@ function barra() {
   const n = carro.reduce((s, i) => s + i.cantidad, 0);
   $('cartbtn').hidden = !n;
   $('cartCount').textContent = n; $('cartTotal').textContent = clp(total());
+  $('navPedido').disabled = !n;
+  $('navPedido').setAttribute('aria-label', n ? `Ver pedido: ${n} producto${n === 1 ? '' : 's'}, ${clp(total())}` : 'Pedido vacío');
+  $('navCount').hidden = !n; $('navCount').textContent = n;
   document.querySelectorAll('[data-qb]').forEach((b) => {
     const q = carro.filter((i) => i.producto_id === Number(b.dataset.qb)).reduce((s, i) => s + i.cantidad, 0);
     b.hidden = !q; b.textContent = q;
   });
 }
+// Barra inferior del cliente: accesos de una mano sin competir con el CTA de compra.
+document.querySelector('.customer-nav').onclick = (e) => {
+  const b = e.target.closest('[data-nav]'); if (!b || b.disabled) return;
+  if (b.dataset.nav === 'carta') window.scrollTo({ top: 0, behavior: 'smooth' });
+  else if (b.dataset.nav === 'buscar') { $('q').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('q').focus({ preventScroll: true }); }
+  else if (b.dataset.nav === 'categorias') { $('cats').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('cats').querySelector('a')?.focus({ preventScroll: true }); }
+  else if (b.dataset.nav === 'pedido') $('cartbtn').click();
+};
 // ---------- venta sugerida ----------
 // Acompañamientos que el local marcó como "sugerir" (papas, bebidas…), sin los de una
 // categoría que ya está en el carro: si ya lleva una bebida, no se le ofrece otra.
