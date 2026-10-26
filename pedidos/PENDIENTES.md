@@ -229,6 +229,30 @@ Orden: meta B primero; de la A, antes del 2º local A5, A6, A1 y A8; A2–A4 ent
   el contador.
 
 
+## Sesión 2026-10-21: panel en teléfono, movimiento y navegación
+
+Hecho y en producción (commits `f3cdb30`, `aac2684`, `cc5c466` y el de 5+Más; tests 87/87):
+- **Carta en Chrome 81 (Nokia 3.1 Plus):** se quitó el `await` de nivel superior en `carta.html`, `carta-imprimible.html`, `cartel.html`, `comanda.html` y `legal.html`. Chrome < 89 no lo soporta y la carta se quedaba en "Cargando…". Las páginas de `panel` y `admin` no lo usaban.
+- **Panel: movimiento** (CSS puro, solo `transform`/`opacity`, con guarda de `prefers-reduced-motion`): entrada por pestaña, hundir al tocar, elevación con cursor, estados vacíos suaves y placeholders de producto con profundidad. Verificado en el Nokia real (video).
+- **Panel: barra al pie en móvil (≤760 px)** por la Zona del Pulgar: 4 pestañas fijas (Pedidos, Venta rápida, Caja del día, Gastos) + **Más**, que abre una hoja con el resto. "Más" respeta los permisos (salta las ocultas por rol). En escritorio no cambia.
+- **Entrar al panel desde adb:** Chrome 81 no deja que `adb input text` escriba en campos `type=password`. Hay que tocar el campo con el dedo, o pegar.
+
+Decisiones:
+- El admin (`/admin`) es de la marca 8vobit (morado/cian, copiada de `index.html`). Es intencional, no se cambia por el rojo de Gassuso.
+- Los skills de diseño (`ui-ux-pro-max`, `apple-design`, `design-taste-frontend-v1`) son criterio, no stack: el proyecto no usa React/Tailwind ni build. Se aplica el criterio en CSS puro.
+
+En cola (por orden de valor):
+- [ ] **`<dialog>` en Safari < 15.4:** la carta y el panel abren las hojas con `showModal()`. Un iPhone viejo no abre el cobro ni la carta. Falta el polyfill o fallback, partiendo por la carta.
+- [ ] **`gap` de flex en Chrome 81:** en la carta, los chips y las filas se ven pegados en el Nokia (sin el espacio). Agregar márgenes de respaldo.
+- [ ] **Skeletons** en Caja, Resumen y Resultados para cortar la pantalla en blanco del re-render en gama baja.
+- [ ] **Safe-area superior** (`env(safe-area-inset-top)`) en la barra del panel, para PWA instalada en iPhone con notch.
+- [ ] **Debloat del Nokia** (`pm uninstall --user 0`, reversible): propuesta en 4 grupos, esperando OK del dueño (solo telemetría + Claro, o todo). Chrome y WebView no se tocan. Hay Magisk instalado: decidir si se queda.
+- [ ] **Hoja que se cierra arrastrando** (pulido tipo Apple). Opcional.
+- [ ] Pruebas de punta a punta en el Nokia para cobro, Caja y Gastos. Hay que hacerlas en la demo local, no en producción.
+- [ ] Pantalla de login: el campo de clave no sube el teclado con toque de adb. Revisar en un teléfono real con dedo.
+
+Revisión de diseño: `REVISION-UX-2026-10-21.md` (en `pedidos/`).
+
 ## Revisión UX (2026-10-16)
 
 Detalle en `REVISION-UX.md` (primera pasada) y `ESTUDIO-UX.md` (mes simulado, onboarding, notificaciones, caché, competencia y orden de entrega).
