@@ -24,3 +24,10 @@ Antes de trabajar en `pedidos/`, lee en este orden:
 - Nunca subir claves: la del panel vive solo en `/srv/docker/compose/pedidos/.env` en el servidor.
 - Marketing y calendario de carruseles: empezar por `marketing/README.md` (estado en `marketing/CALENDARIO-NOV-2026.md`).
 - DM automáticos de Instagram (n8n): cómo funciona y cómo revisarlo en `infra/n8n/OPERACION.md`, copiado en el servidor en `/srv/docker/compose/n8n/OPERACION.md`.
+
+## Control técnico del servicio de reparación
+
+- La memoria del control de reparaciones está en `control-tecnico/CONTEXTO-SESION-2026-10-26.md`. Leerla antes de retomar ese trabajo.
+- `D:\COSTANERA SUR\FICHA CAJA.xlsx` es material histórico: el usuario indicó que el método de cálculo de precios es lo más vigente; ficha/caja y registros están desactualizados. No importarlo como ventas o contabilidad actual.
+- La agenda y el control técnico son aplicaciones distintas que deben colaborar mediante integración explícita; no mezclar con `pedidos/` (Gassuso/restaurantes).
+- La conversación de equipos no retirados no autoriza a implementar remate automático a 30 días. Revisar el contexto guardado antes de cambiar términos, contratos o flujos.
