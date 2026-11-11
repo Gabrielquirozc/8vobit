@@ -1,6 +1,6 @@
 # Respuestas automáticas de DM en Instagram (n8n en lenovo-edge)
 
-Cuando alguien escribe **AGENDA**, **DEMO**, **WEB** o **AGENDA PRO** por DM a @8vobit:
+Cuando alguien escribe **AGENDA**, **DEMO**, **WEB** o **AGENDA PRO** (página + agenda, flujo con botones) o **REVISIÓN** (reparación: diagnóstico y link de hora) por DM a @8vobit:
 1. Meta avisa a `https://n8n.8vobit.xyz/webhook/instagram`.
 2. n8n verifica la firma (App Secret), reconoce la palabra clave y responde el DM con la API de Instagram.
 3. Te llega un aviso al celular por ntfy (tema `8vobit-dm`).

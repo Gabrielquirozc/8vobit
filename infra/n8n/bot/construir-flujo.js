@@ -13,7 +13,7 @@ const pegamento = `
 const crypto = require('crypto');
 const memoria = $getWorkflowStaticData('global');
 memoria.contactos = memoria.contactos || {};
-const links = { agenda: $env.LINK_AGENDA, web: $env.LINK_WEB, pedidos: $env.LINK_PEDIDOS };
+const links = { agenda: $env.LINK_AGENDA, web: $env.LINK_WEB, pedidos: $env.LINK_PEDIDOS, fuera: $env.MODO_FUERA };
 const ahora = Date.now();
 
 // Olvidar contactos sin movimiento en 60 días (la memoria vive dentro de n8n).

@@ -88,3 +88,10 @@ Prueba de punta a punta: desde otra cuenta de Instagram escribir "quiero una dem
 3. ¿Token válido? (paso 5). Error 190 → renovarlo.
 4. ¿Suscripción activa? (paso 6). Si no aparece `messages`: `POST /me/subscribed_apps?subscribed_fields=messages` con el token.
 5. En la interfaz de n8n (`https://n8n.8vobit.xyz`, cuenta de Gabriel), *Executions* muestra cada aviso y el nodo que falló.
+
+## Registro de despliegues
+
+- **11-nov-2026** · Diálogos A y B de `centro-negocios-marketing/DIALOGOS-BOT-V2-2026-11.md`.
+  - **«Memoria» no siempre es RAM.** Se separó en síntoma, duda (pregunta 1/2), RAM explícita (pregunta cotizar/diagnóstico), SSD, pieza propia, compatibilidad y miedo. Las preguntas 1/2 se recuerdan 24 h; si la respuesta no se entiende, el bot repregunta una vez y a la segunda pasa a Gabriel con aviso urgente.
+  - **Aviso «fuera de Concepción».** Se activa con `MODO_FUERA=AAAA-MM-DD` (último día fuera) en `.env` y se apaga solo después de esa fecha. Hoy no está definido, así que está apagado. Para activarlo: agregar la línea al `.env` y correr `up -d --force-recreate`.
+  - **Verificación.** 59 pruebas OK, flujo activo con el código nuevo, 0 errores en el log y webhook vivo. Falta la prueba de punta a punta desde otra cuenta.
