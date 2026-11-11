@@ -10,6 +10,9 @@ const DIA = 24 * HORA;
 const AGENDA = '{{LINK_AGENDA}}';
 const LINK_WEB = '{{LINK_WEB}}';
 const LINK_PEDIDOS = '{{LINK_PEDIDOS}}';
+const LINK_REUNION = 'https://8vobit.xyz/#reunion';
+const LINK_GASSUSO = 'https://pedidos.8vobit.xyz/gassuso';
+const LINK_AGENDA_DEMO = 'https://8vobit.xyz/#agendar';
 const DIAG = 'El diagnóstico son $5.000 y se descuentan si haces el servicio.';
 
 // Varias versiones por respuesta: el bot no suena igual cada vez.
@@ -134,6 +137,85 @@ const TEXTOS = {
   ],
   sal5_que: [
     'No pasa nada, para eso está el diagnóstico: son $5.000 y se descuentan si haces el servicio. Toma hora acá: ' + AGENDA
+  ],
+  // Diálogo C · Página con agenda (sección C). Sin precio ni Meet de 45 min.
+  ag_0: [
+    'Hola! Hago páginas con agenda: tus clientes reservan solos, a cualquier hora. Para mostrarte algo que te sirva, ¿a qué te dedicas?',
+    'Hola! Armo páginas donde tus clientes toman hora sin tener que escribirte. Cuéntame, ¿a qué te dedicas?'
+  ],
+  ag_0_anoto: [
+    'Perfecto, lo anoto. ¿Y a qué te dedicas?'
+  ],
+  ag_0_rep: [
+    'Te pregunto por tu trabajo, por ejemplo psicóloga, kinesiólogo, abogada, peluquería. ¿A qué te dedicas tú?'
+  ],
+  ag_1: [
+    '¿Ya tienes logo o una marca definida?\n1️⃣ Sí, ya tengo\n2️⃣ Todavía no',
+    'Y cuéntame, ¿ya tienes tu logo o tu marca armada?\n1️⃣ Sí\n2️⃣ Todavía no'
+  ],
+  ag_1_rep: [
+    'Perdón, no te entendí. ¿Ya tienes logo o marca? 1️⃣ Sí, ya tengo · 2️⃣ Todavía no'
+  ],
+  ag_1_explica: [
+    'Marca es el logo y los colores con que te reconocen. Si no tienes, no pasa nada: igual lo vemos.'
+  ],
+  ag_2: [
+    '¿Y cómo te piden hora hoy tus clientes?\n1️⃣ Por WhatsApp o mensajes\n2️⃣ Los anoto en cuaderno o planilla\n3️⃣ Uso otra app',
+    'Última pregunta: hoy, ¿cómo coordinas las horas con tus clientes?\n1️⃣ WhatsApp o mensajes\n2️⃣ Cuaderno o planilla\n3️⃣ Otra app'
+  ],
+  ag_2_rep: [
+    'Me refiero a cómo te reservan hora tus clientes hoy: 1️⃣ te escriben por WhatsApp · 2️⃣ los anotas tú · 3️⃣ usas alguna app.'
+  ],
+  ag_3: [
+    'Mira cómo se ve funcionando: así reserva un cliente en mi propia agenda 👉 ' + LINK_AGENDA_DEMO + '\nLa tuya queda con tus servicios, tus horarios y tu marca. ¿Lo vemos para tu caso en una llamada de 15 min por WhatsApp?\n1️⃣ Sí, veámoslo\n2️⃣ Ahora no',
+    'Te muestro una de verdad: esta es mi agenda, pruébala como si fueras cliente 👉 ' + LINK_AGENDA_DEMO + '\nLa tuya se arma igual, con tu marca. ¿Te parece conversarlo 15 min por WhatsApp?\n1️⃣ Sí\n2️⃣ Ahora no'
+  ],
+  ag_3_rep: [
+    'Perdón, no te entendí. ¿Lo vemos en una llamada de 15 min por WhatsApp? 1️⃣ Sí, veámoslo · 2️⃣ Ahora no'
+  ],
+  ag_4a: [
+    'Elige la hora que te acomode 👉 ' + LINK_REUNION + '\nSon 15 minutos y Gabriel te llama por WhatsApp.',
+    'Toma la hora acá 👉 ' + LINK_REUNION + '\nSon 15 minutos y te llama Gabriel por WhatsApp.'
+  ],
+  ag_4b: [
+    'Ningún problema. Cuando quieras retomarlo, escribe LLAMADA y lo coordinamos.',
+    'Tranqui, queda acá para cuando lo necesites: escribes LLAMADA y lo vemos.'
+  ],
+  ag_precio: [
+    'Depende de lo que necesites, por eso prefiero verlo contigo en la llamada: son 15 minutos y sin compromiso.',
+    'Te lo digo con tu caso en la mano, en la llamada de 15 min, para no darte un número que no te sirva.'
+  ],
+  ag_compara: [
+    'Normal, conviene comparar. Para que compares con algo concreto, en la llamada de 15 min te muestro qué incluye y cómo funciona. Sin compromiso.',
+    'Tiene sentido. Lo que te puedo mostrar es una agenda funcionando y qué incluye la página, para que compares con lo mismo. 15 min por WhatsApp.'
+  ],
+  ag_recom: [
+    'Qué bueno, gracias por avisar. ¿Quién te recomendó? Así le agradezco.'
+  ],
+  ag_dominio: [
+    'Perfecto, eso nos sirve: no partimos de cero. Si me dices la dirección de tu página o dónde está tu dominio, lo reviso antes de la llamada.'
+  ],
+  ag_lateral: [
+    'Eso lo definimos en la llamada, porque depende de tu caso.'
+  ],
+  ag_dos_temas: [
+    'Eso también lo hago: escribe REVISIÓN y lo vemos. Volvamos a tu página:'
+  ],
+  ag_sal6: [
+    'Dale, sin apuro. Aquí quedo.'
+  ],
+  sal3: [
+    'Claro. Le aviso a Gabriel y te responde por acá.'
+  ],
+  sal8: [
+    'Dale. Le aviso a Gabriel para que te escriba por WhatsApp. Si me dejas tu número, mejor.',
+    'Perfecto, se lo paso a Gabriel para que te contacte por WhatsApp.'
+  ],
+  sal8_ya: [
+    'Gracias, ya tengo tu número. Gabriel te escribe por WhatsApp.'
+  ],
+  sal8_octavo: [
+    'Gabriel te escribe él por WhatsApp. Si quieres, déjame tu número.'
   ],
   // Modo «fuera de Concepción» (MODO_FUERA, sección A). {{VUELTA}} = «lunes 16», {{HASTA}} = «domingo».
   fuera_aviso: [
@@ -426,103 +508,56 @@ function resolverPendiente(texto, payload, c, ahora, links) {
 
 
 // ---------------------------------------------------------------------------
-// Flujo de onboarding para desarrollo web (ver infra/n8n/FLUJO-WEB.md).
-// 3 preguntas con botones (quick replies) y un cierre que muestra y agenda.
-// Estado en contacto.web = { paso, eleccion, negocio, hoy, cuando, t, reintento }.
+// Flujo de Pedidos (DEMO): se conserva como estaba (ver infra/n8n/FLUJO-WEB.md).
+// Estado en contacto.web = { paso, eleccion: 'PEDIDOS', negocio, hoyTexto, cuando, t, reintento }.
 // ---------------------------------------------------------------------------
-const LINK_REUNION = 'https://8vobit.xyz/#reunion';
-const LINK_GASSUSO = 'https://pedidos.8vobit.xyz/gassuso';
-const LINK_AGENDA_DEMO = 'https://8vobit.xyz/#agendar';
-const LINK_TU_AGENDA = 'https://8vobit.xyz/tu-agenda/';
-
 const MENU_INICIO = [['Reparación', 'MENU_REP'], ['Desarrollo web', 'MENU_WEB']];
-const W_ELECCION = [['Página web', 'W_PAGINA'], ['Agenda online', 'W_AGENDA'], ['Pedidos para local', 'W_PEDIDOS'], ['Quiero conversarlo', 'W_CONVERSAR']];
-const W_HOY = {
-  PAGINA: [['No tengo página', 'H_NO'], ['Quiero mejorarla', 'H_MEJORAR']],
-  AGENDA: [['WhatsApp o cuaderno', 'H_WSP'], ['Uso otra app', 'H_APP']],
-  PEDIDOS: [['Por WhatsApp', 'H_WSP'], ['Por apps de delivery', 'H_APPS'], ['Ambas', 'H_AMBAS']]
-};
+const W_HOY_PEDIDOS = [['Por WhatsApp', 'H_WSP'], ['Por apps de delivery', 'H_APPS'], ['Ambas', 'H_AMBAS']];
 const W_CUANDO = [['Este mes', 'C_MES'], ['En 1 a 3 meses', 'C_TRIM'], ['Solo estoy mirando', 'C_MIRANDO']];
-const NOMBRE_ELECCION = { PAGINA: 'Página web', AGENDA: 'Agenda online', PEDIDOS: 'Pedidos para local', CONVERSAR: 'Quiere conversarlo' };
 
 function botones(lista) { return lista.map(([titulo, payload]) => ({ titulo, payload })); }
 
-function eleccionDesde(t, payload) {
-  if (payload && payload.startsWith('W_')) return payload.slice(2);
-  if (/pagina|web|sitio|landing/.test(t)) return 'PAGINA';
-  if (/agenda|reserva|hora/.test(t)) return 'AGENDA';
-  if (/pedido|local|delivery|carta|restoran|comida/.test(t)) return 'PEDIDOS';
-  if (/convers|hablar|reunion|no se/.test(t)) return 'CONVERSAR';
-  return null;
-}
-
-function cierreWeb(w) {
+function cierrePedidos(w) {
   const caliente = w.cuando !== 'C_MIRANDO';
-  const resumen = [NOMBRE_ELECCION[w.eleccion], w.negocio, w.hoyTexto, { C_MES: 'este mes', C_TRIM: 'en 1 a 3 meses', C_MIRANDO: 'solo mirando' }[w.cuando]].filter(Boolean).join(' · ');
-  let texto;
-  if (w.eleccion === 'PEDIDOS') {
-    texto = 'Mira cómo funciona en un local real, Gassuso: ' + LINK_GASSUSO + '\nTus clientes piden directo, por 1% del pedido, sin las comisiones de las apps.';
-  } else if (w.eleccion === 'AGENDA') {
-    texto = 'Es la misma agenda que usamos en OCTAVOBIT. Pruébala como si fueras cliente: ' + LINK_AGENDA_DEMO + '\nLa tuya queda con tu marca y conectada a tu Google Calendar, desde $190.000 + $14.990 al mes. Todo el detalle: ' + LINK_TU_AGENDA;
-  } else if (w.eleccion === 'PAGINA') {
-    texto = 'Para mostrarte ejemplos parecidos a lo que buscas, Gabriel te escribe personalmente por acá 🙌';
-  } else {
-    texto = '¡Buenísimo! Lo vemos juntos.';
-  }
+  const resumen = ['Pedidos para local', w.negocio, w.hoyTexto, { C_MES: 'este mes', C_TRIM: 'en 1 a 3 meses', C_MIRANDO: 'solo mirando' }[w.cuando]].filter(Boolean).join(' · ');
+  let texto = 'Mira cómo funciona en un local real, Gassuso: ' + LINK_GASSUSO + '\nTus clientes piden directo, por 1% del pedido, sin las comisiones de las apps.';
   texto += caliente
     ? '\n\nSi quieres, agendamos una reunión gratis de 45 min por Google Meet: ' + LINK_REUNION + '\nCuando agendes, te confirmo el link de Meet por aquí.'
     : '\n\nCuando quieras verlo con calma, agenda una reunión gratis acá: ' + LINK_REUNION + ' o escribe REUNIÓN.';
-  // Página web siempre pasa a Gabriel (no hay portafolio publicado todavía).
-  const urgente = caliente || w.eleccion === 'PAGINA' || w.eleccion === 'CONVERSAR';
-  return { texto, aviso: urgente ? 'urgente' : 'normal', resumen };
+  return { texto, aviso: caliente ? 'urgente' : 'normal', resumen };
 }
 
-// Devuelve null si el mensaje no es del flujo web; si lo es, { respuesta, botones, aviso, intencion, resumen }.
-function flujoWeb(texto, payload, c, ahora) {
+const REG_DEMO = /\bdemo\b|\b(sistema de pedidos|pedidos para mi local)\b/;
+
+// Devuelve null si el mensaje no es del flujo de Pedidos; si lo es, { respuesta, botones, aviso, intencion, resumen }.
+function flujoPedidos(texto, payload, c, ahora) {
   const t = normalizar(texto);
   const activo = c.web && c.web.paso !== undefined && ahora - c.web.t < DIA;
-  const inicia = payload === 'MENU_WEB'
-    || /\b(desarrollo web|pagina web|sitio web|agenda pro|landing|sistema de pedidos|pedidos para mi local)\b|^(web|demo|agenda pro|agenda)[!. ]*$/.test(t)
-    || /\bdemo\b/.test(t);
-  if (!activo && !inicia) return null;
+  if (!activo && !REG_DEMO.test(t)) return null;
 
   // Salida a una persona en cualquier momento.
   if (/\b(hablar|persona|humano|gabriel)\b/.test(t)) {
-    const resumen = c.web ? NOMBRE_ELECCION[c.web.eleccion] || '' : '';
     c.web = null;
-    return { intencion: 'web_humano', respuesta: '¡Dale! Le aviso a Gabriel y te escribe por aquí 🙌', botones: null, aviso: 'urgente', resumen };
+    return { intencion: 'web_humano', respuesta: '¡Dale! Le aviso a Gabriel y te escribe por aquí 🙌', botones: null, aviso: 'urgente', resumen: 'Pedidos para local' };
   }
-
   if (!activo) {
-    // Inicio: si el mensaje ya dice qué quiere, se salta la primera pregunta.
-    const pre = /\bdemo\b|pedido/.test(t) ? 'PEDIDOS' : /agenda/.test(t) ? 'AGENDA' : payload === 'MENU_WEB' ? null : (/pagina|sitio|landing/.test(t) ? 'PAGINA' : null);
-    c.web = { paso: pre ? 1 : 0, eleccion: pre, t: ahora, reintento: 0 };
-    if (!pre) return { intencion: 'web_inicio', respuesta: '¡Hola! Te ayudo con eso 🙌 ¿Qué te gustaría resolver?', botones: botones(W_ELECCION), aviso: null };
+    c.web = { paso: 1, eleccion: 'PEDIDOS', t: ahora, reintento: 0 };
     return { intencion: 'web_inicio', respuesta: '¡Buenísimo! Para mostrarte algo que te sirva: ¿a qué se dedica tu negocio?', botones: null, aviso: null };
   }
 
   const w = c.web; w.t = ahora;
   const reintentar = (pregunta, lista) => {
-    if (w.reintento >= 1) { c.web = null; return { intencion: 'web_humano', respuesta: 'Te paso con Gabriel para verlo directo 🙌', botones: null, aviso: 'urgente', resumen: NOMBRE_ELECCION[w.eleccion] || '' }; }
+    if (w.reintento >= 1) { c.web = null; return { intencion: 'web_humano', respuesta: 'Te paso con Gabriel para verlo directo 🙌', botones: null, aviso: 'urgente', resumen: 'Pedidos para local' }; }
     w.reintento++;
     return { intencion: 'web_repite', respuesta: pregunta, botones: lista ? botones(lista) : null, aviso: null };
   };
-
-  if (w.paso === 0) {
-    const e = eleccionDesde(t, payload);
-    if (!e) return reintentar('¿Cuál de estas opciones se parece más a lo que buscas?', W_ELECCION);
-    w.eleccion = e; w.reintento = 0;
-    if (e === 'CONVERSAR') { w.cuando = 'C_TRIM'; const f = cierreWeb(w); c.web = null; return { intencion: 'web_cierre', respuesta: f.texto, botones: null, aviso: f.aviso, resumen: f.resumen }; }
-    w.paso = 1;
-    return { intencion: 'web_paso1', respuesta: '¿A qué se dedica tu negocio?', botones: null, aviso: null };
-  }
   if (w.paso === 1) {
     if (!t || t.length < 2) return reintentar('¿A qué se dedica tu negocio? (por ejemplo: psicóloga, sushi, peluquería)');
     w.negocio = String(texto).slice(0, 80); w.paso = 2; w.reintento = 0;
-    return { intencion: 'web_paso2', respuesta: '¿Y cómo lo haces hoy?', botones: botones(W_HOY[w.eleccion] || W_HOY.PAGINA), aviso: null };
+    return { intencion: 'web_paso2', respuesta: '¿Y cómo lo haces hoy?', botones: botones(W_HOY_PEDIDOS), aviso: null };
   }
   if (w.paso === 2) {
-    const op = (W_HOY[w.eleccion] || []).find(([, p]) => p === payload);
+    const op = W_HOY_PEDIDOS.find(([, p]) => p === payload);
     w.hoyTexto = op ? op[0] : String(texto).slice(0, 60);
     w.paso = 3; w.reintento = 0;
     return { intencion: 'web_paso3', respuesta: '¿Para cuándo lo necesitas?', botones: botones(W_CUANDO), aviso: null };
@@ -532,11 +567,330 @@ function flujoWeb(texto, payload, c, ahora) {
     if (!cuando) cuando = /mirando|viendo|cotiz|todavia|aun no/.test(t) ? 'C_MIRANDO' : /mes|ya|urgente|pronto|semana|luego/.test(t) ? 'C_MES' : /\d|mes|meses/.test(t) ? 'C_TRIM' : null;
     if (!cuando) return reintentar('¿Para cuándo lo necesitas?', W_CUANDO);
     w.cuando = cuando;
-    const f = cierreWeb(w); c.web = null;
+    const f = cierrePedidos(w); c.web = null;
     return { intencion: 'web_cierre', respuesta: f.texto, botones: null, aviso: f.aviso, resumen: f.resumen };
   }
   c.web = null;
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Diálogo C · Página con agenda (DIALOGOS-BOT-V2, sección C).
+// El bot guarda lo que el cliente va contando y pregunta solo lo que falta (M3):
+// rubro → marca → cómo agenda hoy, máximo 3 preguntas. Sin precio ni Meet de 45 min.
+// Estado en contacto.ag = { paso: rubro|marca|hoy|cierre|fin, t, rubro, marca, hoy, quiere[], ... }.
+// ---------------------------------------------------------------------------
+const AG_QUIERE = {
+  tienda: /\b(tienda|vender|catalogo|productos?|carrito)\b/,
+  portafolio: /\b(portafolio|galeria|mostrar (mis )?trabajos)\b/,
+  agenda: /\b(agendar|reservas?|citas?|calendario|que reserven)\b/,
+  correos: /\b(correos?|mails?|email)\b/,
+  rediseno: /redisen|moderniz|actualizar (la |mi )?pagina|ya tengo una pagina|https?:\/\/|www\.|\b[a-z0-9-]+\.(cl|com|net|org|xyz)\b/,
+  dominio: /\b(dominio|hosting)\b/
+};
+// Las que se repiten en la frase «la página lleva …» (en este orden) y cómo se nombran.
+const AG_FRASE = [['portafolio', 'portafolio'], ['tienda', 'tienda'], ['agenda', 'calendario'], ['correos', 'correos'], ['rediseno', 'rediseño']];
+const AG_ETIQ = { portafolio: 'portafolio', tienda: 'tienda', agenda: 'agenda', correos: 'correos', rediseno: 'rediseño', dominio: 'dominio' };
+const AG_RUBRO = /\b(soy|somos|me dedico a|trabajo (?:de|como|en)|mi (?:emprendimiento|negocio|consult[a-z]*|local|empresa|taller|estudio|clinica|clínica|salon|salón) (?:de|es)\b)[^.,;\n]{0,70}/i;
+const AG_DIR = /(https?:\/\/\S+|www\.\S+|\b[a-z0-9-]+\.(?:cl|com|net|org|xyz)\b\S*)/i;
+const AG_TEL = /(?:\+?56[\s-]?)?9[\s-]?\d{4}[\s-]?\d{4}\b/;
+// Palabras clave exactas: entran siempre.
+const AG_ENTRADA_FIJA = /\b(desarrollo web|pagina web|sitio web|landing|agenda online|agenda pro)\b|^(web|agenda|agenda pro|agenda online)[!. ]*$/;
+// Frases libres: entran solo si el mensaje no es de reparación ni de otro tema (ver vetoReparacion).
+const AG_ENTRADA_LIBRE = /\bweb\b|\b(tienda (online|virtual|en linea)|e-?commerce|catalogo online|vender por internet|(pagina|sitio) para vender|sitio para vender (mis )?productos|pagina para mi (negocio|emprendimiento)|quiero una pagina)\b|\b(necesit\w+|quer\w+|quier\w+|quisiera|cotiz\w+|busco|hacer|armar|crear|hacen|redisen\w+)\b.*\bpagina\b/;
+const AG_NO_WEB = /\b(factura|cobro|cobr[oó]|garantia|windows|drivers?|inicio|descarga|ayuda|banco)\b/;
+const AG_EQUIPO = /\b(notebook|pc|compu\w*|laptop|computador\w*)\b/;
+const AG_SINTOMA = /\b(no prende|no enciende|no parte|se pega|lent[oa]|se calienta|falla\w*|se apaga|se cuelga|error|no funciona|no carga)\b/;
+function vetoReparacion(texto) {
+  const t = normalizar(texto);
+  // «Armar mi tienda online» no es armado de PC: con tienda/página/web/sitio/catálogo gana el flujo C.
+  const armaWeb = /\b(tienda|pagina|web|sitio|catalogo)\b/.test(t);
+  return clasificar(texto).some(i => SERVICIO.includes(i) && !(i === 'armado' && armaWeb)) || AG_NO_WEB.test(t) || (AG_EQUIPO.test(t) && AG_SINTOMA.test(t));
+}
+const AG_SAL8 = /\b(mi (numero|telefono|celular|whatsapp|wsp)|hablame|escribeme|llamame|llamenme|(mandame|pasame|dame) (tu |el )?(numero|wsp|whatsapp)|(cual es|tienes) (tu |el )?(numero|wsp|whatsapp)|te escribo al (correo|mail)|no me escribas|pero por escrito|prefiero por (aca|aqui))\b/;
+const AG_HUMANO = /\b(hablar|persona|humano|gabriel)\b|con quien hablo|hay alguien/;
+const AG_POSTERGA = /\b(te aviso|te confirmo|dame un (rato|segundo|ratito|momento)|dejame (ver|revisar|pensarlo)|voy a ver|mas tarde|en un rato|cuando pueda|llegando te mando|quedo atent[oa])\b/;
+const FALSOS_NO = /\b(no hay (problema|drama)|no te preocupes|no tranqui|no importa|no te compliques)\b/;
+const SI_RE = /^(si|sip|ya|yap|yapo|yapis|dale|vale|ok|oki|okis|oka|listo|perfecto|super|genial|bacan|buenisimo|claro|obvio|de una|altiro|ahora si|ahh ya|1|uno)\b/;
+const NO_RE = /^(no|nop|ahora no|despues|mas adelante|lo pienso|lo voy a pensar|por ahora no|solo estoy mirando|solo queria saber|2|dos)\b|\bno gracias\b|\bahora no\b/;
+const CONFUSION = /^(\?+|como|que|que cosa|eh|alo|no entendi|a que te refieres)$/;
+const ENTRADA_SOLA = /^(web|agenda|agenda online|agenda pro|pagina|pagina web|sitio web|landing|desarrollo web|hola|holi|buenas|buenas tardes|buenos dias|si|no|ya|ok|dale)$/;
+
+const AG_PIDE = /^(quiero|necesito|busco|quisiera|queria)\b/;
+const AG_PREG = { rubro: 'ag_0', marca: 'ag_1', hoy: 'ag_2', cierre: 'ag_3' };
+const AG_REP = { rubro: 'ag_0_rep', marca: 'ag_1_rep', hoy: 'ag_2_rep', cierre: 'ag_3_rep' };
+const AG_INTENT = { rubro: 'web_inicio', marca: 'web_marca', hoy: 'web_hoy', cierre: 'web_mostrar' };
+const AG_BOTONES = {
+  marca: [['Sí, ya tengo', 'AG1_SI'], ['Todavía no', 'AG1_NO']],
+  hoy: [['WhatsApp o mensajes', 'AG2_1'], ['Cuaderno o planilla', 'AG2_2'], ['Otra app', 'AG2_3']],
+  cierre: [['Sí, veámoslo', 'AG3_SI'], ['Ahora no', 'AG3_NO']]
+};
+
+// Normaliza para interpretar respuestas: sin tildes, letras repetidas colapsadas y sin signos.
+function lim(s) {
+  return normalizar(s).replace(/(.)\1{2,}/g, '$1').replace(/[¿?¡!.,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// 'si' | 'no' | null. Los falsos «no» («no hay problema», «no tranqui») se evalúan antes que el «no».
+function respSiNo(t) {
+  if (FALSOS_NO.test(t)) return 'si';
+  if (NO_RE.test(t)) return 'no';
+  if (SI_RE.test(t)) return 'si';
+  return null;
+}
+
+function respMarca(t, payload) {
+  if (payload === 'AG1_SI') return 'si';
+  if (payload === 'AG1_NO') return 'no';
+  if (/no se que es|que es (eso de )?marca/.test(t)) return 'explica';
+  if (/^(2|dos)\b|todavia no|aun no|estoy en eso|mas o menos|a medias|solo el nombre|no tengo (ni )?(logo|marca|identidad)|no hay (logo|marca)|sin (logo|marca)|no tengo$/.test(t)) return 'no';
+  if (/tengo (el |un |mi )?(logo|marca|identidad)|mi (logo|marca)/.test(t)) return 'si';
+  return respSiNo(t);
+}
+
+function respHoy(t, payload) {
+  if (payload && /^AG2_[123]$/.test(payload)) return ['wsp', 'cuaderno', 'app'][Number(payload.slice(4)) - 1];
+  if (/no agendo|aun no atiendo|^nada\b/.test(t)) return 'no_agenda';
+  if (/^(1|uno)\b|whatsapp|wsp|wasap|wpp|mensajes|instagram|\bdm\b|me escriben|me llaman|telefono/.test(t)) return 'wsp';
+  if (/^(2|dos)\b|cuaderno|planilla|excel|libreta|papel|a mano/.test(t)) return 'cuaderno';
+  if (/^(3|tres)\b|\bapp\b|aplicacion|calendly|agendapro|google calendar|sistema|software/.test(t)) return 'app';
+  return null;
+}
+
+function nuevoAg(ahora) {
+  return { paso: 'rubro', t: ahora, rubro: null, marca: null, hoy: null, quiere: [], precio: false, recomendado: false, nombreRec: null,
+    compara: false, urgencia: false, telefono: null, dir: null, intentos: 0, preguntas: 0, dioO: false, dioR: false, dioD: false, precioPedido: false };
+}
+
+// Extrae datos de CUALQUIER mensaje (M3). Devuelve lo que apareció en este mensaje.
+function leerAg(ag, texto) {
+  const t = normalizar(texto);
+  const ev = { precio: false, compara: false, recomendado: false, d: false, quiereAhora: false };
+  const antes = ag.quiere.length;
+  const dir = AG_DIR.exec(String(texto));
+  const tSinUrl = normalizar(String(texto).replace(AG_DIR, ' '));      // «/tienda» dentro de una dirección no es «quiero tienda»
+  for (const k of Object.keys(AG_QUIERE)) if ((AG_QUIERE[k].test(k === 'rediseno' ? t : tSinUrl) || (k === 'rediseno' && dir)) && !ag.quiere.includes(k)) ag.quiere.push(k);
+  if (dir && !ag.dir) ag.dir = dir[0].slice(0, 80);
+  ev.quiereAhora = Object.keys(AG_QUIERE).some(k => AG_QUIERE[k].test(k === 'rediseno' ? t : tSinUrl)) || !!dir;
+  ev.d = !!dir || ag.quiere.slice(antes).some(k => ['rediseno', 'dominio', 'correos'].includes(k));
+  if (!ag.marca) {
+    if (/no (hay|tengo|tenemos) (un |ni )?(logo|marca|identidad)|sin (logo|marca)|solo el nombre/.test(t)) ag.marca = 'no';
+    else if (/(ya )?tengo (un |mi |el )?(logo|marca|identidad)|\bmi (logo|marca)\b/.test(t)) ag.marca = 'si';
+  }
+  if (!ag.hoy && /no agendo|cuaderno|planilla|excel|calendly|agendapro|google calendar|(agendo|coordino|reservan|piden hora)\b.*\b(whatsapp|wsp|instagram)/.test(t)) {
+    ag.hoy = /no agendo/.test(t) ? 'no_agenda' : /cuaderno|planilla|excel/.test(t) ? 'cuaderno' : /calendly|agendapro|google calendar/.test(t) ? 'app' : 'wsp';
+  }
+  if (!ag.rubro) { const r = AG_RUBRO.exec(String(texto)); if (r) ag.rubro = r[0].replace(/\s*(?:,|\by\b)?\s*\b(quiero|necesito|busco|quisiera)\b.*$/i, '').trim().slice(0, 80) || null; }
+  ev.precio = /\b(cuanto (sale|cuesta|cobr\w*|vale|seria|saldria|es)|precio|valor|rango|presupuesto|platita)\b/.test(t);
+  // Ya preguntó el precio: la insistencia sin las palabras de siempre («aunque sea aproximado») también cuenta.
+  if (!ev.precio && ag.precioPedido) ev.precio = /\b(aproximado|aproximada|aunque sea|mas o menos cuanto|un numero|un valor|insisto|pero cuanto)\b/.test(t);
+  ev.compara = /\b(cotizando|cotizo|comparando|comparar|otras opciones|varias opciones|varios lados|otros lados)\b/.test(t);
+  ev.recomendado = /\b(me (dio|dieron|paso|pasaron) (tu|el|su) (dato|contacto|numero|instagram)|me recomend\w+|te recomendaron|vengo de parte)\b/.test(t);
+  if (ev.recomendado && !ag.nombreRec) {
+    const n = /(?:contacto|dato|numero)\s+(?:de\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})/.exec(String(texto)) || /me recomend(?:ó|o)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})/.exec(String(texto));
+    if (n) ag.nombreRec = n[1];
+  }
+  if (ev.recomendado) ag.recomendado = true;
+  if (ev.compara) ag.compara = true;
+  if (/\b(urgente|lo antes posible|para hoy|es para mi trabajo|lo necesito (ya|rapido))\b/.test(t)) ag.urgencia = true;
+  return ev;
+}
+
+// Resumen estructurado para Gabriel (nunca lleva claves: solo lo que el cliente contó del negocio).
+function resumenAg(ag) {
+  const marca = ag.marca === 'si' ? 'con marca' : ag.marca === 'no' ? 'sin marca' : 'marca sin dato';
+  const hoy = { wsp: 'agenda por WhatsApp', cuaderno: 'cuaderno o planilla', app: 'otra app', no_agenda: 'no agenda' }[ag.hoy] || 'cómo agenda: sin dato';
+  const sn = v => v ? 'sí' : 'no';
+  return ['Lead agenda', ag.rubro || 'sin rubro', marca, hoy,
+    'quiere: ' + (Object.keys(AG_ETIQ).filter(k => ag.quiere.includes(k)).map(k => AG_ETIQ[k]).join(', ') || 'sin dato'),
+    'pidió precio: ' + sn(ag.precio), 'recomendado: ' + sn(ag.recomendado) + (ag.nombreRec ? ' (' + ag.nombreRec + ')' : ''), 'compara: ' + sn(ag.compara)]
+    .concat(ag.urgencia ? ['urgencia: sí'] : [], ag.telefono ? ['teléfono: ' + ag.telefono] : [], ag.dir ? ['web: ' + ag.dir] : []).join(' · ');
+}
+
+function sufijoNoche(ahora) { const h = horaChile(ahora); return h >= 21 || h < 9 ? ' Te contesta mañana desde las 9.' : ''; }
+
+// Arma la salida: segmentos laterales (AG-P/O/R/D), frase opcional y el texto del paso.
+function salidaAg(ag, ahora, links, intencion, segs, clave, extra) {
+  const e = extra || {};
+  const partes = (segs || []).slice();
+  if (clave) partes.push((e.frase ? e.frase + '\n\n' : '') + renderizar(clave, ahora, links, null) + (e.sufijo || ''));
+  return { intencion, respuesta: partes.join('\n\n'), botones: e.botones ? botones(e.botones) : null,
+    aviso: e.aviso === undefined ? null : e.aviso, resumen: e.resumen || '' };
+}
+
+function sal2Ag(ag, ahora, links, texto, motivo) {
+  ag.paso = 'fin';
+  const ultimo = /clave|contrasena|password/.test(normalizar(texto)) ? '[mensaje omitido]' : String(texto).slice(0, 80);
+  return salidaAg(ag, ahora, links, 'web_humano', [], 'sal2', { sufijo: sufijoNoche(ahora), aviso: 'urgente',
+    resumen: resumenAg(ag) + ' · ' + motivo + ' · último mensaje: ' + ultimo });
+}
+
+function cierreAg(ag, ahora, links, si) {
+  ag.paso = 'fin';
+  return salidaAg(ag, ahora, links, si ? 'web_llamada' : 'web_ahora_no', [], si ? 'ag_4a' : 'ag_4b', {
+    aviso: si ? 'urgente' : 'normal', resumen: si ? '🔥 ' + resumenAg(ag) + ' · ya tiene el link' : resumenAg(ag) + ' · ahora no' });
+}
+
+// SAL-8: pide otro canal o deja un teléfono. El número va solo al aviso, nunca al cliente.
+function canalAg(ag, ahora, links, texto, tel) {
+  const yaTenia = !!ag.telefono;
+  if (tel) ag.telefono = tel[0].trim();
+  ag.paso = 'fin';
+  const clave = yaTenia ? 'sal8_ya' : /(tu|el) (numero|wsp|whatsapp)/.test(normalizar(texto)) && !tel ? 'sal8_octavo' : 'sal8';
+  return salidaAg(ag, ahora, links, 'web_canal', [], clave, { aviso: 'urgente', resumen: 'Pide contacto por WhatsApp · ' + resumenAg(ag) });
+}
+
+function siguientePaso(ag) {
+  if (!ag.rubro) return 'rubro';
+  if (!ag.marca) return 'marca';
+  // «Hoy» se pregunta si no dijo qué quiere o si quiere agenda; se salta solo si quiere otra cosa y no agenda.
+  if (!ag.hoy && (!ag.quiere.length || ag.quiere.includes('agenda'))) return 'hoy';
+  return 'cierre';
+}
+
+function fraseAg(ag) {
+  const p = AG_FRASE.filter(([k]) => ag.quiere.includes(k)).map(([, n]) => n);
+  if (!p.length) return null;
+  return 'Gracias por contarme. Con lo que me dices, la página lleva ' + (p.length > 1 ? p.slice(0, -1).join(', ') + ' y ' + p[p.length - 1] : p[0]) + '.';
+}
+
+// Segmentos laterales, una vez cada uno: AG-R, AG-D, AG-O y AG-P (en ese orden).
+function segmentosAg(ag, ev, ahora, links) {
+  const s = [];
+  if (ev.recomendado && !ag.dioR) { ag.dioR = true; s.push(renderizar('ag_recom', ahora, links, null)); }
+  if (ev.d && !ag.dioD) { ag.dioD = true; s.push(renderizar('ag_dominio', ahora, links, null)); }
+  if (ev.compara && !ag.dioO) { ag.dioO = true; s.push(renderizar('ag_compara', ahora, links, null)); }
+  if (ev.precio) { ag.precio = true; ag.precioPedido = true; s.push(renderizar('ag_precio', ahora, links, null)); }
+  return s;
+}
+
+// Muestra el paso `ag.paso` (pregunta nueva). AG-3 lleva aviso normal con el resumen del lead.
+function preguntaAg(ag, ahora, links, segs, opciones) {
+  const paso = ag.paso;
+  if (paso !== 'cierre') ag.preguntas++;
+  ag.intentos = 0;
+  const e = Object.assign({ botones: AG_BOTONES[paso] }, opciones || {});
+  if (paso === 'cierre') { e.frase = fraseAg(ag); e.aviso = 'normal'; e.resumen = resumenAg(ag); }
+  return salidaAg(ag, ahora, links, AG_INTENT[paso], segs, AG_PREG[paso], e);
+}
+
+function rubroValidoAg(texto, t, ev) {
+  if (/\?/.test(texto) || CONFUSION.test(t) || ENTRADA_SOLA.test(t)) return null;
+  if (AG_PIDE.test(t) || ev.quiereAhora) return null;               // «quiero una tienda» es lo que quiere, no su rubro
+  if (t.replace(/[^a-z]/g, '').length < 3 || /^(ja|je|ji|jo)+$/.test(t)) return null;
+  if (ev.precio || ev.compara || ev.recomendado) return null;       // era una consulta, no su rubro
+  return String(texto).trim().slice(0, 80);
+}
+
+// Aplica la respuesta al paso actual. Devuelve true si el mensaje respondía la pregunta.
+function respondePaso(ag, texto, t, payload, ev, segs, ahora, links) {
+  if (ag.paso === 'rubro') {
+    if (!ag.rubro) ag.rubro = rubroValidoAg(texto, t, ev);
+    return !!ag.rubro;
+  }
+  if (ag.paso === 'marca') {
+    if (!ag.marca) {
+      const m = respMarca(t, payload);
+      if (m === 'explica') { ag.marca = 'no'; segs.push(renderizar('ag_1_explica', ahora, links, null)); }
+      else if (m) ag.marca = m;
+    }
+    return !!ag.marca;
+  }
+  if (ag.paso === 'hoy') {
+    if (!ag.hoy) ag.hoy = respHoy(t, payload);
+    return !!ag.hoy;
+  }
+  return false;
+}
+
+// Mensaje que no responde la pregunta: M4 (lo preguntado se responde y se repite), M5 (dos intentos).
+function noRespondeAg(ag, texto, t, segs, ahora, links, ev) {
+  const paso = ag.paso;
+  const rep = clave => salidaAg(ag, ahora, links, 'web_repite', segs, clave, { botones: AG_BOTONES[paso] });
+  // Dijo qué quiere en vez de su rubro: ya quedó anotado en `quiere`; se repregunta sin contar fallo.
+  if (paso === 'rubro' && ev && (ev.quiereAhora || AG_PIDE.test(t))) return rep('ag_0_anoto');
+  if (segs.length) return rep(AG_PREG[paso]);                               // contestó algo lateral: repite la pregunta, no es fallo
+  if (/\?/.test(texto) && !CONFUSION.test(t)) {
+    segs.push(renderizar('ag_lateral', ahora, links, null));
+    return rep(AG_PREG[paso]);
+  }
+  const ids = clasificar(texto).filter(i => SERVICIO.includes(i));
+  if (ids.length) {
+    segs.push(renderizar('ag_dos_temas', ahora, links, null));
+    const r = salidaAg(ag, ahora, links, 'web_repite', segs, AG_PREG[paso], { botones: AG_BOTONES[paso], aviso: 'normal', resumen: 'dos temas · ' + resumenAg(ag) });
+    return r;
+  }
+  if (ag.intentos >= 1) return sal2Ag(ag, ahora, links, texto, 'no entendió ' + paso);
+  ag.intentos++;
+  return rep(AG_REP[paso]);
+}
+
+// Devuelve null si el mensaje no es del flujo de la página con agenda.
+function flujoAgenda(texto, payload, c, ahora, links) {
+  const t = lim(texto);
+  const activo = !!c.ag && c.ag.paso !== 'fin' && ahora - c.ag.t < DIA;
+  const tel = AG_TEL.exec(String(texto));
+  const llamada = /^(quiero )?(la )?llamada$/.test(t);
+  // SAL-8: pide contacto explícito (con o sin número) o, dentro del flujo, el mensaje es casi solo un número.
+  // Un número dentro de una consulta («la serie 912345678, se pega») no desvía nada.
+  const palabras = tel ? lim(String(texto).replace(AG_TEL, ' ')).split(' ').filter(Boolean).length : 0;
+  const sal8 = AG_SAL8.test(t) || (!!tel && activo && palabras <= 3);
+  const fuera = !!modoFuera(links, ahora);
+  const norm = normalizar(texto);
+  const inicia = payload === 'MENU_WEB' || AG_ENTRADA_FIJA.test(norm) || (AG_ENTRADA_LIBRE.test(norm) && !vetoReparacion(texto));
+  if (!activo && !llamada && !sal8 && !inicia) return null;
+  if (activo && (!/[a-z0-9]/.test(t) || /^(ja|je|ji|jo)+$/.test(t) || /\b(liked a message|reacted|audio call)\b/.test(t))) {
+    return { intencion: 'web_ignorada', respuesta: null, botones: null, aviso: null };        // M2
+  }
+  const ids = activo ? clasificar(texto, fuera) : [];
+  if (activo && fuera && ids.includes('fuera_vuelta') && !ids.some(i => i !== 'fuera_vuelta' && LOGISTICA.includes(i))) {
+    // FUERA-5 dentro del flujo: responde cuándo vuelven y repite la pregunta pendiente, sin contar fallo.
+    c.ag.t = ahora;
+    const ag = c.ag;
+    return salidaAg(ag, ahora, links, 'fuera_vuelta', [renderizar('fuera_vuelta', ahora, links, modoFuera(links, ahora))], AG_PREG[ag.paso], { botones: AG_BOTONES[ag.paso] });
+  }
+  if (activo && ids.some(i => LOGISTICA.includes(i))) return null;                            // M8: la logística manda
+
+  const previo = c.ag;
+  const ag = activo || (previo && (llamada || sal8)) ? previo : nuevoAg(ahora);
+  const nuevo = !activo;
+  c.ag = ag; ag.t = ahora;
+  if (llamada) return cierreAg(ag, ahora, links, true);
+  if (sal8) { leerAg(ag, texto); return canalAg(ag, ahora, links, texto, tel); }
+  if (activo && AG_HUMANO.test(t)) {                                                          // SAL-3
+    ag.paso = 'fin';
+    return salidaAg(ag, ahora, links, 'web_humano', [], 'sal3', { sufijo: sufijoNoche(ahora), aviso: 'urgente', resumen: resumenAg(ag) });
+  }
+  if (activo && AG_POSTERGA.test(t)) return salidaAg(ag, ahora, links, 'web_pausa', [], 'ag_sal6', {});   // SAL-6
+
+  const ev = leerAg(ag, texto);
+  if (tel && !ag.telefono) ag.telefono = tel[0].trim();      // dejó su teléfono dentro de una respuesta: señal para Gabriel
+  if (ev.precio && ag.precioPedido) return sal2Ag(ag, ahora, links, texto, 'pide precio dos veces');
+  const segs = segmentosAg(ag, ev, ahora, links);
+
+  if (nuevo) {
+    // Relato que ya trae lo que quiere (y quién es o de dónde viene): salta las preguntas.
+    const relato = ag.quiere.length > 0 && (ag.rubro || ag.recomendado || ag.compara || ag.dir || ev.d);
+    ag.paso = relato ? 'cierre' : siguientePaso(ag);
+    return preguntaAg(ag, ahora, links, segs);
+  }
+  if (ag.paso === 'cierre') {
+    const r = payload === 'AG3_SI' ? 'si' : payload === 'AG3_NO' ? 'no' : /llamada|cuando|me interesa/.test(t) && !respSiNo(t) ? 'si' : respSiNo(t);
+    if (r) return cierreAg(ag, ahora, links, r === 'si');
+    return noRespondeAg(ag, texto, t, segs, ahora, links, ev);
+  }
+  if (respondePaso(ag, texto, t, payload, ev, segs, ahora, links)) {
+    ag.paso = siguientePaso(ag);
+    return preguntaAg(ag, ahora, links, segs);
+  }
+  return noRespondeAg(ag, texto, t, segs, ahora, links, ev);
+}
+
+// Despacha: Pedidos (DEMO) conserva su flujo; lo demás de desarrollo web es el diálogo C.
+function flujoWeb(texto, payload, c, ahora, links) {
+  const pedidosActivo = c.web && c.web.paso !== undefined && ahora - c.web.t < DIA;
+  if (pedidosActivo || REG_DEMO.test(normalizar(texto))) { c.ag = null; return flujoPedidos(texto, payload, c, ahora); }
+  return flujoAgenda(texto, payload, c, ahora, links || {});
 }
 
 // contacto: { visto, gabriel, enviados: {intencion: ts}, ultimoBot, bots: [ts], web } (memoria persistente)
@@ -552,10 +906,20 @@ function decidir(texto, contacto, ahora, links, payload) {
     return { intencion: 'menu_rep', respuesta: '¡Dale! Cuéntame qué le pasa a tu notebook o PC (y el modelo si lo tienes) y te digo cuánto sale.', botones: null, aviso: null, contacto: c0 };
   }
   if (!gabrielActivo) {
-    const w = flujoWeb(texto, payload, c0, ahora);
+    const antes = JSON.stringify({ ag: c0.ag, web: c0.web });
+    // Una conversación de flujo ya en marcha no se corta con el tope: cada respuesta contesta un mensaje del cliente.
+    const enFlujo = (c0.ag && c0.ag.paso !== 'fin' && ahora - c0.ag.t < DIA) || (c0.web && c0.web.paso !== undefined && ahora - c0.web.t < DIA);
+    const w = flujoWeb(texto, payload, c0, ahora, links);
     if (w) {
       c0.visto = ahora; c0.pend = null;
-      if (w.respuesta) { c0.ultimoBot = ahora; c0.bots = (c0.bots || []).filter(x => ahora - x < HORA).concat(ahora); }
+      c0.bots = (c0.bots || []).filter(x => ahora - x < HORA);
+      if (w.respuesta && !enFlujo && c0.bots.length >= 3) {
+        // Tope de 3 por hora: no se manda el texto (y el flujo no avanza), pero el aviso y el resumen siguen.
+        const e = JSON.parse(antes);
+        c0.ag = e.ag; c0.web = e.web;
+        return Object.assign({ contacto: c0 }, w, { respuesta: null, botones: null });
+      }
+      if (w.respuesta) { c0.ultimoBot = ahora; c0.bots = c0.bots.concat(ahora); }
       return Object.assign({ contacto: c0 }, w);
     }
     // Respuesta a una pregunta pendiente del bot (MEM-D, RAM-1): no la silencia el «conversación en curso».
@@ -660,4 +1024,4 @@ function decidirBase(texto, contacto, ahora, links) {
 }
 
 /* FIN-CEREBRO */
-if (typeof module !== 'undefined') module.exports = { decidir, flujoWeb, clasificar, normalizar, modoFuera, TEXTOS, REGLAS };
+if (typeof module !== 'undefined') module.exports = { decidir, flujoWeb, flujoAgenda, clasificar, normalizar, modoFuera, TEXTOS, REGLAS };

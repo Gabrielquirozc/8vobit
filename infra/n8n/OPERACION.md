@@ -95,3 +95,10 @@ Prueba de punta a punta: desde otra cuenta de Instagram escribir "quiero una dem
   - **«Memoria» no siempre es RAM.** Se separó en síntoma, duda (pregunta 1/2), RAM explícita (pregunta cotizar/diagnóstico), SSD, pieza propia, compatibilidad y miedo. Las preguntas 1/2 se recuerdan 24 h; si la respuesta no se entiende, el bot repregunta una vez y a la segunda pasa a Gabriel con aviso urgente.
   - **Aviso «fuera de Concepción».** Se activa con `MODO_FUERA=AAAA-MM-DD` (último día fuera) en `.env` y se apaga solo después de esa fecha. Hoy no está definido, así que está apagado. Para activarlo: agregar la línea al `.env` y correr `up -d --force-recreate`.
   - **Verificación.** 59 pruebas OK, flujo activo con el código nuevo, 0 errores en el log y webhook vivo. Falta la prueba de punta a punta desde otra cuenta.
+- **11-nov-2026** · Diálogo C («página con agenda», palabra clave AGENDA) de `DIALOGOS-BOT-V2-2026-11.md`.
+  - **Flujo.** Ya no hay menú de 4 botones, ni «¿para cuándo?», ni precio, ni reunión de 45 min por Meet. El bot guarda rubro, marca, cómo agenda hoy, qué quiere y las señales (pidió precio, viene recomendado, compara, teléfono), y pregunta solo lo que falta. Después muestra `8vobit.xyz/#agendar` y ofrece una llamada de 15 min por WhatsApp (`#reunion`).
+  - **Avisos.** AG-3 manda un aviso normal y AG-4a uno urgente, ambos con un resumen «Lead agenda · …». LLAMADA lleva a la reunión en cualquier momento. Si piden precio por segunda vez, va aviso urgente.
+  - **Entradas.** Siempre entran AGENDA, «página web», «sitio web», «landing», «desarrollo web», «web» suelto y el botón. Las frases libres («tienda online», «quiero una web/página para…», «vender por internet»…) entran solo si el mensaje no trae un síntoma o servicio de reparación.
+  - **DEMO (Pedidos).** Sin cambios; sigue ofreciendo su reunión de 45 min por Meet.
+  - **Verificación.** 104 pruebas OK, flujo activo, webhook vivo. Los 3 errores del log son del catálogo de api.n8n.io (timeout), no del bot.
+  - **Pendiente menor.** «web» suelto en una frase puede abrir el flujo con mensajes como «la web del SII no abre».

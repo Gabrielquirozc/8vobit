@@ -36,14 +36,18 @@ test('palabra clave REVISIÓN de los carruseles de reparación: diagnóstico y l
   assert.strictEqual(decidir('me puedes hacer revisión de la pantalla?', null, tarde, links).intencion, 'pantalla');
 });
 
-test('cierre de AGENDA en el flujo web: precio de lista y página de la agenda', () => {
+test('cierre de AGENDA en el flujo web: muestra la agenda, sin precio ni Meet de 45 min', () => {
   let r = decidir('AGENDA', null, tarde, links);
   r = decidir('kinesióloga', r.contacto, tarde + 1e3, links);
-  r = decidir('por whatsapp', r.contacto, tarde + 2e3, links);
-  r = decidir('este mes', r.contacto, tarde + 3e3, links);
-  assert.strictEqual(r.intencion, 'web_cierre');
-  assert.match(r.respuesta, /\$190\.000 \+ \$14\.990/);
-  assert.match(r.respuesta, /tu-agenda/);
+  r = decidir('sí', r.contacto, tarde + 2e3, links);
+  r = decidir('por whatsapp', r.contacto, tarde + 3e3, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  assert.match(r.respuesta, /8vobit\.xyz\/#agendar/);
+  assert.doesNotMatch(r.respuesta, /\$|190|14\.990|45 min|Meet/);
+  r = decidir('dale', r.contacto, tarde + 4e3, links);
+  assert.strictEqual(r.intencion, 'web_llamada');
+  assert.match(r.respuesta, /8vobit\.xyz\/#reunion/);
+  assert.doesNotMatch(r.respuesta, /45 min|Meet/);
 });
 
 test('precio de formateo con un contacto nuevo: precio y link de agenda', () => {
@@ -114,13 +118,9 @@ test('DEMO inicia el flujo web directo en pedidos', () => {
   assert.strictEqual(r.contacto.web.eleccion, 'PEDIDOS');
 });
 
-test('flujo web completo con botones: pedidos, caliente → Gassuso, reunión y aviso urgente', () => {
-  let r = decidir('quiero una pagina web', null, tarde, links);
-  // "pagina web" ya dice qué quiere: salta a la pregunta del negocio
-  assert.strictEqual(r.contacto.web.eleccion, 'PAGINA');
-  r = decidir('', null, tarde, links, 'MENU_WEB');
-  assert.strictEqual(r.botones.length, 4);
-  r = decidir('Pedidos para mi local', r.contacto, tarde + 60e3, links, 'W_PEDIDOS');
+test('flujo de Pedidos (DEMO) completo con botones: caliente → Gassuso, reunión y aviso urgente', () => {
+  let r = decidir('DEMO', null, tarde, links);
+  assert.strictEqual(r.contacto.web.eleccion, 'PEDIDOS');
   assert.match(r.respuesta, /a qué se dedica/i);
   r = decidir('Sushi en Lomas', r.contacto, tarde + 120e3, links);
   assert.strictEqual(r.botones.length, 3);
@@ -135,14 +135,16 @@ test('flujo web completo con botones: pedidos, caliente → Gassuso, reunión y 
   assert.strictEqual(r.contacto.web, null);
 });
 
-test('flujo web: solo mirando no es urgente', () => {
-  let r = decidir('', null, tarde, links, 'MENU_WEB');
-  r = decidir('agenda', r.contacto, tarde + 1e3, links);
-  r = decidir('psicóloga', r.contacto, tarde + 2e3, links);
-  r = decidir('por whatsapp', r.contacto, tarde + 3e3, links);
-  r = decidir('solo estoy mirando', r.contacto, tarde + 4e3, links);
+test('flujo web: solo mirando termina en «ahora no» con aviso normal (ejemplo 9)', () => {
+  let r = decidir('página web', null, tarde, links);
+  r = decidir('tengo una barbería', r.contacto, tarde + 1e3, links);
+  r = decidir('sí', r.contacto, tarde + 2e3, links);
+  r = decidir('otra app', r.contacto, tarde + 3e3, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  r = decidir('ahora no', r.contacto, tarde + 4e3, links);
+  assert.strictEqual(r.intencion, 'web_ahora_no');
   assert.strictEqual(r.aviso, 'normal');
-  assert.match(r.respuesta, /#agendar/);
+  assert.match(r.respuesta, /LLAMADA/);
 });
 
 test('flujo web: "hablar" pasa a Gabriel en cualquier paso', () => {
@@ -537,4 +539,548 @@ test('memoria_duda no se activa con virus, basura, malware ni publicidad', () =>
   for (const s of ['mi pc se llena de virus', 'se me llena el notebook de publicidad', 'mi compu se llena de basura', 'el pc se llena de malware']) {
     assert.notStrictEqual(decidir(s, null, tarde, links).intencion, 'memoria_duda', s);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Diálogo C · Página con agenda (palabra clave AGENDA).
+// ---------------------------------------------------------------------------
+const S = 1e3;
+// Lleva a un contacto nuevo hasta AG-3 (muestra la agenda y propone la llamada).
+function hastaAG3(t0 = tarde) {
+  let r = decidir('AGENDA', null, t0, links);
+  r = decidir('soy psicóloga', r.contacto, t0 + S, links);
+  r = decidir('sí', r.contacto, t0 + 2 * S, links);
+  r = decidir('por whatsapp', r.contacto, t0 + 3 * S, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  return r;
+}
+
+test('C: ningún texto del diálogo menciona precios ni Meet de 45 min', () => {
+  const { TEXTOS } = require('./cerebro.js');
+  for (const k of Object.keys(TEXTOS).filter(x => /^ag_|^sal[38]/.test(x))) {
+    for (const v of TEXTOS[k]) assert.doesNotMatch(v, /\$|190|14\.990|45 min|Meet|gratis/, k);
+  }
+});
+
+test('C ejemplo 1: cliente ideal AGENDA → rubro → marca → agenda hoy → AG-3 → dale → AG-4a urgente', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  assert.strictEqual(r.intencion, 'web_inicio');
+  assert.match(r.respuesta, /¿a qué te dedicas\?/);
+  assert.strictEqual(r.aviso, null);
+  r = decidir('soy psicóloga', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  assert.deepStrictEqual(r.botones.map(b => b.titulo), ['Sí, ya tengo', 'Todavía no']);
+  r = decidir('sí', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_hoy');
+  assert.strictEqual(r.botones.length, 3);
+  r = decidir('por whatsapp', r.contacto, tarde + 3 * S, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  assert.match(r.respuesta, /8vobit\.xyz\/#agendar/);
+  assert.match(r.respuesta, /15 min/);
+  assert.strictEqual(r.contacto.ag.preguntas, 3);   // rubro, marca y hoy: máximo tres preguntas de datos
+  r = decidir('dale', r.contacto, tarde + 4 * S, links);
+  assert.strictEqual(r.intencion, 'web_llamada');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.respuesta, /8vobit\.xyz\/#reunion/);
+  assert.match(r.resumen, /Lead agenda · soy psicóloga · con marca · agenda por WhatsApp · quiere: sin dato · pidió precio: no · recomendado: no · compara: no/);
+});
+
+test('banco 3 / ejemplo 2 (caso del 9-nov): web → web → soy contador → 1 → ¿qué cosa? → whatsapp', () => {
+  let r = decidir('web', null, tarde, links);
+  assert.strictEqual(r.intencion, 'web_inicio');
+  r = decidir('web', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /psicóloga, kinesiólogo, abogada, peluquería/);
+  r = decidir('soy contador', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  r = decidir('1', r.contacto, tarde + 3 * S, links);
+  assert.strictEqual(r.intencion, 'web_hoy');
+  r = decidir('¿qué cosa?', r.contacto, tarde + 4 * S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /Me refiero a cómo te reservan hora/);
+  r = decidir('whatsapp', r.contacto, tarde + 5 * S, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+});
+
+test('banco 4 / ejemplo 3: relato largo salta AG-0/1/2, responde AG-P y manda AG-3 con la frase', () => {
+  const r = decidir('Quería cotizar una página para mi emprendimiento de servicios fotográficos. No tengo logo ni página, sería portafolio y tienda, y un calendario para agendar sesiones. Solo quiero un rango de precio', null, tarde, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  assert.match(r.respuesta, /Depende de lo que necesites|Te lo digo con tu caso en la mano/);              // AG-P
+  assert.match(r.respuesta, /Gracias por contarme\. Con lo que me dices, la página lleva portafolio, tienda y calendario\./);
+  assert.doesNotMatch(r.respuesta, /fotogr/);                                                                 // nunca el rubro
+  assert.doesNotMatch(r.respuesta, /\$/);
+  assert.match(r.respuesta, /#agendar/);
+  assert.strictEqual(r.contacto.ag.marca, 'no');
+  assert.strictEqual(r.contacto.ag.precio, true);
+  assert.match(r.resumen, /mi emprendimiento de servicios fotográficos · sin marca/);
+  assert.match(r.resumen, /pidió precio: sí/);
+  r.contacto.ag.paso === 'cierre' || assert.fail('debía quedar en AG-3');
+  const f = decidir('dale', r.contacto, tarde + S, links);
+  assert.strictEqual(f.aviso, 'urgente');
+  assert.match(f.resumen, /quiere: portafolio, tienda, agenda · pidió precio: sí/);
+});
+
+test('banco 5: AGENDA → soy kinesiólogo → no tengo logo → no agendo → AG-3 con aviso «sin marca» y «no agenda»', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy kinesiólogo', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  r = decidir('no tengo logo', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_hoy');
+  r = decidir('no agendo', r.contacto, tarde + 3 * S, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  assert.ok(r.aviso);
+  assert.match(r.resumen, /sin marca/);
+  assert.match(r.resumen, /no agenda/);
+});
+
+test('banco 6, 7, 8: «no hay problema» y «no, tranqui» cuentan como sí; «no gracias» como no', () => {
+  for (const s of ['no hay problema', 'no, tranqui', 'no te preocupes', 'no importa']) {
+    const r = decidir(s, hastaAG3().contacto, tarde + 10 * S, links);
+    assert.strictEqual(r.intencion, 'web_llamada', s);
+  }
+  const n = decidir('no gracias', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(n.intencion, 'web_ahora_no');
+  assert.strictEqual(n.aviso, 'normal');
+  assert.match(n.resumen, /ahora no/);
+  const l = decidir('lo voy a pensar', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(l.intencion, 'web_ahora_no');
+});
+
+test('banco 9: en AG-1, «jajaja» y emojis no cuentan como intento (se pidió M2)', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy peluquera', r.contacto, tarde + S, links);
+  const a = decidir('jajaja', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(a.respuesta, null);
+  const b = decidir('🙃', a.contacto, tarde + 3 * S, links);
+  assert.strictEqual(b.respuesta, null);
+  assert.strictEqual(b.contacto.ag.intentos, 0);
+  assert.strictEqual(decidir('liked a message', b.contacto, tarde + 4 * S, links).respuesta, null);
+});
+
+test('M5: dos respuestas que no se entienden → SAL-2 con aviso urgente', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy peluquera', r.contacto, tarde + S, links);
+  r = decidir('mmm', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  r = decidir('eh', r.contacto, tarde + 3 * S, links);
+  assert.strictEqual(r.intencion, 'web_humano');
+  assert.match(r.respuesta, /Gabriel/);
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.resumen, /Lead agenda · soy peluquera/);
+});
+
+test('banco 17: «cuanto sale» en AG-1 → AG-P + repite AG-1, sin contar fallo', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy peluquera', r.contacto, tarde + S, links);
+  r = decidir('cuanto sale', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /llamada/);
+  assert.match(r.respuesta, /¿Ya tienes logo|¿ya tienes tu logo/i);
+  assert.doesNotMatch(r.respuesta, /\$|\d{2}\.\d{3}/);
+  assert.strictEqual(r.contacto.ag.intentos, 0);
+  r = decidir('1', r.contacto, tarde + 3 * S, links);          // la pregunta sigue vigente
+  assert.strictEqual(r.intencion, 'web_hoy');
+});
+
+test('banco 18 / ejemplo 8: pide precio dos veces → SAL-2 con aviso «pide precio dos veces»', () => {
+  let r = hastaAG3();
+  r = decidir('cuanto sale', r.contacto, tarde + 10 * S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /1️⃣/);
+  r = decidir('aunque sea aproximado', r.contacto, tarde + 11 * S, links);
+  assert.strictEqual(r.intencion, 'web_humano');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.resumen, /pide precio dos veces/);
+  assert.match(r.respuesta, /Gabriel/);
+});
+
+test('banco 20 / ejemplo 10: «hablame al wsp +56…» → SAL-8, el número va solo al aviso', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy contador', r.contacto, tarde + S, links);
+  r = decidir('no me escribas por acá, hablame al wsp +56912345678', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_canal');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.resumen, /\+56912345678/);
+  assert.doesNotMatch(r.respuesta, /\d{6}/);
+  assert.match(r.respuesta, /Gabriel/);
+  // Sin flujo previo también.
+  const s = decidir('hablame al wsp +56912345678', null, tarde, links);
+  assert.strictEqual(s.intencion, 'web_canal');
+  assert.match(s.resumen, /\+56912345678/);
+  // Un teléfono suelto: solo confirma que ya lo tiene si ya lo había dejado.
+  const y = decidir('mi número es 9 8765 4321', s.contacto, tarde + 60 * S, links);
+  assert.match(y.respuesta, /ya tengo tu número/);
+  assert.doesNotMatch(y.respuesta, /8765/);
+});
+
+test('SAL-8 en AG-3: «ya, pero por escrito» cambia de canal', () => {
+  const r = decidir('ya, pero por escrito', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(r.intencion, 'web_canal');
+  assert.strictEqual(r.aviso, 'urgente');
+});
+
+test('banco 29 / ejemplo 7: AG-3 → «te aviso» → SAL-6, sin fallo y la pregunta sigue vigente', () => {
+  let r = decidir('te aviso', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(r.intencion, 'web_pausa');
+  assert.strictEqual(r.respuesta, 'Dale, sin apuro. Aquí quedo.');
+  assert.strictEqual(r.aviso, null);
+  assert.strictEqual(r.contacto.ag.paso, 'cierre');
+  r = decidir('dale', r.contacto, tarde + 20 * S, links);
+  assert.strictEqual(r.intencion, 'web_llamada');
+});
+
+test('banco 31 / ejemplo 5: rediseño con dirección y comparando → AG-D + AG-O → AG-3', () => {
+  const r = decidir('Necesito rediseñar la página de mi papá, estoy cotizando en varios lados, es esta: https://www.ejemplo.cl/tienda', null, tarde, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  assert.match(r.respuesta, /no partimos de cero/);                                  // AG-D
+  assert.match(r.respuesta, /Normal, conviene comparar|Tiene sentido/);              // AG-O
+  assert.match(r.respuesta, /#agendar/);
+  assert.match(r.respuesta, /la página lleva rediseño/);
+  assert.doesNotMatch(r.respuesta, /Hago páginas|Armo páginas/);
+  assert.strictEqual(r.contacto.ag.compara, true);
+  assert.match(r.resumen, /compara: sí/);
+  assert.match(r.resumen, /web: https:\/\/www\.ejemplo\.cl/);
+});
+
+test('banco 32: «me dio tu contacto Juan» en el flujo → AG-R, no bloquea y el nombre va al aviso', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('me dio tu contacto Juan', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /¿Quién te recomendó\?/);
+  assert.match(r.respuesta, /¿a qué te dedicas tú\?|¿a qué te dedicas\?/);
+  assert.strictEqual(r.contacto.ag.intentos, 0);
+  r = decidir('soy abogada', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  assert.doesNotMatch(r.respuesta, /Quién te recomendó/);                             // no repregunta
+  assert.strictEqual(r.contacto.ag.nombreRec, 'Juan');
+});
+
+test('ejemplo 4: recomendado, informativa y con dominio → AG-R + AG-D, salta todo y llega a AG-3', () => {
+  const r = decidir('Me dieron tu contacto, necesito una página informativa y habilitar unos correos. Ya compré un dominio', null, tarde, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');
+  assert.match(r.respuesta, /¿Quién te recomendó\?/);
+  assert.match(r.respuesta, /no partimos de cero/);
+  assert.match(r.respuesta, /la página lleva correos\./);
+  assert.match(r.resumen, /recomendado: sí/);
+  assert.match(r.resumen, /quiere: correos, dominio/);
+});
+
+test('M3: informativa + correos salta «cómo agenda hoy» pero sigue preguntando rubro y marca', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy contador, quiero una página informativa y correos', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  r = decidir('todavía no', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_mostrar');      // sin AG-2
+  assert.match(r.respuesta, /la página lleva correos/);
+});
+
+test('ejemplo 9: «LLAMADA» dos días después de AG-4b → AG-4a con el lead', () => {
+  let r = decidir('ahora no', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(r.intencion, 'web_ahora_no');
+  r = decidir('LLAMADA', r.contacto, tarde + 2 * 24 * H, links);
+  assert.strictEqual(r.intencion, 'web_llamada');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.resumen, /Lead agenda · soy psicóloga/);
+  // Sin flujo previo también entra directo.
+  const n = decidir('llamada', null, tarde, links);
+  assert.strictEqual(n.intencion, 'web_llamada');
+});
+
+test('C: «no sé qué es eso de marca» explica y cuenta como «no»; «tengo el logo pero feo» como «sí»', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy contador', r.contacto, tarde + S, links);
+  const base = JSON.stringify(r.contacto);
+  const a = decidir('no sé qué es eso de marca', JSON.parse(base), tarde + 2 * S, links);
+  assert.match(a.respuesta, /Marca es el logo y los colores/);
+  assert.strictEqual(a.contacto.ag.marca, 'no');
+  assert.strictEqual(a.intencion, 'web_hoy');
+  const b = decidir('tengo el logo pero feo', JSON.parse(base), tarde + 2 * S, links);
+  assert.strictEqual(b.contacto.ag.marca, 'si');
+});
+
+test('C: pregunta intermedia («¿incluye dominio?») se responde con una línea y se repite la pregunta', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('¿cuánto demoras en hacerla?', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /Eso lo definimos en la llamada/);
+  assert.match(r.respuesta, /a qué te dedicas/);
+  assert.strictEqual(r.contacto.ag.intentos, 0);
+});
+
+test('C: pide arreglar un notebook → «dos temas» y vuelve a la pregunta', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy contador', r.contacto, tarde + S, links);
+  r = decidir('y también me arreglas la pantalla de mi notebook', r.contacto, tarde + 2 * S, links);
+  assert.match(r.respuesta, /Eso también lo hago/);
+  assert.match(r.respuesta, /¿ya tienes tu logo|¿Ya tienes logo/i);
+  assert.strictEqual(r.aviso, 'normal');
+  assert.match(r.resumen, /dos temas/);
+});
+
+test('C: SAL-3 «quiero hablar con Gabriel» pasa a una persona con aviso urgente', () => {
+  const r = decidir('prefiero hablar con alguien', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(r.intencion, 'web_humano');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.respuesta, /Le aviso a Gabriel/);
+});
+
+test('C: M8 la logística manda y pausa el flujo; Gabriel activo calla al bot; el flujo expira a las 24 h', () => {
+  const c = hastaAG3().contacto;
+  const l = decidir('llegué, estoy abajo', c, tarde + 10 * S, links);
+  assert.strictEqual(l.intencion, 'llegada');
+  assert.strictEqual(l.contacto.ag.paso, 'cierre');                       // el flujo sigue pausado, no se pierde
+  const g = decidir('dale', Object.assign({}, c, { gabriel: tarde + 5 * S }), tarde + 10 * S, links);
+  assert.strictEqual(g.respuesta, null);
+  const e = decidir('dale', c, tarde + 25 * H, links);                    // 25 h después: ya no es respuesta del flujo
+  assert.notStrictEqual(e.intencion, 'web_llamada');
+});
+
+test('C: tope de 3 por hora en una entrada nueva conserva el aviso (SAL-8) y no manda texto', () => {
+  const c = { visto: tarde - 5 * 60e3, enviados: {}, bots: [tarde - 3 * 60e3, tarde - 2 * 60e3, tarde - 60e3] };
+  const r = decidir('hablame al wsp +56912345678', c, tarde, links);
+  assert.strictEqual(r.respuesta, null);
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.resumen, /\+56912345678/);
+});
+
+test('C: el flujo no se rompe con la bienvenida: «Desarrollo web» (MENU_WEB) abre AG-0', () => {
+  const r = decidir('', null, tarde, links, 'MENU_WEB');
+  assert.strictEqual(r.intencion, 'web_inicio');
+  assert.match(r.respuesta, /a qué te dedicas/);
+  assert.strictEqual(r.botones, null);
+  for (const s of ['página web', 'sitio web', 'landing', 'desarrollo web', 'agenda online', 'web']) {
+    assert.strictEqual(decidir(s, null, tarde, links).intencion, 'web_inicio', s);
+  }
+  // Pedir hora para el taller no entra al flujo web.
+  assert.strictEqual(decidir('quiero agendar una hora', null, tarde, links).intencion, 'agendar');
+});
+
+test('FUERA-6: con el modo fuera activo, AGENDA entra a AG-0 sin aviso', () => {
+  const r = decidir('AGENDA', null, tarde, linksFuera);
+  assert.strictEqual(r.intencion, 'web_inicio');
+  assert.doesNotMatch(r.respuesta, /fuera de Concepción/);
+});
+
+// ---------------------------------------------------------------------------
+// Diálogo C · iteración 2.
+// ---------------------------------------------------------------------------
+test('C + MODO_FUERA: «ya lo dejé en portería» dentro del flujo es FUERA-4 urgente y pausa el flujo', () => {
+  let r = decidir('AGENDA', null, tarde, linksFuera);
+  r = decidir('ya lo deje en porteria', r.contacto, tarde + S, linksFuera);
+  assert.strictEqual(r.intencion, 'fuera_porteria');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.match(r.respuesta, /lunes 19|domingo/);
+  assert.strictEqual(r.contacto.ag.rubro, null);              // no se tomó como rubro
+  assert.strictEqual(r.contacto.ag.paso, 'rubro');            // el flujo sigue pausado
+  r = decidir('soy contador', r.contacto, tarde + 2 * S, linksFuera);
+  assert.strictEqual(r.intencion, 'web_marca');
+});
+
+test('C + MODO_FUERA: «cuando vuelven?» en AG-1 responde FUERA-5 y repite la pregunta pendiente', () => {
+  let r = decidir('AGENDA', null, tarde, linksFuera);
+  r = decidir('soy contador', r.contacto, tarde + S, linksFuera);
+  r = decidir('cuando vuelven?', r.contacto, tarde + 2 * S, linksFuera);
+  assert.strictEqual(r.intencion, 'fuera_vuelta');
+  assert.match(r.respuesta, /Volvemos a recibir equipos el lunes 19/);
+  assert.match(r.respuesta, /¿Ya tienes logo|¿ya tienes tu logo/i);
+  assert.strictEqual(r.contacto.ag.intentos, 0);
+  assert.strictEqual(r.contacto.ag.paso, 'marca');
+  // Con el modo apagado, «cuando vuelven?» no tiene significado especial.
+  let a = decidir('AGENDA', null, tarde, links);
+  a = decidir('soy contador', a.contacto, tarde + S, links);
+  assert.notStrictEqual(decidir('cuando vuelven?', a.contacto, tarde + 2 * S, links).intencion, 'fuera_vuelta');
+});
+
+test('C: «aunque sea aproximado» (sin «rango») es la insistencia de precio → SAL-2 urgente', () => {
+  for (const s of ['aunque sea aproximado', 'más o menos cuánto', 'dime un número', 'pero cuánto']) {
+    let r = hastaAG3();
+    r = decidir('cuanto sale', r.contacto, tarde + 10 * S, links);
+    assert.strictEqual(r.intencion, 'web_repite', s);
+    r = decidir(s, r.contacto, tarde + 11 * S, links);
+    assert.strictEqual(r.intencion, 'web_humano', s);
+    assert.match(r.resumen, /pide precio dos veces/, s);
+  }
+  // Sin precio previo, «aunque sea» no es precio.
+  const n = decidir('dale aunque sea ahora', hastaAG3().contacto, tarde + 10 * S, links);
+  assert.strictEqual(n.intencion, 'web_llamada');
+});
+
+test('C: «tienda y calendario» sí pregunta cómo agenda hoy; tienda sola o con correos lo salta', () => {
+  const corre = (msg) => {
+    let r = decidir('AGENDA', null, tarde, links);
+    r = decidir('soy contador, ' + msg, r.contacto, tarde + S, links);
+    assert.strictEqual(r.intencion, 'web_marca');
+    return decidir('todavía no', r.contacto, tarde + 2 * S, links);
+  };
+  assert.strictEqual(corre('quiero tienda y calendario').intencion, 'web_hoy');
+  assert.strictEqual(corre('quiero un calendario').intencion, 'web_hoy');
+  assert.strictEqual(corre('quiero tienda').intencion, 'web_mostrar');
+  assert.strictEqual(corre('quiero portafolio y correos').intencion, 'web_mostrar');
+});
+
+test('SAL-8: un número de 9 dígitos dentro de una consulta no desvía nada', () => {
+  const r = decidir('mi notebook tiene la serie 912345678, se pega', null, tarde, links);
+  assert.notStrictEqual(r.intencion, 'web_canal');
+  assert.strictEqual(r.intencion, 'lento');
+  // Dentro del flujo, un número en una frase larga tampoco es SAL-8, pero queda como señal.
+  let f = decidir('AGENDA', null, tarde, links);
+  f = decidir('soy contador y mi local queda en el 912345678 de Freire', f.contacto, tarde + S, links);
+  assert.notStrictEqual(f.intencion, 'web_canal');
+});
+
+test('SAL-8: «mi número es …», un número solo dentro del flujo y «llámame» sin número', () => {
+  const a = decidir('mi número es 9 8765 4321', null, tarde, links);
+  assert.strictEqual(a.intencion, 'web_canal');
+  assert.match(a.resumen, /9 8765 4321/);
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('+56 9 8765 4321', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_canal');
+  assert.strictEqual(r.aviso, 'urgente');
+  assert.strictEqual(decidir('llámame', null, tarde, links).intencion, 'web_canal');
+  // Fuera del flujo, un número pelado no activa nada.
+  assert.notStrictEqual(decidir('912345678', null, tarde, links).intencion, 'web_canal');
+});
+
+// ---------------------------------------------------------------------------
+// Diálogo C · iteración 3: lo que quiere no es el rubro; nuevas entradas.
+// ---------------------------------------------------------------------------
+test('C: en AG-0, «quiero tienda» no es el rubro: se anota en quiere y se repregunta sin fallo', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('quiero tienda', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_repite');
+  assert.match(r.respuesta, /Perfecto, lo anoto\. ¿Y a qué te dedicas\?/);
+  assert.doesNotMatch(r.respuesta, /Te pregunto por tu trabajo/);
+  assert.strictEqual(r.contacto.ag.rubro, null);
+  assert.deepStrictEqual(r.contacto.ag.quiere, ['tienda']);
+  assert.strictEqual(r.contacto.ag.intentos, 0);
+  r = decidir('soy psicóloga', r.contacto, tarde + 2 * S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  assert.strictEqual(r.contacto.ag.rubro, 'soy psicóloga');
+  r = decidir('no', r.contacto, tarde + 3 * S, links);
+  r = decidir('dale', r.contacto, tarde + 4 * S, links);
+  assert.match(r.resumen, /Lead agenda · soy psicóloga · sin marca/);
+  assert.match(r.resumen, /quiere: tienda/);
+  assert.doesNotMatch(r.resumen, /quiero tienda/);
+});
+
+test('C: varios «quiero …» seguidos en AG-0 no cuentan como fallo ni como rubro', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  for (const s of ['quiero tienda', 'necesito correos y un calendario', 'busco algo bonito']) {
+    r = decidir(s, r.contacto, tarde + S, links);
+    assert.strictEqual(r.intencion, 'web_repite', s);
+    assert.strictEqual(r.contacto.ag.intentos, 0, s);
+    assert.strictEqual(r.contacto.ag.rubro, null, s);
+  }
+  assert.deepStrictEqual(r.contacto.ag.quiere.sort(), ['agenda', 'correos', 'tienda']);
+});
+
+test('C: «soy fotógrafa y quiero una tienda» guarda rubro y quiere juntos', () => {
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('soy fotógrafa y quiero una tienda', r.contacto, tarde + S, links);
+  assert.strictEqual(r.intencion, 'web_marca');
+  assert.strictEqual(r.contacto.ag.rubro, 'soy fotógrafa');
+  assert.deepStrictEqual(r.contacto.ag.quiere, ['tienda']);
+});
+
+test('C entradas nuevas: tienda online/virtual, ecommerce, catálogo online, página para mi negocio', () => {
+  for (const s of ['quiero una tienda online', 'tienda virtual', 'necesito un e-commerce', 'ecommerce', 'catálogo online para vender', 'una página para mi negocio', 'quiero una página']) {
+    const r = decidir(s, null, tarde, links);
+    assert.strictEqual(r.intencion, 'web_inicio', s);
+    assert.match(r.respuesta, /a qué te dedicas/, s);
+    assert.strictEqual(r.contacto.ag.rubro, null, s);                       // lo detectado va a quiere, no a rubro
+  }
+  const t = decidir('quiero una tienda online', null, tarde, links);
+  assert.deepStrictEqual(t.contacto.ag.quiere, ['tienda']);
+  const e = decidir('quiero un catálogo online', null, tarde, links);
+  assert.ok(e.contacto.ag.quiere.includes('tienda'));
+});
+
+test('C: «quiero tienda y calendario» como primer mensaje NO entra (sin forma segura); dentro del flujo sí cuenta', () => {
+  // Decisión: «tienda» sola es demasiado común en reparación («lo compré en una tienda»), así que
+  // sin «online/virtual» ni «página» no se abre el flujo desde un mensaje frío.
+  assert.notStrictEqual(decidir('quiero tienda y calendario', null, tarde, links).intencion, 'web_inicio');
+  let r = decidir('AGENDA', null, tarde, links);
+  r = decidir('quiero tienda y calendario', r.contacto, tarde + S, links);
+  assert.deepStrictEqual(r.contacto.ag.quiere.sort(), ['agenda', 'tienda']);
+});
+
+test('«tienda» de otros contextos (reparación) no dispara el flujo web', () => {
+  const r = decidir('lo compré en una tienda y no prende', null, tarde, links);
+  assert.strictEqual(r.intencion, 'no_enciende');
+  assert.strictEqual(r.contacto.ag, undefined);
+  assert.notStrictEqual(decidir('compré el cargador en una tienda', null, tarde, links).intencion, 'web_inicio');
+});
+
+// ---------------------------------------------------------------------------
+// Diálogo C · iteración 4: las frases libres de entrada no capturan reparaciones.
+// ---------------------------------------------------------------------------
+test('C: frases de reparación con «tienda online», «ecommerce» o «página» NO entran al flujo web', () => {
+  const casos = [
+    ['compre el notebook en una tienda online y no prende', 'no_enciende'],
+    ['vendo en una tienda online y mi pc se calienta', 'limpieza'],
+    ['mi notebook de la tienda virtual va lento', 'lento'],
+    ['hola, quiero una pagina de ayuda con el windows, se pega', null],
+    ['quiero que la pagina de inicio no cambie sola en mi pc', null],
+    ['necesito una pagina de descarga de drivers para mi notebook', null],
+    ['el ecommerce de la tienda me cobró dos veces, necesito la factura', null]
+  ];
+  for (const [s, intencion] of casos) {
+    const r = decidir(s, null, tarde, links);
+    assert.notStrictEqual(r.intencion, 'web_inicio', s);
+    assert.strictEqual(r.contacto.ag, undefined, s);
+    if (intencion) assert.strictEqual(r.intencion, intencion, s);
+  }
+});
+
+test('C: las palabras clave exactas entran siempre, aunque traigan palabras de reparación', () => {
+  for (const s of ['AGENDA', 'página web', 'sitio web', 'landing', 'desarrollo web', 'web', 'necesito una página web para mi notebook shop']) {
+    assert.strictEqual(decidir(s, null, tarde, links).intencion, 'web_inicio', s);
+  }
+  assert.strictEqual(decidir('', null, tarde, links, 'MENU_WEB').intencion, 'web_inicio');
+  assert.strictEqual(decidir('DEMO', null, tarde, links).intencion, 'web_inicio');
+});
+
+test('C: frases libres legítimas siguen entrando', () => {
+  const a = decidir('quiero una tienda online para vender ropa', null, tarde, links);
+  assert.strictEqual(a.intencion, 'web_inicio');          // no dijo su rubro: se pregunta
+  assert.ok(a.contacto.ag);
+  const b = decidir('necesito una página para mi consulta de psicología', null, tarde, links);
+  assert.strictEqual(b.intencion, 'web_marca');           // entra y ya trae el rubro: salta a la marca
+  assert.match(b.contacto.ag.rubro, /consulta de psicolog/);
+});
+
+// ---------------------------------------------------------------------------
+// Diálogo C · iteración 5: «web» en frase libre, vender por internet y «armar mi tienda».
+// ---------------------------------------------------------------------------
+test('C: «quiero una web para mi negocio» y «necesito una web para mi consulta» entran', () => {
+  for (const s of ['quiero una web para mi negocio', 'necesito una web para mi consulta']) {
+    const r = decidir(s, null, tarde, links);
+    assert.ok(r.intencion.startsWith('web_'), s);
+    assert.ok(r.contacto.ag, s);
+  }
+  // El veto de reparación también rige para «web» en frase libre.
+  assert.strictEqual(decidir('mi notebook no abre paginas web y se pega', null, tarde, links).contacto.ag, undefined);
+});
+
+test('C: «tienda en línea», «vender por internet» y «sitio para vender» entran', () => {
+  for (const s of ['quiero una tienda en linea', 'quiero vender por internet', 'necesito un sitio para vender mis productos', 'una pagina para vender']) {
+    const r = decidir(s, null, tarde, links);
+    assert.strictEqual(r.intencion, 'web_inicio', s);
+    assert.ok(r.contacto.ag.quiere.includes('tienda'), s);
+    assert.strictEqual(r.contacto.ag.rubro, null, s);
+  }
+});
+
+test('C: «quiero armar mi tienda online» es del flujo C; «armar un pc gamer» sigue siendo armado', () => {
+  const a = decidir('quiero armar mi tienda online', null, tarde, links);
+  assert.strictEqual(a.intencion, 'web_inicio');
+  assert.notStrictEqual(a.intencion, 'armado');
+  assert.strictEqual(decidir('quiero armar un pc gamer', null, tarde, links).intencion, 'armado');
+  assert.strictEqual(decidir('cuanto sale el armado de un pc', null, tarde, links).intencion, 'armado');
+});
+
+test('C (a propósito): «mi pagina web no abre» entra al flujo por la palabra fija, sin veto de reparación', () => {
+  // Si su página web no abre es un caso para Gabriel por la línea web, no de reparación de equipos.
+  const r = decidir('mi pagina web no abre', null, tarde, links);
+  assert.strictEqual(r.intencion, 'web_inicio');
 });
