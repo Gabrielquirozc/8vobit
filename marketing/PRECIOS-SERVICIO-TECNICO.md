@@ -28,9 +28,10 @@ Calendly está sincronizado con el calendario de Gabriel: los bloques ocupados (
 | **Formateo**: Windows, drivers y programas gratuitos (open source) | **$15.000** | Mismo día (2-4 h) |
 | + Respaldo de datos (Documentos, Escritorio, Descargas) | **+$5.000** | — |
 | **Reparar Windows** sin formatear | **$15.000** | Mismo día |
-| **Limpieza interna** de notebook normal (pasta térmica) | **$20.000** | Mismo día |
-| **Limpieza interna** de gamer o torre (pasta y pads térmicos) | **$25.000** | Mismo día o 24 h |
-| **Combo formateo + limpieza normal** | **$30.000** (en vez de $35.000) | Mismo día |
+| **Limpieza interna** de notebook normal (pasta térmica) | **$25.000** | Mismo día |
+| **Limpieza interna** de notebook gamer o gama alta (pasta y pads térmicos) | **$30.000** | Mismo día o 24 h |
+| **Limpieza PC de torre** | **$45.000** | Mismo día o 24 h |
+| **Combo formateo + limpieza normal** | **$35.000** (en vez de $40.000) | Mismo día |
 | **Programa con licencia** (Office, Photoshop, etc.) | **$10.000 por programa** | Mismo día |
 | **Recuperación de datos** (si no se recupera nada, se paga solo el diagnóstico) | **$20.000** | 1-2 días |
 | **Armado de PC** | **$50.000** | 1-2 días con las piezas |
@@ -56,7 +57,7 @@ Calendly está sincronizado con el calendario de Gabriel: los bloques ocupados (
 | **Teclado** | **No se hace**: no hay forma de dejarlo con buena terminación |
 
 ### Piezas
-- Se piden casi siempre a **AliExpress**: llegan en **2-4 semanas**. Si hay stock con el proveedor de Santiago, en **2-7 días hábiles**. Se avisa al pedir.
+- Se piden casi siempre a **AliExpress**: llegan en **2-4 semanas** (las **pantallas, en 7-14 días hábiles**, dato de Gabriel del 12-nov). Si hay stock con el proveedor de Santiago, en **2-7 días hábiles**. Se avisa al pedir.
 - La pieza **se paga por adelantado**.
 - Para cotizar hay que mandar el **modelo exacto** (la etiqueta de abajo del equipo) y una foto.
 - Rangos de referencia que se han dado: SSD instalado $40.000-$80.000; batería instalada $45.000-$70.000; pantalla instalada $75.000-$115.000.

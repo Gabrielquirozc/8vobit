@@ -1,4 +1,4 @@
-# Banco de temas · @8vobit
+# Banco de temas · @octavobit.cl
 
 Una sola cuenta con las tres líneas intercaladas (decidido el 2026-10-16). Cada línea tiene su etiqueta, la cápsula cian de arriba a la izquierda:
 

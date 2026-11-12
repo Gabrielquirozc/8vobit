@@ -1,4 +1,4 @@
-// Cerebro del bot de DM de @8vobit. Sin IA: reglas por intención + textos con la voz de Gabriel.
+// Cerebro del bot de DM de @octavobit.cl. Sin IA: reglas por intención + textos con la voz de Gabriel.
 // Es una función pura: recibe el mensaje y la memoria del contacto, y devuelve qué hacer.
 // Se incrusta tal cual en el nodo Code de n8n (lo hace construir-flujo.js); lo de abajo de
 // FIN-CEREBRO solo existe para las pruebas locales.
@@ -286,7 +286,7 @@ const TEXTOS = {
     'Freire 1458, Concepción, solo con hora agendada (' + AGENDA + '). Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'
   ],
   tiempo: [
-    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: con stock en Santiago son 2 a 7 días hábiles, e importada, 2 a 4 semanas. Te aviso siempre antes.'
+    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: con stock en Santiago son 2 a 7 días hábiles; una pantalla importada demora 7 a 14 días hábiles, y otras piezas importadas, 2 a 4 semanas. Te aviso siempre antes.'
   ],
   descuento: [
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'

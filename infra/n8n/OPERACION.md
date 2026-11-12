@@ -1,11 +1,11 @@
-# n8n · DM automáticos de Instagram (@8vobit): cómo funciona y cómo revisarlo
+# n8n · DM automáticos de Instagram (@octavobit.cl): cómo funciona y cómo revisarlo
 
 Este archivo vive en el servidor en `/srv/docker/compose/n8n/OPERACION.md` y en el repo en `infra/n8n/OPERACION.md`.
 Cualquier sesión puede leerlo para saber qué hay y cómo verificarlo. **Aquí no hay secretos**: los secretos están solo en `.env` (root, 600).
 
 ## Qué hace
 
-1. Alguien escribe un DM a @8vobit en Instagram.
+1. Alguien escribe un DM a @octavobit.cl en Instagram.
 2. Meta avisa con un POST a `https://n8n.8vobit.xyz/webhook/instagram` (túnel de Cloudflare → `127.0.0.1:5678`).
 3. El flujo **"DM Instagram · bot 8vobit"** (ID `GOhImTsPA0GizMPu`) es un **bot sin IA que suena humano**. El diseño está en `D:\VPS\infra\bot-8vobit\DISENO.md`. Lo que hace:
    - Verifica la firma `X-Hub-Signature-256` con `IG_APP_SECRET`; si es inválida, ignora el mensaje.
@@ -41,7 +41,7 @@ Después: prueba de punta a punta desde otra cuenta ("hola, cuánto sale formate
 | Datos (flujos, cuenta, ejecuciones) | volumen Docker `n8n_n8n-data` → `/home/node/.n8n` |
 | Secretos | `/srv/docker/compose/n8n/.env` (N8N_ENCRYPTION_KEY, IG_VERIFY_TOKEN, IG_APP_SECRET, IG_ACCESS_TOKEN, NTFY_URL, LINK_*) |
 | Túnel | `/etc/cloudflared/config.yml`, regla `n8n.8vobit.xyz → http://127.0.0.1:5678` |
-| App de Meta | "8vobit DM", ID `1009509995498920`, **publicada (Live)** el 17-oct-2026, cuenta @8vobit suscrita a `messages` |
+| App de Meta | "8vobit DM", ID `1009509995498920`, **publicada (Live)** el 17-oct-2026, cuenta @octavobit.cl suscrita a `messages` |
 | Política de privacidad | https://8vobit.xyz/privacidad/ (`/srv/docker/compose/home-8vobit/site/privacidad/`) |
 | Flujo exportable | `infra/n8n/flujo-dm-instagram.json` en el repo |
 
@@ -69,7 +69,7 @@ sudo sh -c '. /srv/docker/compose/n8n/.env; curl -s "https://graph.instagram.com
 sudo sh -c '. /srv/docker/compose/n8n/.env; curl -s "https://graph.instagram.com/v21.0/me/subscribed_apps?access_token=$IG_ACCESS_TOKEN"'
 ```
 
-Prueba de punta a punta: desde otra cuenta de Instagram escribir "quiero una demo" a @8vobit. Debe llegar la respuesta DEMO y un aviso ntfy. Probado OK el 17-oct-2026 desde @gabq.c.
+Prueba de punta a punta: desde otra cuenta de Instagram escribir "quiero una demo" a @octavobit.cl. Debe llegar la respuesta DEMO y un aviso ntfy. Probado OK el 17-oct-2026 desde @gabq.c.
 
 ## Mantención
 
@@ -109,3 +109,5 @@ Prueba de punta a punta: desde otra cuenta de Instagram escribir "quiero una dem
   - **Garantía.** `GARANTIA_ACTIVA = false` en `cerebro.js`: el bot dice que existe y que Gabriel la detalla. Para activar el texto con el mínimo legal (30 días hábiles, art. 41 Ley 19.496), confirmar el plazo en la fuente oficial y escribirlo en la boleta.
   - **Limitación conocida.** La memoria de contactos vive en el static data de n8n: dos ejecuciones simultáneas (el cron y un mensaje) pueden pisarse. El arreglo real es una base externa. Tampoco hay espera de ráfagas (el cliente que manda 3 mensajes seguidos recibe una respuesta por mensaje).
   - **Verificación.** 146 pruebas OK, flujo con 13 nodos, importado y activo, webhook vivo, sin errores del bot en el log. Falta ver la primera ejecución real del cron.
+
+- **12-nov-2026 · Plazo de piezas y usuario nuevo.** `cerebro.js`: respuesta de tiempos ahora dice que una pantalla importada demora 7 a 14 días hábiles (otras piezas importadas, 2 a 4 semanas; con stock en Santiago, 2 a 7 días). Comentarios y documentación pasan a @octavobit.cl. **Verificación:** 146 pruebas OK, flujo de 13 nodos importado y publicado (`GOhImTsPA0GizMPu`), n8n reiniciado, webhook vivo (responde «token invalido» con token falso tras unos segundos de arranque). Falta la prueba de punta a punta desde otra cuenta de Instagram a @octavobit.cl.

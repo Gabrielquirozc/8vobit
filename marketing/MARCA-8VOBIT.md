@@ -77,7 +77,7 @@ Nada bajo 26 px. Máximo 3 tamaños por lámina, sin contar el pie.
 
 - **Malla poligonal:** líneas finas (2 px, cian al 25 %) que salen del logo de cristal de 8vobit. Va en una esquina, nunca detrás del texto.
 - **Etiqueta mono:** una cápsula con borde de 2 px en cian y texto en JetBrains Mono ("SERVICIO TÉCNICO", "PARA LOCALES", "TIP 03"). Arriba a la izquierda, en todas las láminas.
-- **Barra de pie:** abajo, a 72 px del borde: `@8vobit` a la izquierda y `03 / 08` a la derecha, en mono 26 px lavanda. Es el sello que hace reconocible la grilla.
+- **Barra de pie:** abajo, a 72 px del borde: `@octavobit.cl` a la izquierda y `03 / 08` a la derecha, en mono 26 px lavanda. Es el sello que hace reconocible la grilla.
 - **Flecha de avance:** "→" en cian, junto a la numeración, en todas las láminas menos la última.
 - **Esquinas:** radio de 32 px en las tarjetas y 48 px en los marcos de celular.
 
@@ -111,7 +111,7 @@ Antes de capturar el panel para marketing, cargar datos de demostración (pedido
  │ │ imagen / dato / lista    │ │
  │ └──────────────────────────┘ │
  │                              │
- │ @8vobit            03 / 08 → │  pie: y = 1206
+ │ @octavobit.cl      03 / 08 → │  pie: y = 1206
  └──────────────────────────────┘
 ```
 

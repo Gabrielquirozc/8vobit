@@ -10,12 +10,12 @@ Lee en este orden:
 
 ## Decisiones vigentes (17-oct-2026)
 
-- @8vobit es un "punto tecnológico" con 3 líneas intercaladas: **REPARACIÓN**, **PARA PROFESIONALES** (página con agenda) y **PARA LOCALES** (Pedidos). resuelve.cl es la marca legal; CÓDICE ya no existe.
+- @octavobit.cl es un "punto tecnológico" con 3 líneas intercaladas: **REPARACIÓN**, **PARA PROFESIONALES** (página con agenda) y **PARA LOCALES** (Pedidos). resuelve.cl es la marca legal; CÓDICE ya no existe.
 - Solo carruseles (1080×1350) por ahora, sin reels.
 - Tono: humor chileno, contingencia y voz de guionista. Nada de listas genéricas ni "cotiza gratis", y sin el enlace 8vobit.xyz en las piezas. Proponer ganchos antes de diseñar.
 - Cifras inventadas siempre marcadas como "ejemplo".
 - Marca oficial: cian #40BAD5, morado #120136, logo en Clio, Montserrat. Logo en Canva: isotipo `MAFDgjMu0Us` e isologotipo `MAFDgn62xz8`.
-- Base editorial en Canva: `DAHYOuRT7Yk`. Pie de página: isotipo + @8vobit + "0X / 07".
+- Base editorial histórica en Canva: `DAHYOuRT7Yk`. Pie vigente en la campaña de tres láminas: isotipo + @octavobit.cl + 1/3, 2/3 o 3/3 según la función de la página; no usar el total del archivo.
 - Se guarda en Canva (commit) solo con la aprobación del usuario.
 
 ## Qué sigue

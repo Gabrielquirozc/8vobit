@@ -10,7 +10,7 @@ Versión 1 · 2026-10-16. Funcionamos como agencia: cada pieza tiene un objetivo
 | Pedidos para locales | 6 demos agendadas y 1 local nuevo | DM con "DEMO" |
 | Servicios digitales | 3 cotizaciones de web | DM |
 | resuelve.cl | 8 consultas legales | DM |
-| Comunidad | +300 seguidores en @8vobit | Seguidores, alcance a no seguidores |
+| Comunidad | +300 seguidores en @octavobit.cl | Seguidores, alcance a no seguidores |
 
 ## 2. Cómo decide Instagram (2026)
 
@@ -54,7 +54,7 @@ Cada carrusel de "decidir" pide su palabra. Así, al contar los mensajes sabemos
 
 ## 6. Ritmo
 
-- **@8vobit:** 3 carruseles por semana (lunes, miércoles y viernes, a las 19:00).
+- **@octavobit.cl:** 3 carruseles por semana (lunes, miércoles y viernes, a las 19:00).
 - **@resuelve.cl:** 2 carruseles por semana (martes y jueves, a las 12:30).
 - **@gabq.c:** comparte en historias el día de cada carrusel y publica 1 post personal por semana sobre el proceso (las cuentas personales generan más confianza).
 - Reels: más adelante. Este mes, solo carruseles.
