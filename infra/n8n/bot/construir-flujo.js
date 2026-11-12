@@ -47,16 +47,20 @@ for (const item of $input.all()) {
       }
       const remitente = ev.sender && ev.sender.id;
       if (!remitente) continue;
-      const texto = typeof msg.text === 'string' ? msg.text : (msg.attachments ? '[adjunto]' : '');
+      const texto = typeof msg.text === 'string' ? msg.text : '';
       const payload = msg.quick_reply && msg.quick_reply.payload ? String(msg.quick_reply.payload) : '';
-      const d = decidir(texto === '[adjunto]' ? '' : texto, memoria.contactos[remitente], ahora, links, payload);
+      // Adjunto sin texto: se pasa el tipo de Meta (audio, image, video, share u otro) para SAL-4.
+      const adj = !texto.trim() && msg.attachments && msg.attachments[0] ? String(msg.attachments[0].type || 'otro') : '';
+      const tipoAdj = adj ? ({ audio: 'audio', image: 'image', video: 'video', share: 'share', ig_reel: 'share', reel: 'share', story_mention: 'share', ig_post: 'share' }[adj] || 'otro') : '';
+      const d = decidir(texto, memoria.contactos[remitente], ahora, links, payload, tipoAdj);
       if (d.respuesta) d.contacto.ultimoTexto = d.respuesta;
       memoria.contactos[remitente] = d.contacto;
       if (!d.respuesta && !d.aviso) continue;
       salida.push({ json: {
         remitente,
         intencion: d.intencion,
-        texto: texto.slice(0, 300),
+        // Un mensaje con clave nunca viaja al aviso (SAL-9).
+        texto: d.ocultar ? '[mensaje con clave, oculto]' : (texto || (tipoAdj ? '[adjunto: ' + tipoAdj + ']' : '')).slice(0, 300),
         respuesta: d.respuesta,
         // Botones de respuesta rápida de Instagram (título máx. 20 caracteres).
         botones: (d.botones || []).map(b => ({ content_type: 'text', title: String(b.titulo).slice(0, 20), payload: b.payload })),
@@ -70,6 +74,22 @@ for (const item of $input.all()) {
   }
 }
 return salida;
+`;
+
+// Seguimientos (sección D): corre cada 15 min con el mismo cerebro y la misma memoria por contacto.
+// Limitación conocida: la memoria estática de n8n no aguanta ejecuciones concurrentes (ráfagas, M1).
+// Misma limitación entre el webhook y este cron: cada ejecución carga su copia de la memoria y n8n guarda
+// la última que termina. Si un mensaje del cliente llega justo mientras corre el cron, puede pisar
+// `seg.enviado` y, en el peor caso, reenviar un seguimiento. No se puede mezclar desde el código del nodo
+// (no hay forma de releer la memoria al guardar) y un mensaje del cliente abre un episodio nuevo de todos
+// modos. Fix real: mover los contactos a una base externa (Redis/SQLite) con escritura atómica.
+const pegamentoSeguimientos = `
+// ---- Pegamento n8n: seguimientos por tiempo (sección D) ----
+const memoria = $getWorkflowStaticData('global');
+memoria.contactos = memoria.contactos || {};
+const links = { agenda: $env.LINK_AGENDA, web: $env.LINK_WEB, pedidos: $env.LINK_PEDIDOS, fuera: $env.MODO_FUERA };
+const envios = seguimientos(memoria.contactos, Date.now(), links);   // marca cada contacto y guarda el eco (ultimoTexto)
+return envios.map(e => ({ json: { remitente: e.remitente, respuesta: e.texto, intencion: e.intencion } }));
 `;
 
 const graph = 'https://graph.instagram.com/v21.0/me/messages';
@@ -104,7 +124,15 @@ flujo.nodes = [
         { name: 'Tags', value: 'speech_balloon' }
       ] },
       sendBody: true, contentType: 'raw', rawContentType: 'text/plain',
-      body: "={{ ($json.resumen ? '📋 ' + $json.resumen + '\\n\\n' : '') + $json.texto + ($json.respuesta ? '\\n\\nBot: ' + $json.respuesta : '\\n\\n(el bot no respondió)') }}", options: {} } }
+      body: "={{ ($json.resumen ? '📋 ' + $json.resumen + '\\n\\n' : '') + $json.texto + ($json.respuesta ? '\\n\\nBot: ' + $json.respuesta : '\\n\\n(el bot no respondió)') }}", options: {} } },
+  // Seguimientos: Schedule cada 15 min → Code → HTTP (igual que «Responder DM», sin botones).
+  { id: 'c1', name: 'Cada 15 minutos', type: 'n8n-nodes-base.scheduleTrigger', typeVersion: 1.2, position: [0, 640],
+    parameters: { rule: { interval: [{ field: 'minutes', minutesInterval: 15 }] } } },
+  { id: 'c2', name: 'Seguimientos', type: 'n8n-nodes-base.code', typeVersion: 2, position: [240, 640],
+    parameters: { jsCode: cerebro + pegamentoSeguimientos } },
+  { id: 'c3', name: 'Responder seguimiento', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [480, 640],
+    parameters: { method: 'POST', url: graph, sendHeaders: true, headerParameters: auth, sendBody: true, specifyBody: 'json',
+      jsonBody: '={{ JSON.stringify({ recipient: { id: $json.remitente }, message: { text: $json.respuesta } }) }}', options: {} } }
 ];
 flujo.connections = {
   'Verificación Meta (GET)': { main: [[{ node: 'Devolver challenge', type: 'main', index: 0 }]] },
@@ -116,7 +144,9 @@ flujo.connections = {
   '¿Hay respuesta?': { main: [[{ node: 'Escribiendo…', type: 'main', index: 0 }]] },
   'Escribiendo…': { main: [[{ node: 'Pausa humana', type: 'main', index: 0 }]] },
   'Pausa humana': { main: [[{ node: 'Responder DM', type: 'main', index: 0 }]] },
-  '¿Hay que avisar?': { main: [[{ node: 'Avisar por ntfy', type: 'main', index: 0 }]] }
+  '¿Hay que avisar?': { main: [[{ node: 'Avisar por ntfy', type: 'main', index: 0 }]] },
+  'Cada 15 minutos': { main: [[{ node: 'Seguimientos', type: 'main', index: 0 }]] },
+  'Seguimientos': { main: [[{ node: 'Responder seguimiento', type: 'main', index: 0 }]] }
 };
 
 fs.writeFileSync(archivo, JSON.stringify(flujo, null, 2) + '\n');

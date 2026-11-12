@@ -13,6 +13,13 @@ const LINK_PEDIDOS = '{{LINK_PEDIDOS}}';
 const LINK_REUNION = 'https://8vobit.xyz/#reunion';
 const LINK_GASSUSO = 'https://pedidos.8vobit.xyz/gassuso';
 const LINK_AGENDA_DEMO = 'https://8vobit.xyz/#agendar';
+// Garantía (SAL-13): Gabriel debe confirmar el plazo (art. 41 Ley 19.496) antes de activarla.
+// Con false el bot solo dice que existe y que Gabriel la detalla al tomar hora.
+const GARANTIA_ACTIVA = false;
+const GARANTIA_LEGAL = [
+  'Sí. Si lo que reparamos vuelve a fallar, lo revisamos sin costo dentro de los 30 días hábiles desde que lo retiras. Las piezas tienen además la garantía del proveedor, que te informamos al cotizar.',
+  'Tiene garantía legal: 30 días hábiles desde la entrega para reclamar por la reparación, y la revisamos sin costo. En las piezas depende del proveedor y te lo decimos al cotizar.'
+];
 const DIAG = 'El diagnóstico son $5.000 y se descuentan si haces el servicio.';
 
 // Varias versiones por respuesta: el bot no suena igual cada vez.
@@ -262,9 +269,6 @@ const TEXTOS = {
   remoto: [
     'Atendemos remoto por AnyDesk: $10.000 hasta 1 hora (dudas, programas, configuración). Formateos y limpiezas son presenciales. ¿Qué necesitas?'
   ],
-  otros_disp: [
-    'Nos dedicamos a notebooks y PC 💻. Celulares, tablets y consolas no los estamos viendo, ¡perdón! Si tienes algo con tu compu, feliz te ayudo.'
-  ],
   // Palabra clave REVISIÓN de los carruseles de reparación (AGENDA es la de página + agenda).
   revision: [
     '¡Hola! Para la revisión cuéntame qué le pasa al equipo y el modelo, y te digo qué conviene. ' + DIAG + ' Agenda acá: ' + AGENDA,
@@ -297,9 +301,58 @@ const TEXTOS = {
     '¡Hola! Te muestro el sistema de pedidos funcionando: carta web, despacho por zonas y caja del día, por 1% del pedido. Detalles: ' + LINK_PEDIDOS + ' ¿Cómo se llama tu local y en qué sector está?'
   ],
   gracias: [
-    '¡De nada! Cualquier cosa me escribes 🙌',
+    'De nada, cualquier cosa me escribes.',
     '¡Un gusto! Aquí estoy para lo que necesites.'
   ],
+  otros_disp: [
+    'Nos dedicamos a notebooks y PC. Eso no lo vemos, perdón. Si tienes algo con tu compu, feliz te ayudo.',
+    'Eso no lo hacemos, solo notebooks y PC. Si es un computador, cuéntame qué le pasa.'
+  ],
+  mac_bloqueo: [
+    'Es un caso especial: se lo paso a Gabriel para que te diga si se puede.'
+  ],
+  // Salidas comunes (sección E).
+  sal4_audio: [
+    'Por acá no alcanzo a escuchar audios. ¿Me lo escribes en una línea?',
+    'Los audios no los puedo escuchar desde aquí. ¿Me lo pones por escrito?'
+  ],
+  sal4_foto: ['Recibí la foto, gracias. Gabriel la mira antes de la hora.'],
+  sal4_logo: ['Gracias por el logo. Gabriel lo mira antes de la llamada.'],
+  sal4_video: ['Recibí el video. Gabriel lo ve y te responde.'],
+  sal4_llamada: ['No alcanzo a contestar llamadas por Instagram. Escríbeme o toma hora y Gabriel te llama por WhatsApp.'],
+  sal5_modelo: [
+    'No te preocupes. El modelo sale en una etiqueta en la parte de abajo del notebook. Si me mandas una foto, lo leo yo. Si no, igual puedes tomar hora y lo vemos en persona: ' + AGENDA,
+    'Tranqui. Dale vuelta al equipo, ahí hay una etiqueta con letras y números: mándame una foto. Si no la encuentras, lo vemos cuando vengas.'
+  ],
+  objecion: [
+    'Te entiendo. Por eso el diagnóstico se descuenta del servicio y nunca se cobra doble. Cuando puedas, aquí estamos.',
+    'Claro, tómate tu tiempo. Si después quieres retomarlo, me escribes.'
+  ],
+  sal9: [
+    'Ojo: no mandes claves por mensaje. Déjala anotada en un papel junto al equipo o la vemos cuando vengas. Si ya la usaste en otro lado, conviene cambiarla.'
+  ],
+  compara: ['Normal, conviene comparar. Si quieres volver, aquí estamos.'],
+  garantia_q: GARANTIA_ACTIVA ? GARANTIA_LEGAL : ['Sí, el trabajo tiene garantía. Te la detalla Gabriel al tomar hora.'],
+  respaldo: ['Antes de formatear se pueden respaldar tus archivos (son $5.000 más). Si son muy importantes, lo conversamos al entregarlo.'],
+  urgencia: ['Entiendo que es urgente. Le aviso a Gabriel ahora para ver si hay hora hoy. Mientras, puedes mirar: ' + AGENDA],
+  urgencia_fuera: ['Entiendo que es urgente. Le aviso a Gabriel ahora y te escribe por acá.'],
+  dos_temas: ['Las dos cosas se pueden. Parto por {{PRIMERO}} y después vemos la otra. ¿Seguimos así?'],
+  ping: ['Hola! Perdona la demora. ¿Qué necesitabas?'],
+  es_bot: ['Soy el asistente automático de OCTAVOBIT. Gabriel revisa los mensajes y responde lo que yo no puedo. ¿Quieres que le avise?'],
+  es_bot_no: ['Dale, aquí estoy para lo que necesites.'],
+  otra_persona: ['Hola! Este es el chat de OCTAVOBIT. Si buscabas a Gabriel, le aviso para que te responda.'],
+  confuso: ['Hola! ¿En qué te puedo ayudar?'],
+  humano: ['Claro. Le aviso a Gabriel y te responde por acá.'],
+  // Seguimientos (sección D): uno solo, a las 5 h del último mensaje del cliente.
+  seg1: [
+    'Hola de nuevo. ¿Pudiste ver la agenda? Si no encontraste una hora que te acomode, dime cuándo puedes y la buscamos.',
+    'Hola! Te dejo el link de la llamada por si se te quedó atrás 👉 ' + LINK_REUNION + '. Si prefieres otra hora, me dices.'
+  ],
+  seg2: [
+    'Hola! Quedamos a medias. Por si te sirve, acá puedes ver una agenda funcionando: ' + LINK_AGENDA_DEMO + '. Cualquier duda me escribes.',
+    'Hola de nuevo. Si quieres, te muestro cómo funciona la agenda: ' + LINK_AGENDA_DEMO + '.'
+  ],
+  seg3: ['Hola! ¿Pudiste pasar? Si no alcanzaste, dime y vemos otra hora: ' + AGENDA],
   fuera_horario: [
     'Te respondo con calma mañana desde las 9 🙌 Mientras, si quieres, puedes tomar hora acá: ' + AGENDA,
     'Ahora no estoy, pero te contesto mañana temprano. Si te sirve, las horas están acá: ' + AGENDA
@@ -308,15 +361,24 @@ const TEXTOS = {
 
 // Orden = prioridad. 'aviso' manda ntfy; 'urgente' lo manda con prioridad alta.
 const REGLAS = [
-  { id: 'spam', re: /app\.link|bnc\.lt|private video|too shy|really? hot|ur realy|crypto|bitcoin|forex|followers? (gratis|free)|sneaky mission/ },
+  { id: 'spam', re: /app\.link|bnc\.lt|private video|too shy|really? hot|ur realy|crypto|bitcoin|forex|followers? (gratis|free)|sneaky mission|\bhiring\b|\b(buscamos|necesitamos) vendedores\b|\bofrecemos\b|unete (a|al)|ganar dinero|ingresos extra|\bvacantes?\b|\bcontratar\b|puestos? (de trabajo|disponibles)|oferta (de )?(trabajo|laboral)|trabajo estable (en|desde|para|con)|criptomonedas?|sent an attachment|te (agregaron|anadieron) al grupo|unete al grupo|invitacion al grupo|group invite/ },
   // Solo con MODO_FUERA activo (soloFuera): con el modo apagado no existen.
   { id: 'fuera_porteria', soloFuera: true, re: /\b(lo (dejo|deje) en (la )?porteria|ya lo deje|voy a dejarlo|voy en camino|voy para alla)\b/, urgente: true },
   { id: 'llegada', re: /\b(llegu[eé]|estoy (afuera|abajo|aca|aqui|en el hall|en la puerta|en el lobby|esperando)|ya estoy (aca|aqui|afuera|abajo)|voy llegando|estoy llegando)\b/, urgente: true },
   { id: 'garantia', re: /\b(sigue (igual|fallando|con)|volvio a (fallar|pasar)|otra vez (lo mismo|se)|no quedo bien)\b/, urgente: true },
+  { id: 'garantia_q', re: /\b(tiene(n)? garantia|dan garantia|hay garantia|con garantia|que garantia)\b|garantia\?/ },
   { id: 'urgente', re: /\b(se mojo|derram|le cayo (agua|cafe|te|jugo|bebida)|se (me )?llen[oa] de (agua|liquido)|se me cayo (agua|cafe)|liquido)\b/, urgente: true },
   { id: 'estado', re: /\b(esta listo|ya esta (listo)?\??$|estara listo|como va (mi|el)|novedad(es)? (de|del|con)|puedo (ir a )?(buscar|retirar)|cuando (lo )?retiro|esta disponible mi)\b/, urgente: true },
+  { id: 'urgencia', re: /\b(urgente|urgentemente|lo antes posible|es para mi trabajo|para hoy|lo necesito (hoy|ya|para hoy))\b/, urgente: true },
   { id: 'pago', re: /\b(te (transferi|deposite)|ya (transferi|pague|deposite)|comprobante|transferencia (lista|hecha))\b/, aviso: true },
   { id: 'agendo', re: /\b(agende|ya agendo|voy a agendar|agendada|agendado|tome (la )?hora|reserve)\b/, aviso: true },
+  // «Voy»: no se responde, pero abre el seguimiento SEG-3 (sección D).
+  { id: 'voy', re: /\b(voy para alla|voy en camino|ya voy|voy saliendo|voy ahora|voy a ir|paso (en un rato|mas tarde|hoy))\b/ },
+  // Mac con bloqueo de pantalla de inicio: caso especial de SAL-11.
+  { id: 'mac_bloqueo', re: /^(?=.*\b(mac|macbook|imac)\b)(?=.*(bloque|contrasena|clave|icloud|inicio de sesion|pantalla de inicio))/ },
+  { id: 'es_bot', re: /\b(eres un bot|sos un bot|es un bot|eres (una )?persona|eres (un )?humano|eres real|eres un robot|hablo con (un )?(bot|robot|persona|humano)|bot o persona|persona o bot)\b/ },
+  { id: 'humano', re: /\b(hablar con (una )?(persona|alguien|gabriel|humano)|con quien hablo|hay alguien (ahi|alli))\b/, urgente: true },
+  { id: 'objecion', re: /^(?!.*\b(descuento|estudiante)\b).*\b(muy caro|es caro|esta caro|que caro|carisimo|tan caro|muy costoso|platita|no me alcanza|no tengo plata|sale mucho|se me sale del presupuesto|junt\w+ (la )?plata)\b/ },
   { id: 'fuera_vuelta', soloFuera: true, re: /\b(cuando (vuelven|vuelves|regresan|regresas)|la proxima semana)\b/ },
   { id: 'demo', re: /\bdemo\b/ },
   { id: 'revision', re: /^(una )?revision[!. ]*$|\b(quiero|necesito|para) (una )?revision\b/ },
@@ -341,8 +403,9 @@ const REGLAS = [
   { id: 'armado', re: /\b(armar|armado|pc gamer)\b/ },
   { id: 'remoto', re: /\b(remot[ao]|anydesk|teamviewer|telematic)/ },
   { id: 'domicilio', re: /\b(domicilio|retiran|van a buscar|lo pasan a buscar)\b/ },
-  { id: 'otros_disp', re: /\b(celular|iphone|telefono|tablet|ipad|consola|play ?station|nintendo|switch)\b/ },
+  { id: 'otros_disp', re: /\b(celular|iphone|telefono|tablet|ipad|consola|play ?station|nintendo|switch|impresoras?|camaras?|televisor(es)?|routers?|macbook|imac|mac)\b/ },
   { id: 'no_enciende', re: /\b(no (prende|enciende|parte|da imagen)|murio|pantalla negra)\b/ },
+  { id: 'respaldo', re: /\b(perder (mis |los |todos mis )?(archivos|datos|fotos|documentos)|no perder (mis |los )?(archivos|datos|fotos)|respaldo|respaldar|backup)\b/ },
   { id: 'formateo', re: /\b(format|reinstal|windows)/ },
   { id: 'limpieza', re: /\b(limpieza|limpiar|mantencion|manutencion|pasta termica|se calienta|temperatura)\b/ },
   { id: 'lento', re: /\b(lento|lenta|se pega|se queda pegad)/ },
@@ -351,8 +414,11 @@ const REGLAS = [
   { id: 'agendar', re: /\b(agend|reserv|tienes hora|hay hora|disponibilidad|cupo)/ },
   { id: 'ubicacion', re: /\b(donde (esta|estan|queda|quedan|atiend)|direccion|ubicad|que depto|departamento)\b/ },
   { id: 'horario', re: /\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados))\b/ },
+  { id: 'compara', re: /\b(cotizando|cotizo|comparando|voy a ir a otro lado|voy a ir a otra parte|me voy a otro lado|otros lados|varios lados|otras opciones|otro tecnico|otro servicio tecnico)\b/ },
   { id: 'precio_general', re: /\b(cuanto (sale|cuesta|cobr|vale|saldria|seria)|precio|valor|cotiz|presupuesto|costo)\b/ },
-  { id: 'gracias', re: /^(muchas )?gracias|^(bacan|genial|excelente|perfecto|super)[!. ]*(gracias)?/ },
+  { id: 'gracias', re: /^(muchas |ya )?gracias|^(bacan|genial|excelente|perfecto|super)[!. ]*(gracias)?|\b(te pasaste|nos vemos|quedo atent[oa])\b/ },
+  { id: 'ping', re: /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/ },
+  { id: 'otra_persona', re: /^(hola|buenas|wena|holi)[ ,]+(gab|gabo|gabi|gabriel)\b|\bbusco a\b|mensaje equivocado|numero equivocado/ },
   { id: 'saludo', re: /^(hol+[ai]+s?|holi+s?|buena?s?|wena?s?|hola buenas)( (tardes|noches|dias))?[ !.,]*(como (estas|estan|va)\??)?[ !.]*$/ }
 ];
 
@@ -413,6 +479,7 @@ function renderizar(clave, ahora, links, fuera) {
     .split('{{LINK_PEDIDOS}}').join(links.pedidos)
     .split('{{VUELTA}}').join(f.vuelta || '')
     .split('{{HASTA}}').join(f.hasta || '')
+    .split('{{PRIMERO}}').join(f.primero || '')
     .replace(/\*\*/g, '');
 }
 
@@ -465,6 +532,7 @@ function salidaPend(c, intencion, clave, ahora, links, extra) {
   if (extra.noche && (horaChile(ahora) >= 21 || horaChile(ahora) < 9)) respuesta += ' Te contesta mañana desde las 9.';
   c.enviados[clave] = ahora; c.ultimoBot = ahora; c.bots.push(ahora);
   if (!extra.mantener) c.pend = null;
+  if (extra.pendModelo) c.pend = { q: 'MODELO', t: ahora, intentos: 0 };   // pidió el modelo: «no sé» o una foto lo contestan
   return { intencion, respuesta, botones: extra.botones || null, aviso, resumen: extra.resumen || '', contacto: c };
 }
 
@@ -483,15 +551,35 @@ function resolverPendiente(texto, payload, c, ahora, links) {
   c.visto = ahora;
   // Reacciones, «jaja», emojis o adjuntos sin texto: no avanzan ni cuentan como fallo (M2).
   if (!/[a-z0-9]/.test(t) || /^(ja|je|ji|jo)+[ !.]*$/.test(t)) return { intencion: 'pend_ignorada', respuesta: null, botones: null, aviso: null, contacto: c };
+  if (RE_PING.test(t)) {                                   // SAL-16 con una pregunta pendiente
+    const q = preguntaActual(c, ahora, links);
+    marcar(c, null, ahora);
+    return { intencion: 'pend_ping', respuesta: 'Hola! Perdona la demora.' + (q ? ' ' + q.texto : ''), botones: q && q.botones ? botones(q.botones) : null, aviso: 'normal', contacto: c };
+  }
+  if (p.q === 'BOT') {                                     // SAL-17: «¿quieres que le avise?»
+    const sn = respSiNo(lim(texto));
+    if (sn === 'si') return salidaPend(c, 'sal3_bot', 'humano', ahora, links, { noche: true, aviso: 'urgente', resumen: 'Pidió que le avisen a Gabriel (preguntó si era un bot)' });
+    c.pend = null;
+    return sn === 'no' ? salidaPend(c, 'es_bot_no', 'es_bot_no', ahora, links, { aviso: null }) : null;
+  }
+  if (p.q === 'MODELO') {                                  // SAL-5: «no sé / no tengo el modelo»
+    if (RE_NO_MODELO.test(t)) {
+      const r = salidaPend(c, 'sal5', 'sal5_modelo', ahora, links, { resumen: 'No sabe el modelo' });
+      if (r.respuesta && RE_NO_COMPUTADORES.test(t)) r.respuesta += FRASE_NO_COMPUTADORES;
+      return r;
+    }
+    c.pend = null;
+    return null;                                           // dio el modelo (o habló de otra cosa): sigue como siempre
+  }
   const op = interpretar(p.q, t, payload);
   if (p.q === 'MEM-D') {
-    if (op === '1') return salidaPend(c, 'mem_d1', 'mem_d1', ahora, links, { resumen: 'Quiere SSD · falta cotizar la pieza' });
+    if (op === '1') return salidaPend(c, 'mem_d1', 'mem_d1', ahora, links, { resumen: 'Quiere SSD · falta cotizar la pieza', pendModelo: true });
     if (op === '2') return salidaPend(c, 'mem_d2', 'mem_d2', ahora, links, { resumen: 'Memoria · lentitud o demora en prender' });
     if (op === 'nose') return salidaPend(c, 'sal5', 'sal5_que', ahora, links, { resumen: 'No sabe qué elegir (memoria)' });
   } else if (op) {
     const a = op === '1';
     return salidaPend(c, a ? 'ram_1a' : 'ram_1b', a ? 'ram_1a' : 'ram_1b', ahora, links, {
-      resumen: a ? 'RAM · pide cotización · ' + String(texto).slice(0, 80) : 'RAM · eligió diagnóstico' });
+      resumen: a ? 'RAM · pide cotización · ' + String(texto).slice(0, 80) : 'RAM · eligió diagnóstico', pendModelo: a });
   }
   if (p.q === 'MEM-D' && ids.includes('precio_general')) {                         // M4: no cuenta como fallo
     return salidaPend(c, 'pend_precio', 'mem_d_precio', ahora, links, { botones: botones(BOTONES_PREGUNTA[p.q]), mantener: true, aviso: null });
@@ -597,7 +685,7 @@ const AG_TEL = /(?:\+?56[\s-]?)?9[\s-]?\d{4}[\s-]?\d{4}\b/;
 // Palabras clave exactas: entran siempre.
 const AG_ENTRADA_FIJA = /\b(desarrollo web|pagina web|sitio web|landing|agenda online|agenda pro)\b|^(web|agenda|agenda pro|agenda online)[!. ]*$/;
 // Frases libres: entran solo si el mensaje no es de reparación ni de otro tema (ver vetoReparacion).
-const AG_ENTRADA_LIBRE = /\bweb\b|\b(tienda (online|virtual|en linea)|e-?commerce|catalogo online|vender por internet|(pagina|sitio) para vender|sitio para vender (mis )?productos|pagina para mi (negocio|emprendimiento)|quiero una pagina)\b|\b(necesit\w+|quer\w+|quier\w+|quisiera|cotiz\w+|busco|hacer|armar|crear|hacen|redisen\w+)\b.*\bpagina\b/;
+const AG_ENTRADA_LIBRE = /\b(una web|mi web para|web para (mi|un|una) (negocio|emprendimiento|consulta|local|tienda|empresa|marca)|(hacer|crear|armar|cotizar)( una| mi)? web)\b|\b(tienda (online|virtual|en linea)|e-?commerce|catalogo online|vender por internet|(pagina|sitio) para vender|sitio para vender (mis )?productos|pagina para mi (negocio|emprendimiento)|quiero una pagina)\b|\b(necesit\w+|quer\w+|quier\w+|quisiera|cotiz\w+|busco|hacer|armar|crear|hacen|redisen\w+)\b.*\bpagina\b/;
 const AG_NO_WEB = /\b(factura|cobro|cobr[oó]|garantia|windows|drivers?|inicio|descarga|ayuda|banco)\b/;
 const AG_EQUIPO = /\b(notebook|pc|compu\w*|laptop|computador\w*)\b/;
 const AG_SINTOMA = /\b(no prende|no enciende|no parte|se pega|lent[oa]|se calienta|falla\w*|se apaga|se cuelga|error|no funciona|no carga)\b/;
@@ -727,6 +815,7 @@ function sal2Ag(ag, ahora, links, texto, motivo) {
 
 function cierreAg(ag, ahora, links, si) {
   ag.paso = 'fin';
+  ag.cerrado = si ? 'llamada' : 'ahora_no';
   return salidaAg(ag, ahora, links, si ? 'web_llamada' : 'web_ahora_no', [], si ? 'ag_4a' : 'ag_4b', {
     aviso: si ? 'urgente' : 'normal', resumen: si ? '🔥 ' + resumenAg(ag) + ' · ya tiene el link' : resumenAg(ag) + ' · ahora no' });
 }
@@ -837,7 +926,9 @@ function flujoAgenda(texto, payload, c, ahora, links) {
   const sal8 = AG_SAL8.test(t) || (!!tel && activo && palabras <= 3);
   const fuera = !!modoFuera(links, ahora);
   const norm = normalizar(texto);
-  const inicia = payload === 'MENU_WEB' || AG_ENTRADA_FIJA.test(norm) || (AG_ENTRADA_LIBRE.test(norm) && !vetoReparacion(texto));
+  // «Quiero formatear y además una web»: dos temas (SAL-15), no es del flujo C.
+  const dosTemas = /\b(y|ademas|tambien|aparte)\b/.test(norm) && clasificar(texto).some(i => SERVICIO.includes(i));
+  const inicia = payload === 'MENU_WEB' || (AG_ENTRADA_FIJA.test(norm) && !dosTemas) || (AG_ENTRADA_LIBRE.test(norm) && !vetoReparacion(texto));
   if (!activo && !llamada && !sal8 && !inicia) return null;
   if (activo && (!/[a-z0-9]/.test(t) || /^(ja|je|ji|jo)+$/.test(t) || /\b(liked a message|reacted|audio call)\b/.test(t))) {
     return { intencion: 'web_ignorada', respuesta: null, botones: null, aviso: null };        // M2
@@ -850,6 +941,11 @@ function flujoAgenda(texto, payload, c, ahora, links) {
     return salidaAg(ag, ahora, links, 'fuera_vuelta', [renderizar('fuera_vuelta', ahora, links, modoFuera(links, ahora))], AG_PREG[ag.paso], { botones: AG_BOTONES[ag.paso] });
   }
   if (activo && ids.some(i => LOGISTICA.includes(i))) return null;                            // M8: la logística manda
+  if (activo && ids.includes('es_bot')) return null;                                          // SAL-17 lo contesta el bot de siempre
+  if (activo && ids.includes('ping')) {                                                       // SAL-16: repite la pregunta sin contar fallo
+    c.ag.t = ahora;
+    return salidaAg(c.ag, ahora, links, 'web_repite', ['Hola! Perdona la demora.'], AG_PREG[c.ag.paso], { botones: AG_BOTONES[c.ag.paso], aviso: 'normal' });
+  }
 
   const previo = c.ag;
   const ag = activo || (previo && (llamada || sal8)) ? previo : nuevoAg(ahora);
@@ -893,9 +989,258 @@ function flujoWeb(texto, payload, c, ahora, links) {
   return flujoAgenda(texto, payload, c, ahora, links || {});
 }
 
-// contacto: { visto, gabriel, enviados: {intencion: ts}, ultimoBot, bots: [ts], web } (memoria persistente)
-// Devuelve { intencion, respuesta|null, botones|null, aviso: null|'normal'|'urgente', resumen?, contacto }
-function decidir(texto, contacto, ahora, links, payload) {
+// ---------------------------------------------------------------------------
+// Salidas comunes (sección E) y seguimientos (sección D).
+// ---------------------------------------------------------------------------
+const MIN = 60 * 1000;
+// «clave/contraseña/password/pass/pin» + hasta 4 palabras + (es|:|=)? + una cadena de 4 o más con algún dígito
+// («la clave del wifi es 1234», «password Hunter2 no me entra», «pin 4321»). Con «es», «:» o «=» vale cualquier valor.
+const RE_CLAVE = /\b(la |mi |su )?(clave|contrasena|password|pin)\s*(es|:|=)\s*\S+|\b(contrasena|password)\s*[:=]\s*\S+|\bclave\b[\s:]+(?=\S*\d)\S{3,}|\b(clave|contrasena|password|pass|pin)\b(?:\s+\S+){0,4}?\s*(?:es|:|=)?\s*\b(?=[a-z0-9]*\d)[a-z0-9]{4,}\b/;
+const RE_CLAVE_PAL = /\b(clave|contrasena|password|pass|pin)\b/;
+const RE_VALOR = /\b(?=[a-z0-9]*\d)[a-z0-9]{4,}\b/;
+const RE_MAC = /\b(mac|macbook|imac)\b/;
+const RE_MAC_BLOQUEO = /bloque|contrasena|clave|icloud|inicio de sesion|pantalla de inicio/;
+const RE_INSULTO = /\b(idiota|estupido|imbecil|conchetumare|ctm|mierda|puta madre|maricon|culiao|qlo)\b/;
+// Acuses y risas: no reciben bienvenida ni se responden (SAL-10).
+const RE_ACK = /^(ok+|oki+|okis|oka|ya+|yap|yapo|dale|vale|listo|perfecto|bacan|genial|super|si+|sip|jaj\w*|ajaj\w*|je+j\w*|ja+|ji+j\w*)$/;
+const RE_SI_SEG = /^(si+|sip|dale|claro|de una|obvio|ya dale|por favor)$/;
+function esAck(texto) { const l = lim(texto); return !/[a-z0-9]/.test(l) || RE_ACK.test(l); }
+const RE_PING = /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/;
+const RE_NO_MODELO = /\b(no se|no lo se|no tengo idea|no cacho|no tengo el modelo|no aparece|apenas se ve|no estoy segur[oa]|nula con la tecnologia)\b/;
+const RE_NO_COMPUTADORES = /\b(no (se|cacho|entiendo) nada( de)? (computador\w*|compu\w*|tecnologia)|nula con la tecnologia|no cacho nada)\b/;
+const FRASE_NO_COMPUTADORES = ' Cuéntame con tus palabras qué ves, yo me encargo del resto.';
+const RE_SEG_NO = /\b(agende|reagende|ya tengo hora|pedi la hora|tome la hora|ahora no|lo pienso|no gracias|solo estoy mirando|lo voy a pensar)\b/;
+const RE_WEB_TEMA = /\b(una web|pagina web|sitio web|landing|agenda online|pagina para)\b/;
+const EN_PALABRAS = /^(the|and|you|your|are|is|have|for|with|this|that|hello|hi|dear|please|we|our|can|will|would|thanks|thank|very|much|my|of|to|in|it|im)$/;
+const ES_PALABRAS = /^(el|la|los|las|de|que|y|en|un|una|por|para|con|mi|tu|su|es|no|si|como|hola|buenas|quiero|necesito|me|lo|se|del|al|mas|muy|pero|tengo)$/;
+// Textos de reparación que piden el modelo: la respuesta siguiente puede ser «no sé» o una foto.
+const MODELO_CLAVES = ['mem_compat', 'mem_pieza', 'mem_pieza_ya', 'pantalla', 'bateria', 'bisagras', 'ssd', 'memoria_sintoma', 'mem_d1', 'ram_1a'];
+// Además de la logística, estas respuestas salen aunque haya conversación en curso (48 h).
+const RESPONDE_EN_CURSO = LOGISTICA.concat(['objecion', 'compara', 'garantia_q', 'urgencia', 'es_bot', 'humano', 'dos_temas', 'mac_bloqueo', 'respaldo', 'ping']);
+
+// Red de seguridad: una palabra de clave y una cadena con dígitos en el mismo mensaje, aunque la intención sea otra.
+function claveSospechosa(t) { return RE_CLAVE_PAL.test(t) && RE_VALOR.test(t); }
+
+function esClave(t) { return RE_CLAVE.test(t) && !(RE_MAC.test(t) && RE_MAC_BLOQUEO.test(t)); }
+
+// Inglés sin una sola palabra en español (SAL-19).
+function esIngles(t) {
+  const w = t.replace(/[^a-z ]/g, ' ').split(' ').filter(Boolean);
+  if (w.length < 3) return false;
+  return w.filter(x => EN_PALABRAS.test(x)).length >= 2 && !w.some(x => ES_PALABRAS.test(x));
+}
+
+// Nunca es spam si el mensaje trae una intención de servicio de reparación.
+function esSpamTexto(t) {
+  if (clasificar(t).some(i => SERVICIO.includes(i))) return false;
+  return REGLAS.find(r => r.id === 'spam').re.test(t) || esIngles(t);
+}
+
+// Insulto o mensaje sin sentido (SAL-20): una palabra con 5 o más consonantes seguidas.
+function esConfuso(t) {
+  if (RE_INSULTO.test(t)) return true;
+  return t.split(' ').some(w => /^[a-z]+$/.test(w) && /[bcdfghjklmnpqrstvwxz]{5,}/.test(w.replace(/(.)\1{2,}/g, '$1')));
+}
+
+// Anota que el bot mandó algo: no repetirlo en 24 h, tope por hora y eco para no confundirlo con Gabriel.
+function marcar(c, clave, ahora) {
+  if (clave) c.enviados[clave] = ahora;
+  c.ultimoBot = ahora;
+  c.bots = (c.bots || []).filter(x => ahora - x < HORA).concat(ahora);
+}
+
+// La pregunta que el bot dejó abierta (flujo C o pendiente de B/E), para repetirla.
+function preguntaActual(c, ahora, links) {
+  const ag = c.ag && c.ag.paso !== 'fin' && ahora - c.ag.t < DIA ? c.ag : null;
+  if (ag) return { texto: renderizar(AG_PREG[ag.paso], ahora, links, null), botones: AG_BOTONES[ag.paso] || null };
+  const p = c.pend && ahora - c.pend.t <= DIA ? c.pend : null;
+  if (!p) return null;
+  const clave = { 'MEM-D': 'memoria_duda', 'RAM-1': 'upgrade_ram' }[p.q];
+  if (clave) return { texto: renderizar(clave, ahora, links, null), botones: BOTONES_PREGUNTA[p.q] };
+  if (p.q === 'MODELO') return { texto: '¿Me mandas el modelo exacto del equipo?', botones: null };
+  if (p.q === 'BOT') return { texto: '¿Quieres que le avise a Gabriel?', botones: null };
+  return null;
+}
+
+// Lo que se resuelve antes que cualquier flujo: claves (SAL-9), spam (SAL-19), llamadas de Instagram,
+// insultos o mensajes sin sentido (SAL-20) y la respuesta a un seguimiento (D).
+function tempranas(texto, t, c, ahora, links, gabrielActivo) {
+  if (!t) return null;
+  const sale = (intencion, respuesta, aviso, resumen, extra) =>
+    Object.assign({ intencion, respuesta, botones: null, aviso, resumen: resumen || '', contacto: c }, extra);
+  if (esClave(t)) {                      // nunca se copia la clave: el pegamento oculta el texto (ocultar)
+    c.visto = ahora;
+    const responde = !gabrielActivo && !(c.enviados.sal9 && ahora - c.enviados.sal9 < DIA);
+    if (responde) marcar(c, 'sal9', ahora);
+    return sale('clave', responde ? renderizar('sal9', ahora, links, null) : null, 'normal', 'mandó una clave por chat', { ocultar: true });
+  }
+  if (esSpamTexto(t)) { c.visto = ahora; return sale('spam', null, null); }
+  if (/\b(audio|video) call ended\b/.test(t)) return sale('llamada_fin', null, null);
+  if (/\b(audio|video) call started\b/.test(t)) {
+    c.visto = ahora;
+    const ya = gabrielActivo || (c.enviados.sal4_llamada && ahora - c.enviados.sal4_llamada < DIA);
+    if (!ya) marcar(c, 'sal4_llamada', ahora);
+    return sale('llamada_ig', ya ? null : renderizar('sal4_llamada', ahora, links, null), 'normal', 'intentó llamar por Instagram');
+  }
+  if (esConfuso(t)) {
+    c.visto = ahora;
+    const segunda = c.enviados.confuso && ahora - c.enviados.confuso < DIA;
+    if (gabrielActivo || segunda) return sale('confuso', null, 'normal', 'mensaje confuso');
+    const q = preguntaActual(c, ahora, links);
+    marcar(c, 'confuso', ahora);
+    return sale('confuso', renderizar('confuso', ahora, links, null) + (q ? '\n\n' + q.texto : ''), null, '', { botones: q && q.botones ? botones(q.botones) : null });
+  }
+  if (c.segEnviado) return respuestaSeguimiento(texto, t, c, ahora, links, gabrielActivo, sale);
+  return null;
+}
+
+// Respuesta a un seguimiento enviado (D): solo el contenido real escala a Gabriel. Los acuses y las risas no
+// se responden ni consumen el episodio; «gracias» sigue SAL-10; «sí/dale» tras SEG-1 da el link y tras SEG-2 retoma la pregunta.
+function respuestaSeguimiento(texto, t, c, ahora, links, gabrielActivo, sale) {
+  const l = lim(texto), tipo = c.segTipo;
+  if (ahora - c.segEnviado >= DIA) { c.segEnviado = null; return null; }
+  const ag = c.ag;
+  const interes = RE_SI_SEG.test(l) && ag && (tipo === 'SEG-1' || (tipo === 'SEG-2' && ag.paso !== 'fin'));
+  if (!interes) {
+    if (!/[a-z0-9]/.test(l) || RE_ACK.test(l)) return sale('seg_acuse', null, 'normal');
+    if (/^(muchas |ya )?gracias|\b(te pasaste|nos vemos|quedo atent[oa])\b/.test(l)) return null;
+  }
+  c.segEnviado = null;
+  const logistica = clasificar(texto, !!modoFuera(links, ahora)).some(i => LOGISTICA.includes(i));
+  if (gabrielActivo || logistica || RE_SEG_NO.test(t)) return null;
+  c.visto = ahora;
+  marcar(c, null, ahora);
+  if (interes && tipo === 'SEG-1') {
+    ag.t = ahora;
+    return Object.assign({ contacto: c }, cierreAg(ag, ahora, links, true), { intencion: 'seg_interes_link' });
+  }
+  if (interes) {
+    ag.t = ahora;
+    return Object.assign({ contacto: c }, salidaAg(ag, ahora, links, 'seg_retoma', [], AG_PREG[ag.paso], { botones: AG_BOTONES[ag.paso] }));
+  }
+  if (ag && ag.paso !== 'fin') ag.paso = 'fin';
+  return sale('seg_respuesta', renderizar('humano', ahora, links, null) + sufijoNoche(ahora), 'urgente', 'respondió al seguimiento (' + tipo + ')');
+}
+
+// SAL-4: audio, foto, video u otro adjunto (sin texto). El pegamento pasa el tipo de Meta.
+// Devuelve una salida sin `contacto` (la completa decidir) o null.
+function atenderAdjunto(adj, c, ahora, links) {
+  const tipo = { audio: 'audio', image: 'foto', video: 'video' }[adj];
+  if (!tipo) return { intencion: 'adjunto_otro', respuesta: null, botones: null, aviso: null, mantenerPend: true };
+  const nuevoCont = !c.visto || ahora - c.visto > 30 * DIA;
+  const enCurso = !!c.visto && ahora - c.visto < 2 * DIA && !nuevoCont;
+  const txt = k => renderizar(k, ahora, links, null);
+  const resumen = { audio: 'mandó un audio', foto: 'mandó una foto', video: 'mandó un video' }[tipo];
+  const clave = { audio: 'sal4_audio', foto: 'sal4_foto', video: 'sal4_video' }[tipo];
+  const ag = c.ag && c.ag.paso !== 'fin' && ahora - c.ag.t < DIA ? c.ag : null;
+  if (ag) {                              // dentro del flujo C: el audio cuenta como primer intento fallido
+    ag.t = ahora;
+    if (tipo === 'audio') {
+      if (ag.intentos >= 1) return sal2Ag(ag, ahora, links, '[audio]', 'mandó audios');
+      ag.intentos++;
+      return salidaAg(ag, ahora, links, 'web_repite', [txt(clave)], AG_PREG[ag.paso], { botones: AG_BOTONES[ag.paso] });
+    }
+    if (tipo === 'foto' && ag.paso === 'marca') {   // la foto de su logo cuenta como «marca: sí»
+      ag.marca = 'si'; ag.paso = siguientePaso(ag);
+      return preguntaAg(ag, ahora, links, [txt('sal4_logo')], { aviso: 'normal', resumen: 'logo recibido · ' + resumenAg(ag) });
+    }
+    return salidaAg(ag, ahora, links, 'web_repite', [txt(clave)], AG_PREG[ag.paso], { botones: AG_BOTONES[ag.paso], aviso: 'normal', resumen });
+  }
+  const p = c.pend && ahora - c.pend.t <= DIA ? c.pend : null;
+  if (p) {                               // pendiente de B/E
+    const q = preguntaActual(c, ahora, links);
+    const bt = q && q.botones ? botones(q.botones) : null;
+    if (tipo === 'audio') {
+      if (p.intentos >= 1) {
+        c.pend = null;
+        return { intencion: 'sal2', respuesta: txt('sal2') + sufijoNoche(ahora), botones: null, aviso: 'urgente', resumen: 'No entendió la pregunta ' + p.q + ' · mandó audios', mantenerPend: true };
+      }
+      p.intentos++;
+      return { intencion: 'adjunto_audio', respuesta: txt(clave) + (q ? '\n\n' + q.texto : ''), botones: bt, aviso: null, mantenerPend: true };
+    }
+    if (tipo === 'foto' && (p.q === 'MODELO' || p.q === 'RAM-1')) {     // la foto del equipo cuenta como el modelo
+      c.pend = null;
+      return { intencion: 'adjunto_foto', respuesta: txt(clave), botones: null, aviso: 'normal', resumen: 'mandó foto del modelo', mantenerPend: true };
+    }
+    return { intencion: 'adjunto_' + tipo, respuesta: txt(clave) + (q ? '\n\n' + q.texto : ''), botones: bt, aviso: 'normal', resumen, mantenerPend: true };
+  }
+  const repetido = c.enviados['adj_' + tipo] && ahora - c.enviados['adj_' + tipo] < DIA;
+  if (enCurso || repetido) return { intencion: 'adjunto_' + tipo, respuesta: null, botones: null, aviso: 'normal', resumen, mantenerPend: true };
+  c.enviados['adj_' + tipo] = ahora;     // contacto nuevo: el texto sale una sola vez
+  return { intencion: 'adjunto_' + tipo, respuesta: txt(clave), botones: null, aviso: 'normal', resumen, mantenerPend: true };
+}
+
+// ---------------------------------------------------------------------------
+// Seguimiento (sección D): un solo mensaje por episodio, a las 5 h del último mensaje del cliente,
+// entre las 10:00 y las 20:00 de Chile; si cae fuera, a las 10:00 siguientes siempre que no pasen 23 h.
+// ---------------------------------------------------------------------------
+const FMT_CHILE = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
+function minutosChile(ts) {
+  const p = FMT_CHILE.formatToParts(new Date(ts));
+  return Number(p.find(x => x.type === 'hour').value) * 60 + Number(p.find(x => x.type === 'minute').value);
+}
+
+// Cuándo corresponde mandar el seguimiento de un último mensaje del cliente en `visto`; null si nunca.
+function momentoSeguimiento(visto) {
+  const t5 = visto + 5 * HORA;
+  let m = t5;
+  const min5 = minutosChile(t5);
+  if (min5 < 600 || min5 > 1200) {       // fuera de 10:00-20:00: a las 10:00 siguientes
+    m = Math.ceil(t5 / HORA) * HORA;
+    for (let i = 0; i < 30 && minutosChile(m) !== 600; i++) m += HORA;
+  }
+  return m - visto > 23 * HORA ? null : m;
+}
+
+// El cron corre cada 15 min: se tolera hasta las 20:15 para no perder el envío de las 20:00.
+function enVentanaEnvio(ahora) { const m = minutosChile(ahora); return m >= 600 && m <= 1215; }
+
+// Qué episodio de seguimiento abre este mensaje (se recalcula en cada mensaje: cualquier mensaje posterior lo cancela).
+function calcularSeg(r, c, ahora, links) {
+  if (c.gabriel && ahora - c.gabriel < 12 * HORA) return null;
+  const i = r.intencion || '', ag = c.ag;
+  if (i === 'web_llamada' && ag && ag.cerrado === 'llamada') return { tipo: 'SEG-1', enviado: 0 };
+  if (r.respuesta && /^web_(inicio|marca|hoy|repite)$/.test(i) && ag && ['rubro', 'marca', 'hoy'].includes(ag.paso)) return { tipo: 'SEG-2', enviado: 0 };
+  // «Voy» o «agendé» en reparación; si venía del flujo web, «agendé» es la reserva de la llamada y cancela.
+  const webReciente = ag && ahora - ag.t < DIA;
+  if ((i === 'agendo' || i === 'voy') && !webReciente && !modoFuera(links, ahora)) return { tipo: 'SEG-3', enviado: 0 };
+  return null;
+}
+
+// Función pura sobre la memoria de contactos: devuelve [{ remitente, texto, intencion }] y marca
+// en cada contacto que ya se le mandó (máximo 1 por episodio).
+function seguimientos(contactos, ahora, links) {
+  const out = [];
+  for (const id of Object.keys(contactos || {})) {
+    const c = contactos[id], s = c && c.seg;
+    if (!s || s.enviado || !c.visto) continue;
+    if (c.gabriel && (c.gabriel >= c.visto || ahora - c.gabriel < 12 * HORA)) { c.seg = null; continue; }   // Gabriel escribió a mano
+    const m = momentoSeguimiento(c.visto);
+    if (m === null || ahora - c.visto > 23 * HORA) { c.seg = null; continue; }
+    if (ahora < m || !enVentanaEnvio(ahora)) continue;
+    if (s.tipo === 'SEG-3' && modoFuera(links, ahora)) { c.seg = null; continue; }
+    const clave = { 'SEG-1': 'seg1', 'SEG-2': 'seg2', 'SEG-3': 'seg3' }[s.tipo];
+    const texto = renderizar(clave, ahora, links, null);
+    s.enviado = ahora;
+    c.segEnviado = ahora; c.segTipo = s.tipo; c.ultimoTexto = texto;
+    marcar(c, null, ahora);
+    out.push({ remitente: id, texto, intencion: 'seg_' + s.tipo.slice(4) });
+  }
+  return out;
+}
+
+// contacto: { visto, gabriel, enviados: {intencion: ts}, ultimoBot, bots: [ts], web, ag, pend, seg } (memoria persistente)
+// `adjunto` = tipo de adjunto de Meta cuando el mensaje no trae texto ('audio' | 'image' | 'video' | 'share' | 'otro').
+// Devuelve { intencion, respuesta|null, botones|null, aviso: null|'normal'|'urgente', resumen?, ocultar?, contacto }
+function decidir(texto, contacto, ahora, links, payload, adjunto) {
+  const r = decidirNucleo(texto, contacto, ahora, links, payload, adjunto);
+  if (!r.ocultar && claveSospechosa(normalizar(texto))) r.ocultar = true;   // nunca viaja al aviso
+  r.contacto.seg = calcularSeg(r, r.contacto, ahora, links);
+  return r;
+}
+
+function decidirNucleo(texto, contacto, ahora, links, payload, adjunto) {
   const c0 = Object.assign({ visto: 0, gabriel: 0, enviados: {}, bots: [] }, contacto || {});
   const gabrielActivo = c0.gabriel && ahora - c0.gabriel < 12 * HORA;
   // El menú de bienvenida "Reparación" vuelve al bot de siempre con un saludo de servicio técnico.
@@ -905,13 +1250,17 @@ function decidir(texto, contacto, ahora, links, payload) {
     c0.ultimoBot = ahora; c0.bots = (c0.bots || []).concat(ahora);
     return { intencion: 'menu_rep', respuesta: '¡Dale! Cuéntame qué le pasa a tu notebook o PC (y el modelo si lo tienes) y te digo cuánto sale.', botones: null, aviso: null, contacto: c0 };
   }
+  const t0 = normalizar(texto);
+  const previo = tempranas(texto, t0, c0, ahora, links, gabrielActivo);
+  if (previo) return previo;
   if (!gabrielActivo) {
     const antes = JSON.stringify({ ag: c0.ag, web: c0.web });
     // Una conversación de flujo ya en marcha no se corta con el tope: cada respuesta contesta un mensaje del cliente.
     const enFlujo = (c0.ag && c0.ag.paso !== 'fin' && ahora - c0.ag.t < DIA) || (c0.web && c0.web.paso !== undefined && ahora - c0.web.t < DIA);
-    const w = flujoWeb(texto, payload, c0, ahora, links);
+    const w = adjunto && !t0 ? atenderAdjunto(adjunto, c0, ahora, links) : flujoWeb(texto, payload, c0, ahora, links);
     if (w) {
-      c0.visto = ahora; c0.pend = null;
+      c0.visto = ahora;
+      if (!w.mantenerPend) c0.pend = null;
       c0.bots = (c0.bots || []).filter(x => ahora - x < HORA);
       if (w.respuesta && !enFlujo && c0.bots.length >= 3) {
         // Tope de 3 por hora: no se manda el texto (y el flujo no avanza), pero el aviso y el resumen siguen.
@@ -922,7 +1271,7 @@ function decidir(texto, contacto, ahora, links, payload) {
       if (w.respuesta) { c0.ultimoBot = ahora; c0.bots = c0.bots.concat(ahora); }
       return Object.assign({ contacto: c0 }, w);
     }
-    // Respuesta a una pregunta pendiente del bot (MEM-D, RAM-1): no la silencia el «conversación en curso».
+    // Respuesta a una pregunta pendiente del bot (MEM-D, RAM-1, modelo): no la silencia el «conversación en curso».
     const p = resolverPendiente(texto, payload, c0, ahora, links);
     if (p) return p;
   }
@@ -936,6 +1285,14 @@ function decidir(texto, contacto, ahora, links, payload) {
 const CON_AVISO_FUERA = SERVICIO.filter(x => x !== 'otros_disp' && x !== 'remoto')
   .concat(['precio_general', 'revision', 'tiempo', 'descuento', 'agendar', 'mem_d2']);
 const RESUMEN_ID = {
+  objecion: 'objeción de precio',
+  compara: 'compara',
+  garantia_q: 'consulta de garantía',
+  mac_bloqueo: 'Mac con bloqueo de pantalla de inicio',
+  dos_temas: 'dos temas',
+  otra_persona: 'mensaje para otra persona',
+  humano: 'pide hablar con una persona',
+  es_bot: 'preguntó si es un bot',
   memoria_sintoma: 'Síntoma de memoria',
   mem_pieza_ya: 'Ya compró la pieza',
   fuera_porteria: 'Iba a dejar un equipo en portería'
@@ -957,7 +1314,18 @@ function decidirBase(texto, contacto, ahora, links) {
   if (id === 'no_enciende' && ids.includes('bateria')) id = 'bateria';
   // "demora en prender" + memoria: va directo al diagnóstico, sin repreguntar.
   if (id === 'memoria_duda' && SENAL_LENTO.test(normalizar(texto))) id = 'mem_d2';
+  const tNorm = normalizar(texto);
+  // SAL-12: si pregunta qué incluye, se responde con la lista de precios.
+  if (id === 'compara' && /\bque incluye\b/.test(tNorm)) id = 'precio_general';
+  // SAL-15: reparación y web en el mismo mensaje: parte por la que dijo primero.
+  let primero = '';
+  if (servicio && (id === servicio || ['precio_general', 'agendar', 'web', 'saludo'].includes(id)) && RE_WEB_TEMA.test(tNorm)) {
+    const sr = regla(servicio).re.exec(tNorm), wr = RE_WEB_TEMA.exec(tNorm);
+    primero = sr && sr.index <= wr.index ? 'la reparación' : 'la página web';
+    id = 'dos_temas';
+  }
 
+  if (id === 'spam' && servicio) id = servicio;
   const r = id && regla(id);
   let aviso = r && r.urgente ? 'urgente' : 'normal';
   if (id === 'spam') return { intencion: 'spam', respuesta: null, aviso: null, contacto: c };
@@ -969,21 +1337,24 @@ function decidirBase(texto, contacto, ahora, links) {
   const h = horaChile(ahora);
   const deNoche = h >= 21 || h < 9;
 
+  const soloAck = !id && esAck(texto);
   let clave = null;
-  if (!id) clave = nuevo ? 'bienvenida' : null;            // sin intención clara: solo saludo si es nuevo
+  if (!id) clave = nuevo && !soloAck ? 'bienvenida' : null;            // sin intención clara: solo saludo si es nuevo
   else if (id === 'saludo') clave = nuevo ? 'bienvenida' : null;
   else if (id === 'gracias') clave = c.ultimoBot && ahora - c.ultimoBot < 2 * HORA ? 'gracias' : null;
+  else if (id === 'ping') clave = nuevo ? 'bienvenida' : (c.ultimoBot && ahora - c.ultimoBot >= 5 * MIN ? 'ping' : null);   // SAL-16
   else clave = id;
 
-  if (id === 'agendo') clave = null;
-  if (enCurso && clave && !LOGISTICA.includes(clave) && clave !== 'gracias') clave = null;
+  if (id === 'agendo' || id === 'voy') clave = null;
+  if (enCurso && clave && !RESPONDE_EN_CURSO.includes(clave) && clave !== 'gracias') clave = null;
 
   // Modo fuera de Concepción: la bienvenida y el «voy bajando» cambian de texto.
   if (fuera && clave === 'bienvenida') clave = 'fuera_bienvenida';
+  if (fuera && clave === 'urgencia') clave = 'urgencia_fuera';
   if (fuera && clave === 'llegada') clave = deNoche ? 'fuera_llegada_noche' : 'fuera_llegada';
 
   // De noche y sin nada que contestar con datos: avisar que se responde mañana (una vez por noche).
-  if (deNoche && (!clave || clave === 'bienvenida') && !(c.enviados.fuera_horario && ahora - c.enviados.fuera_horario < 10 * HORA)) {
+  if (deNoche && !soloAck && (!clave || clave === 'bienvenida') && !(c.enviados.fuera_horario && ahora - c.enviados.fuera_horario < 10 * HORA)) {
     clave = 'fuera_horario';
   }
   // De noche no se promete bajar al lobby.
@@ -999,7 +1370,8 @@ function decidirBase(texto, contacto, ahora, links) {
   let respuesta = null;
   let botonesPregunta = null;
   if (clave) {
-    respuesta = renderizar(clave, ahora, links, fuera);
+    respuesta = renderizar(clave, ahora, links, clave === 'dos_temas' ? Object.assign({}, fuera || {}, { primero }) : fuera);
+    if (clave === 'humano') respuesta += sufijoNoche(ahora);
     // FUERA-1: el aviso va primero, una sola vez por contacto, y solo en consultas de reparación.
     if (fuera && CON_AVISO_FUERA.includes(clave) && !c.enviados.fuera_aviso) {
       respuesta = renderizar('fuera_aviso', ahora, links, fuera) + '\n\n' + respuesta;
@@ -1011,6 +1383,10 @@ function decidirBase(texto, contacto, ahora, links) {
     if (PREGUNTAS[clave]) {          // la pregunta queda pendiente para entender la respuesta siguiente
       c.pend = { q: PREGUNTAS[clave], t: ahora, intentos: 0 };
       botonesPregunta = botones(BOTONES_PREGUNTA[PREGUNTAS[clave]]);
+    } else if (clave === 'es_bot') {
+      c.pend = { q: 'BOT', t: ahora, intentos: 0 };
+    } else if (MODELO_CLAVES.includes(clave)) {
+      c.pend = { q: 'MODELO', t: ahora, intentos: 0 };      // pidió el modelo
     }
   }
   if (!id && !respuesta) aviso = 'normal';
@@ -1024,4 +1400,4 @@ function decidirBase(texto, contacto, ahora, links) {
 }
 
 /* FIN-CEREBRO */
-if (typeof module !== 'undefined') module.exports = { decidir, flujoWeb, flujoAgenda, clasificar, normalizar, modoFuera, TEXTOS, REGLAS };
+if (typeof module !== 'undefined') module.exports = { decidir, seguimientos, momentoSeguimiento, GARANTIA_ACTIVA, GARANTIA_LEGAL, flujoWeb, flujoAgenda, clasificar, normalizar, modoFuera, TEXTOS, REGLAS };
