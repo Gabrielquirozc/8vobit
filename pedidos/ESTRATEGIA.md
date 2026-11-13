@@ -164,9 +164,12 @@ paga tarifa. Se cobra a mes vencido, junto con el plan, según los pedidos web n
 | Resumen semanal y comisión ahorrada | ✅ | ✅ | ✅ |
 | Costo de productos y margen | — | ✅ | ✅ |
 | Costeo de despacho por vehículo | — | ✅ | ✅ |
+| Armar salida: orden de entrega, Waze, Maps, hoja de ruta | ✅ | ✅ | ✅ |
+| Repartidor en su teléfono, cobro y rendición, "en camino" al cliente (por hacer, `DISENO-REPARTO.md`) | — | ✅ | ✅ |
+| Historial por repartidor y repartidores compartidos (por hacer) | — | — | ✅ |
 | Equipo, turnos y sueldos estimados | — | ✅ | ✅ |
 | Estado de resultados mensual | — | ✅ | ✅ |
-| Usuarios con PIN y roles | 2 usuarios | ilimitados | ilimitados |
+| Usuarios con PIN y roles (los repartidores no cuentan) | 2 usuarios | ilimitados | ilimitados |
 | Exportar a CSV/Excel | — | ✅ | ✅ |
 | Inventario, recetas y proveedores | — | — | ✅ |
 | Combos y promociones | — | — | ✅ |

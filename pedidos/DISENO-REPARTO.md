@@ -10,7 +10,7 @@ Diseño del 2026-11-13. **Aún no se programa.** Parte de "Armar salida" (ESTUDI
 | ¿Quién arma la salida? | **Las dos formas:** el repartidor elige sus pedidos y el dueño o encargado puede asignarlos o corregirlos. |
 | ¿El repartidor cobra? | **Sí.** Recibe efectivo, transferencia o tarjeta al entregar y luego rinde en caja. |
 | ¿Repartidores propios o compartidos? | **Propios del local.** Nada de "tipo Uber" entre locales por ahora. |
-| ¿En qué plan va? | **Por definir:** la propuesta está en §7. |
+| ¿En qué plan va? | **Aprobado el 2026-11-13:** la propuesta de §7, sin adicional para Canal. |
 
 Sin integración con apps externas: PedidosYa, Uber Eats y Rappi traen sus propios repartidores y quedan fuera.
 
@@ -124,7 +124,7 @@ Es lo que más cuidado necesita, porque se mueve plata.
 - **Sin GPS en vivo** en esta etapa: gasta batería, exige permisos y abre un tema de privacidad del
   trabajador. Queda para más adelante si los clientes lo piden.
 
-## 7. Planes (propuesta para decidir)
+## 7. Planes (aprobados el 2026-11-13)
 
 Hoy (`lib/licencias.mjs`): Canal $19.900 (2 usuarios, sin Equipo), Gestión $34.900 (con Equipo y
 costeo de despacho por vehículo) y Pro $54.900. La ficha del repartidor vive en **Equipo**, que es de Gestión.
@@ -151,11 +151,14 @@ costeo de despacho por vehículo) y Pro $54.900. La ficha del repartidor vive en
 **Alternativa, si se quiere vender a Canal:** un adicional **"Reparto" a $5.900/mes** que activa las filas
 de Gestión en Canal. Es más ingreso, pero complica la oferta. Recomiendo partir sin adicional y medir.
 
-**Para decidir:**
-1. ¿Las tres filas nuevas van en Gestión, o el seguimiento "en camino" va en todos los planes (porque lo
-   ve el cliente y vende la carta)?
-2. ¿Cuántos repartidores por local en Gestión: ilimitados o con tope?
-3. ¿Adicional para Canal: sí o no?
+**Decidido (2026-11-13, el dueño aprobó la propuesta):**
+1. Acceso del repartidor, cobro con rendición y seguimiento "en camino" van en **Gestión y Pro**. Canal
+   se queda con Armar salida en el panel.
+2. Repartidores **ilimitados** en Gestión y Pro, y **no cuentan** en el límite de usuarios del plan.
+3. **Sin adicional** "Reparto" para Canal por ahora. Se revisa si varios locales Canal lo piden.
+
+En código (etapa 5): una función `reparto` en `gestion` y `pro` (`lib/licencias.mjs`), y otra
+`reparto_historial` solo en `pro`.
 
 ## 8. Datos (borrador)
 
