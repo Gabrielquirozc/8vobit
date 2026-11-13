@@ -22,6 +22,7 @@ import { crearInventario } from './lib/inventario.mjs';
 import { crearClientes } from './lib/clientes.mjs';
 import { crearMensajes } from './lib/mensajes.mjs';
 import * as LG from './lib/legal.mjs';
+import { crearPagos } from './lib/pagos.mjs';
 
 const PORT = Number(process.env.PORT || 8099);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -517,7 +518,7 @@ function menu(local, publico = true) {
     local: { slug: local.slug, nombre: local.nombre, ...(publico ? contactoPublico(local) : { instagram: local.instagram, whatsapp: local.whatsapp, telefono: local.telefono }), ...privado, modo_boleta: local.modo_boleta,
       horario: JSON.parse(local.horario), direccion: local.direccion, pausa: !!local.pausa, cupo_franja: local.cupo_franja, comision_app: local.comision_app,
       logo: local.logo ? `${BASE}/img/${local.logo}` : null, despacho: despachoDe(local), ubicacion: ubicacionDe(local),
-      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null,
+      transferencia: local.transferencia ? JSON.parse(local.transferencia) : null, pago_online: PAGOS.publico(local.id),
       legal: publico ? (Object.keys(LG.publicos(legal)).length ? LG.publicos(legal) : null) : legal },
     mas_pedidos: mas,
     promociones: LIC.puede(local.id, 'combos') ? PROMOS.enCarta(local.id, ahoraDe(local)) : [],
@@ -542,6 +543,7 @@ function pedidoCompleto(id, localId) {
   if (p.fiado_nombre) p.fiado_saldo = p.total - CAJA.fiados.abonado(id);
   p.items = db.prepare('SELECT nombre, agregados, salsas, cantidad, precio_unitario, nota FROM pedido_items WHERE pedido_id=?').all(id)
     .map((i) => ({ ...i, agregados: JSON.parse(i.agregados), salsas: JSON.parse(i.salsas) }));
+  p.pago_online = PAGOS.dePedido(id);
   p.mensajes = MSJ.de(id); p.sin_leer = MSJ.sinLeer(id); p.mensajes_abiertos = MSJ.abierto(p);
   return p;
 }
@@ -971,6 +973,8 @@ const PROMOS = crearPromos(db);
 const INV = crearInventario(db, { combos: (lid) => PROMOS.combos(lid) });
 const CLI = crearClientes(db);
 const MSJ = crearMensajes(db);
+// Pago con tarjeta en línea (Flow o Mercado Pago, a la cuenta del local). Ver lib/pagos.mjs.
+const PAGOS = crearPagos(db, { base: BASE, correoLocal: (lid) => LEGAL.datosDe(lid)?.correo || null });
 // Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
 {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
@@ -1064,6 +1068,53 @@ async function api(req, res, url) {
     }
   }
 
+  // --- pago con tarjeta en línea ---
+  // Inicio: con el token de seguimiento (lo tiene solo quien hizo el pedido). El monto lo pone el servidor.
+  // Un pedido ya hecho se puede pagar aunque después la carta quede en pausa.
+  const pagar = async (local, p, b) => {
+    const r = await PAGOS.iniciar(local, p, b);
+    return r.error ? send(res, r.status || 400, { error: r.error }) : send(res, 200, r);
+  };
+  const muchosPagos = () => limitar(`pagar:${ipDe(req)}`, 10, 15 * 60e3) && send(res, 429, { error: 'Demasiados intentos. Espera unos minutos o paga en el local.' });
+  if (m === 'POST' && parts[0] === 'locales' && parts[2] === 'pedido' && /^\d+$/.test(parts[3] || '') && parts[4] === 'pagar' && !parts[5]) {
+    if (muchosPagos()) return;
+    const local = db.prepare('SELECT * FROM locales WHERE slug=?').get(parts[1]);
+    if (!local) return send(res, 404, { error: 'Local no encontrado' });
+    const b = await readJson(req, 4e3), token = String(b.token || '');
+    const p = /^[\w-]{20,30}$/.test(token) ? db.prepare('SELECT * FROM pedidos WHERE id=? AND token=?').get(Number(parts[3]), token) : null;
+    if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
+    // Aislamiento por local: el pedido (y su cobro) es solo del local que lo recibió.
+    if (p.local_id !== local.id) return send(res, 403, { error: 'Ese pedido no es de este local' });
+    return pagar(local, p, b);
+  }
+  if (m === 'POST' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '') && parts[2] === 'pagar' && !parts[3]) {
+    if (muchosPagos()) return;
+    const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
+    if (!p) return send(res, 404, { error: 'No encontramos ese pedido' });
+    return pagar(db.prepare('SELECT * FROM locales WHERE id=?').get(p.local_id), p, await readJson(req, 4e3));
+  }
+  // Confirmación servidor a servidor. La fuente de verdad del pago: se verifica con la pasarela.
+  if (m === 'POST' && parts[0] === 'pagos' && parts[1] === 'webhook' && parts[2] && !parts[3]) {
+    if (limitar(`webhook:${ipDe(req)}`, 120, 60e3)) return send(res, 429, { error: 'Demasiadas solicitudes' });
+    const raw = (await readBytes(req, 16e3)).toString('utf8');
+    let cuerpo = {};
+    if (/json/.test(req.headers['content-type'] || '')) { try { cuerpo = JSON.parse(raw || '{}'); } catch { cuerpo = {}; } }
+    else cuerpo = Object.fromEntries(new URLSearchParams(raw));
+    const r = await PAGOS.confirmar(parts[2], { ref: url.searchParams.get('ref'), cuerpo, query: url.searchParams, headers: req.headers });
+    return send(res, r.status, r.body);
+  }
+  // Aviso de la pasarela por una devolución (Flow, urlCallBack): solo dispara la consulta a su API.
+  if (m === 'POST' && parts[0] === 'pagos' && parts[1] === 'devolucion' && parts[2] && !parts[3]) {
+    if (limitar(`webhook:${ipDe(req)}`, 120, 60e3)) return send(res, 429, { error: 'Demasiadas solicitudes' });
+    await readBytes(req, 16e3).catch(() => {});
+    const r = await PAGOS.avisoDevolucion(parts[2], url.searchParams.get('ref'));
+    return send(res, r.status, r.body);
+  }
+  if (m === 'GET' && parts[0] === 'pagos' && parts[1] === 'estado' && parts[2] && !parts[3]) {
+    const e = await PAGOS.estado(parts[2]); // si el webhook no llegó, concilia con la pasarela (con límite de frecuencia)
+    return e ? send(res, 200, e) : send(res, 404, { error: 'No encontramos ese pago' });
+  }
+
   // --- seguimiento (público, por token) ---
   if (m === 'GET' && parts[0] === 'seguimiento' && /^[\w-]{20,30}$/.test(parts[1] || '')) {
     const p = db.prepare('SELECT * FROM pedidos WHERE token=?').get(parts[1]);
@@ -1076,6 +1127,7 @@ async function api(req, res, url) {
     // Solo lo que el cliente necesita ver: sin teléfono, dirección ni datos de cobro.
     return send(res, 200, { local, numero: p.numero, cliente: p.cliente.split(' ')[0], estado: p.estado, franja: p.franja,
       modalidad: p.modalidad, total: p.total, costo_despacho: p.costo_despacho, descuento: p.descuento, promo: p.promo_nombre, pagado: !!p.pagado, creado: p.creado, items,
+      pago_online: !p.pagado && p.canal === 'web' && p.estado !== 'anulado' && !p.fiado_nombre ? PAGOS.publico(p.local_id) : null,
       cupon: p.telefono && LIC.puede(p.local_id, 'clientes') ? PROMOS.cuponDe(p.local_id, p.telefono, today()) : null,
       mensajes: MSJ.paraCliente(p) });
   }
@@ -1232,6 +1284,23 @@ async function api(req, res, url) {
       if (r.error) return send(res, r.status || 400, { error: r.error });
       return send(res, 201, pedidoCompleto(p.id, lid));
     }
+    // Devolver un pago en línea (total). Solo el dueño; el pedido se busca dentro de su local.
+    if (m === 'POST' && parts[1] === 'pedidos' && parts[2] && parts[3] === 'devolver-pago' && !parts[4]) {
+      if (yo.rol !== 'dueno') return send(res, 403, { error: 'Las devoluciones de pagos en línea las hace el dueño del local.' });
+      if (limitar(`devolver:${lid}`, Number(process.env.PAGOS_DEVOLVER_MAX) || 20, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera unos minutos.' });
+      const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      const r = await PAGOS.devolver(local, p, await readJson(req, 4e3));
+      return r.error ? send(res, r.status || 400, { error: r.error }) : send(res, 200, { ...r, pedido: pedidoCompleto(p.id, lid) });
+    }
+    // Cerrar a mano una devolución que quedó en curso (el dueño lo comprobó en la pasarela). Solo el dueño.
+    if (m === 'POST' && parts[1] === 'pedidos' && parts[2] && parts[3] === 'devolucion-manual' && !parts[4]) {
+      if (yo.rol !== 'dueno') return send(res, 403, { error: 'Solo el dueño del local cierra una devolución a mano.' });
+      const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      const r = PAGOS.resolverManual(local, p, await readJson(req, 2e3), yo.nombre);
+      return r.error ? send(res, r.status || 400, { error: r.error }) : send(res, 200, { ...r, pedido: pedidoCompleto(p.id, lid) });
+    }
     if (m === 'PATCH' && parts[1] === 'pedidos' && parts[2]) {
       const b = await readJson(req);
       const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
@@ -1289,7 +1358,10 @@ async function api(req, res, url) {
         INV.revertirPedido(lid, p.id, yo.nombre); // devuelve al stock lo que se había descontado
         if (p.promo_id) PROMOS.devolver(p.promo_id, p.promo_unidades || 0);
       }
-      return send(res, 200, pedidoCompleto(p.id, lid));
+      const out = pedidoCompleto(p.id, lid);
+      // Anular no devuelve la plata sola: si el cliente pagó en línea, el dueño debe devolverla.
+      if (estado === 'anulado' && out.pago_online?.estado === 'pagado') out.aviso_devolucion = `Este pedido se pagó en línea (${out.pago_online.nombre}, ${out.pago_online.monto} CLP): hay que devolver el pago.`;
+      return send(res, 200, out);
     }
     const r2 = (x, ok = 200) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, ok, x));
     // Promociones y combos (plan Pro).
@@ -1558,6 +1630,16 @@ async function api(req, res, url) {
     }
     if (m === 'GET' && parts[1] === 'contrato' && parts[2] === 'aceptado') return enviarAceptado(res, url, local, LEGAL.aceptadoTexto(lid));
     if (m === 'POST' && parts[1] === 'legal' && parts[2] === 'vista') { const r = vistaLegal(local, await readJson(req)); return send(res, r.error ? 400 : 200, r); }
+    // Pago con tarjeta en línea: pasarela, credenciales (cifradas), modo y prueba. Solo el dueño.
+    if (parts[1] === 'pagos' && (!parts[2] || parts[2] === 'probar') && !parts[3]) {
+      if (yo.rol !== 'dueno') return send(res, 403, { error: 'El pago en línea lo configura el dueño del local.' });
+      if (m === 'GET' && !parts[2]) return send(res, 200, PAGOS.config(lid));
+      if (m === 'PUT' && !parts[2]) { const r = PAGOS.guardarConfig(lid, await readJson(req, 8e3)); return send(res, r.error ? 400 : 200, r); }
+      if (m === 'POST' && parts[2] === 'probar') {
+        if (limitar(`probar:${lid}`, 10, 15 * 60e3)) return send(res, 429, { error: 'Demasiadas pruebas seguidas. Espera unos minutos.' });
+        const r = await PAGOS.probar(local, await readJson(req, 4e3)); return send(res, r.error ? r.status || 400 : 200, r);
+      }
+    }
     // Primeros pasos del local (solo el dueño): avance, omitir un paso, cerrar el asistente.
     if (parts[1] === 'inicio' && !parts[2]) {
       if (m === 'GET') return send(res, 200, AUTO.estado(lid));
@@ -1610,6 +1692,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
     if (p === '/cartel') return serveFile(res, 'cartel.html');
     if (p === '/seguimiento') return serveFile(res, 'seguimiento.html');
+    // Vuelta desde la pasarela (Flow llega con POST y un token): solo muestra el estado, no confirma nada.
+    if (p === '/pago/retorno') { if (req.method === 'POST') await readBytes(req, 16e3).catch(() => {}); return serveFile(res, 'pago-retorno.html'); }
     if (p === '/terminos' || p === '/privacidad') return serveFile(res, 'legal.html');
     if (/^\/[a-z0-9-]+$/.test(p) && db.prepare('SELECT 1 FROM locales WHERE slug=?').get(p.slice(1))) return serveFile(res, 'carta.html');
     const f = p.slice(1);

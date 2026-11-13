@@ -126,6 +126,12 @@
       <div class="big num" id="okNum"></div>
       <p id="okTexto" style="color:var(--ink-2)"></p>
     </div>
+    <!-- Pago con tarjeta en línea (si el local lo activó): el monto lo pone el servidor desde el pedido guardado. -->
+    <div id="okPagar" hidden style="margin-top:12px">
+      <div class="field" id="okEmailBox" hidden><label for="okEmail">Correo para el comprobante</label><input id="okEmail" type="email" inputmode="email" autocomplete="email" maxlength="190" placeholder="tu@correo.cl"></div>
+      <button type="button" class="primary" id="okPagarBtn" style="width:100%"><span>Pagar con tarjeta ahora</span></button>
+      <p class="ayuda" id="okPagarMsg" role="status" style="text-align:center"></p>
+    </div>
   </div>
   <div class="sh-foot" style="flex-direction:column;align-items:stretch">
     <a id="okSeg" class="primary" style="text-decoration:none"><svg class="ico"><use href="#i-clock"/></svg>Ver el estado de mi pedido</a>
@@ -387,7 +393,9 @@ function pintarCarro() {
   }).join('');
   pintarTotales();
   const t = M.local.transferencia;
-  $('pagoInfo').innerHTML = `<b>Pagas al retirar o recibir</b><br>Efectivo, transferencia o tarjeta. Sin cargos extra.` + (t ? `
+  const po = M.local.pago_online;
+  $('pagoInfo').innerHTML = (po ? `<b>Paga con tarjeta en línea o al retirar o recibir</b><br>Al enviar el pedido puedes pagarlo con tarjeta (${esc(po.nombre)}), o después en efectivo, transferencia o tarjeta.`
+    : `<b>Pagas al retirar o recibir</b><br>Efectivo, transferencia o tarjeta. Sin cargos extra.`) + (t ? `
     <details class="transf"><summary>Ver datos para transferir</summary><dl>
       ${[['Titular', t.titular], ['RUT', t.rut], ['Banco', t.banco], ['Tipo de cuenta', t.tipo], ['N° de cuenta', t.numero], ['Correo', t.email]].filter(([, v]) => v)
         .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
@@ -567,6 +575,24 @@ $('enviar').onclick = async () => {
     $('okTexto').textContent = `${r.franja === 'Lo antes posible' ? 'Lo preparamos lo antes posible' : 'Para ' + r.franja}. Total ${clp(r.total)}, pagas al ${modalidad === 'despacho' ? 'recibir' : 'retirar'}.`
       + (r.cupon ? ` Tu próximo pedido tiene ${r.cupon.valor} % de descuento con el código ${r.cupon.codigo}.` : '');
     $('codigo').value = ''; promoClave = '';
+    // Pago en línea: el botón usa el id y el token del pedido recién creado; el monto lo pone el servidor.
+    const po = M.local.pago_online;
+    $('okPagar').hidden = !po; $('okPagarMsg').textContent = '';
+    if (po) {
+      $('okTexto').textContent = $('okTexto').textContent.replace(/, pagas al (recibir|retirar)\./, (m, x) => `. Puedes pagarlo ahora con tarjeta o al ${x}.`);
+      $('okEmailBox').hidden = !po.pide_email;
+      $('okPagarBtn').disabled = false;
+      $('okPagarBtn').firstElementChild.textContent = `Pagar ${clp(r.total)} con tarjeta`;
+      $('okPagarBtn').onclick = async () => {
+        $('okPagarMsg').textContent = '';
+        if (po.pide_email && !$('okEmail').value.trim()) { $('okPagarMsg').textContent = 'Escribe tu correo: ahí te llega el comprobante.'; $('okEmail').focus(); return; }
+        $('okPagarBtn').disabled = true;
+        try {
+          const x = await api(`locales/${slug}/pedido/${r.id}/pagar`, { method: 'POST', body: { token: r.token, email: $('okEmail').value.trim() || undefined } });
+          location.href = x.url;
+        } catch (e) { $('okPagarMsg').textContent = e.message; $('okPagarBtn').disabled = false; }
+      };
+    }
     const msg = encodeURIComponent(`Hola, hice el pedido #${r.numero} por ${clp(r.total)} (${r.franja}) a nombre de ${$('cliente').value}.`);
     $('okWa').hidden = !M.local.whatsapp;
     $('okWa').href = `https://wa.me/${(M.local.whatsapp || '').replace(/\D/g, '')}?text=${msg}`;

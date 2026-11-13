@@ -286,7 +286,12 @@ const TEXTOS = {
     'Freire 1458, Concepción, solo con hora agendada (' + AGENDA + '). Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'
   ],
   tiempo: [
-    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: con stock en Santiago son 2 a 7 días hábiles; una pantalla importada demora 7 a 14 días hábiles, y otras piezas importadas, 2 a 4 semanas. Te aviso siempre antes.'
+    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: las pantallas se piden importadas y normalmente demoran 7 a 14 días hábiles (con stock local, de un día para otro); otras piezas, 2 a 7 días hábiles si hay stock en Santiago y 2 a 4 semanas si son importadas. Te aviso siempre antes.'
+  ],
+  // Pregunta de plazo que nombra la pieza: responde el plazo, no el precio (falla del 13-nov: contestaba $25.000).
+  tiempo_pantalla: [
+    'Las pantallas se piden importadas: normalmente demoran 7 a 14 días hábiles. Si hay stock local, puede ser de un día para otro. Te aviso siempre antes de pedirla. ¿Me mandas el modelo exacto (etiqueta de abajo) y una foto? Así te cotizo la pieza.',
+    'La pantalla se pide importada y normalmente demora 7 a 14 días hábiles; con stock local puede ser de un día para otro. Antes de pedirla te aviso. ¿Me mandas el modelo exacto y una foto para cotizarte?'
   ],
   descuento: [
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'
@@ -410,7 +415,7 @@ const REGLAS = [
   { id: 'limpieza', re: /\b(limpieza|limpiar|mantencion|manutencion|pasta termica|se calienta|temperatura)\b/ },
   { id: 'lento', re: /\b(lento|lenta|se pega|se queda pegad)/ },
   { id: 'descuento', re: /\b(descuento|estudiante|promo)\b/ },
-  { id: 'tiempo', re: /\b(cuanto (se )?demora|cuanto tiempo|cuantos dias|para cuando estaria)\b/ },
+  { id: 'tiempo', re: /\b(cuanto (se |me )?(demora|demoran|tarda|tardan|tardaria|demoraria)|cuanto tiempo|en cuanto tiempo|cuantos dias|cuantas semanas|para cuando (estaria|esta|queda)|que tan rapido|en cuanto (estaria|queda))\b/ },
   { id: 'agendar', re: /\b(agend|reserv|tienes hora|hay hora|disponibilidad|cupo)/ },
   { id: 'ubicacion', re: /\b(donde (esta|estan|queda|quedan|atiend)|direccion|ubicad|que depto|departamento)\b/ },
   { id: 'horario', re: /\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados))\b/ },
@@ -1283,7 +1288,7 @@ function decidirNucleo(texto, contacto, ahora, links, payload, adjunto) {
 
 // Servicios de reparación: la primera respuesta con modo fuera activo lleva el aviso de FUERA-1.
 const CON_AVISO_FUERA = SERVICIO.filter(x => x !== 'otros_disp' && x !== 'remoto')
-  .concat(['precio_general', 'revision', 'tiempo', 'descuento', 'agendar', 'mem_d2']);
+  .concat(['precio_general', 'revision', 'tiempo', 'tiempo_pantalla', 'descuento', 'agendar', 'mem_d2']);
 const RESUMEN_ID = {
   objecion: 'objeción de precio',
   compara: 'compara',
@@ -1309,6 +1314,11 @@ function decidirBase(texto, contacto, ahora, links) {
   let id = ids[0] || null;
   const servicio = ids.find(x => SERVICIO.includes(x));
   if (servicio && ['precio_general', 'agendar', 'saludo', 'gracias', 'tiempo', 'descuento', 'horario', 'ubicacion'].includes(id)) id = servicio;
+  // Pregunta de plazo + pieza: responde el plazo (pantalla con su texto; otras piezas, el general).
+  if (ids.includes('tiempo') && servicio) {
+    if (servicio === 'pantalla') id = 'tiempo_pantalla';
+    else if (['bateria', 'teclado', 'ssd', 'jack', 'bisagras', 'ventilador'].includes(servicio)) id = 'tiempo';
+  }
   // "lento" + "formatear" → formateo; "no prende" + "batería" → batería
   if (id === 'lento' && ids.includes('formateo')) id = 'formateo';
   if (id === 'no_enciende' && ids.includes('bateria')) id = 'bateria';
@@ -1346,7 +1356,9 @@ function decidirBase(texto, contacto, ahora, links) {
   else clave = id;
 
   if (id === 'agendo' || id === 'voy') clave = null;
-  if (enCurso && clave && !RESPONDE_EN_CURSO.includes(clave) && clave !== 'gracias') clave = null;
+  // De noche Gabriel no está: las consultas con datos se responden igual (13-nov: no decir "lo veo mañana"
+  // a quien ya había conversado). Si Gabriel está conversando, gabrielActivo calla al bot más abajo.
+  if (enCurso && clave && !deNoche && !RESPONDE_EN_CURSO.includes(clave) && clave !== 'gracias') clave = null;
 
   // Modo fuera de Concepción: la bienvenida y el «voy bajando» cambian de texto.
   if (fuera && clave === 'bienvenida') clave = 'fuera_bienvenida';

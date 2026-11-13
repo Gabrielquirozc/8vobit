@@ -1,6 +1,6 @@
 // Utilidades compartidas por las páginas. BASE se deduce de la URL para que
 // funcione igual en la raíz o bajo un prefijo (BASE_PATH).
-export const BASE = location.pathname.replace(/\/(panel|comanda|carta-imprimible|seguimiento|[a-z0-9-]+)$/, '').replace(/\/$/, '');
+export const BASE = location.pathname.replace(/\/(panel|comanda|carta-imprimible|seguimiento|pago\/retorno|[a-z0-9-]+)$/, '').replace(/\/$/, '');
 // 56984506842 → "+56 9 8450 6842" (celular chileno); otros números quedan con + y sin formato.
 export const fmtTel = (t) => { const d = String(t || '').replace(/\D/g, ''); return /^569\d{8}$/.test(d) ? `+56 9 ${d.slice(3, 7)} ${d.slice(7)}` : d ? '+' + d : ''; };
 export const clp = (n) => '$' + Math.round(n).toLocaleString('es-CL');
