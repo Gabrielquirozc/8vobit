@@ -1713,3 +1713,20 @@ test('Respuesta al seguimiento: el contenido real sigue escalando a Gabriel', ()
   const s3 = tras('SEG-3', 'no pude, mañana paso').r;
   assert.strictEqual(s3.intencion, 'seg_respuesta');
 });
+
+test('plazo de la pantalla (13-nov): responde 7 a 14 días hábiles, no el precio', () => {
+  const frases = ['cuanto demora una pantalla', 'cuánto se demora el cambio de pantalla?', 'cuanto tiempo tarda cambiar la pantalla',
+    'en cuantos dias me cambian la pantalla', 'cuantas semanas demora la pantalla', 'pantalla rota, cuanto demora', 'para cuando estaria la pantalla'];
+  for (const f of frases) {
+    const r = decidir(f, null, tarde, links);
+    assert.strictEqual(r.intencion, 'tiempo_pantalla', f);
+    assert.match(r.respuesta, /7 a 14 días hábiles/, f);
+    assert.doesNotMatch(r.respuesta, /\$25\.000/, f);
+  }
+});
+
+test('plazo de otras piezas: respuesta general de tiempos; sin pieza no cambia', () => {
+  assert.strictEqual(decidir('cuanto demora cambiar la bateria', null, tarde, links).intencion, 'tiempo');
+  assert.strictEqual(decidir('cuanto demora', null, tarde, links).intencion, 'tiempo');
+  assert.strictEqual(decidir('cuanto sale la pantalla', null, tarde, links).intencion, 'pantalla');
+});
