@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<title>Hoja de ruta</title>
+<style>
+  /* Térmica 80 mm, igual que la comanda: ancho útil ~72 mm. */
+  @page { size: 80mm auto; margin: 0; }
+  body { margin: 0; background: #ddd; }
+  .ticket { width: 72mm; margin: 0 auto; padding: 4mm 0 8mm; background: #fff; color: #000;
+    font: 12px/1.35 "Courier New", ui-monospace, monospace; }
+  .c { text-align: center; } .big { font-size: 20px; font-weight: 700; }
+  hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+  .par { display: flex; gap: 6px; } .par .n { font-size: 18px; font-weight: 700; min-width: 3ch; }
+  .par .d { flex: 1; overflow-wrap: anywhere; }
+  .cobrar { font-weight: 700; font-size: 14px; }
+  .tot { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; }
+  .noprint { text-align: center; padding: 10px; }
+  @media print { body { background: #fff; } .noprint { display: none; } }
+</style>
+</head>
+<body>
+<div class="noprint"><button data-print>Imprimir</button></div>
+<div class="ticket" id="t">Cargando…</div>
+<script type="module">
+import { api, clp, esc } from './comun.js';
+// ?ids=3,1,2 (ya en el orden calculado) &km=1.2,0.8,2.1 (tramo) &lleg=1272,1280,1291 (min del día) &kmt=4.6
+(async () => {
+const q = new URLSearchParams(location.search);
+const lista = (k) => (q.get(k) || '').split(',').filter(Boolean);
+const ids = lista('ids').filter((x) => /^\d+$/.test(x)).slice(0, 12), km = lista('km').map(Number), lleg = lista('lleg').map(Number);
+const hhmm = (m) => Number.isFinite(m) ? `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m) % 60).padStart(2, '0')}` : '--:--';
+const kmTxt = (x) => Number.isFinite(x) ? x.toLocaleString('es-CL', { maximumFractionDigits: 1 }) : '?';
+try {
+  if (!ids.length) throw new Error('No hay paradas.');
+  const ps = await Promise.all(ids.map((id) => api(`panel/pedidos/${id}`)));
+  const porCobrar = ps.filter((p) => !p.pagado && !p.fiado_nombre).reduce((s, p) => s + p.total, 0);
+  const ahora = new Date();
+  document.getElementById('t').innerHTML = `
+    <div class="c big">${esc(ps[0].local)}</div>
+    <div class="c">HOJA DE RUTA</div>
+    <div class="c">${ahora.toLocaleDateString('es-CL')} ${hhmm(ahora.getHours() * 60 + ahora.getMinutes())} · ${ps.length} ${ps.length === 1 ? 'parada' : 'paradas'} · ${kmTxt(Number(q.get('kmt')))} km</div><hr>
+    ${ps.map((p, i) => `<div class="par"><span class="n">${i + 1}.</span><div class="d">
+      <b>${esc(p.direccion || 'Sin dirección')}</b><br>
+      #${p.numero} ${esc(p.cliente)} ${esc(p.telefono)}<br>
+      ${kmTxt(km[i])} km · llega ~${hhmm(lleg[i])} · franja ${esc(p.franja)}<br>
+      ${p.pagado ? 'PAGADO' : p.fiado_nombre ? `FIADO (${esc(p.fiado_nombre)})` : `<span class="cobrar">COBRAR ${clp(p.total)}</span>`}
+      ${p.notas ? `<br>NOTA: ${esc(p.notas)}` : ''}</div></div><hr>`).join('')}
+    <div class="tot"><span>POR COBRAR</span><span>${clp(porCobrar)}</span></div>
+    <div>${ps.filter((p) => !p.pagado && !p.fiado_nombre).length} de ${ps.length} pedidos se cobran al entregar.</div>`;
+  if (q.has('auto')) print();
+} catch (e) { document.getElementById('t').textContent = e.message; }
+})();
+</script>
+</body>
+</html>

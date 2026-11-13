@@ -26,7 +26,7 @@ function permutaciones(xs) {
 }
 
 // origen: { lat, lng } del local. paradas: [{ id, lat, lng, fin (min) | null }].
-// opc: { factor, velocidad (km/h), minEntrega (min por parada), ahora (min del día) }.
+// opc: { factor, velocidad (km/h), minEntrega (min por parada), ahora (min del día), vuelta (suma el regreso al local) }.
 export function ordenarRuta(origen, paradas, opc = {}) {
   const factor = opc.factor || 1.35, vel = Math.max(5, opc.velocidad || 25), parada = opc.minEntrega ?? 3, ahora = opc.ahora ?? 0;
   const validas = paradas.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
@@ -41,10 +41,12 @@ export function ordenarRuta(origen, paradas, opc = {}) {
       t += parada; pos = p;
       return { ...p, km_tramo: Math.round(tramo * 10) / 10, llegada: Math.round(llegada) };
     });
+    // La vuelta vacía al local no atrasa a nadie, pero sí suma km: cambia el desempate.
+    if (opc.vuelta && orden.length) km += (distancia(pos, origen) / 1000) * factor;
     return { pasos, km: Math.round(km * 10) / 10, retraso: Math.round(retraso) };
   };
   let candidatos;
-  if (validas.length <= 7) candidatos = permutaciones(validas);
+  if (validas.length <= 7) candidatos = permutaciones(validas); // 7! = 5040 órdenes: instantáneo
   else {
     // Muchos pedidos: el más cercano primero (rápido y suficiente para una moto).
     const resto = [...validas], orden = []; let pos = origen;
@@ -65,4 +67,23 @@ export function enlaceMaps(origen, pasos) {
   const c = (p) => `${p.lat},${p.lng}`, ult = pasos[pasos.length - 1];
   const via = pasos.slice(0, -1).map(c).join('|');
   return `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${c(origen)}&destination=${c(ult)}${via ? `&waypoints=${encodeURIComponent(via)}` : ''}`;
+}
+
+// Qué despachos se marcan al abrir "Armar salida": los listos del repartidor que tiene más listos
+// (si nada está listo, los que están en cocina). pedidos: [{ id, estado, repartidor_id }].
+export function seleccionInicial(pedidos) {
+  const listos = pedidos.filter((p) => p.estado === 'listo');
+  const base = listos.length ? listos : pedidos;
+  const cuenta = new Map();
+  for (const p of base) cuenta.set(p.repartidor_id ?? null, (cuenta.get(p.repartidor_id ?? null) || 0) + 1);
+  let repartidor = null, max = 0;
+  for (const [r, n] of cuenta) if (n > max || (n === max && repartidor === null && r !== null)) { repartidor = r; max = n; }
+  return { repartidor, ids: base.filter((p) => (p.repartidor_id ?? null) === repartidor).map((p) => p.id) };
+}
+
+// Vehículo con que sale el repartidor: el que tiene asignado; si no, el elegido en el cálculo de
+// Despacho; si no, el primero cargado. Sin vehículos: null (el orden supone 25 km/h).
+export function vehiculoDe(vehiculos = [], repartidorId = null, vehiculoCalculo = null) {
+  return (repartidorId != null && vehiculos.find((v) => v.repartidorId != null && String(v.repartidorId) === String(repartidorId)))
+    || vehiculos.find((v) => v.id === vehiculoCalculo) || vehiculos[0] || null;
 }

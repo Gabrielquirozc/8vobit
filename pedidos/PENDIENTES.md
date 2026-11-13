@@ -24,7 +24,7 @@ cd D:\8vobit
 git pull origin claude/compassionate-maxwell-hb826m
 cd pedidos
 $env:PANEL_PASSWORD="demo"; node server.mjs        # http://127.0.0.1:8099/gassuso y /panel (clave demo)
-npm test                                           # 74 pruebas (API de punta a punta + orden de entrega), ~1-2 s
+npm test                                           # 91 pruebas (API de punta a punta, Pro y orden de entrega), ~5 s
 ```
 
 Requisitos: Node 22 (usa `node:sqlite`, sin dependencias npm). Los datos locales quedan en
@@ -60,7 +60,8 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `lib/legal.mjs` + `lib/plantillas/` + `public/panel-legal.js` | Textos legales como plantilla fija ({{campo}}): Términos, Privacidad, Contrato + Anexo A; datos legales validados (RUT módulo 11); aceptación del contrato en línea (tabla `contrato_aceptaciones`) |
 | `deploy/probar-respaldo.mjs`, `deploy/MONITOREO.md` | Prueba de restauración de respaldos y guía de monitoreo |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |
-| `public/seguimiento.html`, `comanda.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, carta PDF, cartel/tarjetas con QR |
+| `public/seguimiento.html`, `comanda.html`, `hoja-ruta.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, hoja de ruta 80 mm, carta PDF, cartel/tarjetas con QR |
+| `public/ruta.js` | Armar salida: orden de entrega (permutaciones hasta 7 paradas), selección por repartidor, vehículo, enlaces Waze y Maps |
 | `test/api.test.mjs` | Pruebas contra el servidor real con una base temporal |
 | `deploy/` | Despliegue (ps1 + remoto.sh), túnel, exportar/respaldo |
 | `README.md` | Descripción completa de cada función |
@@ -269,4 +270,5 @@ Hecho en esta tanda:
 - Carta: "Recordar mis datos en este teléfono" (nombre y celular, más la última dirección por local, en localStorage; "Olvidar" los borra; agregado a Privacidad). Etiqueta en dirRef, chips y enlaces legales de 44 px y fuentes del sistema (ya no se nombran Bricolage ni Inter). Se borró `estilo.css`, que no se usaba.
 - Resumen: la semana en curso se compara con los mismos días de la anterior. Resultados avisa cuando más del 20 % del costo de la comida es estimado.
 - Despacho: "Ordenar entregas de despacho" en Pedidos (`public/ruta.js`). Prueba todos los órdenes y minimiza el retraso contra la franja y luego los km. Tiene Waze por parada y la ruta completa en Google Maps.
-Pendiente de la revisión: reemplazar `alert`, `confirm` y `prompt` por diálogos propios; agrupar las pestañas en tablet; importar omitiendo filas con error; web push para el dueño y el cliente; "Repetir mi último pedido"; asistente de Despacho; hoja de ruta imprimible; reemplazar el JSON de carta en `/admin` por una planilla.
+- 2026-11-13, **Armar salida** (ESTUDIO-UX §6 bis): el botón aparece en Pedidos con 1 o más despachos en cocina o listos. Marca por defecto los listos del repartidor que tiene más, y se puede cambiar de repartidor o marcar a mano. La velocidad sale del vehículo del repartidor, luego del vehículo del cálculo y, si no hay, 25 km/h. Opción "Contar la vuelta al local". Muestra el total por cobrar, con Waze y Llamar por parada. "Imprimir hoja de ruta" abre `/hoja-ruta?ids=…&km=…&lleg=…` (80 mm; en la URL solo van ids y números). Se probó en local con 3 despachos: el orden, Maps (6,5 km reales contra 6,3 estimados) y Waze.
+Pendiente de la revisión: reemplazar `alert`, `confirm` y `prompt` por diálogos propios; agrupar las pestañas en tablet; importar omitiendo filas con error; web push para el dueño y el cliente; "Repetir mi último pedido"; asistente de Despacho; OSRM para el orden por calles reales (hoy es línea recta × factor); reemplazar el JSON de carta en `/admin` por una planilla.

@@ -1593,7 +1593,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/salud') return send(res, 200, 'ok');
     // Para el monitoreo externo (ver deploy/MONITOREO.md): base, respaldo del día y espacio en disco.
     if (p === '/salud/completo') { const r = saludCompleta(); return send(res, r.ok ? 200 : 503, r.texto); }
-    if (p === '/robots.txt') return send(res, 200, INDEXAR ? 'User-agent: *\nDisallow: /panel\nDisallow: /api/\nDisallow: /seguimiento\nDisallow: /comanda\n' : 'User-agent: *\nDisallow: /\n');
+    if (p === '/robots.txt') return send(res, 200, INDEXAR ? 'User-agent: *\nDisallow: /panel\nDisallow: /api/\nDisallow: /seguimiento\nDisallow: /comanda\nDisallow: /hoja-ruta\n' : 'User-agent: *\nDisallow: /\n');
     if (p.startsWith('/img/')) {
       const f = path.join(IMG_DIR, path.basename(p));
       if (!/^\/img\/[\w-]+\.webp$/.test(p) || !fs.existsSync(f)) return send(res, 404, 'No encontrado');
@@ -1606,6 +1606,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/panel') return serveFile(res, 'panel.html');
     if (p === '/admin' && ADMIN_PASSWORD) return serveFile(res, 'admin.html');
     if (p === '/comanda') return serveFile(res, 'comanda.html');
+    if (p === '/hoja-ruta') return serveFile(res, 'hoja-ruta.html');
     if (p === '/carta-imprimible') return serveFile(res, 'carta-imprimible.html');
     if (p === '/cartel') return serveFile(res, 'cartel.html');
     if (p === '/seguimiento') return serveFile(res, 'seguimiento.html');

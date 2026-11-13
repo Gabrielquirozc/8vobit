@@ -361,7 +361,7 @@ test('mostrador: ventas seguidas no chocan con el límite de pedidos web', async
 
 test('CSP: el hash de cada script coincide con lo que calcula el navegador (aunque el HTML tenga CRLF)', async () => {
   const crypto = await import('node:crypto');
-  for (const pagina of ['/gassuso', '/panel', '/seguimiento', '/comanda', '/carta-imprimible']) {
+  for (const pagina of ['/gassuso', '/panel', '/seguimiento', '/comanda', '/hoja-ruta', '/carta-imprimible']) {
     const r = await fetch(B + pagina);
     const csp = r.headers.get('content-security-policy');
     // El navegador normaliza CRLF a LF antes de hashear el contenido del <script>.
