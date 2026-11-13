@@ -43,7 +43,8 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 - Ya lo usan 6 locales del centro (Mega Sandwich, Nostro Burger, Sushi Tenta, Happy Point, Sushi al
   hoyo, Buonissimo). Ver `PROSPECCION-CONCEPCION-CENTRO-2026-11.md` §2.
 - ⚠️ Frente a Influye, "la comisión más baja" deja de ser cierto. El plan Canal ($19.900 + 1 %) sale más
-  barato solo bajo ~$2.000.000/mes de venta web. Falta revisar qué gestión (caja, sueldos, despacho) ofrece.
+  barato solo bajo ~$2.000.000/mes de venta web (Gestión frente a web + caja de Influye: bajo ~$3,4M).
+- Comparativa completa, alternativas y recomendación en **`COMPETENCIA-INFLUYE.md`**.
 
 ### Dónde nos paramos
 

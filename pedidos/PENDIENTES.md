@@ -169,6 +169,10 @@ Orden: meta B primero; de la A, antes del 2º local A5, A6, A1 y A8; A2–A4 ent
 - [x] **Prospección del centro** (2026-11-12, `PROSPECCION-CONCEPCION-CENTRO-2026-11.md`): cliente ideal,
       ~30 locales candidatos y descartes. Hallazgo: **Influye** (Concepción, 1 UF/mes, 0 % comisión) ya está
       en 6 locales del centro; el argumento "comisión más baja" no se sostiene frente a él.
+- [ ] **Respuesta a Influye** (`COMPETENCIA-INFLUYE.md`): decidir el tope de la tarifa (propuesta: 1 % con tope
+      $20.000/mes) y recalcular VIABILIDAD; confirmar de día si las 4 tiendas Influye caídas del centro se
+      dieron de baja y preguntarles por qué; cambiar el mensaje de venta ("sin comisión de app", no
+      "la más baja"). Pago online es lo primero a desarrollar cuando Pedidos se reactive.
 - [ ] **Siguiente**: propuesta de una página para Gassuso (planes, piloto, puesta en marcha
       bonificada) e inicio de actividades en el SII (persona natural de primera categoría) antes del mes 4.
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y
