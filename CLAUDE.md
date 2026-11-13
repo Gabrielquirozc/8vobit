@@ -13,6 +13,7 @@ Antes de trabajar en `pedidos/`, lee en este orden:
 3. `pedidos/ESTRATEGIA.md`: competencia (Fudo, Justo), producto de entrada, planes, líneas de trabajo y diseño del gestor de licencias.
 4. `pedidos/VIABILIDAD.md`: si es viable para el creador (solo, medio tiempo, meta $2M/mes): números, hitos y palancas.
 5. `pedidos/README.md`: detalle de cada función.
+6. `pedidos/DISENO-REPARTO.md`: diseño del acceso del repartidor, cobro, rendición y planes (aún sin programar).
 
 ## Reglas de trabajo
 
