@@ -286,12 +286,20 @@ const TEXTOS = {
     'Freire 1458, Concepción, solo con hora agendada (' + AGENDA + '). Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'
   ],
   tiempo: [
-    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: las pantallas se piden importadas y normalmente demoran 7 a 14 días hábiles (con stock local, de un día para otro); otras piezas, 2 a 7 días hábiles si hay stock en Santiago y 2 a 4 semanas si son importadas. Te aviso siempre antes.'
+    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: las pantallas se piden importadas y normalmente demoran 7 a 14 días hábiles (con stock local, de un día para otro); otras piezas, 2 a 7 días hábiles si hay stock local y 2 a 4 semanas si son importadas. Te aviso siempre antes.'
   ],
   // Pregunta de plazo que nombra la pieza: responde el plazo, no el precio (falla del 13-nov: contestaba $25.000).
   tiempo_pantalla: [
     'Las pantallas se piden importadas: normalmente demoran 7 a 14 días hábiles. Si hay stock local, puede ser de un día para otro. Te aviso siempre antes de pedirla. ¿Me mandas el modelo exacto (etiqueta de abajo) y una foto? Así te cotizo la pieza.',
     'La pantalla se pide importada y normalmente demora 7 a 14 días hábiles; con stock local puede ser de un día para otro. Antes de pedirla te aviso. ¿Me mandas el modelo exacto y una foto para cotizarte?'
+  ],
+  dano_general: [
+    'Cuéntame qué le pasa: ¿no prende, está lento, se ve mal la pantalla o es otra cosa? Si tienes el modelo (sale en la etiqueta de abajo), mejor, así te oriento más rápido.',
+    'Para ayudarte necesito saber qué hace tu equipo: ¿no enciende, anda lento, falla la pantalla, se calienta? Y si tienes el modelo a mano, me lo mandas.'
+  ],
+  como_estas: [
+    '¡Bien, gracias! ¿Y tú? Cuéntame en qué te puedo ayudar con tu equipo 🙌',
+    'Todo bien por acá, gracias. ¿Qué necesitas con tu notebook o PC?'
   ],
   descuento: [
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'
@@ -358,10 +366,6 @@ const TEXTOS = {
     'Hola de nuevo. Si quieres, te muestro cómo funciona la agenda: ' + LINK_AGENDA_DEMO + '.'
   ],
   seg3: ['Hola! ¿Pudiste pasar? Si no alcanzaste, dime y vemos otra hora: ' + AGENDA],
-  fuera_horario: [
-    'Te respondo con calma mañana desde las 9 🙌 Mientras, si quieres, puedes tomar hora acá: ' + AGENDA,
-    'Ahora no estoy, pero te contesto mañana temprano. Si te sirve, las horas están acá: ' + AGENDA
-  ]
 };
 
 // Orden = prioridad. 'aviso' manda ntfy; 'urgente' lo manda con prioridad alta.
@@ -369,12 +373,14 @@ const REGLAS = [
   { id: 'spam', re: /app\.link|bnc\.lt|private video|too shy|really? hot|ur realy|crypto|bitcoin|forex|followers? (gratis|free)|sneaky mission|\bhiring\b|\b(buscamos|necesitamos) vendedores\b|\bofrecemos\b|unete (a|al)|ganar dinero|ingresos extra|\bvacantes?\b|\bcontratar\b|puestos? (de trabajo|disponibles)|oferta (de )?(trabajo|laboral)|trabajo estable (en|desde|para|con)|criptomonedas?|sent an attachment|te (agregaron|anadieron) al grupo|unete al grupo|invitacion al grupo|group invite/ },
   // Solo con MODO_FUERA activo (soloFuera): con el modo apagado no existen.
   { id: 'fuera_porteria', soloFuera: true, re: /\b(lo (dejo|deje) en (la )?porteria|ya lo deje|voy a dejarlo|voy en camino|voy para alla)\b/, urgente: true },
-  { id: 'llegada', re: /\b(llegu[eé]|estoy (afuera|abajo|aca|aqui|en el hall|en la puerta|en el lobby|esperando)|ya estoy (aca|aqui|afuera|abajo)|voy llegando|estoy llegando)\b/, urgente: true },
+  { id: 'llegada', re: /^afuera[^a-z0-9]*$|\b(llegu[eé]|legue|estoy (afuera|abajo|aca|aqui|en el hall|en la puerta|en el lobby|esperando)|ya estoy (aca|aqui|afuera|abajo)|voy llegando|estoy llegando)\b/, urgente: true },
   { id: 'garantia', re: /\b(sigue (igual|fallando|con)|volvio a (fallar|pasar)|otra vez (lo mismo|se)|no quedo bien)\b/, urgente: true },
+  // «Otra vez / de nuevo» + daño: solo para quien ya tuvo servicio (contacto que no es nuevo); ver ctxNuevo en clasificar().
+  { id: 'garantia_repite', re: /^(?!.*\b(link|enlace|pagina|web|sitio|app|aplicacion|whatsapp|instagram|wifi|internet|luz|ascensor|cuenta|correo|venta|vender|comprar|compra|agenda|formulario|hora|reserva|cita|turno)\b)(?=.*(otra vez|de nuevo))(?=.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo))/, urgente: true },
   { id: 'garantia_q', re: /\b(tiene(n)? garantia|dan garantia|hay garantia|con garantia|que garantia)\b|garantia\?/ },
-  { id: 'urgente', re: /\b(se mojo|derram|le cayo (agua|cafe|te|jugo|bebida)|se (me )?llen[oa] de (agua|liquido)|se me cayo (agua|cafe)|liquido)\b/, urgente: true },
-  { id: 'estado', re: /\b(esta listo|ya esta (listo)?\??$|estara listo|como va (mi|el)|novedad(es)? (de|del|con)|puedo (ir a )?(buscar|retirar)|cuando (lo )?retiro|esta disponible mi)\b/, urgente: true },
-  { id: 'urgencia', re: /\b(urgente|urgentemente|lo antes posible|es para mi trabajo|para hoy|lo necesito (hoy|ya|para hoy))\b/, urgente: true },
+  { id: 'urgente', re: /\b(se mojo|derram|le cayo (agua|cafe|te|jugo|bebida)|se (me )?llen[oa] de (agua|liquido)|se me cayo (el |la )?(agua|cafe|liquido|te|jugo)|mojad[oa]|liquido)\b/, urgente: true },
+  { id: 'estado', re: /\b(esta listo|ya esta (listo)?\??$|estara listo|como va (mi|el)|novedad(es)? (de|del|con)|alguna (novedad|actualizacion|noticia)|hay (alguna )?(novedad|actualizacion)|se ha podido (concluir|avanzar)|puedo (ir a )?(buscar|retirar)|cuando (lo )?retiro|esta disponible mi)\b/, urgente: true },
+  { id: 'urgencia', re: /\b(urgente|urgentemente|lo antes posible|es para mi trabajo|para hoy|me urge|urge|lo necesito (hoy|ya|manana|para hoy|para manana))\b/, urgente: true },
   { id: 'pago', re: /\b(te (transferi|deposite)|ya (transferi|pague|deposite)|comprobante|transferencia (lista|hecha))\b/, aviso: true },
   { id: 'agendo', re: /\b(agende|ya agendo|voy a agendar|agendada|agendado|tome (la )?hora|reserve)\b/, aviso: true },
   // «Voy»: no se responde, pero abre el seguimiento SEG-3 (sección D).
@@ -403,12 +409,12 @@ const REGLAS = [
   { id: 'jack', re: /\b(jack|pin de carga|entrada de(l)? cargador|puerto de carga)\b/ },
   { id: 'bateria', re: /\bbateria/ },
   { id: 'ventilador', re: /\bventilador\b/ },
-  { id: 'datos', re: /\b(recuperar|recuperacion|se (me )?borr|tarjeta sd|disco externo|pendrive)\b/ },
+  { id: 'datos', re: /\b(recuperar|recuperacion|se (me )?borr\w*|tarjeta sd|disco externo|pendrive)\b/ },
   { id: 'programas', re: /\b(office|photoshop|autocad|licencia|instalar (un )?programa)\b/ },
   { id: 'armado', re: /\b(armar|armado|pc gamer)\b/ },
   { id: 'remoto', re: /\b(remot[ao]|anydesk|teamviewer|telematic)/ },
-  { id: 'domicilio', re: /\b(domicilio|retiran|van a buscar|lo pasan a buscar)\b/ },
-  { id: 'otros_disp', re: /\b(celular|iphone|telefono|tablet|ipad|consola|play ?station|nintendo|switch|impresoras?|camaras?|televisor(es)?|routers?|macbook|imac|mac)\b/ },
+  { id: 'domicilio', re: /\b(domicilio|retiran|van a buscar|ir a buscar|lo pasan a buscar)\b/ },
+  { id: 'otros_disp', re: /\b(celulares?|iphone|telefono|tablet|ipad|consola|play ?station|nintendo|switch|impresoras?|camaras?|televisor(es)?|routers?|macbook|imac|mac)\b/ },
   { id: 'no_enciende', re: /\b(no (prende|enciende|parte|da imagen)|murio|pantalla negra)\b/ },
   { id: 'respaldo', re: /\b(perder (mis |los |todos mis )?(archivos|datos|fotos|documentos)|no perder (mis |los )?(archivos|datos|fotos)|respaldo|respaldar|backup)\b/ },
   { id: 'formateo', re: /\b(format|reinstal|windows)/ },
@@ -416,15 +422,18 @@ const REGLAS = [
   { id: 'lento', re: /\b(lento|lenta|se pega|se queda pegad)/ },
   { id: 'descuento', re: /\b(descuento|estudiante|promo)\b/ },
   { id: 'tiempo', re: /\b(cuanto (se |me )?(demora|demoran|tarda|tardan|tardaria|demoraria)|cuanto tiempo|en cuanto tiempo|cuantos dias|cuantas semanas|para cuando (estaria|esta|queda)|que tan rapido|en cuanto (estaria|queda))\b/ },
-  { id: 'agendar', re: /\b(agend|reserv|tienes hora|hay hora|disponibilidad|cupo)/ },
+  { id: 'agendar', re: /\b(agend|reserv|tienes hora|tienen horas|horas disponibles|hay hora|disponibilidad|cupo)/ },
   { id: 'ubicacion', re: /\b(donde (esta|estan|queda|quedan|atiend)|direccion|ubicad|que depto|departamento)\b/ },
-  { id: 'horario', re: /\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados))\b/ },
+  { id: 'horario', re: /\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados)|estan (atendiendo|trabajando|abiertos))\b/ },
   { id: 'compara', re: /\b(cotizando|cotizo|comparando|voy a ir a otro lado|voy a ir a otra parte|me voy a otro lado|otros lados|varios lados|otras opciones|otro tecnico|otro servicio tecnico)\b/ },
-  { id: 'precio_general', re: /\b(cuanto (sale|cuesta|cobr|vale|saldria|seria)|precio|valor|cotiz|presupuesto|costo)\b/ },
-  { id: 'gracias', re: /^(muchas |ya )?gracias|^(bacan|genial|excelente|perfecto|super)[!. ]*(gracias)?|\b(te pasaste|nos vemos|quedo atent[oa])\b/ },
+  { id: 'precio_general', re: /\b(cuanto (sale|cuesta|cobr\w*|vale|saldria|seria)|precio|valor|cotiz\w*|presupuesto|costo)\b/ },
+  { id: 'gracias', re: /^(?!.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo|(?<!gracias )(?<!gracias, )(otra vez|de nuevo)))(?:(muchas |mil |ya )?gracia+s|.{0,80}\bgracia+s[ !.]*$|((ah )?ya )?(bacan|genial|excelente|perfecto|super|buenisimo)[!. ]*(gracias)?|.*\b(te pasaste|nos vemos|quedo atent[oa])\b)/ },
   { id: 'ping', re: /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/ },
   { id: 'otra_persona', re: /^(hola|buenas|wena|holi)[ ,]+(gab|gabo|gabi|gabriel)\b|\bbusco a\b|mensaje equivocado|numero equivocado/ },
-  { id: 'saludo', re: /^(hol+[ai]+s?|holi+s?|buena?s?|wena?s?|hola buenas)( (tardes|noches|dias))?[ !.,]*(como (estas|estan|va)\??)?[ !.]*$/ }
+  { id: 'como_estas', re: /^(y )?(como (estas|estan|te va|andas|va todo|esta)|que tal)( todo)?[^a-z0-9]*$/ },
+  { id: 'saludo', re: /^(ho+l+a+s?|holi+s?|ola+|hello+|hellooo+|oie|buen(a|o)?s?|wena?s?)([ ,]+(buena?s?|buenos|tardes|noches|dias?|tarde|amig[oa]s?|bro|hermano|8vobit|octavobit|que tal|como (estas|estan|va|andas|esta)( todo)?|espero se encuentre bien))*[^a-z0-9]*$/ },
+  // Va al final a propósito: gracias, otra_persona, como_estas y saludo ganan. Exige estado de daño (más el equipo, o la frase pelada). La misma lista de daño está en gracias y garantia: mantener sincronizadas.
+  { id: 'dano_general', re: /^(?!.*\b(link|enlace|pagina|web|sitio|app|aplicacion|whatsapp|instagram|wifi|internet|luz|ascensor|cuenta|correo|venta|vender|comprar|compra)\b)((?=.*\b(pc|compu|computador|computadora|notebook|laptop|lapto|portatil|equipo|maquina|note)\b)(?=.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo))|(hola |buenas )?(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder)|no (me )?(funciona|anda|sirve)|esta (malo|mala)|se puede (reparar|arreglar)|tiene arreglo)[ !.?]*$)/ }
 ];
 
 // Combinaciones: si hay intención de servicio, gana sobre precio_general, agendar o saludo.
@@ -441,10 +450,12 @@ function hash(s) {
 }
 
 // fuera = true activa las reglas marcadas soloFuera (MODO_FUERA).
+// ctxNuevo lo fija decidir(): para un contacto nuevo, «otra vez + daño» no implica garantía (garantia_repite).
+let ctxNuevo = false;
 function clasificar(texto, fuera) {
   const t = normalizar(texto);
-  const ids = REGLAS.filter(r => (!r.soloFuera || fuera) && r.re.test(t)).map(r => r.id);
-  return ids;
+  const ids = REGLAS.filter(r => (!r.soloFuera || fuera) && !(r.id === 'garantia_repite' && ctxNuevo) && r.re.test(t)).map(r => r.id === 'garantia_repite' ? 'garantia' : r.id);
+  return ids.filter((x, i) => ids.indexOf(x) === i);
 }
 
 function horaChile(ahora) {
@@ -479,7 +490,7 @@ function renderizar(clave, ahora, links, fuera) {
   const opciones = TEXTOS[clave];
   const f = fuera || {};
   return opciones[hash(String(ahora) + clave) % opciones.length]
-    .split('{{LINK_AGENDA}}').join(links.agenda)
+    .split('{{LINK_AGENDA}}').join(!links.agenda || /calendly/i.test(links.agenda) ? LINK_AGENDA_DEMO : links.agenda)
     .split('{{LINK_WEB}}').join(links.web)
     .split('{{LINK_PEDIDOS}}').join(links.pedidos)
     .split('{{VUELTA}}').join(f.vuelta || '')
@@ -534,7 +545,6 @@ function salidaPend(c, intencion, clave, ahora, links, extra) {
   const aviso = extra.aviso === undefined ? 'normal' : extra.aviso;
   if (c.bots.length >= 3) return { intencion, respuesta: null, botones: null, aviso, resumen: extra.resumen || '', contacto: c };
   let respuesta = renderizar(clave, ahora, links, null);
-  if (extra.noche && (horaChile(ahora) >= 21 || horaChile(ahora) < 9)) respuesta += ' Te contesta mañana desde las 9.';
   c.enviados[clave] = ahora; c.ultimoBot = ahora; c.bots.push(ahora);
   if (!extra.mantener) c.pend = null;
   if (extra.pendModelo) c.pend = { q: 'MODELO', t: ahora, intentos: 0 };   // pidió el modelo: «no sé» o una foto lo contestan
@@ -568,13 +578,18 @@ function resolverPendiente(texto, payload, c, ahora, links) {
     return sn === 'no' ? salidaPend(c, 'es_bot_no', 'es_bot_no', ahora, links, { aviso: null }) : null;
   }
   if (p.q === 'MODELO') {                                  // SAL-5: «no sé / no tengo el modelo»
+    // Con el modelo pendiente, un líquido o una urgencia no se pierden: aviso urgente a Gabriel.
+    if (RE_LIQUIDO.test(t)) return salidaPend(c, 'urgente', 'urgente', ahora, links, { aviso: 'urgente', resumen: 'Líquido o equipo mojado (respondía el modelo)' });
+    if (RE_URGE.test(t)) return salidaPend(c, 'urgencia', 'urgencia', ahora, links, { aviso: 'urgente', resumen: 'Urgencia (respondía el modelo)' });
     if (RE_NO_MODELO.test(t)) {
       const r = salidaPend(c, 'sal5', 'sal5_modelo', ahora, links, { resumen: 'No sabe el modelo' });
       if (r.respuesta && RE_NO_COMPUTADORES.test(t)) r.respuesta += FRASE_NO_COMPUTADORES;
       return r;
     }
     c.pend = null;
-    return null;                                           // dio el modelo (o habló de otra cosa): sigue como siempre
+    // Dio el modelo (o describió el equipo, sin otro tema): se acusa en silencio, sin repreguntar el daño.
+    if (!ids.length || (ids.length === 1 && ids[0] === 'dano_general')) return { intencion: 'modelo_dado', respuesta: null, botones: null, aviso: 'normal', resumen: 'Dio el modelo: ' + String(texto).slice(0, 80), contacto: c };
+    return null;                                           // habló de otra cosa: sigue como siempre
   }
   const op = interpretar(p.q, t, payload);
   if (p.q === 'MEM-D') {
@@ -800,7 +815,8 @@ function resumenAg(ag) {
     .concat(ag.urgencia ? ['urgencia: sí'] : [], ag.telefono ? ['teléfono: ' + ag.telefono] : [], ag.dir ? ['web: ' + ag.dir] : []).join(' · ');
 }
 
-function sufijoNoche(ahora) { const h = horaChile(ahora); return h >= 21 || h < 9 ? ' Te contesta mañana desde las 9.' : ''; }
+// 13-nov: el bot responde igual a cualquier hora; no hay aviso de horario (solo MODO_FUERA tiene textos de ausencia).
+function sufijoNoche(ahora) { return ''; }
 
 // Arma la salida: segmentos laterales (AG-P/O/R/D), frase opcional y el texto del paso.
 function salidaAg(ag, ahora, links, intencion, segs, clave, extra) {
@@ -1011,6 +1027,8 @@ const RE_ACK = /^(ok+|oki+|okis|oka|ya+|yap|yapo|dale|vale|listo|perfecto|bacan|
 const RE_SI_SEG = /^(si+|sip|dale|claro|de una|obvio|ya dale|por favor)$/;
 function esAck(texto) { const l = lim(texto); return !/[a-z0-9]/.test(l) || RE_ACK.test(l); }
 const RE_PING = /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/;
+const RE_LIQUIDO = /\b(cafe|agua|liquido|derram\w*|mojad[oa]|mojo)\b/;
+const RE_URGE = /\b(me urge|urge|urgente|para hoy|lo necesito (hoy|ya|manana|para manana))\b/;
 const RE_NO_MODELO = /\b(no se|no lo se|no tengo idea|no cacho|no tengo el modelo|no aparece|apenas se ve|no estoy segur[oa]|nula con la tecnologia)\b/;
 const RE_NO_COMPUTADORES = /\b(no (se|cacho|entiendo) nada( de)? (computador\w*|compu\w*|tecnologia)|nula con la tecnologia|no cacho nada)\b/;
 const FRASE_NO_COMPUTADORES = ' Cuéntame con tus palabras qué ves, yo me encargo del resto.';
@@ -1020,8 +1038,8 @@ const EN_PALABRAS = /^(the|and|you|your|are|is|have|for|with|this|that|hello|hi|
 const ES_PALABRAS = /^(el|la|los|las|de|que|y|en|un|una|por|para|con|mi|tu|su|es|no|si|como|hola|buenas|quiero|necesito|me|lo|se|del|al|mas|muy|pero|tengo)$/;
 // Textos de reparación que piden el modelo: la respuesta siguiente puede ser «no sé» o una foto.
 const MODELO_CLAVES = ['mem_compat', 'mem_pieza', 'mem_pieza_ya', 'pantalla', 'bateria', 'bisagras', 'ssd', 'memoria_sintoma', 'mem_d1', 'ram_1a'];
-// Además de la logística, estas respuestas salen aunque haya conversación en curso (48 h).
-const RESPONDE_EN_CURSO = LOGISTICA.concat(['objecion', 'compara', 'garantia_q', 'urgencia', 'es_bot', 'humano', 'dos_temas', 'mac_bloqueo', 'respaldo', 'ping']);
+// Solo interrumpe al bot que Gabriel haya respondido: si pasan más de 10 min desde su último mensaje, el bot vuelve a responder.
+const PAUSA_GABRIEL = 10 * MIN;
 
 // Red de seguridad: una palabra de clave y una cadena con dígitos en el mismo mensaje, aunque la intención sea otra.
 function claveSospechosa(t) { return RE_CLAVE_PAL.test(t) && RE_VALOR.test(t); }
@@ -1239,6 +1257,7 @@ function seguimientos(contactos, ahora, links) {
 // `adjunto` = tipo de adjunto de Meta cuando el mensaje no trae texto ('audio' | 'image' | 'video' | 'share' | 'otro').
 // Devuelve { intencion, respuesta|null, botones|null, aviso: null|'normal'|'urgente', resumen?, ocultar?, contacto }
 function decidir(texto, contacto, ahora, links, payload, adjunto) {
+  ctxNuevo = !contacto || !contacto.visto || ahora - contacto.visto > 30 * DIA;
   const r = decidirNucleo(texto, contacto, ahora, links, payload, adjunto);
   if (!r.ocultar && claveSospechosa(normalizar(texto))) r.ocultar = true;   // nunca viaja al aviso
   r.contacto.seg = calcularSeg(r, r.contacto, ahora, links);
@@ -1247,7 +1266,7 @@ function decidir(texto, contacto, ahora, links, payload, adjunto) {
 
 function decidirNucleo(texto, contacto, ahora, links, payload, adjunto) {
   const c0 = Object.assign({ visto: 0, gabriel: 0, enviados: {}, bots: [] }, contacto || {});
-  const gabrielActivo = c0.gabriel && ahora - c0.gabriel < 12 * HORA;
+  const gabrielActivo = c0.gabriel && ahora - c0.gabriel < PAUSA_GABRIEL;
   // El menú de bienvenida "Reparación" vuelve al bot de siempre con un saludo de servicio técnico.
   if (payload === 'MENU_REP') {
     c0.visto = ahora; c0.web = null; c0.pend = null;
@@ -1282,7 +1301,7 @@ function decidirNucleo(texto, contacto, ahora, links, payload, adjunto) {
   }
   const r = decidirBase(texto, c0, ahora, links);
   // La bienvenida ofrece el menú de dos opciones como botones.
-  if (r.respuesta && (r.contacto.enviados.bienvenida === ahora || r.contacto.enviados.fuera_bienvenida === ahora || r.contacto.enviados.fuera_horario === ahora)) r.botones = botones(MENU_INICIO);
+  if (r.respuesta && (r.contacto.enviados.bienvenida === ahora || r.contacto.enviados.fuera_bienvenida === ahora)) r.botones = botones(MENU_INICIO);
   return r;
 }
 
@@ -1340,10 +1359,7 @@ function decidirBase(texto, contacto, ahora, links) {
   let aviso = r && r.urgente ? 'urgente' : 'normal';
   if (id === 'spam') return { intencion: 'spam', respuesta: null, aviso: null, contacto: c };
 
-  // Conversación en curso (algo en las últimas 48 h): el bot solo se encarga de la logística;
-  // las consultas las sigue Gabriel. Las respuestas con datos son para quien recién llega.
-  const enCurso = contacto && contacto.visto && ahora - contacto.visto < 2 * DIA;
-  const gabrielActivo = c.gabriel && ahora - c.gabriel < 12 * HORA;
+  const gabrielActivo = c.gabriel && ahora - c.gabriel < PAUSA_GABRIEL;
   const h = horaChile(ahora);
   const deNoche = h >= 21 || h < 9;
 
@@ -1351,24 +1367,19 @@ function decidirBase(texto, contacto, ahora, links) {
   let clave = null;
   if (!id) clave = nuevo && !soloAck ? 'bienvenida' : null;            // sin intención clara: solo saludo si es nuevo
   else if (id === 'saludo') clave = nuevo ? 'bienvenida' : null;
+  else if (id === 'como_estas') clave = nuevo ? 'bienvenida' : 'como_estas';
   else if (id === 'gracias') clave = c.ultimoBot && ahora - c.ultimoBot < 2 * HORA ? 'gracias' : null;
   else if (id === 'ping') clave = nuevo ? 'bienvenida' : (c.ultimoBot && ahora - c.ultimoBot >= 5 * MIN ? 'ping' : null);   // SAL-16
   else clave = id;
 
   if (id === 'agendo' || id === 'voy') clave = null;
-  // De noche Gabriel no está: las consultas con datos se responden igual (13-nov: no decir "lo veo mañana"
-  // a quien ya había conversado). Si Gabriel está conversando, gabrielActivo calla al bot más abajo.
-  if (enCurso && clave && !deNoche && !RESPONDE_EN_CURSO.includes(clave) && clave !== 'gracias') clave = null;
+  // 13-nov: la conversación en curso ya no calla al bot; solo lo calla una respuesta de Gabriel (PAUSA_GABRIEL).
 
   // Modo fuera de Concepción: la bienvenida y el «voy bajando» cambian de texto.
   if (fuera && clave === 'bienvenida') clave = 'fuera_bienvenida';
   if (fuera && clave === 'urgencia') clave = 'urgencia_fuera';
   if (fuera && clave === 'llegada') clave = deNoche ? 'fuera_llegada_noche' : 'fuera_llegada';
 
-  // De noche y sin nada que contestar con datos: avisar que se responde mañana (una vez por noche).
-  if (deNoche && !soloAck && (!clave || clave === 'bienvenida') && !(c.enviados.fuera_horario && ahora - c.enviados.fuera_horario < 10 * HORA)) {
-    clave = 'fuera_horario';
-  }
   // De noche no se promete bajar al lobby.
   if (clave === 'llegada' && deNoche) clave = null;
 
@@ -1412,4 +1423,4 @@ function decidirBase(texto, contacto, ahora, links) {
 }
 
 /* FIN-CEREBRO */
-if (typeof module !== 'undefined') module.exports = { decidir, seguimientos, momentoSeguimiento, GARANTIA_ACTIVA, GARANTIA_LEGAL, flujoWeb, flujoAgenda, clasificar, normalizar, modoFuera, TEXTOS, REGLAS };
+if (typeof module !== 'undefined') module.exports = { decidir, seguimientos, momentoSeguimiento, GARANTIA_ACTIVA, GARANTIA_LEGAL, flujoWeb, flujoAgenda, clasificar, normalizar, modoFuera, TEXTOS, REGLAS, esAck };

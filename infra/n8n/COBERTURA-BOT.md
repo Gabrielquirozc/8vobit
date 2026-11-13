@@ -1,0 +1,33 @@
+# Cobertura del bot de DM (13-nov-2026, SPEC-004)
+
+Medido con los chats exportados de Instagram del 17-oct-2026 (269 conversaciones con mensajes de cliente, 5.892 mensajes sin eventos de sistema; 5.478 "accionables" una vez quitados acks y emojis). Todo local, nada salió a servicios externos; este documento solo trae agregados.
+
+## Respuestas cortas
+
+**Cuántas interacciones necesita un bot por reglas para "entender bien".** Con tus datos: unas **50 conversaciones reales** dan casi todo el vocabulario útil (51 de 70 intenciones aparecieron en las primeras 50 conversaciones), y de ahí en adelante la curva se aplana: tramos de 50 conversaciones aportan 4, 5, 6, 0 y 3 intenciones nuevas. Con **200 a 300 conversaciones** el ruido nuevo es de ~3 a 6 intenciones por tramo, casi todas variantes de forma (ortografía, apodos), no temas nuevos. Argumento: el lenguaje de consultas sigue una ley de potencia con cola larga. Las 5 intenciones más frecuentes cubren 48% de los mensajes con intención, las 10 más frecuentes 65%, las 20 más frecuentes 82% y las 40 más frecuentes 96%. Una regla extra de la cola larga rinde cada vez menos, así que no se busca el 100%: se busca que el 90%+ de los **primeros mensajes** reciba respuesta y que lo demás se derive a Gabriel con aviso normal.
+
+**Cobertura hoy.** Sobre mensajes accionables (sin acks): intención reconocida 32,6% antes de este trabajo y **38,2%** ahora; sobre el **primer mensaje** de cada conversación, 68,0% antes y **76,6%** ahora; el bot además contesta algo (bienvenida incluida) al 93% de los primeros mensajes. El resto de los mensajes sin intención es charla ya en curso con Gabriel (logística, "te aviso", bromas, "ya, genial"). Desde SPEC-004 el bot **sí** contesta en una conversación en curso, apenas Gabriel lleva más de 10 minutos sin escribir y el mensaje calza una intención; lo que no calza queda sin respuesta, con aviso normal a Gabriel.
+
+**Brechas cerradas:** saludos con variantes ("hooola", "buenos días", "hola buenas tardes", "hola amigo"), "cómo estás / qué tal" (nueva intención `como_estas`), "alguna novedad/actualización" y "se ha podido concluir" (a `estado`), "están atendiendo/trabajando" (a `horario`), "para hacer una cotización" (`cotiz\w*`), "se puede reparar/arreglar" (a `dano_general`), "gracias" alargado ("graciaas"), "ya genial/perfecto/bacán", "afuera" y "legue" (a `llegada`), y la falla vaga de daño ("se me rompió el pc", "no funciona"), que ahora recibe pregunta de síntoma a cualquier hora.
+
+**Superficie de falsos positivos.** Las reglas amplias (`dano_general`, saludos, `estado`) pueden contestar algo que Gabriel habría dejado pasar. Por eso `dano_general` va al final de la lista (gana cualquier otra regla), exige un estado de daño ("se rompió", "no funciona", "falla"...) junto al equipo o la frase pelada, y excluye enlaces/web/compra-venta/"ya no falla". Si Gabriel ya contestó hace menos de 10 min el bot calla. Cada semana conviene mirar las respuestas del bot que Gabriel corrigió a mano.
+
+**Brechas que quedan (derivan a Gabriel, sin respuesta inventada):** marcas ("¿trabajan con Asus?"), reparación de placa madre, venta de piezas por unidad, "¿incluye antivirus?", recomendaciones y referidos ("vengo de parte de...") que no piden nada concreto, y consultas de mantención de otros temas (celulares, hackeo, etc.). No hay dato aprobado para responderlas; si Gabriel aprueba una respuesta de marcas y de placas madre, se agregan en 2 reglas.
+
+## Plan de mantenimiento
+
+1. Cada semana, revisar los mensajes con intención `sin_intencion` que llegan por ntfy (aviso normal) y anotar los que se repiten 3 o más veces.
+2. Por cada forma repetida con respuesta posible con datos ya aprobados, agregar una regla en `REGLAS` y un texto en `TEXTOS`; si no hay dato aprobado, queda como derivación.
+3. Cada cambio se prueba con `node --test infra/n8n/bot/` (suite fija + banco masivo de ~29.900 casos, ~17 s: cada frase en 6 variantes x 5 horas x 8 estados, con intención esperada por frase).
+4. Una vez al mes, volver a exportar chats y repetir esta medición (cobertura del primer mensaje debe mantenerse sobre 75%; si baja, hay un tema nuevo).
+5. Regla de oro: ante duda, derivar. Nunca precios, plazos ni garantías que no estén ya en `TEXTOS`.
+
+## Simulador (`bot/simulador.js`)
+
+- Interactivo: `node infra/n8n/bot/simulador.js --hora 23:30`. Escribes como cliente; `/g texto` = Gabriel responde a mano; `/+10m` o `/+2h` avanza el reloj; `/hora 03:00` salta de hora; `/memoria` muestra el contacto; `/salir`.
+- Guion: `node infra/n8n/bot/simulador.js guion.json`, con pasos como `[{"hora":"23:30"},{"cliente":"hola se me rompió el pc","espera":"qué"},{"gabriel":"te ayudo"},{"esperar":11},{"cliente":"cuanto sale formatear","espera":"15.000"}]`. `espera` es una regex que debe calzar con la respuesta (`null` = silencio); `payload` y `adjunto` también valen en un paso.
+- Como librería: `crearConversacion({hora, links})` con `.cliente(texto, {payload, adjunto})`, `.gabriel(texto)`, `.esperar(minutos)`, `.irA('03:00')`, `.historial`.
+- Imita el pegamento de n8n: la memoria del contacto pasa de turno a turno, y el mensaje de Gabriel (eco distinto del último texto del bot) marca `contacto.gabriel`, que calla al bot por `PAUSA_GABRIEL` (10 min).
+- `.cron()` (o `/cron` en consola, `{"cron":true}` en un guion) corre `seguimientos()` sobre la misma memoria y el reloj actual, como el nodo "Seguimientos" de n8n cada 15 min.
+- El eco propio del bot ya está simulado: `cliente()` guarda `ultimoTexto`, y `gabriel(texto)` con ese mismo texto exacto NO cuenta como Gabriel. Limitación: no simula ráfagas concurrentes (la memoria estática de n8n no es atómica) ni la firma de Meta.
+- El reloj es hora de Chile (verano/invierno resueltos por `Intl`).

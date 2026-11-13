@@ -64,15 +64,19 @@ test('llegada: respuesta y aviso urgente', () => {
   assert.match(r.respuesta, /baj/i);
 });
 
-test('si Gabriel está conversando, el bot se calla pero avisa', () => {
-  const r = decidir('llegué', { visto: tarde - H, gabriel: tarde - 2 * H }, tarde, links);
+test('si Gabriel respondió hace menos de 10 min, el bot se calla pero avisa; pasados 10 min vuelve a responder', () => {
+  const r = decidir('llegué', { visto: tarde - H, gabriel: tarde - 2 * 60e3 }, tarde, links);
   assert.strictEqual(r.respuesta, null);
   assert.strictEqual(r.aviso, 'urgente');
+  const v = decidir('llegué', { visto: tarde - H, gabriel: tarde - 11 * 60e3 }, tarde, links);
+  assert.ok(v.respuesta);
+  assert.match(v.respuesta, /baj/i);
 });
 
-test('de noche: avisa que responde mañana, una sola vez', () => {
+test('de noche el bot responde igual que de día (sin aviso de horario), y el segundo saludo no se responde', () => {
   const a = decidir('hola', null, noche, links);
-  assert.match(a.respuesta, /mañana/);
+  assert.match(a.respuesta, /hola/i);
+  assert.doesNotMatch(a.respuesta, /mañana|fuera de horario|automático/i);
   const b = decidir('alguien?', a.contacto, noche + 10 * 60e3, links);
   assert.strictEqual(b.respuesta, null);
 });
@@ -89,9 +93,12 @@ test('spam: no responde ni avisa', () => {
   assert.strictEqual(r.aviso, null);
 });
 
-test('conversación en curso: las consultas las sigue Gabriel', () => {
+test('conversación en curso: el bot sigue respondiendo las consultas (solo lo calla una respuesta de Gabriel)', () => {
   const r = decidir('y cuánto sería el arreglo?', { visto: tarde - 3 * H }, tarde, links);
-  assert.strictEqual(r.respuesta, null);
+  assert.strictEqual(r.intencion, 'precio_general');
+  assert.ok(r.respuesta);
+  const g = decidir('y cuánto sería el arreglo?', { visto: tarde - 3 * H, gabriel: tarde - 5 * 60e3 }, tarde, links);
+  assert.strictEqual(g.respuesta, null);
 });
 
 test('"ya agendé" no se responde', () => {
@@ -159,9 +166,12 @@ test('bienvenida ofrece el menú Reparación / Desarrollo web', () => {
   assert.deepStrictEqual(r.botones.map(b => b.payload), ['MENU_REP', 'MENU_WEB']);
 });
 
-test('si Gabriel está conversando, el flujo web no arranca', () => {
-  const r = decidir('DEMO', { visto: tarde - 3 * H, gabriel: tarde - H }, tarde, links);
+test('si Gabriel está conversando (menos de 10 min), el flujo web no arranca; pasados 10 min sí', () => {
+  const r = decidir('DEMO', { visto: tarde - 3 * H, gabriel: tarde - 2 * 60e3 }, tarde, links);
   assert.strictEqual(r.respuesta, null);
+  const v = decidir('DEMO', { visto: tarde - 3 * H, gabriel: tarde - H }, tarde, links);
+  assert.strictEqual(v.intencion, 'web_inicio');
+  assert.ok(v.respuesta);
 });
 
 // ---------------------------------------------------------------------------
@@ -286,7 +296,7 @@ test('MEM-D → «ya» → repregunta → «no sé» → SAL-5 sin contar fallo'
   assert.notStrictEqual(r.aviso, 'urgente');
 });
 
-test('MEM-D con dos fallos → SAL-2 y aviso urgente; de noche agrega «mañana desde las 9»', () => {
+test('MEM-D con dos fallos → SAL-2 y aviso urgente; de noche no agrega horario', () => {
   let r = decidir('más memoria', null, tarde, links);
   r = decidir('ya', r.contacto, tarde + MIN, links);
   r = decidir('hmm quizás depende', r.contacto, tarde + 2 * MIN, links);
@@ -299,7 +309,7 @@ test('MEM-D con dos fallos → SAL-2 y aviso urgente; de noche agrega «mañana 
   n = decidir('ya', n.contacto, noche - H, links);
   n = decidir('ok', n.contacto, noche, links);
   assert.strictEqual(n.intencion, 'sal2');
-  assert.match(n.respuesta, /Te contesta mañana desde las 9/);
+  assert.doesNotMatch(n.respuesta, /mañana|automático|fuera de horario/i);
 });
 
 test('MEM-D: «jaja» no cuenta como intento fallido', () => {
@@ -331,8 +341,11 @@ test('pregunta pendiente: la logística manda y Gabriel activo calla al bot', ()
   const l = decidir('llegué, estoy abajo', c, tarde, links);
   assert.strictEqual(l.intencion, 'llegada');
   assert.strictEqual(l.contacto.pend, null);
-  const g = decidir('1', Object.assign({ gabriel: tarde - H }, c), tarde, links);
+  const g = decidir('1', Object.assign({ gabriel: tarde - 2 * 60e3 }, c), tarde, links);
   assert.strictEqual(g.respuesta, null);
+  // Pasados 10 min desde la respuesta de Gabriel, el bot retoma la pregunta pendiente.
+  const v = decidir('1', Object.assign({ gabriel: tarde - H }, c), tarde, links);
+  assert.strictEqual(v.intencion, 'mem_d1');
 });
 
 test('banco 24: modo fuera activo, «estoy afuera» → FUERA-3 urgente, nunca «voy bajando»', () => {
@@ -420,7 +433,8 @@ test('RAM-1 pendiente + otro servicio: atiende ese servicio y borra la pendiente
     const c = { visto: tarde - 3 * H, enviados: {}, bots: [], pend: { q: 'RAM-1', t: tarde - H, intentos: 0 } };
     const r = decidir(s, c, tarde, links);
     assert.strictEqual(r.intencion, intencion, s);
-    assert.strictEqual(r.contacto.pend, null, s);
+    // formateo no deja pendiente; batería pide el modelo (MODELO), pero la RAM-1 siempre se borra.
+    assert.ok(r.contacto.pend === null || r.contacto.pend.q === 'MODELO', s);
   }
   // Un «cuánto sale» pelado sigue siendo la opción 1, y un párrafo largo no cuenta como modelo.
   const c = () => ({ visto: tarde - H, enviados: {}, bots: [], pend: { q: 'RAM-1', t: tarde - H, intentos: 0 } });
@@ -1607,7 +1621,7 @@ test('SAL-9: red de seguridad — con una clave y otra intención, el texto va o
   assert.strictEqual(r.ocultar, true);
   assert.doesNotMatch(JSON.stringify([r.resumen, r.respuesta]), /abc123/);
   // Sin respuesta del bot por Gabriel conversando, sigue oculto.
-  const g = decidir('la clave es hunter22', { visto: tarde - H, gabriel: tarde - H, enviados: {}, bots: [] }, tarde, links);
+  const g = decidir('la clave es hunter22', { visto: tarde - H, gabriel: tarde - 2 * 60e3, enviados: {}, bots: [] }, tarde, links);
   assert.strictEqual(g.ocultar, true);
   assert.strictEqual(g.respuesta, null);
   // En un flujo en marcha también.
@@ -1741,8 +1755,11 @@ test('de noche, quien ya conversó recibe la respuesta con datos (no "lo veo ma�
   assert.doesNotMatch(r.respuesta, /mañana/);
 });
 
-test('de día, si Gabriel conversa o es conversación en curso, el bot sigue callando los datos', () => {
+test('de día, la conversación en curso ya no calla al bot; solo lo calla Gabriel (menos de 10 min)', () => {
   const a = decidir('cuanto sale formatear', null, tarde, links);
   const r = decidir('cuanto demora una pantalla', a.contacto, tarde + 600e3, links);
-  assert.strictEqual(r.respuesta, null);
+  assert.strictEqual(r.intencion, 'tiempo_pantalla');
+  assert.match(r.respuesta, /7 a 14 días hábiles/);
+  const g = decidir('cuanto demora una pantalla', Object.assign({}, a.contacto, { gabriel: tarde + 600e3 - 5 * 60e3 }), tarde + 600e3, links);
+  assert.strictEqual(g.respuesta, null);
 });
