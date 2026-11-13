@@ -1,6 +1,6 @@
 # Traspaso: estado del proyecto y cómo seguir desde local
 
-Última actualización: 2026-10-24 (misión de lanzamiento del local: cuatro etapas guiadas, siguiente objetivo, puntos derivados de cambios reales y hito de primera entrega; navegación inferior fija: cliente en teléfono con Carta/Buscar/Categorías/Pedido y CTA separado; panel en todas las pantallas con cuatro acciones operativas y Más, sin pestañas recortadas; la entrada por clave aísla el atajo del teclado del PIN para que la contraseña se pueda escribir, editar y borrar normalmente; promociones y combos, inventario y recetas, clientes y cupón de vuelta; revisión UX en `REVISION-UX.md` y `ESTUDIO-UX.md`, con alertas de pedidos nuevos en todas las pestañas, sonido que se repite, local nuevo en pausa, recordar datos del cliente y orden de entrega de despachos; tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
+Última actualización: 2026-11-13 (pago con tarjeta en línea con Flow o Mercado Pago, en sandbox, rama `claude/pago-tarjeta`; ver "Pago con tarjeta en línea" abajo y en README). Antes, 2026-10-24 (misión de lanzamiento del local: cuatro etapas guiadas, siguiente objetivo, puntos derivados de cambios reales y hito de primera entrega; navegación inferior fija: cliente en teléfono con Carta/Buscar/Categorías/Pedido y CTA separado; panel en todas las pantallas con cuatro acciones operativas y Más, sin pestañas recortadas; la entrada por clave aísla el atajo del teclado del PIN para que la contraseña se pueda escribir, editar y borrar normalmente; promociones y combos, inventario y recetas, clientes y cupón de vuelta; revisión UX en `REVISION-UX.md` y `ESTUDIO-UX.md`, con alertas de pedidos nuevos en todas las pestañas, sonido que se repite, local nuevo en pausa, recordar datos del cliente y orden de entrega de despachos; tarifa por pedido a 1 % sin tope; paquete legal en `legal/`; autoservicio: primeros pasos e importar carta; multi-local, PIN y roles, licencias, /admin, resultados; etapa 1 de control; estrategia: competencia Fudo/Justo, producto de entrada, planes,
 líneas de trabajo y gestor de licencias en `ESTRATEGIA.md`). Rama de trabajo: `claude/compassionate-maxwell-hb826m`
 (repo `gabrielquirozc/8vobit`, carpeta `pedidos/`). Este archivo es el punto de partida si se
 sigue sin la sesión en la nube: con Claude Code en el PC (`claude` dentro de `D:\8vobit`) basta
@@ -24,7 +24,7 @@ cd D:\8vobit
 git pull origin claude/compassionate-maxwell-hb826m
 cd pedidos
 $env:PANEL_PASSWORD="demo"; node server.mjs        # http://127.0.0.1:8099/gassuso y /panel (clave demo)
-npm test                                           # 91 pruebas (API de punta a punta, Pro y orden de entrega), ~5 s
+npm test                                           # 100 pruebas (API de punta a punta, Pro, orden de entrega y pagos), ~6 s
 ```
 
 Requisitos: Node 22 (usa `node:sqlite`, sin dependencias npm). Los datos locales quedan en
@@ -58,6 +58,7 @@ Respaldo fuera del servidor (una vez; queda programado a diario):
 | `lib/clientes.mjs` + `public/panel-clientes.js` | Clientes de la carta online: frecuentes, nuevos, dormidos, historial (plan Gestión) |
 | `lib/autoservicio.mjs` + `public/panel-inicio.js` | Primeros pasos en dos niveles (recibir pedidos / controlar el local), bloqueo suave de la pausa, importar la carta, ayudas por pestaña |
 | `lib/legal.mjs` + `lib/plantillas/` + `public/panel-legal.js` | Textos legales como plantilla fija ({{campo}}): Términos, Privacidad, Contrato + Anexo A; datos legales validados (RUT módulo 11); aceptación del contrato en línea (tabla `contrato_aceptaciones`) |
+| `lib/pagos.mjs` + `lib/pagos-flow.mjs` + `lib/pagos-mercadopago.mjs` + `public/panel-pagos.js` + `public/pago-retorno.html` | Pago con tarjeta en línea a la cuenta del local: capa común con adaptadores Flow y Mercado Pago, credenciales cifradas por local, webhook verificado con la pasarela (fuente de verdad), idempotente por referencia; tablas `local_pagos_config`, `pago_intentos`, `pago_eventos` |
 | `deploy/probar-respaldo.mjs`, `deploy/MONITOREO.md` | Prueba de restauración de respaldos y guía de monitoreo |
 | `public/comun.js` | Utilidades del navegador (api, clp, esc, emojis, fmtTel) |
 | `public/seguimiento.html`, `comanda.html`, `hoja-ruta.html`, `carta-imprimible.html`, `cartel.html` | Seguimiento del cliente, ticket 80 mm, hoja de ruta 80 mm, carta PDF, cartel/tarjetas con QR |
@@ -142,6 +143,19 @@ Orden: meta B primero; de la A, antes del 2º local A5, A6, A1 y A8; A2–A4 ent
    el cartel.
 
 ## Pendiente técnico / próximos pasos sugeridos
+
+- **Pago con tarjeta en línea (2026-11-13, rama `claude/pago-tarjeta`, handoff en `HANDOFF-pago-tarjeta.md`).**
+  Hecho: Flow y Mercado Pago detrás de `lib/pagos.mjs`; botón "Pagar con tarjeta" en la confirmación de la carta y
+  en el seguimiento; panel *Datos del local → Pago con tarjeta* (solo el dueño: pasarela, credenciales, modo, activar,
+  "Probar"); página `/pago/retorno`; 9 pruebas nuevas con pasarela simulada (monto del servidor, webhook falso o de
+  otro monto rechazado y registrado, repetido no duplica, 403 cruzado entre locales). Cobros reales apagados
+  (`PAGOS_PRODUCCION` vacío).
+  **Decisiones**: credenciales cifradas en la base con `PAGOS_CLAVE` (opción B del handoff; la A, variable de entorno
+  por local, obligaba a tocar el servidor por cada local); el pago en línea no se anota en `pedido_pagos` (es el
+  detalle del pago mixto) sino como `medio_pago='tarjeta'`; Flow exige correo del cliente, que no se guarda.
+  **Falta**: (1) agregar `PAGOS_CLAVE` y `PAGOS_URL_BASE` al `.env` del servidor y desplegar; (2) probar en el
+  sandbox real de Flow y de Mercado Pago con cuentas de prueba (las pruebas automáticas usan una pasarela simulada:
+  confirmar formato real de respuestas y del webhook); (3) con un local real, pasar a producción según README.
 
 - **/admin como tablero del gestor (2026-10-20, `lib/gestion.mjs`)**: imagen 8vobit, escalones 5/10/20/42/50 locales
   con bolsillo estimado (fórmula de VIABILIDAD.md, usa el ingreso real por local), ritmo de altas y meses a la meta,

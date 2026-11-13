@@ -845,6 +845,7 @@ import { crearCuentaUI } from './panel-cuenta.js';
 import { crearInicioUI } from './panel-inicio.js';
 import { crearLegalUI } from './panel-legal.js';
 import { crearPromosUI } from './panel-promos.js';
+import { crearPagosUI } from './panel-pagos.js';
 import { crearInventarioUI } from './panel-inventario.js';
 import { crearClientesUI } from './panel-clientes.js';
 import { ordenarRuta, finFranja, enlaceWaze, enlaceMaps, seleccionInicial, vehiculoDe } from './ruta.js';
@@ -1735,6 +1736,7 @@ const INICIO = crearInicioUI({ $, ico, toast, api, clp, esc, fmtTel, BASE, aWebp
   carta: () => M, puede: (x) => CUENTA.puede(x),
   alCambiar: async () => { await cargarCarta(); if (vista === 'carta') await pintarCarta(); else if (vista === 'local' && !localSucio) await pintarLocal(); refrescar().catch(() => {}); } });
 // Datos legales guiados y contrato de servicio (public/panel-legal.js).
+const PAGOSUI = crearPagosUI({ $, esc, api, toast, clp, esDueno: () => CUENTA.yo()?.rol === 'dueno', correo: () => M.local?.legal?.correo });
 const LEGALUI = crearLegalUI({ $, esc, api, toast, BASE, rutFormato, rutValido, fmtTel, esDueno: () => CUENTA.yo()?.rol === 'dueno', local: () => M.local,
   alCambiar: async () => { await cargarCarta(); INICIO.cargar().catch(() => {}); } });
 let localSucio = false;
@@ -1749,7 +1751,7 @@ async function pintarLocal() {
   await cargarCarta();
   const L = M.local, t = L.transferencia || {}, g = L.legal || {};
   const campo = (id, label, val, extra = '', ayuda = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(val ?? '')}" ${extra}>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ''}<div class="err" id="${id}-err"></div></div>`;
-  const SEC = [['s-plan', 'Tu plan'], ['s-usuarios', 'Usuarios y PIN'], ['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-legal', 'Datos legales'], ['s-contrato', 'Contrato'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
+  const SEC = [['s-plan', 'Tu plan'], ['s-usuarios', 'Usuarios y PIN'], ['s-contacto', 'Contacto'], ['s-horario', 'Horario de atención'], ['s-pagos', 'Transferencias'], ['s-tarjeta', 'Pago con tarjeta'], ['s-legal', 'Datos legales'], ['s-contrato', 'Contrato'], ['s-pedidos', 'Pedidos en línea'], ['s-logo', 'Logo']];
   const tipoOk = !t.tipo || TIPOS.includes(t.tipo);
   $('v-local').innerHTML = `<div class="lwrap">
     <nav class="lnav" aria-label="Secciones">${SEC.map(([id, n]) => `<a href="#${id}" data-sec="${id}">${n}</a>`).join('')}</nav>
@@ -1780,6 +1782,7 @@ async function pintarLocal() {
         ${campo('t-numero', 'Número de cuenta', t.numero, 'maxlength="30" inputmode="numeric" autocomplete="off"')}
         ${campo('t-email', 'Correo para el comprobante', t.email, 'type="email" maxlength="80" autocomplete="off"')}
       </div><datalist id="bancos">${BANCOS.map((b) => `<option value="${b}">`).join('')}</datalist></section>
+    <section class="cardf" id="s-tarjeta"><h3>Pago con tarjeta en línea</h3><p class="ayuda">Cargando…</p></section>
     <section class="cardf" id="s-legal"><h3>Datos legales y privacidad</h3><p class="ayuda top">Aparecen en los <a href="${BASE}/terminos?l=${esc(L.slug)}" target="_blank">Términos y condiciones</a> y la <a href="${BASE}/privacidad?l=${esc(L.slug)}" target="_blank">Política de privacidad</a> que la carta muestra al cliente. Mientras falten, esas páginas dicen "Borrador".</p>
       ${LEGALUI.campos(g)}
       <div class="field"><label for="g-borrar">Borrar los datos de un cliente</label>
@@ -1804,10 +1807,11 @@ async function pintarLocal() {
       <button type="button" class="ghost" id="l-descartar">Descartar</button><button class="primary" id="l-guardar">Guardar cambios</button></div>`;
   marcarSucio(false);
   CUENTA.pintarPlan($('s-plan')).catch(() => {}); CUENTA.pintarUsuarios($('s-usuarios')).catch(() => {});
+  PAGOSUI.pintar($('s-tarjeta')).catch((e) => { $('s-tarjeta').innerHTML = `<h3>Pago con tarjeta en línea</h3><p class="formerr">${esc(e.message)}</p>`; });
   LEGALUI.enlazar(); LEGALUI.pintarContrato($('s-contrato')).catch((e) => { $('s-contrato').innerHTML = `<p class="formerr">${esc(e.message)}</p>`; });
   const v = $('v-local'), q = (sel) => v.querySelector(sel);
   // Plan y usuarios se guardan al tiro: no cuentan como cambios del formulario.
-  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar' && !e.target.closest('#s-usuarios, #s-plan, #s-contrato')) marcarSucio(true); };
+  v.oninput = v.onchange = (e) => { if (e.target.id !== 'l-logo' && e.target.id !== 'g-borrar' && !e.target.closest('#s-usuarios, #s-plan, #s-contrato, #s-tarjeta')) marcarSucio(true); };
   const enlazar = (pre) => v.querySelectorAll(`[data-${pre}abre]`).forEach((c) => c.addEventListener('change', () => {
     const d = c.dataset[`${pre}abre`]; for (const k of ['desde', 'hasta']) q(`[data-${pre}${k}="${d}"]`).disabled = !c.checked;
   }));

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#241c17">
+<meta name="robots" content="noindex">
+<title>Tu pago</title>
+<!-- Esta página vive en /pago/retorno: los archivos comunes están un nivel arriba. -->
+<link rel="stylesheet" href="../carta.css">
+<style>
+  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 40px; }
+  .card { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); padding: 20px; margin-top: 16px; }
+  .estado { font: 800 1.5rem/1.2 var(--font-display); margin: 6px 0 8px; }
+  .msg { color: var(--ink-2); margin: 0; }
+  .pulse { display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: var(--brand); margin-right: 8px; animation: pul 1.6s ease-in-out infinite; vertical-align: middle; }
+  @keyframes pul { 50% { opacity: .3; } }
+  .acciones { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .acciones a { text-decoration: none; text-align: center; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="card" id="app" aria-live="polite" aria-busy="true">
+    <p class="msg">Revisando tu pago…</p>
+  </section>
+</main>
+<script type="module">
+import { api, clp, esc, BASE } from '../comun.js';
+// La confirmación del pago la manda la pasarela al servidor (webhook): aquí solo se muestra el estado.
+const ref = new URLSearchParams(location.search).get('ref') || '';
+const app = document.getElementById('app');
+const inicio = Date.now();
+function pintar(e) {
+  app.removeAttribute('aria-busy');
+  const seg = e.seguimiento ? `${BASE}/seguimiento?p=${encodeURIComponent(e.seguimiento)}` : '';
+  const pagado = e.estado === 'pagado', rechazado = e.estado === 'rechazado' || e.estado === 'fallido';
+  const esperando = !pagado && !rechazado;
+  const largo = Date.now() - inicio > 90e3;
+  const [titulo, texto] = pagado ? ['¡Pago recibido!', `Pagaste ${clp(e.monto)} con ${esc(e.pasarela)}${e.numero ? ` por el pedido #${e.numero}` : ''}.`]
+    : rechazado ? ['El pago no se completó', 'No se hizo ningún cargo. Puedes intentarlo de nuevo desde tu pedido o pagar en el local.']
+    : largo ? ['Todavía no recibimos la confirmación', `${esc(e.pasarela)} aún no nos confirma el pago. Si se hizo el cargo, el pedido se marcará pagado solo; revisa el estado de tu pedido en unos minutos.`]
+    : ['Confirmando tu pago…', `Esperando la confirmación de ${esc(e.pasarela)}. No cierres esta página.`];
+  document.title = titulo;
+  app.innerHTML = `<h1 class="estado">${esperando && !largo ? '<span class="pulse" aria-hidden="true"></span>' : ''}${titulo}</h1><p class="msg">${texto}</p>
+    <div class="acciones">${seg ? `<a class="primary" href="${seg}">Ver el estado de mi pedido</a>` : ''}</div>`;
+  return esperando && !largo;
+}
+async function revisar() {
+  if (!/^[\w-]{20,40}$/.test(ref)) { app.removeAttribute('aria-busy'); app.innerHTML = '<h1 class="estado">No encontramos ese pago</h1><p class="msg">Revisa el estado desde el link de tu pedido.</p>'; return; }
+  try { if (pintar(await api(`pagos/estado/${encodeURIComponent(ref)}`))) setTimeout(revisar, 3000); }
+  catch (e) {
+    if (e.status === 404) { app.removeAttribute('aria-busy'); app.innerHTML = '<h1 class="estado">No encontramos ese pago</h1><p class="msg">Revisa el estado desde el link de tu pedido.</p>'; return; }
+    setTimeout(revisar, 5000);
+  }
+}
+revisar();
+</script>
+</body>
+</html>
