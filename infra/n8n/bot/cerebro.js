@@ -1356,7 +1356,9 @@ function decidirBase(texto, contacto, ahora, links) {
   else clave = id;
 
   if (id === 'agendo' || id === 'voy') clave = null;
-  if (enCurso && clave && !RESPONDE_EN_CURSO.includes(clave) && clave !== 'gracias') clave = null;
+  // De noche Gabriel no está: las consultas con datos se responden igual (13-nov: no decir "lo veo mañana"
+  // a quien ya había conversado). Si Gabriel está conversando, gabrielActivo calla al bot más abajo.
+  if (enCurso && clave && !deNoche && !RESPONDE_EN_CURSO.includes(clave) && clave !== 'gracias') clave = null;
 
   // Modo fuera de Concepción: la bienvenida y el «voy bajando» cambian de texto.
   if (fuera && clave === 'bienvenida') clave = 'fuera_bienvenida';

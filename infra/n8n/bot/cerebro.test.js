@@ -1730,3 +1730,19 @@ test('plazo de otras piezas: respuesta general de tiempos; sin pieza no cambia',
   assert.strictEqual(decidir('cuanto demora', null, tarde, links).intencion, 'tiempo');
   assert.strictEqual(decidir('cuanto sale la pantalla', null, tarde, links).intencion, 'pantalla');
 });
+
+test('de noche, quien ya conversó recibe la respuesta con datos (no "lo veo mañana")', () => {
+  const nocheCL = Date.parse('2026-10-16T03:00:00Z');   // 00:00 en Chile
+  const a = decidir('cuanto sale formatear', null, nocheCL - 3600e3, links);
+  assert.ok(a.respuesta);
+  const r = decidir('cuanto demora una pantalla', a.contacto, nocheCL, links);
+  assert.strictEqual(r.intencion, 'tiempo_pantalla');
+  assert.match(r.respuesta, /7 a 14 días hábiles/);
+  assert.doesNotMatch(r.respuesta, /mañana/);
+});
+
+test('de día, si Gabriel conversa o es conversación en curso, el bot sigue callando los datos', () => {
+  const a = decidir('cuanto sale formatear', null, tarde, links);
+  const r = decidir('cuanto demora una pantalla', a.contacto, tarde + 600e3, links);
+  assert.strictEqual(r.respuesta, null);
+});
