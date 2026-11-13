@@ -72,6 +72,7 @@
   .ped .total { font-weight: 800; font-size: 1.1rem; }
   .paso { width: 100%; min-height: 60px; margin-top: 10px; border: 0; border-radius: var(--r-sm); background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .paso.verde { background: var(--ok); color: #fff; }
+  .paso.dev { min-height: 44px; font-size: .95rem; background: var(--surface-2); color: var(--ink); border: 1px solid var(--ink-2); }
   .acc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
   .acc > * { min-height: 52px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: .9rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; }
   .acc .ico { width: 18px; height: 18px; }
@@ -964,6 +965,27 @@ $('v-pedidos').addEventListener('click', (e) => {
 });
 
 // ---------- pedidos ----------
+// Pago en línea (Flow o Mercado Pago) de un pedido, tal como lo entrega el servidor en p.pago_online.
+const PAGO_VIGENTE = ['pagado', 'devolucion_pendiente'];
+function chipPagoOnline(p) {
+  const po = p.pago_online;
+  if (!po) return '';
+  if (po.estado === 'pagado') return p.estado === 'anulado' ? `<span class="chip2 warn">Pago a revisar: devolver ${clp(po.monto)} (${esc(po.nombre)})</span>` : `<span class="chip2 ok">${ico('check')}Pagado en línea · ${esc(po.nombre)}</span>`;
+  if (po.estado === 'devolucion_pendiente') return `<span class="chip2 warn">Devolución en curso · ${esc(po.nombre)}</span>`;
+  if (po.estado === 'devuelto') return `<span class="chip2">Pago en línea devuelto · ${esc(po.nombre)}</span>`;
+  if (po.estado === 'creado' && po.reciente && !p.pagado) return `<span class="chip2 warn">Pago en línea pendiente · ${esc(po.nombre)}</span>`;
+  return '';
+}
+const botonDevolver = (p) => (CUENTA.yo()?.rol === 'dueno' && p.pago_online && PAGO_VIGENTE.includes(p.pago_online.estado)
+  ? `<button type="button" class="paso dev" data-acc="devolver" data-id="${p.id}">${p.pago_online.estado === 'pagado' ? `Devolver pago en línea (${clp(p.pago_online.monto)})` : 'Revisar devolución en curso'}</button>${p.pago_online.manual ? `<button type="button" class="paso dev" data-acc="devolucion-manual" data-id="${p.id}">Ya la resolví en la pasarela</button>` : ''}` : '');
+// Hay un pago en línea iniciado y sin terminar: antes de cobrarlo a mano se avisa (la API lo permite).
+const pagoEnCurso = (p) => {
+  const po = p.pago_online;
+  if (po?.estado !== 'creado') return false;
+  const min = Math.max(0, Math.round((Date.now() - new Date(po.creado.replace(' ', 'T')).getTime()) / 60000));
+  const hace = min < 1 ? 'hace instantes' : min < 60 ? `hace ${min} min` : `hace ${Math.round(min / 60)} h`;
+  return !confirm(`El cliente inició un pago en línea de este pedido (${po.nombre}) ${hace} y no ha terminado. Si lo cobras a mano y después se completa el pago en línea, el cliente pagaría dos veces. ¿Registrar el cobro igual?`);
+};
 const wa = (p, txt) => `https://wa.me/${p.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(txt)}`;
 function tarjeta(p) {
   const pasos = {
@@ -983,7 +1005,8 @@ function tarjeta(p) {
     <div class="meta">
       ${mostrador ? `<span class="chip2 mos">${ico('store')}Mostrador</span>` : `<span class="chip2">${ico(p.modalidad === 'despacho' ? 'bike' : 'store')}${p.modalidad === 'despacho' ? 'Despacho' : 'Retiro'}</span>`}
       ${mostrador ? '' : `<span class="chip2">${ico('clock')}${p.franja === 'Lo antes posible' ? 'Lo antes posible' : esc(p.franja)}</span>`}
-      ${p.pagado ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : p.fiado_nombre ? `<span class="chip2">Fiado: ${esc(p.fiado_nombre)}</span>` : `<span class="chip2 warn">Por cobrar</span>`}
+      ${chipPagoOnline(p)}
+      ${p.pagado && p.pago_online?.estado !== 'pagado' ? `<span class="chip2 ok">${ico('check')}Pagado</span>` : p.pagado ? '' : p.fiado_nombre ? `<span class="chip2">Fiado: ${esc(p.fiado_nombre)}</span>` : `<span class="chip2 warn">Por cobrar</span>`}
     </div>
     ${p.direccion ? `<div style="margin-top:6px">${esc(p.direccion)}${p.lat != null ? ` · <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener">Ver en el mapa (${(p.distancia_m / 1000).toLocaleString('es-CL', { maximumFractionDigits: 1 })} km)</a>` : ''}</div>` : ''}
     <ul>${p.items.map((i) => `<li><b>${i.cantidad}×</b> ${esc(i.nombre)}${i.agregados.length ? `<span class="ag">${esc(i.agregados.join(' · '))}</span>` : ''}${i.salsas?.length ? `<span class="ag">Salsas: ${esc(i.salsas.join(' · '))}</span>` : ''}${i.nota ? `<span class="ag obs">${ico('note')}${esc(i.nota)}</span>` : ''}</li>`).join('')}</ul>
@@ -992,6 +1015,7 @@ function tarjeta(p) {
     <div class="pie"><span>${[p.costo_despacho ? `incluye despacho ${clp(p.costo_despacho)}` : '', p.descuento ? `descuento ${clp(p.descuento)} (${esc(p.promo_nombre || '')})` : ''].filter(Boolean).join(' · ')}</span><span class="total num">${clp(p.total)}</span></div>
     ${botonMsj(p)}
     ${pasos[p.estado] || ''}
+    ${botonDevolver(p)}
     <div class="acc">
       ${p.telefono ? `<a href="${wa(p, msg)}" target="_blank" rel="noopener">${ico('msg')}WhatsApp</a>` : '<span aria-hidden="true" style="border:0"></span>'}
       <button data-acc="comanda" data-id="${p.id}">${ico('printer')}Comanda</button>
@@ -1086,11 +1110,30 @@ $('v-pedidos').onclick = async (e) => {
       case 'aceptar': comanda(id); await patch(id, { estado: 'preparacion' }); break;
       case 'listo': await patch(id, { estado: 'listo' }); break;
       case 'entregar': await patch(id, { estado: 'entregado' }); toast(`Pedido #${p.numero} entregado`); break;
-      case 'cobrar': return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Cobrar y entregar', enviar: (b) => patch(id, { ...b, estado: 'entregado' }) });
+      case 'cobrar': if (pagoEnCurso(p)) break; return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Cobrar y entregar', enviar: (b) => patch(id, { ...b, estado: 'entregado' }) });
       case 'comanda': comanda(id); break;
       case 'mensajes': return abrirMsj(id);
-      case 'pagado': return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Registrar pago', enviar: (b) => patch(id, b) });
-      case 'anular': if (confirm(`¿Anular el pedido #${p.numero}?`)) await patch(id, { estado: 'anulado' }); break;
+      case 'pagado': if (pagoEnCurso(p)) break; return abrirCobro({ titulo: `Pedido #${p.numero} · ${p.cliente}`, total: p.total, folio: p.folio_boleta, boton: 'Registrar pago', enviar: (b) => patch(id, b) });
+      case 'anular': if (confirm(`¿Anular el pedido #${p.numero}?`)) { const r = await patch(id, { estado: 'anulado' }); if (r.aviso_devolucion) alert(r.aviso_devolucion); } break;
+      case 'devolucion-manual': {
+        const r = (prompt('Mira el pago en el panel de la pasarela. Escribe "devuelto" si el dinero YA se devolvió al cliente, o "pagado" si NO se devolvió y el pago sigue vigente:', '') || '').trim().toLowerCase();
+        if (!r) break;
+        if (r !== 'devuelto' && r !== 'pagado') { alert('Escribe devuelto o pagado.'); break; }
+        if (!confirm(r === 'devuelto' ? `¿Confirmas que el pago del pedido #${p.numero} ya fue devuelto al cliente? Quedará registrado a tu nombre.` : `¿Confirmas que NO se devolvió y el pago sigue vigente? Quedará registrado a tu nombre.`)) break;
+        await api(`panel/pedidos/${id}/devolucion-manual`, { method: 'POST', body: { resultado: r } });
+        toast(r === 'devuelto' ? '✓ Marcado como devuelto' : '✓ El pago sigue vigente');
+        break;
+      }
+      case 'devolver': {
+        const po = p.pago_online;
+        if (po.estado === 'pagado' && !confirm(`¿Devolver el pago en línea de ${clp(po.monto)} (${po.nombre}) del pedido #${p.numero}? Se devuelve el total a la tarjeta del cliente y no se puede deshacer.`)) break;
+        // Flow avisa la devolución por correo: si el local no tiene uno en sus datos legales, se pide.
+        const email = po.pasarela === 'flow' && po.estado === 'pagado' && !M.local?.legal?.correo ? prompt('Flow necesita un correo para avisar la devolución (el tuyo o el del local):', '') : '';
+        if (email === null) break;
+        const r = await api(`panel/pedidos/${id}/devolver-pago`, { method: 'POST', body: { confirmar_monto: po.monto, ...(email ? { email } : {}) } });
+        toast(r.estado === 'devuelto' ? '✓ Pago devuelto' : 'Devolución en curso: la pasarela la está procesando');
+        break;
+      }
     }
     await refrescar();
   } catch (err) { alert(err.message); } finally { b.disabled = false; }

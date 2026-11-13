@@ -4,11 +4,14 @@
 // Se guarda al tiro con sus propios botones (no usa la barra "Guardar cambios" del formulario).
 export function crearPagosUI({ $, esc, api, toast, clp, esDueno, correo }) {
   const NOMBRE = { flow: 'Flow', mercadopago: 'Mercado Pago' };
-  const ESTADO = { creado: 'Iniciado', pagado: 'Pagado', rechazado: 'Rechazado', fallido: 'Falló al crear', expirado: 'Vencido' };
+  const ESTADO = { creado: 'Iniciado', pagado: 'Pagado', rechazado: 'Rechazado', fallido: 'Falló al crear', expirado: 'Vencido', devolucion_pendiente: 'Devolución en curso', devuelto: 'Devuelto' };
   const EVENTO = { confirmado: 'Pago confirmado', rechazado: 'Pago rechazado', pendiente: 'Pago pendiente', firma_invalida: 'Aviso con firma inválida (ignorado)',
     referencia_distinta: 'Aviso con referencia distinta (ignorado)', monto_distinto: 'Aviso con monto distinto (ignorado)', referencia_desconocida: 'Aviso de un pago desconocido',
     error_crear: 'La pasarela no respondió al crear', error_verificar: 'No se pudo verificar con la pasarela', sin_credenciales: 'Aviso sin credenciales guardadas',
-    pago_a_revisar: 'Pago a revisar' };
+    pago_a_revisar: 'Pago a revisar', expirado: 'Pago vencido (24 h sin pago)', error_conciliar: 'No se pudo consultar a la pasarela',
+    devolucion_iniciada: 'Devolución iniciada', devolucion_pendiente: 'Devolución pendiente en la pasarela', devuelto: 'Pago devuelto',
+    devolucion_rechazada: 'La pasarela no aceptó la devolución', devolucion_a_revisar: 'Devolución a revisar', devolucion_incierta: 'La pasarela no confirmó la devolución (se revisa sola)',
+    devolucion_manual: 'Devolución cerrada a mano', contracargo: 'Contracargo: el cliente disputó el pago', error_barrido: 'Error interno al revisar pagos' };
   const CAMPOS = {
     flow: [['api_key', 'API Key', 'En Flow: Mis datos → Integración → API Key.'], ['secret', 'Secret Key', 'Misma pantalla. Nunca la compartas por WhatsApp ni correo.']],
     mercadopago: [['access_token', 'Access Token', 'En Mercado Pago Developers: Tus integraciones → Credenciales. De prueba empieza con TEST-.'],

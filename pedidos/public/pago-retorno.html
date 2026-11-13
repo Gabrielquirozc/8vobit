@@ -34,10 +34,11 @@ const inicio = Date.now();
 function pintar(e) {
   app.removeAttribute('aria-busy');
   const seg = e.seguimiento ? `${BASE}/seguimiento?p=${encodeURIComponent(e.seguimiento)}` : '';
-  const pagado = e.estado === 'pagado', rechazado = e.estado === 'rechazado' || e.estado === 'fallido';
-  const esperando = !pagado && !rechazado;
+  const pagado = e.estado === 'pagado', devuelto = e.estado === 'devuelto' || e.estado === 'devolucion_pendiente', rechazado = e.estado === 'rechazado' || e.estado === 'fallido';
+  const esperando = !pagado && !rechazado && !devuelto;
   const largo = Date.now() - inicio > 90e3;
   const [titulo, texto] = pagado ? ['¡Pago recibido!', `Pagaste ${clp(e.monto)} con ${esc(e.pasarela)}${e.numero ? ` por el pedido #${e.numero}` : ''}.`]
+    : devuelto ? ['Pago devuelto', `Se devolvió ${clp(e.monto)} a tu tarjeta${e.numero ? ` por el pedido #${e.numero}` : ''}. Según tu banco, puede tardar unos días en verse.`]
     : rechazado ? ['El pago no se completó', 'No se hizo ningún cargo. Puedes intentarlo de nuevo desde tu pedido o pagar en el local.']
     : largo ? ['Todavía no recibimos la confirmación', `${esc(e.pasarela)} aún no nos confirma el pago. Si se hizo el cargo, el pedido se marcará pagado solo; revisa el estado de tu pedido en unos minutos.`]
     : ['Confirmando tu pago…', `Esperando la confirmación de ${esc(e.pasarela)}. No cierres esta página.`];

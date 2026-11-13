@@ -256,6 +256,8 @@ Pago con tarjeta en línea (ver la sección de abajo):
 | `GET /api/pagos/estado/:ref` | Estado del pago para esa página. Público (la referencia es aleatoria) |
 | `POST /api/pagos/webhook/flow\|mercadopago?ref=` | Aviso servidor a servidor de la pasarela: **la fuente de verdad** |
 | `GET\|PUT /api/panel/pagos`, `POST /api/panel/pagos/probar` | Configuración del local (solo el dueño) |
+| `POST /api/panel/pedidos/:id/devolver-pago` | Devolución total de un pago en línea (solo el dueño; cuerpo `{ confirmar_monto, email? }`) |
+| `POST /api/pagos/devolucion/flow?ref=` | Aviso de Flow por una devolución: solo dispara la consulta a su API |
 
 ## Pago con tarjeta en línea (Flow o Mercado Pago)
 
@@ -280,6 +282,79 @@ Cómo funciona:
 4. `/pago/retorno` solo muestra el estado: si el cliente cierra la pestaña, el aviso igual llega.
    Si llega un pago de un pedido ya cobrado o anulado, queda como "Pago a revisar" (devolver en la pasarela).
 
+### Si el webhook no llega (conciliación)
+
+El webhook puede perderse (túnel caído, reinicio). Por eso cada adaptador sabe **preguntarle a la
+pasarela** por una referencia (`consultar`: Flow `payment/getStatusByCommerceId`; Mercado Pago
+`GET /v1/payments/search?external_reference=`, tomando el pago aprobado), y se aplica con la misma
+validación que el webhook (referencia, monto, CLP, idempotente, transacción). La verdad la sigue dando la
+API de la pasarela, nunca el navegador. Se usa en dos lugares:
+
+- **Barrido** cada 5 minutos (`setInterval` con `unref`): intentos `creado`, `rechazado` o `expirado` de las
+  últimas 48 h (un pago tardío o reintentado con otra tarjeta entra aunque no llegue el webhook), hasta 40
+  por pasada; si la pasarela no responde se corta la pasada, y un error raro queda como evento sin tumbar el servidor.
+  Los eventos repetidos (error de la pasarela, monto distinto) se registran una sola vez.
+- **Página de retorno**: `GET /api/pagos/estado/:ref` concilia si el intento sigue abierto pasados
+  ~20 s, con un tope de una consulta a la pasarela cada 15 s por referencia.
+
+### Expiración
+
+Un intento `creado` con más de 24 h se concilia una última vez y, si sigue sin pago, pasa a `expirado`
+(el pedido queda por cobrar). Si la pasarela confirma después, **igual se acepta** (el dinero entró):
+`creado`, `rechazado` o `expirado` pasan a `pagado`; desde `pagado` en adelante solo cambia por una
+devolución. Para pruebas los plazos se pueden bajar con `PAGOS_ESPERA_S`, `PAGOS_LIMITE_S`,
+`PAGOS_EXPIRA_S` y `PAGOS_CONCILIAR_MS` (0 apaga el barrido); no hay que tocarlos en producción.
+
+### Devoluciones (totales)
+
+En el panel, el dueño ve en cada pedido "Pagado en línea · Flow/Mercado Pago" y el botón *Devolver pago
+en línea* (confirma el monto). `POST /api/panel/pedidos/:id/devolver-pago` (solo dueño, solo pedidos de
+su local, solo devolución total):
+
+- El intento se reserva (`devolucion_pendiente`) antes de llamar a la pasarela: un doble clic no devuelve dos veces.
+- Solo un rechazo explícito de la pasarela (4xx) vuelve el pago a `pagado`. Si no hay respuesta, hay un 5xx o la
+  respuesta es rara, la devolución pudo haberse creado: queda `devolucion_pendiente` (evento `devolucion_incierta`) y se
+  resuelve consultando a la pasarela (barrido, aviso de Flow o un nuevo clic del dueño). **Un reintento sobre una
+  devolución en curso solo consulta; nunca crea otra.** Si Flow nunca la deja consultar, se revisa en el panel de Flow.
+- **Mercado Pago**: `POST /v1/payments/:id/refunds` con `X-Idempotency-Key` = referencia; la devolución
+  suele quedar confirmada al tiro (`devuelto`).
+- **Flow**: `refund/create` (necesita `receiverEmail`: el correo del cuerpo o el correo legal del local;
+  `refundCommerceOrder` único por pago). Queda `devolucion_pendiente` hasta que Flow la confirme: avisa a
+  `/api/pagos/devolucion/flow?ref=` (el contenido del aviso no cuenta, solo dispara `refund/getStatus`) y
+  el barrido también la consulta.
+- Al confirmarse, el intento pasa a `devuelto` y el pedido vuelve a `pagado = 0` (por cobrar). Queda un evento
+  en `pago_eventos`. Si la pasarela la rechaza, el pago sigue vigente y se puede reintentar.
+- Anular un pedido pagado en línea **no** devuelve la plata sola: la respuesta del anulado trae
+  `aviso_devolucion` y el panel lo muestra; el pedido anulado queda marcado "Pago a revisar: devolver".
+- **Cierre manual** (`POST /api/panel/pedidos/:id/devolucion-manual`, solo dueño, pasados ~10 min en `devolucion_pendiente`):
+  el dueño declara "devuelto" o "pagado" tras mirar la pasarela. **Desviación consciente**: el sistema no puede
+  comprobarlo, así que ese cierre se basa en lo que afirma el dueño; queda el evento `devolucion_manual` con su nombre.
+- Tras un 4xx al crear la devolución, el pago solo vuelve a `pagado` si la pasarela confirma que no existe ninguna
+  devolución (o la rechazó); con una en proceso o ante cualquier duda queda en curso.
+- Si alguien cobra a mano un pedido con un pago en línea iniciado y sin terminar, el panel avisa (y dice hace cuánto
+  se inició) antes de registrar; la API no lo impide.
+- Si el total del pedido cambió respecto de lo cobrado, el pago queda `pagado` (el dinero entró) pero el pedido no se
+  marca y aparece "Pago a revisar". Un contracargo de Mercado Pago queda como evento visible para el dueño.
+
+**BLOQUEO: antes de `PAGOS_PRODUCCION=1`, correr esta lista de verificación en el sandbox real** (los formatos
+siguientes se escribieron sin poder leer la documentación oficial; están marcados "verificar en sandbox" en el código):
+
+- [ ] Flow `payment/create`: responde `url` + `token` + `flowOrder`, y el pago abre en `url?token=`.
+- [ ] Flow `payment/getStatusByCommerceId` (param `commerceId` = nuestra referencia): mismo formato que `getStatus`, y qué
+      responde (código HTTP y `code`) cuando el cliente aún no pagó. El código asume 400/404 = "aún nada".
+- [ ] Flow `refund/create`: nombres de los campos (`refundCommerceOrder`, `commerceTrxId`, `receiverEmail`, `amount`,
+      `urlCallBack`), que `refundCommerceOrder` repetido se rechace, y que el aviso a `urlCallBack` llegue (POST con `token`).
+- [ ] Flow `refund/getStatus`: estados (`created`, `accepted`, `refunded`, `rejected`, `canceled`) y que acepte
+      `refundCommerceOrder` además de `token` (se usa si se perdió la respuesta de `refund/create`).
+- [ ] Flow: monto mínimo de un pago en CLP (hoy 350 en `MONTO_MINIMO`).
+- [ ] Mercado Pago `POST /checkout/preferences`: responde 201 con `init_point` / `sandbox_init_point`; el webhook llega con
+      `data.id` en la URL y la firma `x-signature` coincide con el manifiesto `id:..;request-id:..;ts:..;`.
+- [ ] Mercado Pago `GET /v1/payments/search?external_reference=`: `results` con `status` y `transaction_amount`.
+- [ ] Mercado Pago `POST /v1/payments/:id/refunds` sin cuerpo = devolución total, con `X-Idempotency-Key`; y
+      `GET /v1/payments/:id/refunds` lista las devoluciones con su `status`.
+- [ ] Un pago de prueba de punta a punta por cada pasarela, con webhook, sin webhook (apagar el aviso y esperar al barrido)
+      y una devolución.
+
 El pago en línea **no** se guarda en `pedido_pagos` (esa tabla es el detalle del pago mixto): el
 pedido queda con `medio_pago = 'tarjeta'` y la caja lo cuenta como tarjeta, igual que un cobro con POS.
 
@@ -292,6 +367,8 @@ entorno por local) para que cada dueño conecte su cuenta sin tocar el servidor.
 
 - `PAGOS_CLAVE` (obligatoria para guardar credenciales): `openssl rand -hex 32`.
 - `PAGOS_URL_BASE` (obligatoria): `https://pedidos.8vobit.xyz`.
+- En el servidor real, `deploy/remoto.sh` agrega solo `PAGOS_CLAVE` (aleatoria, no se muestra; **respalda el
+  `.env`**: sin esa clave las credenciales guardadas no se pueden leer) y `PAGOS_URL_BASE` si faltan. No toca `PAGOS_PRODUCCION`.
 - `PAGOS_PRODUCCION=1` habilita los cobros reales en el servidor. Sin ella, solo modo de prueba.
 
 ### Probar en sandbox
@@ -341,7 +418,7 @@ entorno por local) para que cada dueño conecte su cuenta sin tocar el servidor.
 ## Pruebas
 
 ```bash
-npm test   # 100 pruebas de punta a punta, sin dependencias, ~6 s (test/pagos.test.mjs usa una pasarela simulada)
+npm test   # 118 pruebas de punta a punta, sin dependencias, ~6 s (test/pagos.test.mjs usa una pasarela simulada)
 ```
 
 Corren contra el servidor real con una base temporal y horario de 24 h.

@@ -2,6 +2,10 @@
 // Capa común sobre dos pasarelas (Flow y Mercado Pago); cada una es un adaptador con la misma forma:
 //   crearPago({ referencia, monto, asunto, email, urlRetorno, urlConfirmacion }) -> { url, externo }
 //   verificarCallback({ cuerpo, query, headers }) -> { referencia, estado, monto, moneda, externo, raw } | { error } | { ignorar }
+//   consultar({ referencia, externo }) -> lo mismo que verificarCallback, o { ninguno } (conciliación sin webhook)
+//   devolver({ referencia, externo, monto, email, urlConfirmacion }) -> { estado: 'devuelto'|'pendiente'|'rechazado', externo }
+//   consultarDevolucion({ referencia, externo, devolucionExterno }) -> { estado }
+// La parte que marca pagos (webhook y conciliación), vence intentos y devuelve está en lib/pagos-conciliar.mjs.
 //
 // Reglas:
 // - El monto sale siempre del pedido guardado (pedidos.total), nunca del navegador.
@@ -14,6 +18,7 @@
 import crypto from 'node:crypto';
 import * as FLOW from './pagos-flow.mjs';
 import * as MP from './pagos-mercadopago.mjs';
+import { crearConciliacion } from './pagos-conciliar.mjs';
 
 export const PASARELAS = { flow: FLOW, mercadopago: MP };
 const MODOS = ['sandbox', 'produccion'];
@@ -24,7 +29,7 @@ const MONTO_PRUEBA = 1000;
 const red = (e) => e.pasarela || e.name === 'TimeoutError' || (e.name === 'TypeError' && !!e.cause);
 const seguro = (u) => /^https:\/\//.test(u) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(u);
 
-export function crearPagos(db, { env = process.env, base = '', fetch = globalThis.fetch } = {}) {
+export function crearPagos(db, { env = process.env, base = '', fetch = globalThis.fetch, correoLocal = () => null } = {}) {
   db.exec(`
 CREATE TABLE IF NOT EXISTS local_pagos_config (
   local_id INTEGER PRIMARY KEY REFERENCES locales(id), pasarela TEXT, modo TEXT NOT NULL DEFAULT 'sandbox',
@@ -40,6 +45,8 @@ CREATE TABLE IF NOT EXISTS pago_eventos (
   id INTEGER PRIMARY KEY, local_id INTEGER, referencia TEXT, pasarela TEXT, tipo TEXT NOT NULL, detalle TEXT,
   creado TEXT NOT NULL DEFAULT (datetime('now','localtime')));
 `);
+  // Migración idempotente: id de la devolución en la pasarela (se agregó después de la primera versión).
+  if (!db.prepare('PRAGMA table_info(pago_intentos)').all().some((c) => c.name === 'devolucion_externo')) db.exec('ALTER TABLE pago_intentos ADD COLUMN devolucion_externo TEXT');
 
   const urlBase = String(env.PAGOS_URL_BASE || '').replace(/\/$/, '') + base;
   const urlBaseOk = !!env.PAGOS_URL_BASE && seguro(urlBase);
@@ -70,6 +77,7 @@ CREATE TABLE IF NOT EXISTS pago_eventos (
   const evento = (lid, referencia, pasarela, tipo, detalle) =>
     db.prepare('INSERT INTO pago_eventos (local_id,referencia,pasarela,tipo,detalle) VALUES (?,?,?,?,?)').run(lid ?? null, referencia ?? null, pasarela ?? null, tipo, detalle ? String(detalle).slice(0, 300) : null);
   const adaptador = (pasarela, modo, cred) => PASARELAS[pasarela].crearAdaptador({ apiUrl: apiUrl(pasarela, modo), cred, modo, fetch });
+  const urlDevolucion = (ref, pasarela) => `${urlBase}/api/pagos/devolucion/${pasarela}?ref=${ref}`;
   const urls = (ref, pasarela) => ({ urlRetorno: `${urlBase}/pago/retorno?ref=${ref}`, urlConfirmacion: `${urlBase}/api/pagos/webhook/${pasarela}?ref=${ref}` });
 
   // Configuración utilizable para cobrar ahora (o null, con el motivo para el panel).
@@ -156,6 +164,8 @@ CREATE TABLE IF NOT EXISTS pago_eventos (
     if (pedido.estado === 'anulado') return { error: 'Ese pedido está anulado.', status: 409 };
     if (pedido.pagado || pedido.fiado_nombre) return { error: 'Ese pedido ya está pagado.', status: 409 };
     if (!(pedido.total > 0)) return { error: 'El pedido no tiene monto a pagar.', status: 409 };
+    const min = PASARELAS[a.pasarela].MONTO_MINIMO || 0;
+    if (pedido.total < min) return { error: `${PASARELAS[a.pasarela].NOMBRE} no cobra pagos bajo ${min} pesos. Paga en el local.`, status: 409 };
     const e = emailDe(b, a.pasarela);
     if (e.error) return { ...e, status: 400 };
     // El monto es el total guardado del pedido: lo que mande el navegador no se usa.
@@ -174,7 +184,12 @@ CREATE TABLE IF NOT EXISTS pago_eventos (
     return crearIntento(local.id, null, { pasarela: f.pasarela, modo: 'sandbox', cred }, MONTO_PRUEBA, `Prueba de conexion ${local.nombre}`.slice(0, 80), e.email);
   }
 
-  // ---------- confirmación (webhook) ----------
+  // ---------- confirmación (webhook), conciliación, expiración y devoluciones: lib/pagos-conciliar.mjs ----------
+  const { aplicar, estadoConciliando, barrer, devolver, avisoDevolucion, resolverManual, manualS, intervalo } = crearConciliacion({
+    db, env, evento, descifrar, fila, adaptador, PASARELAS, red, REF, EMAIL, urlDevolucion, correoLocal });
+  // Barrido periódico (5 min): concilia los pagos abiertos sin esperar el webhook y vence los de más de 24 h.
+  if (intervalo > 0) setInterval(() => { barrer().catch(() => {}); }, intervalo).unref(); // el barrido nunca tumba el servidor
+
   async function confirmar(pasarela, { ref, cuerpo, query, headers }) {
     if (!PASARELAS[pasarela]) return { status: 404, body: { error: 'Pasarela desconocida' } };
     const it = REF.test(ref || '') ? db.prepare('SELECT * FROM pago_intentos WHERE referencia=? AND pasarela=?').get(ref, pasarela) : null;
@@ -188,42 +203,29 @@ CREATE TABLE IF NOT EXISTS pago_eventos (
       // 4xx de la pasarela (token falso, pago inexistente): se rechaza. Caída: 502 para que reintente.
       return e.status >= 400 && e.status < 500 ? { status: 400, body: { error: 'Confirmación no válida' } } : { status: 502, body: { error: 'Pasarela no disponible' } };
     }
-    if (v.ignorar) return { status: 200, body: { ok: true } };
-    const rechazo = (tipo, detalle) => { evento(it.local_id, ref, pasarela, tipo, detalle); return { status: 400, body: { error: 'Confirmación no válida' } }; };
-    if (v.error) return rechazo(v.error, v.detalle);
-    if (v.referencia !== it.referencia) return rechazo('referencia_distinta', `La pasarela informa ${v.referencia.slice(0, 40)}`);
-    if (v.estado === 'pagado' && (v.monto !== it.monto || v.moneda !== 'CLP')) return rechazo('monto_distinto', `Esperado ${it.monto} CLP, informado ${v.monto} ${v.moneda}`);
-
-    db.exec('BEGIN IMMEDIATE');
-    try {
-      const ahora = db.prepare('SELECT estado FROM pago_intentos WHERE id=?').get(it.id);
-      if (ahora.estado === 'pagado') { db.exec('COMMIT'); return { status: 200, body: { ok: true, repetido: true } }; }
-      const estado = v.estado === 'pagado' ? 'pagado' : v.estado === 'rechazado' ? 'rechazado' : ahora.estado;
-      db.prepare("UPDATE pago_intentos SET estado=?, externo=COALESCE(?,externo), raw=?, actualizado=datetime('now','localtime') WHERE id=?")
-        .run(estado, v.externo || null, JSON.stringify(v.raw || {}), it.id);
-      let tipo = estado === 'pagado' ? 'confirmado' : estado === 'rechazado' ? 'rechazado' : 'pendiente', detalle = null;
-      if (estado === 'pagado' && it.pedido_id) {
-        const p = db.prepare('SELECT id, total, pagado, estado FROM pedidos WHERE id=? AND local_id=?').get(it.pedido_id, it.local_id);
-        if (p && !p.pagado && p.estado !== 'anulado') {
-          db.prepare('UPDATE pedidos SET pagado=1, medio_pago=?, recibido=?, cobrado_en=?, cobrado_por=?, actualizado=? WHERE id=?')
-            .run('tarjeta', p.total, new Date().toTimeString().slice(0, 5), `Pago en línea (${PASARELAS[pasarela].NOMBRE})`, Date.now(), p.id);
-        } else { tipo = 'pago_a_revisar'; detalle = p?.estado === 'anulado' ? 'El pedido estaba anulado: revisa la devolución en la pasarela.' : 'El pedido ya estaba cobrado: revisa si corresponde devolver.'; }
-      }
-      evento(it.local_id, ref, pasarela, tipo, detalle);
-      db.exec('COMMIT');
-      return { status: 200, body: { ok: true } };
-    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return aplicar(it, v);
   }
 
   // Estado para la página de retorno (la referencia es aleatoria: quien la tiene, pagó ese pedido).
-  function estado(ref) {
+  function leerEstado(ref) {
     if (!REF.test(ref || '')) return null;
     const it = db.prepare('SELECT i.estado, i.monto, i.pasarela, p.numero, p.token, p.pagado FROM pago_intentos i LEFT JOIN pedidos p ON p.id=i.pedido_id WHERE i.referencia=?').get(ref);
     if (!it) return null;
     return { estado: it.estado, monto: it.monto, pasarela: PASARELAS[it.pasarela].NOMBRE, numero: it.numero ?? null, pedido_pagado: !!it.pagado, seguimiento: it.token || null };
   }
-  // Último pago en línea de un pedido (para el panel).
-  const dePedido = (pedidoId) => db.prepare("SELECT pasarela, estado, monto, creado FROM pago_intentos WHERE pedido_id=? AND estado IN ('pagado','rechazado','creado') ORDER BY (estado='pagado') DESC, id DESC LIMIT 1").get(pedidoId) || null;
+  // Con la página de retorno abierta: si el webhook no llega, se concilia con la pasarela (con límite de frecuencia).
+  const estado = (ref) => estadoConciliando(ref, leerEstado);
+  // Pago en línea que cuenta para un pedido (para el panel): el pagado o en devolución primero, luego el abierto.
+  // `reciente`: iniciado hace menos de 30 min (el cliente puede estar pagando ahora mismo).
+  const dePedido = (pedidoId) => {
+    const r = db.prepare(`SELECT pasarela, estado, monto, creado, creado >= datetime('now','localtime','-30 minutes') AS reciente,
+      (estado='devolucion_pendiente' AND actualizado <= datetime('now','localtime',?)) AS manual FROM pago_intentos
+      WHERE pedido_id=? AND estado IN ('pagado','devolucion_pendiente','devuelto','creado','rechazado','expirado')
+      ORDER BY CASE estado WHEN 'pagado' THEN 0 WHEN 'devolucion_pendiente' THEN 0 WHEN 'creado' THEN 1 ELSE 2 END, id DESC LIMIT 1`).get(`-${Math.round(manualS)} seconds`, pedidoId);
+    return r ? { ...r, nombre: PASARELAS[r.pasarela].NOMBRE, reciente: !!r.reciente, manual: !!r.manual } : null;
+  };
+  // Devolución total desde el panel (el servidor ya verificó rol y local).
+  const devolverPago = (local, pedido, b) => devolver(local, pedido, b);
 
-  return { config, guardarConfig, publico, iniciar, probar, confirmar, estado, dePedido };
+  return { config, guardarConfig, publico, iniciar, probar, confirmar, estado, dePedido, devolver: devolverPago, avisoDevolucion, resolverManual };
 }

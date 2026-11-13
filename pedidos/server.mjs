@@ -974,7 +974,7 @@ const INV = crearInventario(db, { combos: (lid) => PROMOS.combos(lid) });
 const CLI = crearClientes(db);
 const MSJ = crearMensajes(db);
 // Pago con tarjeta en línea (Flow o Mercado Pago, a la cuenta del local). Ver lib/pagos.mjs.
-const PAGOS = crearPagos(db, { base: BASE });
+const PAGOS = crearPagos(db, { base: BASE, correoLocal: (lid) => LEGAL.datosDe(lid)?.correo || null });
 // Toda cuenta tiene licencia. Las que vienen del seed traen sus condiciones (Gassuso: cliente fundador).
 {
   const s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
@@ -1103,8 +1103,15 @@ async function api(req, res, url) {
     const r = await PAGOS.confirmar(parts[2], { ref: url.searchParams.get('ref'), cuerpo, query: url.searchParams, headers: req.headers });
     return send(res, r.status, r.body);
   }
+  // Aviso de la pasarela por una devolución (Flow, urlCallBack): solo dispara la consulta a su API.
+  if (m === 'POST' && parts[0] === 'pagos' && parts[1] === 'devolucion' && parts[2] && !parts[3]) {
+    if (limitar(`webhook:${ipDe(req)}`, 120, 60e3)) return send(res, 429, { error: 'Demasiadas solicitudes' });
+    await readBytes(req, 16e3).catch(() => {});
+    const r = await PAGOS.avisoDevolucion(parts[2], url.searchParams.get('ref'));
+    return send(res, r.status, r.body);
+  }
   if (m === 'GET' && parts[0] === 'pagos' && parts[1] === 'estado' && parts[2] && !parts[3]) {
-    const e = PAGOS.estado(parts[2]);
+    const e = await PAGOS.estado(parts[2]); // si el webhook no llegó, concilia con la pasarela (con límite de frecuencia)
     return e ? send(res, 200, e) : send(res, 404, { error: 'No encontramos ese pago' });
   }
 
@@ -1277,6 +1284,23 @@ async function api(req, res, url) {
       if (r.error) return send(res, r.status || 400, { error: r.error });
       return send(res, 201, pedidoCompleto(p.id, lid));
     }
+    // Devolver un pago en línea (total). Solo el dueño; el pedido se busca dentro de su local.
+    if (m === 'POST' && parts[1] === 'pedidos' && parts[2] && parts[3] === 'devolver-pago' && !parts[4]) {
+      if (yo.rol !== 'dueno') return send(res, 403, { error: 'Las devoluciones de pagos en línea las hace el dueño del local.' });
+      if (limitar(`devolver:${lid}`, Number(process.env.PAGOS_DEVOLVER_MAX) || 20, 15 * 60e3)) return send(res, 429, { error: 'Demasiados intentos. Espera unos minutos.' });
+      const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      const r = await PAGOS.devolver(local, p, await readJson(req, 4e3));
+      return r.error ? send(res, r.status || 400, { error: r.error }) : send(res, 200, { ...r, pedido: pedidoCompleto(p.id, lid) });
+    }
+    // Cerrar a mano una devolución que quedó en curso (el dueño lo comprobó en la pasarela). Solo el dueño.
+    if (m === 'POST' && parts[1] === 'pedidos' && parts[2] && parts[3] === 'devolucion-manual' && !parts[4]) {
+      if (yo.rol !== 'dueno') return send(res, 403, { error: 'Solo el dueño del local cierra una devolución a mano.' });
+      const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
+      if (!p) return send(res, 404, { error: 'No existe' });
+      const r = PAGOS.resolverManual(local, p, await readJson(req, 2e3), yo.nombre);
+      return r.error ? send(res, r.status || 400, { error: r.error }) : send(res, 200, { ...r, pedido: pedidoCompleto(p.id, lid) });
+    }
     if (m === 'PATCH' && parts[1] === 'pedidos' && parts[2]) {
       const b = await readJson(req);
       const p = db.prepare('SELECT * FROM pedidos WHERE id=? AND local_id=?').get(Number(parts[2]), lid);
@@ -1334,7 +1358,10 @@ async function api(req, res, url) {
         INV.revertirPedido(lid, p.id, yo.nombre); // devuelve al stock lo que se había descontado
         if (p.promo_id) PROMOS.devolver(p.promo_id, p.promo_unidades || 0);
       }
-      return send(res, 200, pedidoCompleto(p.id, lid));
+      const out = pedidoCompleto(p.id, lid);
+      // Anular no devuelve la plata sola: si el cliente pagó en línea, el dueño debe devolverla.
+      if (estado === 'anulado' && out.pago_online?.estado === 'pagado') out.aviso_devolucion = `Este pedido se pagó en línea (${out.pago_online.nombre}, ${out.pago_online.monto} CLP): hay que devolver el pago.`;
+      return send(res, 200, out);
     }
     const r2 = (x, ok = 200) => (x.error ? send(res, x.status || 400, { error: x.error }) : send(res, ok, x));
     // Promociones y combos (plan Pro).

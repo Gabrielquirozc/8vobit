@@ -1,112 +1,19 @@
 // Pago con tarjeta en línea (Flow y Mercado Pago) de punta a punta, contra una pasarela simulada
 // en este mismo proceso: el servidor real le habla por HTTP igual que a Flow o Mercado Pago.
+// Conciliación, expiración y devoluciones: pagos-conciliar.test.mjs.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import http from 'node:http';
 import crypto from 'node:crypto';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import { firmar } from '../lib/pagos-flow.mjs';
+import { crearSim, levantar, FLOW, MP_TOKEN, MP_SECRETO, nuevoPedido } from './_sim.mjs';
 
-const ROOT = path.resolve(import.meta.dirname, '..');
-const FLOW = { api_key: 'flow-api-key-prueba-1234', secret: 'flow-secret-prueba-5678' };
-const MP_TOKEN = 'TEST-1234567890-abcdefghijklmnopqrstuvwxyz-ABCD';
-const MP_SECRETO = 'secreto-webhooks-mp-prueba';
-let srv, gw, B, G, dir;
+let S, B, pub, pas, leerDb, cliente;
+before(async () => { S = await levantar(crearSim()); ({ pas, leerDb, cliente } = S); pub = cliente(); });
+after(() => S?.cerrar());
 
-// ---------- pasarela simulada ----------
-// Flow: exige la firma HMAC en cada llamada. Mercado Pago: exige el Bearer del local.
-const pas = { flow: new Map(), mp: new Map(), mpPagos: new Map(), llamadas: [] };
-function pasarela(req, res) {
-  let raw = '';
-  req.on('data', (c) => { raw += c; });
-  req.on('end', () => {
-    const u = new URL(req.url, 'http://x'), json = (code, b) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)); };
-    pas.llamadas.push({ metodo: req.method, ruta: u.pathname });
-    if (u.pathname.startsWith('/flow/')) {
-      const p = Object.fromEntries(req.method === 'GET' ? u.searchParams : new URLSearchParams(raw));
-      const { s, ...resto } = p;
-      if (p.apiKey !== FLOW.api_key || s !== firmar(resto, FLOW.secret)) return json(401, { code: 108, message: 'Invalid signature' });
-      if (u.pathname === '/flow/payment/create') {
-        const token = crypto.randomBytes(12).toString('hex');
-        pas.flow.set(token, { commerceOrder: p.commerceOrder, amount: Number(p.amount), currency: p.currency, status: 1, email: p.email, urlConfirmation: p.urlConfirmation, urlReturn: p.urlReturn });
-        return json(200, { url: 'https://sandbox.flow.cl/app/web/pay.php', token, flowOrder: 1000 + pas.flow.size });
-      }
-      if (u.pathname === '/flow/payment/getStatus') {
-        const x = pas.flow.get(p.token);
-        return x ? json(200, { flowOrder: 1, commerceOrder: x.commerceOrder, status: x.status, amount: x.amount, currency: x.currency }) : json(400, { code: 105, message: 'Token not found' });
-      }
-    }
-    if (u.pathname.startsWith('/mp/')) {
-      if (req.headers.authorization !== `Bearer ${MP_TOKEN}`) return json(401, { message: 'invalid_token' });
-      if (req.method === 'POST' && u.pathname === '/mp/checkout/preferences') {
-        const b = JSON.parse(raw), id = `pref-${pas.mp.size + 1}`;
-        pas.mp.set(id, b);
-        return json(201, { id, init_point: `https://www.mercadopago.cl/checkout/v1/redirect?pref_id=${id}`, sandbox_init_point: `https://sandbox.mercadopago.cl/checkout/v1/redirect?pref_id=${id}` });
-      }
-      const m = /^\/mp\/v1\/payments\/(\d+)$/.exec(u.pathname);
-      if (m) { const x = pas.mpPagos.get(m[1]); return x ? json(200, { id: Number(m[1]), ...x }) : json(404, { message: 'Payment not found' }); }
-    }
-    json(404, { message: 'no' });
-  });
-}
-
-before(async () => {
-  gw = http.createServer(pasarela);
-  await new Promise((ok) => gw.listen(0, '127.0.0.1', ok));
-  G = `http://127.0.0.1:${gw.address().port}`;
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pedidos-pagos-'));
-  const seed = JSON.parse(fs.readFileSync(path.join(ROOT, 'seed/gassuso.json'), 'utf8'));
-  for (const d of '0123456') seed.local.horario[d] = ['00:00', '00:00'];
-  fs.writeFileSync(path.join(dir, 'seed.json'), JSON.stringify(seed));
-  srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server.mjs'], {
-    cwd: ROOT,
-    env: { ...process.env, PORT: '0', HOST: '127.0.0.1', DATA_DIR: path.join(dir, 'data'), SEED_FILE: path.join(dir, 'seed.json'), PANEL_PASSWORD: 'clave-de-prueba',
-      ADMIN_PASSWORD: 'admin-de-prueba', SESSION_SECRET: 'x'.repeat(64), PAGOS_CLAVE: 'p'.repeat(64), PAGOS_URL_BASE: 'https://pedidos.test',
-      FLOW_API_URL_SANDBOX: `${G}/flow`, MP_API_URL: `${G}/mp`, PAGOS_PRODUCCION: '' },
-    stdio: ['ignore', 'pipe', 'inherit'],
-  });
-  B = await new Promise((ok, fail) => {
-    srv.stdout.on('data', (d) => { const m = /http:\/\/([\d.]+:\d+)/.exec(String(d)); if (m) ok(`http://${m[1]}`); });
-    srv.on('exit', (c) => fail(new Error(`el servidor terminó con código ${c}`)));
-  });
-});
-after(async () => {
-  if (srv && srv.exitCode === null) await new Promise((ok) => { const t = setTimeout(ok, 3000); srv.once('exit', () => { clearTimeout(t); ok(); }); srv.kill(); });
-  gw?.close();
-  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-});
-
-// Cliente con su propia cookie (dueño de un local, otro local, cliente de la carta…).
-function cliente() {
-  const jar = new Map();
-  let cookie = '';
-  return async (method, p, body, headers = {}) => {
-    const form = typeof body === 'string';
-    const r = await fetch(B + p, { method, redirect: 'manual',
-      headers: { 'cf-connecting-ip': `10.1.${Math.random() * 255 | 0}.${Math.random() * 255 | 0}`, ...(body !== undefined ? { 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' } : {}), ...(cookie ? { Cookie: cookie } : {}), ...headers },
-      body: body === undefined ? undefined : form ? body : JSON.stringify(body) });
-    for (const sc of r.headers.getSetCookie()) { const [k, v] = sc.split(';')[0].split('='); jar.set(k, v); }
-    cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
-    const text = await r.text(); let json; try { json = JSON.parse(text); } catch { json = text; }
-    return { status: r.status, body: json, headers: r.headers };
-  };
-}
-const pub = cliente();
 let dueno;
-const productos = async (slug = 'gassuso') => (await pub('GET', `/api/locales/${slug}`)).body.categorias.flatMap((c) => c.productos).filter((p) => p.activo && !p.precio_pendiente && p.precio > 0 && !p.incluye);
-async function pedido(slug = 'gassuso') {
-  const [p] = await productos(slug);
-  const r = await pub('POST', `/api/locales/${slug}/pedidos`, { cliente: 'Ana', telefono: '+56 9 1111 2222', franja: 'Lo antes posible', items: [{ producto_id: p.id, cantidad: 2, agregados: [] }] });
-  assert.equal(r.status, 201, JSON.stringify(r.body));
-  return { ...r.body, precio: p.precio };
-}
+const pedido = (slug) => nuevoPedido(pub, slug);
 const webhookFlow = (ref, token) => pub('POST', `/api/pagos/webhook/flow?ref=${ref}`, `token=${token}`);
 const tokenFlowDe = (ref) => [...pas.flow].find(([, x]) => x.commerceOrder === ref)?.[0];
-const leerDb = (sql, ...a) => { const db = new DatabaseSync(path.join(dir, 'data', 'pedidos.db'), { readOnly: true }); try { return db.prepare(sql).all(...a); } finally { db.close(); } };
 
 test('sin configurar, la carta no ofrece tarjeta en línea y pagar responde 409', async () => {
   dueno = cliente();
