@@ -286,12 +286,12 @@ const TEXTOS = {
     'Freire 1458, Concepción, solo con hora agendada (' + AGENDA + '). Es un edificio: recibimos en el lobby, me escribes cuando llegues y bajo.'
   ],
   tiempo: [
-    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: con stock en Santiago son 2 a 7 días hábiles; una pantalla importada demora 7 a 14 días hábiles, y otras piezas importadas, 2 a 4 semanas. Te aviso siempre antes.'
+    'Formateo y limpieza quedan el mismo día. Si hay que pedir una pieza, depende: las pantallas se piden importadas y normalmente demoran 7 a 14 días hábiles (con stock local, de un día para otro); otras piezas, 2 a 7 días hábiles si hay stock en Santiago y 2 a 4 semanas si son importadas. Te aviso siempre antes.'
   ],
   // Pregunta de plazo que nombra la pieza: responde el plazo, no el precio (falla del 13-nov: contestaba $25.000).
   tiempo_pantalla: [
-    'La pantalla se pide importada: demora 7 a 14 días hábiles en llegar (si hay stock en Santiago, 2 a 7). Te aviso siempre antes de pedirla. ¿Me mandas el modelo exacto (etiqueta de abajo) y una foto? Así te cotizo la pieza.',
-    'Una pantalla importada demora 7 a 14 días hábiles; con stock en Santiago, 2 a 7. Antes de pedirla te aviso. ¿Me mandas el modelo exacto y una foto para cotizarte?'
+    'Las pantallas se piden importadas: normalmente demoran 7 a 14 días hábiles. Si hay stock local, puede ser de un día para otro. Te aviso siempre antes de pedirla. ¿Me mandas el modelo exacto (etiqueta de abajo) y una foto? Así te cotizo la pieza.',
+    'La pantalla se pide importada y normalmente demora 7 a 14 días hábiles; con stock local puede ser de un día para otro. Antes de pedirla te aviso. ¿Me mandas el modelo exacto y una foto para cotizarte?'
   ],
   descuento: [
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'
