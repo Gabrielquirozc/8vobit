@@ -36,6 +36,15 @@ licencias) se prepara en paralelo, pero sin frenar esa venta.
 - Sigue cobrando un % de cada venta, menos que Uber, pero un local con buen volumen paga bastante.
 - Anuncian "pronto" Payroll y planificación de turnos, algo que nosotros ya tenemos (Equipo).
 
+### Influye (influyeapp.cl): competidor local de Concepción (agregado el 2026-11-12)
+
+- Nació en Concepción en 2019. Según su web: tienda online **1 UF/mes con 0 % de comisión** (Webpay),
+  e-commerce plus 1,4 UF y punto de venta 0,5–0,7 UF + IVA con integración a PedidosYa/Uber. Confirmar precios.
+- Ya lo usan 6 locales del centro (Mega Sandwich, Nostro Burger, Sushi Tenta, Happy Point, Sushi al
+  hoyo, Buonissimo). Ver `PROSPECCION-CONCEPCION-CENTRO-2026-11.md` §2.
+- ⚠️ Frente a Influye, "la comisión más baja" deja de ser cierto. El plan Canal ($19.900 + 1 %) sale más
+  barato solo bajo ~$2.000.000/mes de venta web. Falta revisar qué gestión (caja, sueldos, despacho) ofrece.
+
 ### Dónde nos paramos
 
 | | Uber / PedidosYa | Justo Plus | Fudo Avanzado + Tu Delivery | **Nosotros** |

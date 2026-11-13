@@ -166,6 +166,9 @@ Orden: meta B primero; de la A, antes del 2º local A5, A6, A1 y A8; A2–A4 ent
 - [ ] **Viabilidad** (`VIABILIDAD.md`): la meta de $2M/mes a medio tiempo pide ~42 locales (con tarifa 1 %) y bajar el
       soporte a ≤ 0,5 h por local. Medir en Gassuso los pedidos web y las horas de soporte, y actualizar
       los supuestos al mes 3. Hitos: mes 4 Gassuso paga; mes 6, 3 locales más; mes 12, ≥ 10 locales.
+- [x] **Prospección del centro** (2026-11-12, `PROSPECCION-CONCEPCION-CENTRO-2026-11.md`): cliente ideal,
+      ~30 locales candidatos y descartes. Hallazgo: **Influye** (Concepción, 1 UF/mes, 0 % comisión) ya está
+      en 6 locales del centro; el argumento "comisión más baja" no se sostiene frente a él.
 - [ ] **Siguiente**: propuesta de una página para Gassuso (planes, piloto, puesta en marcha
       bonificada) e inicio de actividades en el SII (persona natural de primera categoría) antes del mes 4.
 - [x] Etapa 1 del control (2026-10-14): gastos, movimientos de caja (fondo, ingresos, retiros) y

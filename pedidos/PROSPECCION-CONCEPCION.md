@@ -1,5 +1,8 @@
 # Prospección de locales en Concepción
 
+> **Actualización 2026-11-12:** el centro tiene su propio listado y la definición de cliente ideal en
+> `PROSPECCION-CONCEPCION-CENTRO-2026-11.md`. Nuevo Mega Sandwich ya no califica (usa Influye).
+
 Escrito el 2026-10-20. Lista de locales candidatos para vender el sistema de pedidos (ver
 `ESTRATEGIA.md` §2 y §4). **Criterio de calificación:** el local SIRVE si hoy toma pedidos por
 WhatsApp / Instagram / teléfono y **no tiene web ni sistema de pedidos propio**. Si ya tiene su
