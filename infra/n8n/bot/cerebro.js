@@ -301,6 +301,16 @@ const TEXTOS = {
     '¡Bien, gracias! ¿Y tú? Cuéntame en qué te puedo ayudar con tu equipo 🙌',
     'Todo bien por acá, gracias. ¿Qué necesitas con tu notebook o PC?'
   ],
+  // Placa madre: sin precio aprobado, no se cotiza a ciegas; se deriva al diagnostico y Gabriel recibe el aviso.
+  placa_madre: [
+    'La placa madre no se cotiza a ciegas: primero hay que ver si el problema está ahí o en otra pieza. Eso se ve en el diagnóstico ($5.000, y se descuenta si haces el servicio). ¿Qué hace el equipo y qué modelo es? Así le aviso a Gabriel y te confirma si se puede.',
+    'Con la placa madre hay que revisar antes de decir nada: a veces es la placa y a veces otra pieza. Se ve en el diagnóstico ($5.000, se descuenta si haces el servicio). Cuéntame qué le pasa y el modelo exacto, y Gabriel te responde.'
+  ],
+  // Marcas: no se promete una lista cerrada; se pide modelo y sintoma para confirmar.
+  marcas: [
+    'Vemos notebooks y PC de varias marcas. Para confirmarte si lo podemos revisar, mándame el modelo exacto (sale en la etiqueta de abajo) y qué le pasa.',
+    'Sí, trabajamos con varias marcas de notebooks y PC. Pásame el modelo exacto y qué síntoma tiene, y te confirmo.'
+  ],
   descuento: [
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'
   ],
@@ -416,6 +426,7 @@ const REGLAS = [
   { id: 'domicilio', re: /\b(domicilio|retiran|van a buscar|ir a buscar|lo pasan a buscar)\b/ },
   { id: 'otros_disp', re: /\b(celulares?|iphone|telefono|tablet|ipad|consola|play ?station|nintendo|switch|impresoras?|camaras?|televisor(es)?|routers?|macbook|imac|mac)\b/ },
   { id: 'no_enciende', re: /\b(no (prende|enciende|parte|da imagen)|murio|pantalla negra)\b/ },
+  { id: 'placa_madre', re: /^(?!.*\b(celular|celulares|telefono|iphone|venden|vende|venta|comprar|compran)\b).*\b(placas? madres?|placas? bases?|tarjetas? madres?|motherboard|mainboard|reparacion de placa|reparan placas?)\b/ },
   { id: 'respaldo', re: /\b(perder (mis |los |todos mis )?(archivos|datos|fotos|documentos)|no perder (mis |los )?(archivos|datos|fotos)|respaldo|respaldar|backup)\b/ },
   { id: 'formateo', re: /\b(format|reinstal|windows)/ },
   { id: 'limpieza', re: /\b(limpieza|limpiar|mantencion|manutencion|pasta termica|se calienta|temperatura)\b/ },
@@ -427,6 +438,7 @@ const REGLAS = [
   { id: 'horario', re: /\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados)|estan (atendiendo|trabajando|abiertos))\b/ },
   { id: 'compara', re: /\b(cotizando|cotizo|comparando|voy a ir a otro lado|voy a ir a otra parte|me voy a otro lado|otros lados|varios lados|otras opciones|otro tecnico|otro servicio tecnico)\b/ },
   { id: 'precio_general', re: /\b(cuanto (sale|cuesta|cobr\w*|vale|saldria|seria)|precio|valor|cotiz\w*|presupuesto|costo)\b/ },
+  { id: 'marcas', re: /\b(trabajan|reparan|arreglan|revisan|ven) (con |equipos |notebooks? |pc |computadores )?(de )?(marca )?(asus|lenovo|hp|dell|acer|msi|samsung|toshiba|huawei|gigabyte|razer|alienware|sony|lg)\b|\bque marcas (trabajan|reparan|arreglan|revisan|ven|atienden)\b/ },
   { id: 'gracias', re: /^(?!.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo|(?<!gracias )(?<!gracias, )(otra vez|de nuevo)))(?:(muchas |mil |ya )?gracia+s|.{0,80}\bgracia+s[ !.]*$|((ah )?ya )?(bacan|genial|excelente|perfecto|super|buenisimo)[!. ]*(gracias)?|.*\b(te pasaste|nos vemos|quedo atent[oa])\b)/ },
   { id: 'ping', re: /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/ },
   { id: 'otra_persona', re: /^(hola|buenas|wena|holi)[ ,]+(gab|gabo|gabi|gabriel)\b|\bbusco a\b|mensaje equivocado|numero equivocado/ },
@@ -437,7 +449,7 @@ const REGLAS = [
 ];
 
 // Combinaciones: si hay intención de servicio, gana sobre precio_general, agendar o saludo.
-const SERVICIO = ['no_enciende','teclado','pantalla','bisagras','jack','bateria','memoria_sintoma','mem_miedo','mem_pieza_ya','mem_pieza','mem_compat','memoria_duda','upgrade_ram','ssd','ventilador','datos','programas','armado','remoto','domicilio','otros_disp','formateo','limpieza','lento'];
+const SERVICIO = ['placa_madre','no_enciende','teclado','pantalla','bisagras','jack','bateria','memoria_sintoma','mem_miedo','mem_pieza_ya','mem_pieza','mem_compat','memoria_duda','upgrade_ram','ssd','ventilador','datos','programas','armado','remoto','domicilio','otros_disp','formateo','limpieza','lento'];
 
 function normalizar(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1037,7 +1049,7 @@ const RE_WEB_TEMA = /\b(una web|pagina web|sitio web|landing|agenda online|pagin
 const EN_PALABRAS = /^(the|and|you|your|are|is|have|for|with|this|that|hello|hi|dear|please|we|our|can|will|would|thanks|thank|very|much|my|of|to|in|it|im)$/;
 const ES_PALABRAS = /^(el|la|los|las|de|que|y|en|un|una|por|para|con|mi|tu|su|es|no|si|como|hola|buenas|quiero|necesito|me|lo|se|del|al|mas|muy|pero|tengo)$/;
 // Textos de reparación que piden el modelo: la respuesta siguiente puede ser «no sé» o una foto.
-const MODELO_CLAVES = ['mem_compat', 'mem_pieza', 'mem_pieza_ya', 'pantalla', 'bateria', 'bisagras', 'ssd', 'memoria_sintoma', 'mem_d1', 'ram_1a'];
+const MODELO_CLAVES = ['marcas', 'mem_compat', 'mem_pieza', 'mem_pieza_ya', 'pantalla', 'bateria', 'bisagras', 'ssd', 'memoria_sintoma', 'mem_d1', 'ram_1a'];
 // Solo interrumpe al bot que Gabriel haya respondido: si pasan más de 10 min desde su último mensaje, el bot vuelve a responder.
 const PAUSA_GABRIEL = 10 * MIN;
 
@@ -1312,6 +1324,8 @@ const RESUMEN_ID = {
   objecion: 'objeción de precio',
   compara: 'compara',
   garantia_q: 'consulta de garantía',
+  placa_madre: 'Consulta por placa madre (sin precio aprobado)',
+  marcas: 'Consulta por marcas',
   mac_bloqueo: 'Mac con bloqueo de pantalla de inicio',
   dos_temas: 'dos temas',
   otra_persona: 'mensaje para otra persona',

@@ -1763,3 +1763,17 @@ test('de día, la conversación en curso ya no calla al bot; solo lo calla Gabri
   const g = decidir('cuanto demora una pantalla', Object.assign({}, a.contacto, { gabriel: tarde + 600e3 - 5 * 60e3 }), tarde + 600e3, links);
   assert.strictEqual(g.respuesta, null);
 });
+
+test('placa madre: sin precio inventado, deriva al diagnóstico; con síntoma "no prende" sigue no_enciende', () => {
+  const casos = { 'reparan placa madre?': 'placa_madre', 'cuanto sale reparar la placa madre': 'placa_madre', 'mi notebook no prende creo que es la placa madre': 'no_enciende', 'jack de carga soldado a la placa madre': 'jack' };
+  for (const [f, esperado] of Object.entries(casos)) assert.strictEqual(decidir(f, null, tarde, links).intencion, esperado, f);
+  const r = decidir('cuanto sale reparar la placa madre', null, tarde, links);
+  assert.match(r.respuesta, /diagnóstico \(\$5\.000/);
+  assert.doesNotMatch(r.respuesta, /\$(?!5\.000)\d/);
+});
+
+test('marcas: responde que se ven varias marcas y pide modelo; síntomas, Mac y celulares siguen su ruta', () => {
+  for (const f of ['trabajan con asus?', 'reparan notebooks lenovo?', 'trabajan con hp', 'ven equipos dell?']) assert.strictEqual(decidir(f, null, tarde, links).intencion, 'marcas', f);
+  const casos = { 'mi lenovo no prende': 'no_enciende', 'cambio de pantalla hp': 'pantalla', 'reparan macbook': 'otros_disp', 'arreglan celulares samsung': 'otros_disp', 'atienden los sabados': 'horario', 'cuanto sale formatear en un hp': 'formateo' };
+  for (const [f, esperado] of Object.entries(casos)) assert.strictEqual(decidir(f, null, tarde, links).intencion, esperado, f);
+});

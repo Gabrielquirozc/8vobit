@@ -57,7 +57,7 @@ const FAMILIAS = {
   humano: [['quiero hablar con una persona', 'humano'], ['eres un bot?', 'es_bot'], ['hay alguien ahi?', 'humano']],
   estado: [['ya esta listo mi equipo?', 'estado'], ['alguna novedad del pc?', 'estado']],
   logistica: [['llegue, estoy abajo', 'llegada'], ['estoy afuera', 'llegada'], ['ya agende para el lunes', 'agendo']],
-  otros: [['reparan celulares?', 'otros_disp'], ['tienen impresoras?', 'otros_disp'], ['trabajan con asus?', 'sin_intencion'], ['hacen reparaciones a placas madres?', 'sin_intencion'], ['tengo una duda', 'sin_intencion'], ['necesito ayuda urgente', 'urgencia']]
+  otros: [['reparan celulares?', 'otros_disp'], ['tienen impresoras?', 'otros_disp'], ['trabajan con asus?', 'marcas'], ['trabajan con lenovo?', 'marcas'], ['que marcas trabajan', 'marcas'], ['hacen reparaciones a placas madres?', 'placa_madre'], ['cuanto sale reparar la placa madre', 'placa_madre'], ['tengo una duda', 'sin_intencion'], ['necesito ayuda urgente', 'urgencia']]
 };
 const ADJUNTOS = ['audio', 'image', 'video', 'share', 'otro'];
 
