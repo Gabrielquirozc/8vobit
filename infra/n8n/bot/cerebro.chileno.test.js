@@ -56,6 +56,7 @@ BASES.forEach((b, i) => {
         const r = llamar({ texto }, previo, ahora);
         invariantesRespuesta(r, { texto });
         if (estado === 'nuevo') assert.ok(ok(b.esperada, r.intencion), 'intencion ' + r.intencion);
+        if (estado === 'nuevo' && [].concat(b.esperada)[0] === 'urgente') assert.strictEqual(r.aviso, 'urgente', 'liquido: aviso urgente a cualquier hora');
         if (estado === 'Gabriel hace 5 min') assert.strictEqual(r.respuesta, null, 'Gabriel activo calla al bot');
         if (estado === 'Gabriel hace 11 min') {
           const sin = llamar({ texto }, Object.assign(armar(ahora), { gabriel: 0 }), ahora);

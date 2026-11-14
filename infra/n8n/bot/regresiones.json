@@ -1,0 +1,905 @@
+{
+  "nota": "Fallos reales encontrados por el estres y por los revisores, congelados como regresiones. t = mensaje; n = intenciones aceptables con contacto NUEVO; p = con historial (contacto previo, p omitido = igual que n); noNada = nunca responder 'De nada'; aviso = aviso esperado. Cada caso se prueba a 03:00 y 15:00.",
+  "casos": [
+    {
+      "t": "el pc quedo malo de nuevo, gracias",
+      "n": [
+        "dano_general",
+        "sin_intencion"
+      ],
+      "p": [
+        "garantia"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "hola, el notebook se apaga solo gracias",
+      "n": [
+        "dano_general"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "gracias, pero se me rompio otra vez",
+      "n": [
+        "sin_intencion",
+        "dano_general",
+        "garantia"
+      ],
+      "p": [
+        "garantia"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "gracias, mi pc esta fallando de nuevo",
+      "n": [
+        "dano_general",
+        "garantia"
+      ],
+      "p": [
+        "garantia"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "gracias, y tambien tengo otro notebook que no funciona",
+      "n": [
+        "dano_general"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "gracias, pero sigue fallando",
+      "n": [
+        "garantia"
+      ],
+      "noNada": true,
+      "aviso": "urgente"
+    },
+    {
+      "t": "gracias, sigue igual",
+      "n": [
+        "garantia"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "gracias, me avisas cuando este listo?",
+      "n": [
+        "sin_intencion",
+        "estado"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "gracias, mañana lo llevo pa q lo revisen",
+      "n": [
+        "sin_intencion",
+        "voy",
+        "agendar"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "como te pago? gracias",
+      "n": [
+        "sin_intencion"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "me puedes llamar? gracias",
+      "n": [
+        "sin_intencion"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "tienes el numero de cuenta? gracias",
+      "n": [
+        "sin_intencion"
+      ],
+      "noNada": true
+    },
+    {
+      "t": "ya no falla, gracias!",
+      "n": [
+        "gracias"
+      ]
+    },
+    {
+      "t": "perfecto, mi notebook ya funciona",
+      "n": [
+        "gracias"
+      ]
+    },
+    {
+      "t": "muchas gracias",
+      "n": [
+        "gracias"
+      ]
+    },
+    {
+      "t": "ya retire el pc, gracias",
+      "n": [
+        "gracias"
+      ]
+    },
+    {
+      "t": "gracias, el pc quedo perfecto",
+      "n": [
+        "gracias"
+      ]
+    },
+    {
+      "t": "derrame cerebral jaja",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "me derrame de la risa",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "mi tio tuvo un derrame",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "se me derramo cafe en el notebook",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "derrame de agua en mi pc",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "derrame jugo en el teclado",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "trabajan hp? busco trabajo",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "soy proveedor de pantallas",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "vendo repuestos de notebook, te interesa?",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "trabajan hp los sabados?",
+      "n": [
+        "horario"
+      ]
+    },
+    {
+      "t": "arreglan teclados de hp?",
+      "n": [
+        "teclado"
+      ]
+    },
+    {
+      "t": "reparan pantallas lg",
+      "n": [
+        "pantalla"
+      ]
+    },
+    {
+      "t": "trabajan con hp?",
+      "n": [
+        "marcas"
+      ]
+    },
+    {
+      "t": "de que marca es el ssd",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "que marca de ram usan",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "son wd?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "de q marca es el disco",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "usan kingston o wd",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "puro wd?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "las piezas son originales?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "originales?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "trabajan con wd?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "tienen kingston?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "es samsung el ssd?",
+      "n": [
+        "marca_pieza"
+      ]
+    },
+    {
+      "t": "mi ssd wd no funciona",
+      "n": [
+        "ssd",
+        "dano_general"
+      ]
+    },
+    {
+      "t": "cuanto sale un ssd wd",
+      "n": [
+        "ssd"
+      ]
+    },
+    {
+      "t": "quedo pegado de nuevo",
+      "n": [
+        "sin_intencion",
+        "lento",
+        "dano_general"
+      ],
+      "p": [
+        "garantia"
+      ]
+    },
+    {
+      "t": "quedo pegada otra vez",
+      "n": [
+        "sin_intencion",
+        "lento",
+        "dano_general"
+      ],
+      "p": [
+        "garantia"
+      ]
+    },
+    {
+      "t": "pantalla azul de nuevo",
+      "n": [
+        "sin_intencion",
+        "dano_general"
+      ],
+      "p": [
+        "garantia"
+      ]
+    },
+    {
+      "t": "se volvio a echar a perder",
+      "n": [
+        "sin_intencion",
+        "dano_general",
+        "garantia"
+      ],
+      "p": [
+        "garantia"
+      ]
+    },
+    {
+      "t": "otra vez yo, tengo un pc que no prende",
+      "n": [
+        "no_enciende"
+      ],
+      "p": [
+        "no_enciende",
+        "garantia"
+      ]
+    },
+    {
+      "t": "de nuevo no me carga la agenda",
+      "n": [
+        "agendar"
+      ]
+    },
+    {
+      "t": "de nuevo tengo que pedir hora, no me funciona el formulario",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "tienes hora para mañana?",
+      "n": [
+        "agendar"
+      ]
+    },
+    {
+      "t": "cuanto sale formatear para mañana",
+      "n": [
+        "formateo"
+      ]
+    },
+    {
+      "t": "para mañana estaria listo?",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "me urge para mañana",
+      "n": [
+        "urgencia"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "lo necesito para mañana",
+      "n": [
+        "urgencia"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "weeena 👍",
+      "n": [
+        "saludo"
+      ]
+    },
+    {
+      "t": "hhholaa",
+      "n": [
+        "saludo"
+      ]
+    },
+    {
+      "t": "es urrrgente",
+      "n": [
+        "urgencia"
+      ]
+    },
+    {
+      "t": "me cotizas cambiar la bbbateria?",
+      "n": [
+        "bateria"
+      ]
+    },
+    {
+      "t": "tiene arrrreglo mi notebook?",
+      "n": [
+        "dano_general"
+      ]
+    },
+    {
+      "t": "voy a ir a otttro lado",
+      "n": [
+        "compara"
+      ]
+    },
+    {
+      "t": "hola! como estas?",
+      "n": [
+        "saludo",
+        "como_estas"
+      ]
+    },
+    {
+      "t": "estas?",
+      "n": [
+        "ping"
+      ]
+    },
+    {
+      "t": "cuanto es?",
+      "n": [
+        "precio_general"
+      ]
+    },
+    {
+      "t": "y donde es?",
+      "n": [
+        "ubicacion"
+      ]
+    },
+    {
+      "t": "cuanto te demoras en instalarlas",
+      "n": [
+        "tiempo"
+      ]
+    },
+    {
+      "t": "hoy desde que hora?",
+      "n": [
+        "horario"
+      ]
+    },
+    {
+      "t": "tienen hora?",
+      "n": [
+        "agendar"
+      ]
+    },
+    {
+      "t": "cuanto demora cambiar la pantalla",
+      "n": [
+        "tiempo_pantalla"
+      ]
+    },
+    {
+      "t": "hola gabo, te escribo por el notebook",
+      "n": [
+        "otra_persona"
+      ]
+    },
+    {
+      "t": "hola buenos dias, con gabriel?",
+      "n": [
+        "otra_persona"
+      ]
+    },
+    {
+      "t": "quiero comprar un notebook",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "tienes un notebook a la venta?",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "el link no funciona",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "la pagina no anda",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "falla de luz en el edificio?",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "no falla nada",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "mi macbook quedo en la pantalla de inicio con bloqueo",
+      "n": [
+        "mac_bloqueo"
+      ]
+    },
+    {
+      "t": "tienes el numero de cuenta?",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "Hola se me le rompio el pc",
+      "n": [
+        "dano_general"
+      ]
+    },
+    {
+      "t": "no funciona",
+      "n": [
+        "dano_general"
+      ]
+    },
+    {
+      "t": "se echo a perder el computador",
+      "n": [
+        "dano_general"
+      ]
+    },
+    {
+      "t": "mi compu esta mala",
+      "n": [
+        "dano_general"
+      ]
+    },
+    {
+      "t": "el pc quedo malo",
+      "n": [
+        "dano_general"
+      ]
+    },
+    {
+      "t": "buenas, mi compu anda muy lenta",
+      "n": [
+        "lento"
+      ]
+    },
+    {
+      "t": "no me enciende el notebook",
+      "n": [
+        "no_enciende"
+      ]
+    },
+    {
+      "t": "se me quedo pegado el computador",
+      "n": [
+        "lento"
+      ]
+    },
+    {
+      "t": "estoy cotizando en otros lados",
+      "n": [
+        "compara"
+      ]
+    },
+    {
+      "t": "uff esta caro",
+      "n": [
+        "objecion"
+      ]
+    },
+    {
+      "t": "oie y cuanto demoran?",
+      "n": [
+        "tiempo"
+      ]
+    },
+    {
+      "t": "se me cayo cafe en el notebook",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "mi notebook esta mojado",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "AGENDA",
+      "n": [
+        "web_inicio",
+        "agendar",
+        "demo"
+      ]
+    },
+    {
+      "t": "eres un bot?",
+      "n": [
+        "es_bot"
+      ]
+    },
+    {
+      "t": "quiero hablar con una persona",
+      "n": [
+        "humano"
+      ]
+    },
+    {
+      "t": "mi clave de windows es Hunter22",
+      "n": [
+        "clave",
+        "formateo"
+      ],
+      "oculto": true
+    },
+    {
+      "t": "la contraseña es abc12345 no me deja entrar",
+      "n": [
+        "clave",
+        "formateo"
+      ],
+      "oculto": true
+    },
+    {
+      "t": "hello, do you repair laptops?",
+      "n": [
+        "spam",
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "estoy en el lobbbby",
+      "n": [
+        "llegada"
+      ]
+    },
+    {
+      "t": "cual es la direcccccion?",
+      "n": [
+        "ubicacion"
+      ]
+    },
+    {
+      "t": "necesito instalar offffice",
+      "n": [
+        "programas"
+      ]
+    },
+    {
+      "t": "cuanto sale un ssssd wd",
+      "n": [
+        "ssd"
+      ]
+    },
+    {
+      "t": "y demo?",
+      "n": [
+        "web_inicio",
+        "demo"
+      ]
+    },
+    {
+      "t": "y si vuelvvve a fallar tiene garantia?",
+      "n": [
+        "garantia_q",
+        "garantia"
+      ]
+    },
+    {
+      "t": "cambias la pantalla de un iphone",
+      "n": [
+        "otros_disp"
+      ]
+    },
+    {
+      "t": "arreglas la pantalla de mac?",
+      "n": [
+        "otros_disp"
+      ]
+    },
+    {
+      "t": "limpieza de ventiladores y pasta termica",
+      "n": [
+        "limpieza"
+      ]
+    },
+    {
+      "t": "cuantos dias se demo",
+      "n": [
+        "tiempo"
+      ]
+    },
+    {
+      "t": "se me mojo el pc",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "se mojo el notebook",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "se cayo cafe al notebook",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "le cayo agua",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "le tire cafe al computador",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "me cayo te",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "se me derramo el jugo en la compu",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "cayo liquido en mi laptop",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "mi compu quedo mojada",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "tiene humedad el notebook",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "se me mojo la compu po",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "pucha, se me cayo cafe en el note",
+      "n": [
+        "urgente"
+      ],
+      "aviso": "urgente"
+    },
+    {
+      "t": "moje el pan en la sopa",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "se mojo la ropa",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "cae agua en mi casa",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "se me derramo el jugo en el piso",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "me moje con la lluvia",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "tengo una ram kingston de 8gb, es compatible?",
+      "n": [
+        "mem_compat"
+      ]
+    },
+    {
+      "t": "el ssd kingston sirve para mi notebook?",
+      "n": [
+        "mem_compat"
+      ]
+    },
+    {
+      "t": "compre un ssd kingston, me lo instalan?",
+      "n": [
+        "mem_pieza_ya"
+      ]
+    },
+    {
+      "t": "mi disco es seagate, se puede recuperar la info?",
+      "n": [
+        "mem_compat"
+      ]
+    },
+    {
+      "t": "el teclado tiene un switch malo",
+      "n": [
+        "teclado"
+      ]
+    },
+    {
+      "t": "limpieza y revisar el switch del teclado",
+      "n": [
+        "teclado"
+      ]
+    },
+    {
+      "t": "tienen demo?",
+      "n": [
+        "web_inicio",
+        "demo"
+      ]
+    },
+    {
+      "t": "se mojo la rrropa",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "se me derramo el jugo en el pppiso",
+      "n": [
+        "sin_intencion"
+      ]
+    },
+    {
+      "t": "el telcado tiene un switch malo",
+      "n": [
+        "sin_intencion",
+        "teclado"
+      ]
+    },
+    {
+      "t": "arreglan nintendo switch",
+      "n": [
+        "otros_disp"
+      ]
+    }
+  ]
+}

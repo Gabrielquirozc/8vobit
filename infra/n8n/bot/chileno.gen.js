@@ -55,6 +55,19 @@ add('marcas_placa', [
   ['trabajan con asus?', 'marcas'], ['arreglan lenovo?', 'marcas'], ['reparan hp?', 'marcas'], ['hacen reparaciones a placas madres?', 'placa_madre'], ['arreglan la placa madre?', 'placa_madre'], ['reparan macbook?', 'otros_disp'],
   ['reparan celulares?', 'otros_disp'], ['arreglan impresoras?', 'otros_disp'], ['reparan consolas?', 'otros_disp']
 ]);
+add('marca_pieza', [
+  ['de qué marca es el ssd?', 'marca_pieza'], ['de q marca es el disco', 'marca_pieza'], ['qué marca de ram usan?', 'marca_pieza'], ['son wd?', 'marca_pieza'], ['es wd?', 'marca_pieza'], ['usan kingston o wd', 'marca_pieza'], ['puro wd?', 'marca_pieza'],
+  ['las piezas son originales?', 'marca_pieza'], ['originales?', 'marca_pieza'], ['qué marca de batería ponen?', 'marca_pieza'], ['trabajan con wd?', 'marca_pieza'], ['tienen kingston?', 'marca_pieza'], ['usan piezas genéricas?', 'marca_pieza'],
+  ['mi ssd wd no funciona', 'ssd'], ['cuánto sale un ssd wd', 'ssd'], ['cuánto cuesta una ram kingston', 'upgrade_ram']
+]);
+add('liquidos', [
+  ['se me mojó el pc', 'urgente'], ['se mojó el notebook', 'urgente'], ['se cayó café al notebook', 'urgente'], ['le cayó agua', 'urgente'], ['le tiré café al computador', 'urgente'], ['me cayó té', 'urgente'], ['se me derramó el jugo en la compu', 'urgente'], ['cayó líquido en mi laptop', 'urgente'], ['mi notebook está mojado', 'urgente'], ['mi compu quedó mojada', 'urgente'], ['tiene humedad el notebook', 'urgente'], ['se me mojó la compu po', 'urgente'], ['pucha, se me cayó café en el note', 'urgente'],
+  ['moje el pan en la sopa', 'sin_intencion'], ['se mojó la ropa', 'sin_intencion'], ['cae agua en mi casa', 'sin_intencion'], ['derrame cerebral jaja', 'sin_intencion'], ['se me derramó el jugo en el piso', 'sin_intencion'], ['me mojé con la lluvia', 'sin_intencion']
+]);
+add('compat_y_otros', [
+  ['tengo una ram kingston de 8gb, es compatible?', 'mem_compat'], ['el ssd kingston sirve para mi notebook?', 'mem_compat'], ['compré un ssd kingston, me lo instalan?', 'mem_pieza_ya'], ['mi disco es seagate, se puede recuperar la info?', 'mem_compat'],
+  ['el teclado tiene un switch malo', 'teclado'], ['limpieza y revisar el switch del teclado', 'teclado'], ['arreglan nintendo switch', 'otros_disp'], ['tienen demo?', 'web_inicio']
+]);
 add('objeciones', [
   ['está caro', 'objecion'], ['uff es caro', 'objecion'], ['qué caro', 'objecion'], ['es muy caro para mí', 'objecion'], ['no me alcanza la plata', 'objecion'], ['no tengo plata ahora', 'objecion'], ['me sale muy caro', 'objecion'],
   ['estoy cotizando en otros lados', 'compara'], ['voy a ir a otro lado', 'compara'], ['estoy comparando precios', 'compara'], ['me voy a otro técnico', 'compara'], ['estoy viendo otras opciones', 'compara'],
@@ -62,7 +75,7 @@ add('objeciones', [
 ]);
 add('cortesia', [
   ['hola', 'saludo'], ['holaa', 'saludo'], ['hola buenas tardes', 'saludo'], ['buenas', 'saludo'], ['buenos días', 'saludo'], ['wena', 'saludo'], ['oie', 'saludo'], ['hola, una consulta', 'sin_intencion'], ['hola buenas noches', 'saludo'], ['hooola', 'saludo'],
-  ['hola cómo estás', 'saludo'], ['q tal', ['como_estas', 'saludo']], ['qué tal', ['como_estas', 'saludo']], ['cómo estás?', 'como_estas'], ['cómo estai', 'como_estas'], ['todo bien?', 'sin_intencion'],
+  ['hola cómo estás', ['saludo', 'como_estas']], ['q tal', ['como_estas', 'saludo']], ['qué tal', ['como_estas', 'saludo']], ['cómo estás?', 'como_estas'], ['cómo estai', 'como_estas'], ['todo bien?', 'sin_intencion'],
   ['gracias', 'gracias'], ['muchas gracias', 'gracias'], ['gracias po', 'gracias'], ['ya, gracias', 'gracias'], ['dale gracias', 'gracias'], ['bacán gracias', 'gracias'], ['mil gracias', 'gracias'], ['ya perfecto', 'gracias'], ['genial, muchas gracias!', 'gracias'], ['ya buenísimo', 'gracias']
 ]);
 add('para_gabriel', [

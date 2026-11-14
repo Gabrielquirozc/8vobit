@@ -311,6 +311,15 @@ const TEXTOS = {
     'Vemos notebooks y PC de varias marcas. Para confirmarte si lo podemos revisar, mándame el modelo exacto (sale en la etiqueta de abajo) y qué le pasa.',
     'Sí, trabajamos con varias marcas de notebooks y PC. Pásame el modelo exacto y qué síntoma tiene, y te confirmo.'
   ],
+  // Marca de la PIEZA (no del equipo). Dato aprobado el 13-nov: se usa la marca que haya; no se promete marca ni stock.
+  marca_pieza: [
+    'Trabajamos con la marca que haya disponible en ese momento. Nos gusta WD, pero el stock cambia y no siempre llega. Cuando te cotizo te confirmo la marca y el modelo exacto que te instalaría.',
+    'Usamos la marca que tengamos disponible al momento de la reparación. Nos gusta WD, pero el stock cambia y a veces no llega. Cuando te cotice, te confirmo la marca y el modelo exacto que te pondríamos.'
+  ],
+  marca_pieza_modelo: [
+    'Trabajamos con la marca que haya disponible en ese momento. Nos gusta WD, pero el stock cambia y no siempre llega. Cuando te cotizo te confirmo la marca y el modelo exacto. ¿Me mandas el modelo de tu equipo (sale en la etiqueta de abajo)?',
+    'Usamos la marca que tengamos disponible al momento de la reparación. Nos gusta WD, pero el stock cambia y a veces no llega. Cuando te cotice te confirmo marca y modelo. ¿Me pasas el modelo de tu equipo (etiqueta de abajo)?'
+  ],
   descuento: [
     '¡Sí! Estudiantes tienen 10% en la mano de obra mostrando la credencial 🙌'
   ],
@@ -386,9 +395,11 @@ const REGLAS = [
   { id: 'llegada', re: /^afuera[^a-z0-9]*$|\b(llegu[eé]|legue|estoy (afuera|abajo|aca|aqui|en el hall|en la puerta|en el lobby|esperando)|ya estoy (aca|aqui|afuera|abajo)|voy llegando|estoy llegando)\b/, urgente: true },
   { id: 'garantia', re: /\b(sigue (igual|fallando|con)|volvio a (fallar|pasar)|otra vez (lo mismo|se)|no quedo bien)\b/, urgente: true },
   // «Otra vez / de nuevo» + daño: solo para quien ya tuvo servicio (contacto que no es nuevo); ver ctxNuevo en clasificar().
-  { id: 'garantia_repite', re: /^(?!.*\b(link|enlace|pagina|web|sitio|app|aplicacion|whatsapp|instagram|wifi|internet|luz|ascensor|cuenta|correo|venta|vender|comprar|compra|agenda|formulario|hora|reserva|cita|turno)\b)(?=.*(otra vez|de nuevo))(?=.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo))/, urgente: true },
+  { id: 'garantia_repite', re: /^(?!.*\b(link|enlace|pagina|web|sitio|app|aplicacion|whatsapp|instagram|wifi|internet|luz|ascensor|cuenta|correo|venta|vender|comprar|compra|agenda|formulario|hora|reserva|cita|turno)\b)(?=.*(otra vez|de nuevo|nuevamente|se volvio a|vuelve a))(?=.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo|quedo pegad[oa]|pantalla azul|se volvio a (echar a perder|romper|apagar|calentar|colgar|pegar)|volvio a (fallar|pasar|romperse)|se echar a perder))/, urgente: true },
   { id: 'garantia_q', re: /\b(tiene(n)? garantia|dan garantia|hay garantia|con garantia|que garantia)\b|garantia\?/ },
-  { id: 'urgente', re: /\b(se mojo|derram\w*|le cayo (agua|cafe|te|jugo|bebida)|se (me )?llen[oa] de (agua|liquido)|se me cayo (el |la )?(agua|cafe|liquido|te|jugo)|mojad[oa]|liquido)\b/, urgente: true },
+  // Liquidos y equipo mojado: critico de seguridad (no prender ni cargar). Sin equipo cerca, ropa/pan/piso/casa no cuentan.
+  { id: 'urgente', re: /^(?!.*\b(cerebral|risa|bilis|pleural|sangre|petroleo)\b)(?!(?!.*\b(pc|notebook|note|compu|compus|computador|computadora|laptop|portatil|teclado|equipo|macbook|mac|cargador|pantalla)\b).*\b(r{1,2}op{1,2}a|pan|p{1,2}is{1,2}o|pelo|zapatilla\w*|zapato\w*|casa|techo|calle|suelo|toalla|cama|auto|lluvia|polera|pantalon)\b)(?:.*\b(se (me |le |nos )?mojo|derram\w*(?=.*\b(cafe|agua|te|jugo|bebida|liquido|cerveza|vino|coca|leche|aceite|pc|notebook|note|compu|compus|computador|computadora|laptop|portatil|teclado|equipo|macbook|mac|cargador|pantalla)\b)|(me |le |se me |se le )cayo (el |la )?(cafe|agua|te|jugo|bebida|liquido|cerveza|vino|coca|leche|aceite)|se (me )?llen[oa] de (agua|liquido)|mojad[oa]|liquido)\b|(?=.*\b(pc|notebook|note|compu|compus|computador|computadora|laptop|portatil|teclado|equipo|macbook|mac|cargador|pantalla)\b).*\b(?:(se (me |le |nos )?mojo|humedad|mojad[oa])\b|((me |le |se me |se le )?(cayo|cayeron)|le (tire|eche|derrame|vote)\w*|derram\w*)\b.*\b(cafe|agua|te|jugo|bebida|liquido|cerveza|vino|coca|leche|aceite)\b).*)/, urgente: true },
+  { id: 'urgente', re: /^(?!.*\bno se (me |le )?(empapo|humedecio)\b)(?=.*\b(pc|notebook|note|compu|compus|computador|computadora|laptop|portatil|teclado|equipo|macbook|mac|cargador|pantalla)\b).*\b(empap\w*|humedec\w*|(me |le |se me |se le )?entro (agua|liquido|humedad))\b/ },
   { id: 'estado', re: /\b(esta listo|ya esta (listo)?\??$|estara listo|como va (mi|el)|novedad(es)? (de|del|con)|alguna (novedad|actualizacion|noticia)|hay (alguna )?(novedad|actualizacion)|se ha podido (concluir|avanzar)|puedo (ir a )?(buscar|retirar)(lo|la)?|cuando (lo )?retiro|esta disponible mi)\b/, urgente: true },
   { id: 'urgencia', re: /\b(urgente|urgentemente|lo antes posible|es para mi trabajo|para hoy|me urge|urge|lo necesito (hoy|ya|manana|para hoy|para manana))\b/, urgente: true },
   { id: 'pago', re: /\b(te (transferi|deposite)|ya (transferi|pague|deposite)|comprobante|transferencia (lista|hecha))\b/, aviso: true },
@@ -401,10 +412,12 @@ const REGLAS = [
   { id: 'humano', re: /\b(hablar con (una )?(persona|alguien|gabriel|humano)|con quien hablo|hay alguien (ahi|alli))\b/, urgente: true },
   { id: 'objecion', re: /^(?!.*\b(descuento|estudiante)\b).*\b(muy caro|es caro|esta caro|que caro|carisimo|tan caro|muy costoso|platita|no me alcanza|no tengo plata|sale mucho|se me sale del presupuesto|junt\w+ (la )?plata)\b/ },
   { id: 'fuera_vuelta', soloFuera: true, re: /\b(cuando (vuelven|vuelves|regresan|regresas)|la proxima semana)\b/ },
-  { id: 'demo', re: /\bdemo\b/ },
+  { id: 'demo', re: /^(y |hola |buenas )?(la )?demo[ !.?]*$|\b(tienen|tienes|hay|hacen|ofrecen) (una |la )?demo\b|\b(quiero|ver|mandame|muestrame|dame|una|la|su) demo\b|\bdemo (de|del|para)\b/ },
   { id: 'revision', re: /^(una )?revision[!. ]*$|\b(quiero|necesito|para) (una )?revision\b/ },
   { id: 'web', re: /\b(agenda pro|paginas? web|sitios? web|landing)\b|^web$/ },
   // Memoria, en orden de prioridad (sección B). Van antes que pantalla/batería/etc.
+  // Marca de la pieza: gana a ssd/memoria y a marcas (equipo); el precio, la falla y la compra/venta quedan fuera (EXC).
+  { id: 'marca_pieza', re: /^(?!.*\b(cuanto|precio|valor|costo|sale|cuesta|cobr\w*|no (funciona|prende|enciende|anda|sirve|carga|reconoce|da)|se (rompio|dano|echo|quebro|calienta|apaga)|malo|mala|falla|fallo|roto|rota|cambiar|cambio|instalar|poner|quiero|vende|venden|vendo|venta|comprar|compro|https?|www|compatible|compatibles|sirve|sirven|instalan|instalarlo|instalarla|compre|tengo (un|una)|recuperar|mi (disco|ram|ssd)|funciona con)\b)(?:.*\b(de que marca|que marca|cual marca|marca de|marca es|marca son|que marcas (de |usan|ponen|manejan|ocupan))\b.*\b(ssd|disco|discos|ram|memoria|memorias|bateria|pantalla|teclado|pieza|piezas|repuesto|repuestos|cargador)\b|.*\b(ssd|disco|discos|ram|memoria|memorias|bateria|pantalla|teclado|pieza|piezas|repuesto|repuestos|cargador)\b.*\b(de que marca|que marca|cual marca|marca de|marca es|marca son|que marcas (de |usan|ponen|manejan|ocupan))\b|(?=.*\b((son|es|trabajan con|trabajan|usan|ponen|tienen|instalan|puro|solo|manejan|ocupan) ((puro|solo|puros|solas|los|las|el|la) )?(wd|western digital|kingston|crucial|adata|sandisk|seagate|corsair|hyperx|lexar)\b|(?<=^|\bo )(wd|western digital|kingston|crucial|adata|sandisk|seagate|corsair|hyperx|lexar)( o (wd|western digital|kingston|crucial|adata|sandisk|seagate|corsair|hyperx|lexar))?\??[ ]*$|(wd|western digital|kingston|crucial|adata|sandisk|seagate|corsair|hyperx|lexar) o (wd|western digital|kingston|crucial|adata|sandisk|seagate|corsair|hyperx|lexar)\b)).*|(?=.*\b(samsung|toshiba)\b)(?=.*\b(ssd|disco|discos|ram|memoria|memorias|bateria|pantalla|teclado|pieza|piezas|repuesto|repuestos|cargador)\b)(?=.*(\?|\b(es|son|usan|ponen|trabajan)\b)).*|.*\b(piezas|repuestos) (son )?(originales|genericos|genericas|alternativos|alternativas)\b|.*\b(usan|ponen|instalan|trabajan con|tienen) (piezas |repuestos )?(originales|genericos|genericas|alternativos)\b|(son |es )?originales[?!. ]*$)/ },
   { id: 'memoria_sintoma', re: /^(?=.*\b(memoria|ram)\b).*(error|pantallazo azul|se (apaga|apago|congela|congelo|cuelga|colgo|reinicia|reinicio)|no (prende|enciende))/ },
   { id: 'mem_miedo', re: /miedo (de |a )?hacerlo\b|hacerlo yo.*miedo|^(?=.*\b(ram|ssd|memoria|disco|pieza)\b).*miedo (de |a )?(abrir|cambiar|romper|meterle|tocar)/ },
   { id: 'mem_pieza_ya', re: /^(?!.*\b(pantalla|bateria|teclado|bisagras?|jack|cargador|ventilador)\b)(?=.*(\b(ya )?compre (la|el|una?|mi) (pieza|disco)\b|\btengo (la|el|una?|mi) (pieza|disco) (nueva|nuevo|comprada|comprado)\b|\bme llego (la|el|una?|mi) (pieza|disco)\b))|\b(ya )?compre (la|el|una?|mi) (ram|ssd|memoria|ddr[345])\b(?! llen)|\btengo (la|el|una?|mi) (ram|ssd|memoria|ddr[345]) (nueva|nuevo|comprada|comprado)\b|\bme llego (la|el|una?|mi) (ram|ssd|ddr[345])\b/ },
@@ -412,19 +425,19 @@ const REGLAS = [
   { id: 'mem_compat', re: /se le puede hacer (eso|esto)\b|^(?=.*\b(ram|ssd|memoria|ddr[345]|disco)\b).*(se le puede (hacer|poner|aumentar|ampliar)|\bse puede\b|sirve para mi|\bcompatible\b)/ },
   { id: 'memoria_duda', re: /^(?!.*\b(ram|ddr[345]|ssd|disco solido)\b)(?!.*(polvo|agua|liquido|cafe|ventilador|mojo|derram|virus|basura|malware|publicidad))(?=.*(\bmemoria\b|sin espacio|(disco|almacenamiento|fotos|archivos|pc|notebook|compu\w*|laptop).*se (me )?llen[ao]\b|se (me )?llen[ao]\b.*(disco|almacenamiento|fotos|archivos|pc|notebook|compu\w*|laptop)))/ },
   { id: 'upgrade_ram', re: /\b(ram|ddr[345])\b/ },
-  { id: 'ssd', re: /\b(ssd|disco solido|disco(?! externo)|almacenamiento)\b/ },
-  { id: 'teclado', re: /\bteclado\b/ },
-  { id: 'pantalla', re: /\b(pantalla(?! azul)|display|flex)\b/ },
+  { id: 'ssd', re: /\b(ssd|disco solido|discos?(?! externo)|almacenamiento)\b/ },
+  { id: 'teclado', re: /\bteclados?\b/ },
+  { id: 'pantalla', re: /\b(pantallas?(?! a+z+u+l)|display|flex)\b/ },
   { id: 'bisagras', re: /\bbisagra/ },
   { id: 'jack', re: /\b(jack|pin de carga|entrada de(l)? cargador|puerto de carga)\b/ },
   { id: 'bateria', re: /\bbateria/ },
-  { id: 'ventilador', re: /\bventilador\b/ },
+  { id: 'ventilador', re: /\bventilador(es)?\b/ },
   { id: 'datos', re: /\b(recuperar|recuperacion|se (me )?borr\w*|tarjeta sd|disco externo|pendrive)\b/ },
   { id: 'programas', re: /\b(office|photoshop|autocad|licencia|instalar (un )?programa)\b/ },
   { id: 'armado', re: /\b(armar|armado|pc gamer)\b/ },
   { id: 'remoto', re: /\b(remot[ao]|anydesk|teamviewer|telematic)/ },
   { id: 'domicilio', re: /\b(domicilio|retiran|van a buscar|ir a buscar|lo pasan a buscar)\b/ },
-  { id: 'otros_disp', re: /\b(celulares?|iphone|telefono|tablet|ipad|consolas?|play ?station|nintendo|switch|impresoras?|camaras?|televisor(es)?|routers?|macbook|imac|mac)\b/ },
+  { id: 'otros_disp', re: /\b(celulares?|iphone|telefono|tablet|ipad|consolas?|play ?station|nintendo|switch (oled|lite)|impresoras?|camaras?|televisor(es)?|routers?|macbook|imac|mac)\b/ },
   { id: 'no_enciende', re: /\b(no (me )?(prende|enciende|parte)|no da imagen|murio|pantalla negra)\b/ },
   { id: 'placa_madre', re: /^(?!.*\b(celular|celulares|telefono|iphone|venden|vende|venta|comprar|compran)\b).*\b(placas? madres?|placas? bases?|tarjetas? madres?|motherboard|mainboard|reparacion de placa|reparan placas?)\b/ },
   { id: 'respaldo', re: /\b(perder (mis |los |todos mis )?(archivos|datos|fotos|documentos)|no perder (mis |los )?(archivos|datos|fotos)|respaldo|respaldar|backup)\b/ },
@@ -432,20 +445,20 @@ const REGLAS = [
   { id: 'limpieza', re: /\b(limpieza|limpiar|mantencion|manutencion|pasta termica|se calienta|temperatura)\b/ },
   { id: 'lento', re: /\b(lento|lenta|lentisim\w*|se pega|se (me )?queda(ba)? pegad|se (me )?quedo pegad)/ },
   { id: 'descuento', re: /\b(descuento|estudiante|promo)\b/ },
-  { id: 'tiempo', re: /\b(cuanto (se |me )?(demora|demoran|tarda|tardan|tardaria|demoraria)|cuanto tiempo|en cuanto tiempo|cuantos dias|cuantas semanas|para cuando (estaria|esta|queda)|que tan rapido|en cuanto (estaria|queda))\b/ },
+  { id: 'tiempo', re: /\b(cuanto (se |me )?(demora|demoran|tarda|tardan|tardaria|demoraria)|cuanto tiempo|en cuanto tiempo|cuantos dias|cuantas semanas|para cuando (estaria|esta|queda)|que tan rapido|en cuanto (estaria|queda)|cuanto (te |se )?demoras?|cuanto es el tiempo|cuanto (habria|hay) (q|que) esperar|ctos dias|cuanto le (falta|faltara))\b/ },
   { id: 'agendar', re: /\b(agend|reserv|tienes hora|tienen horas?\b|horas disponibles|hay hora|disponibilidad|cupo)/ },
-  { id: 'ubicacion', re: /\b(donde (esta|estan|queda|quedan|atiend)|direccion|ubicad|que depto|departamento)\b/ },
-  { id: 'horario', re: /\b(horario|a que hora|hasta que hora|atienden|abren|trabajan (hoy|el sabado|los sabados)|estan (atendiendo|trabajando|abiertos))\b/ },
+  { id: 'ubicacion', re: /\b(donde (esta|estan|queda|quedan|atiend|es|debo (ir|llevar|dejar)|hay que (ir|llevar)|habria que (ir|llevar)|puedo (ir|dejar)|llevo|dejo)|en donde\?|direccion|ubicad|que depto|departamento)\b/ },
+  { id: 'horario', re: /\b(horario|a que hora|hasta que hora|desde que hora|atienden|abren|trabajan (hoy|el sabado|los sabados)|trabajan .{0,16}(sabados?|domingos?|feriados?)|estan (atendiendo|trabajando|abiertos))\b/ },
   { id: 'compara', re: /\b(cotizando|cotizo|comparando|voy a ir a otro lado|voy a ir a otra parte|me voy a otro lado|otros lados|varios lados|otras opciones|otro tecnico|otro servicio tecnico)\b/ },
-  { id: 'precio_general', re: /\b(cuanto (sale|cuesta|cobr\w*|vale|saldria|seria)|precio|valor|cotiz\w*|presupuesto|costo|cuanto es (la |el )?(revision|diagnostico|visita))\b/ },
-  { id: 'marcas', re: /\b(trabajan|reparan|arreglan|revisan|ven) (con |equipos |notebooks? |pc |computadores )?(de )?(marca )?(asus|lenovo|hp|dell|acer|msi|samsung|toshiba|huawei|gigabyte|razer|alienware|sony|lg)\b|\bque marcas (trabajan|reparan|arreglan|revisan|ven|atienden)\b/ },
-  { id: 'gracias', re: /^(?!.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo|(?<!gracias )(?<!gracias, )(otra vez|de nuevo)))(?:(muchas |mil |ya )?gracia+s|.{0,80}\bgracia+s[ !.]*$|((ah )?ya )?(bacan|genial|excelente|perfecto|super|buenisimo)[!. ]*(gracias)?|.*\b(te pasaste|nos vemos|quedo atent[oa])\b)/ },
-  { id: 'ping', re: /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/ },
-  { id: 'otra_persona', re: /^(hola|buenas|wena|holi|oie|oye)[ ,]+((hola|wena|buenas)[ ,]+)?(gab|gabo|gabi|gabriel)\b|\bbusco a\b|mensaje equivocado|numero equivocado/ },
+  { id: 'precio_general', re: /\b(cuanto (sale|cuesta|cobr\w*|vale|saldria|seria|costaria|costara|podria (llegar a )?costar)|precio|valor|cotiz\w*|presupuesto|costo|cuanto es (la |el )?(revision|diagnostico|visita))\b|^(y )?cuanto es[^a-z]*$/ },
+  { id: 'marcas', re: /^(?!.*\b(busco trabajo|busco pega|empleo|proveedor|proveedores|provedor|provedores|vendo|ofrezco|ofrecemos|curriculum|cv|repuestos al por mayor|sabados?|domingos?|feriados?)\b).*(\b(trabajan|reparan|arreglan|revisan|ven) (con |equipos |notebooks? |pc |computadores )?(de )?(marca )?(asus|lenovo|hp|dell|acer|msi|samsung|toshiba|huawei|gigabyte|razer|alienware|sony|lg)\b|\bque marcas (trabajan|reparan|arreglan|revisan|ven|atienden)\b)/ },
+  { id: 'gracias', re: /^(?!.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo|quedo pegad[oa]|pantalla azul|se volvio a (echar a perder|romper|apagar|calentar|colgar|pegar)|volvio a (fallar|pasar|romperse)|se echar a perder|(?<!gracias )(?<!gracias, )(otra vez|de nuevo|nuevamente)|\?|avisa|avisame|puedes|podrias|pueden|quiero|necesito|cuanto|cuando|donde|como|llevo|llevar|revis|manana|hoy|lunes|martes|miercoles|jueves|viernes|sabado|domingo|semana|llam|mandas|manda |guardas|pasar|paso |voy|pago|factura|cuenta|abono|tienes|tienen|quisiera|reagend|cancel|anul|reprogram|puedo|podria|podrian|tengo que|hay que|se puede|dejar|retira|transfer|devol))(?:(muchas |mil |ya )?gracia+s|.{0,80}\bgracia+s[ !.]*$|((ah )?ya )?(bacan|genial|excelente|perfecto|super|buenisimo)[!. ]*(gracias)?|.*\b(te pasaste|nos vemos|quedo atent[oa])\b)/ },
+  { id: 'ping', re: /^(ho+la+|alo+|holi+|ola+|buenas|estas|estai|estan)\s*\?+$/ },
+  { id: 'otra_persona', re: /^(hola|buenas|wena|holi|oie|oye)[ ,]+((hola|wena|buenas)[ ,]+)?(gab|gabo|gabi|gabriel)\b|\bcon gabriel\b|\bbusco a\b|mensaje equivocado|numero equivocado/ },
   { id: 'como_estas', re: /^(y )?(como (estas|estan|estai|te va|andas|va todo|esta)|que tal|q tal)( todo)?[^a-z0-9]*$/ },
-  { id: 'saludo', re: /^(ho+l+a+s?|holi+s?|ola+|hello+|hellooo+|oie|buen(a|o)?s?|wena?s?)([ ,]+(buena?s?|buenos|ho+l+a+s?|oie|wenas?|tardes|noches|dias?|tarde|amig[oa]s?|bro|hermano|8vobit|octavobit|que tal|como (estas|estan|va|andas|esta)( todo)?|espero se encuentre bien))*[^a-z0-9]*$/ },
+  { id: 'saludo', re: /^(ho+l+a+s?|holi+s?|ola+|hello+|hellooo+|oie|buen(a|o)?s?|wena?s?)([ ,!.]+(buena?s?|buenos|ho+l+a+s?|oie|wenas?|tardes|noches|dias?|tarde|amig[oa]s?|bro|hermano|8vobit|octavobit|que tal|como (estas|estan|va|andas|esta)( todo)?|espero se encuentre bien))*[^a-z0-9]*$/ },
   // Va al final a propósito: gracias, otra_persona, como_estas y saludo ganan. Exige estado de daño (más el equipo, o la frase pelada). La misma lista de daño está en gracias y garantia: mantener sincronizadas.
-  { id: 'dano_general', re: /^(?!.*\b(link|enlace|pagina|web|sitio|app|aplicacion|whatsapp|instagram|wifi|internet|luz|ascensor|cuenta|correo|venta|vender|comprar|compra)\b)((?=.*\b(pc|compu|computador|computadora|notebook|laptop|lapto|portatil|equipo|maquina|note)\b)(?=.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo))|(hola |buenas )?(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder)|no (me )?(funciona|anda|sirve)|esta (malo|mala)|se puede (reparar|arreglar)|tiene arreglo)[ !.?]*$)/ }
+  { id: 'dano_general', re: /^(?!.*\b(link|enlace|pagina|web|sitio|app|aplicacion|whatsapp|instagram|wifi|internet|luz|ascensor|cuenta|correo|venta|vender|comprar|compra)\b)((?=.*\b(pc|compu|computador|computadora|notebook|laptop|lapto|portatil|equipo|maquina|note)\b)(?=.*(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder|malogro|quebro|apaga|apago|calienta|cuelga|congela|reinicia)|no (me )?(funciona|anda|sirve|prende|enciende|parte|carga)|esta (malo|mala|fallando)|quedo (mal|malo|mala)|(?<!no )(?<!ya no )(falla|fallo|fallando)|tiene (un )?(problema|falla)|se puede (reparar|arreglar)|tiene arreglo|quedo pegad[oa]|pantalla azul|se volvio a (echar a perder|romper|apagar|calentar|colgar|pegar)|volvio a (fallar|pasar|romperse)|se echar a perder))|(hola |buenas )?(se (me |le |nos |te )*(rompio|dano|descompuso|echo a perder)|no (me )?(funciona|anda|sirve)|esta (malo|mala)|se puede (reparar|arreglar)|tiene arreglo)[ !.?]*$)/ }
 ];
 
 // Combinaciones: si hay intención de servicio, gana sobre precio_general, agendar o saludo.
@@ -465,29 +478,66 @@ function hash(s) {
 // Segunda lectura del mensaje con el registro informal de Chile limpiado: emojis, muletillas de borde (po, altiro, pucha,
 // oie, wena...), abreviaturas (q, xq, pa, ta, cm, x) y alargues (hooola, yaa). Solo se usa como segunda oportunidad:
 // una regla calza si calza el texto normal O el texto limpio. No cambia lo que ya se reconocía.
-function limpiarRuido(t) {
+function limpiarRuido(t, conSaludo, colapso, soloColapso) {
   let x = t.replace(/[^a-z0-9 ,.?!¿¡@#:/'-]/g, ' ');
   x = x.replace(/(\b)(q)(\b)/g, 'que').replace(/\bxq\b/g, 'porque').replace(/\bpq\b/g, 'porque').replace(/\bpa\b/g, 'para')
     .replace(/\bta\b/g, 'esta').replace(/\bcm\b/g, 'como').replace(/\bx\b/g, 'por').replace(/\baser\b/g, 'hacer')
     .replace(/\b(a ber|aber)\b/g, 'a ver').replace(/\bbaler\b/g, 'valer').replace(/\bbateria\b/g, 'bateria');
+  x = x.replace(/bo+k/g, 'b00k').replace(/zoom/g, 'z00m').replace(/cooler/g, 'c00ler');
   x = x.replace(/([aeiou])\1+/g, '$1');
+  x = x.replace(/b00k/g, 'book').replace(/z00m/g, 'zoom').replace(/c00ler/g, 'cooler');
+  if (colapso) x = x.replace(/s{2,}d\b/g, 'S5D').replace(/([a-z])\1{2,}/g, (m, c) => c.repeat(colapso === 2 ? 2 : 1)).replace(/S5D/g, 'ssd');   // 3+ letras iguales: 1 copia (colapso 1) o 2 copias (colapso 2: lobby, office, direccion)
+  x = x.replace(/ +/g, ' ').trim();
+  if (soloColapso) return x;   // sin quitar muletillas ni saludos
   const borde = '(po|pos|porfa|porfis|porfavor|altiro|al tiro|nomas|no mas|jaja+|xd|pucha|oie|oye|wena|wenas|ya|bro|amigo)';
-  x = x.replace(new RegExp('([ ,]+' + borde + ')+[ !.?]*$'), '').replace(new RegExp('^(' + borde + '[ ,]+)+'), '');
-  return x.replace(/ +/g, ' ').trim();
+  x = x.replace(new RegExp('([ ,]+' + borde + ')+[ !.?]*$'), '');
+  x = x.replace(new RegExp('^(' + borde + '[ ,]+)+'), '');
+  if (conSaludo) x = x.replace(/^((hola|buenas|buenos dias|buenas tardes|buenas noches)[ ,]+)+/, '');
+  return x.replace(/ +/g, ' ').trim() || x;
 }
 
 // ctxNuevo lo fija decidir(): para un contacto nuevo, «otra vez + daño» no implica garantía (garantia_repite).
 let ctxNuevo = false;
+let cacheClas = { k: null, ids: null };
 function clasificar(texto, fuera) {
+  const k = String(texto) + '\u0001' + (fuera ? 1 : 0) + (ctxNuevo ? 1 : 0);
+  if (cacheClas.k === k) return cacheClas.ids.slice();
+  const ids = clasificarSinCache(texto, fuera);
+  cacheClas = { k, ids };
+  return ids.slice();
+}
+function clasificarSinCache(texto, fuera) {
   const t = normalizar(texto);
-  const tc = limpiarRuido(t);
-  const ids = REGLAS.filter(r => (!r.soloFuera || fuera) && !(r.id === 'garantia_repite' && ctxNuevo) && (r.re.test(t) || (tc && tc !== t && r.re.test(tc)))).map(r => r.id === 'garantia_repite' ? 'garantia' : r.id);
+  const tc = limpiarRuido(t), tl = limpiarRuido(t, true);
+  const triple = /([a-z])\1{2,}/.test(t);
+  const c1 = triple ? limpiarRuido(t, true, 1) : '', c1b = triple ? limpiarRuido(t, false, 1) : '', cr1 = triple ? limpiarRuido(t, false, 1, true) : '';
+  const c2 = triple ? limpiarRuido(t, true, 2) : '', c2b = triple ? limpiarRuido(t, false, 2) : '', cr2 = triple ? limpiarRuido(t, false, 2, true) : '';
+  const alargado = /([a-z])\1\1/.test(t);   // tres o mas letras iguales seguidas
+  const limpias = [tc, tl, c1, c1b, cr1, c2, c2b, cr2].filter(x => x && x !== t);
+  let ids = REGLAS.filter(r => (!r.soloFuera || fuera) && !(r.id === 'garantia_repite' && ctxNuevo) && !(r.id === 'gracias' && (RE_ASK_GRACIAS.test(t) || t.split(' ').length > 8)) && (r.re.test(t) || (tc && tc !== t && r.re.test(tc)) || (tl && tl !== tc && tl !== t && r.re.test(tl)) || (c1 && r.re.test(c1)) || (c1b && r.re.test(c1b)) || (cr1 && r.re.test(cr1)) || (c2 && r.re.test(c2)) || (c2b && r.re.test(c2b)) || (cr2 && r.re.test(cr2)))).map(r => r.id === 'garantia_repite' ? 'garantia' : r.id);
+  if (alargado) {   // con letras alargadas manda la lectura LIMPIA (no la union con el texto original): prefiere la que reconoce una intencion especifica
+    const GENERICAS = ['precio_general', 'agendar', 'saludo', 'gracias', 'tiempo', 'horario', 'ubicacion', 'ping', 'como_estas'];
+    let mejor = null, puntaje = -1;   // gana la lectura que reconoce MAS intenciones (las especificas pesan mas); empate: la primera
+    for (const x of [cr1, cr2, c1b, c2b, c1, c2]) {   // solo lecturas con la letra repetida colapsada (tc/tl la conservan)
+      if (!x) continue;
+      const lim = REGLAS.filter(r => (!r.soloFuera || fuera) && !(r.id === 'garantia_repite' && ctxNuevo) && !(r.id === 'gracias' && RE_ASK_GRACIAS.test(t)) && r.re.test(x)).map(r => r.id === 'garantia_repite' ? 'garantia' : r.id);
+      const pt = lim.length + 10 * lim.filter(i => !GENERICAS.includes(i)).length;
+      if (lim.length && pt > puntaje) { mejor = lim; puntaje = pt; }
+    }
+    ids = mejor || [];
+  }
+  if (RE_OFRECE.test(t)) ids = ids.filter(i => !SERVICIO.includes(i) && !['marcas', 'precio_general', 'agendar', 'marca_pieza'].includes(i));
   return ids.filter((x, i) => ids.indexOf(x) === i);
 }
+// Quien ofrece o vende (proveedor, «vendo», busco trabajo) no consulta por un servicio: se deriva.
+// Despues de un «gracias» no hay nada que pedir: se mira el mensaje ORIGINAL (la lectura limpia podria quitar el «?» o el «altiro»).
+const RE_ASK_GRACIAS = /\?|avisa|avisame|puedes|podrias|pueden|quiero|necesito|cuanto|cuando|donde|como|llevo|llevar|revis|manana|hoy|lunes|martes|miercoles|jueves|viernes|sabado|domingo|semana|llam|mandas|manda |guardas|pasar|paso |voy|pago|factura|cuenta|abono|tienes|tienen|quisiera|reagend|cancel|anul|reprogram|puedo|podria|podrian|tengo que|hay que|se puede|dejar|retira|transfi|devol|me das|me dan|me pasas|me envias|dame|detalle|reparan|arreglan|hacen|cambian|venden|consulta/;
+const RE_OFRECE = /\b(proveedor(es)?|provedor(es)?|distribuidor(es)?|vendo (repuestos|piezas|pantallas|notebooks?|computadores|equipos|baterias|accesorios)|busco trabajo|busco pega)\b/;
 
+
+const FMT_HORA = new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', hour: 'numeric', hourCycle: 'h23' });   // un solo formateador (crearlo por llamada era lo mas lento)
 function horaChile(ahora) {
-  const h = new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', hour: 'numeric', hourCycle: 'h23' }).format(new Date(ahora));
-  return Number(h);
+  return Number(FMT_HORA.format(new Date(ahora)));
 }
 
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -606,8 +656,9 @@ function resolverPendiente(texto, payload, c, ahora, links) {
   }
   if (p.q === 'MODELO') {                                  // SAL-5: «no sé / no tengo el modelo»
     // Con el modelo pendiente, un líquido o una urgencia no se pierden: aviso urgente a Gabriel.
-    if (RE_LIQUIDO.test(t)) return salidaPend(c, 'urgente', 'urgente', ahora, links, { aviso: 'urgente', resumen: 'Líquido o equipo mojado (respondía el modelo)' });
-    if (RE_URGE.test(t)) return salidaPend(c, 'urgencia', 'urgencia', ahora, links, { aviso: 'urgente', resumen: 'Urgencia (respondía el modelo)' });
+    const yaMandado = k => c.enviados[k] && ahora - c.enviados[k] < DIA;
+    if (RE_LIQUIDO.test(t)) return yaMandado('urgente') ? { intencion: 'urgente', respuesta: null, botones: null, aviso: 'urgente', resumen: 'Líquido o equipo mojado (respondía el modelo)', contacto: Object.assign(c, { pend: null }) } : salidaPend(c, 'urgente', 'urgente', ahora, links, { aviso: 'urgente', resumen: 'Líquido o equipo mojado (respondía el modelo)' });
+    if (RE_URGE.test(t)) return yaMandado('urgencia') ? { intencion: 'urgencia', respuesta: null, botones: null, aviso: 'urgente', resumen: 'Urgencia (respondía el modelo)', contacto: Object.assign(c, { pend: null }) } : salidaPend(c, 'urgencia', 'urgencia', ahora, links, { aviso: 'urgente', resumen: 'Urgencia (respondía el modelo)' });
     if (RE_NO_MODELO.test(t)) {
       const r = salidaPend(c, 'sal5', 'sal5_modelo', ahora, links, { resumen: 'No sabe el modelo' });
       if (r.respuesta && RE_NO_COMPUTADORES.test(t)) r.respuesta += FRASE_NO_COMPUTADORES;
@@ -662,7 +713,7 @@ function cierrePedidos(w) {
   return { texto, aviso: caliente ? 'urgente' : 'normal', resumen };
 }
 
-const REG_DEMO = /\bdemo\b|\b(sistema de pedidos|pedidos para mi local)\b/;
+const REG_DEMO = /^(y |hola |buenas )?(la )?demo[ !.?]*$|\b(tienen|tienes|hay|hacen|ofrecen) (una |la )?demo\b|\b(quiero|ver|mandame|muestrame|dame|una|la|su) demo\b|\bdemo (de|del|para)\b|\b(sistema de pedidos|pedidos para mi local)\b/;
 
 // Devuelve null si el mensaje no es del flujo de Pedidos; si lo es, { respuesta, botones, aviso, intencion, resumen }.
 function flujoPedidos(texto, payload, c, ahora) {
@@ -742,7 +793,7 @@ function vetoReparacion(texto) {
   const armaWeb = /\b(tienda|pagina|web|sitio|catalogo)\b/.test(t);
   return clasificar(texto).some(i => SERVICIO.includes(i) && !(i === 'armado' && armaWeb)) || AG_NO_WEB.test(t) || (AG_EQUIPO.test(t) && AG_SINTOMA.test(t));
 }
-const AG_SAL8 = /\b(mi (numero|telefono|celular|whatsapp|wsp)|hablame|escribeme|llamame|llamenme|(mandame|pasame|dame) (tu |el )?(numero|wsp|whatsapp)|(cual es|tienes) (tu |el )?(numero|wsp|whatsapp)|te escribo al (correo|mail)|no me escribas|pero por escrito|prefiero por (aca|aqui))\b/;
+const AG_SAL8 = /\b(mi (numero|telefono|celular|whatsapp|wsp)|hablame|escribeme|llamame|llamenme|(mandame|pasame|dame) (tu |el )?(numero|wsp|whatsapp)(?! de (cuenta|transferencia|banco|rut))|(cual es|tienes) (tu |el )?(numero|wsp|whatsapp)(?! de (cuenta|transferencia|banco|rut))|te escribo al (correo|mail)|no me escribas|pero por escrito|prefiero por (aca|aqui))\b/;
 const AG_HUMANO = /\b(hablar|persona|humano|gabriel)\b|con quien hablo|hay alguien/;
 const AG_POSTERGA = /\b(te aviso|te confirmo|dame un (rato|segundo|ratito|momento)|dejame (ver|revisar|pensarlo)|voy a ver|mas tarde|en un rato|cuando pueda|llegando te mando|quedo atent[oa])\b/;
 const FALSOS_NO = /\b(no hay (problema|drama)|no te preocupes|no tranqui|no importa|no te compliques)\b/;
@@ -1053,7 +1104,7 @@ const RE_INSULTO = /\b(idiota|estupido|imbecil|conchetumare|ctm|mierda|puta madr
 const RE_ACK = /^(ok+|oki+|okis|oka|ya+|yap|yapo|dale|vale|listo|perfecto|bacan|genial|super|si+|sip|jaj\w*|ajaj\w*|je+j\w*|ja+|ji+j\w*)$/;
 const RE_SI_SEG = /^(si+|sip|dale|claro|de una|obvio|ya dale|por favor)$/;
 function esAck(texto) { const l = lim(texto); return !/[a-z0-9]/.test(l) || RE_ACK.test(l); }
-const RE_PING = /^(ho+la+|alo+|holi+|ola+|buenas)\s*\?+$/;
+const RE_PING = /^(ho+la+|alo+|holi+|ola+|buenas|estas|estai|estan)\s*\?+$/;
 const RE_LIQUIDO = /\b(cafe|agua|liquido|derram\w*|mojad[oa]|mojo)\b/;
 const RE_URGE = /\b(me urge|urge|urgente|para hoy|lo necesito (hoy|ya|manana|para manana))\b/;
 const RE_NO_MODELO = /\b(no se|no lo se|no tengo idea|no cacho|no tengo el modelo|no aparece|apenas se ve|no estoy segur[oa]|nula con la tecnologia)\b/;
@@ -1064,7 +1115,7 @@ const RE_WEB_TEMA = /\b(una web|pagina web|sitio web|landing|agenda online|pagin
 const EN_PALABRAS = /^(the|and|you|your|are|is|have|for|with|this|that|hello|hi|dear|please|we|our|can|will|would|thanks|thank|very|much|my|of|to|in|it|im)$/;
 const ES_PALABRAS = /^(el|la|los|las|de|que|y|en|un|una|por|para|con|mi|tu|su|es|no|si|como|hola|buenas|quiero|necesito|me|lo|se|del|al|mas|muy|pero|tengo)$/;
 // Textos de reparación que piden el modelo: la respuesta siguiente puede ser «no sé» o una foto.
-const MODELO_CLAVES = ['marcas', 'mem_compat', 'mem_pieza', 'mem_pieza_ya', 'pantalla', 'bateria', 'bisagras', 'ssd', 'memoria_sintoma', 'mem_d1', 'ram_1a'];
+const MODELO_CLAVES = ['marca_pieza_modelo', 'marcas', 'mem_compat', 'mem_pieza', 'mem_pieza_ya', 'pantalla', 'bateria', 'bisagras', 'ssd', 'memoria_sintoma', 'mem_d1', 'ram_1a'];
 // Solo interrumpe al bot que Gabriel haya respondido: si pasan más de 10 min desde su último mensaje, el bot vuelve a responder.
 const PAUSA_GABRIEL = 10 * MIN;
 
@@ -1341,6 +1392,7 @@ const RESUMEN_ID = {
   garantia_q: 'consulta de garantía',
   placa_madre: 'Consulta por placa madre (sin precio aprobado)',
   marcas: 'Consulta por marcas',
+  marca_pieza: 'Consulta por marca de pieza',
   mac_bloqueo: 'Mac con bloqueo de pantalla de inicio',
   dos_temas: 'dos temas',
   otra_persona: 'mensaje para otra persona',
@@ -1362,6 +1414,9 @@ function decidirBase(texto, contacto, ahora, links) {
   let id = ids[0] || null;
   const servicio = ids.find(x => SERVICIO.includes(x));
   if (servicio && ['precio_general', 'agendar', 'saludo', 'gracias', 'tiempo', 'descuento', 'horario', 'ubicacion'].includes(id)) id = servicio;
+  // «pantalla de iphone / tablet / mac»: no es un equipo que atendemos; sin mencionar notebook o PC gana otros_disp.
+  if (ids.includes('otros_disp') && ['pantalla', 'teclado', 'bateria', 'ssd', 'upgrade_ram', 'jack', 'bisagras', 'ventilador', 'no_enciende', 'lento', 'formateo', 'limpieza', 'datos'].includes(id) && !/\b(notebooks?|pcs?|computador(es|a|as)?|laptops?|portatil(es)?|note)\b/.test(limpiarRuido(normalizar(texto), false, 1, true))) id = 'otros_disp';
+  if (id === 'ventilador' && ids.includes('limpieza') && /limpi/.test(normalizar(texto))) id = 'limpieza';   // «limpieza de ventiladores» es la limpieza interna
   // Pregunta de plazo + pieza: responde el plazo (pantalla con su texto; otras piezas, el general).
   if (ids.includes('tiempo') && servicio) {
     if (servicio === 'pantalla') id = 'tiempo_pantalla';
@@ -1402,6 +1457,7 @@ function decidirBase(texto, contacto, ahora, links) {
   else if (id === 'gracias') clave = c.ultimoBot && ahora - c.ultimoBot < 2 * HORA ? 'gracias' : null;
   else if (id === 'ping') clave = nuevo ? 'bienvenida' : (c.ultimoBot && ahora - c.ultimoBot >= 5 * MIN ? 'ping' : null);   // SAL-16
   else clave = id;
+  if (clave === 'marca_pieza' && /\b(ssd|disco|discos|ram|memoria|bateria|pantalla|teclado)\b/.test(normalizar(texto))) clave = 'marca_pieza_modelo';   // nombra la pieza: pide el modelo
 
   if (id === 'agendo' || id === 'voy') clave = null;
   // 13-nov: la conversación en curso ya no calla al bot; solo lo calla una respuesta de Gabriel (PAUSA_GABRIEL).
