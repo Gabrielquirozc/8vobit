@@ -1,6 +1,7 @@
 # Snapshot
 
-Modo: HANDOFF · 2026-10-20 (noche)
-Estado: producción al día (cupos de unidades). 87/87 tests. Rama al día con origin.
-Siguiente: probar el panel en el Nokia 3.1 Plus (USB en lenovo-edge, adb instalado). El usuario rechazó el último comando sobre el teléfono: preguntar antes de tocarlo.
-Handoff completo: `.aura/docs/HANDOFF-2026-10-20-android-nokia.md`
+Modo: DESIGN · 2026-11-13
+Estado: diseño de Reparto aprobado, con planes incluidos; no hay código nuevo. "Armar salida" (ruta.js, hoja-ruta.html) está en la rama de trabajo, sin desplegar.
+Siguiente: etapa 1 (acceso del repartidor), solo cuando el usuario autorice programar.
+Ojo: la carpeta D:\30-8vobit\8vobit puede estar en `claude/pago-tarjeta` (otra sesión). Commitear la rama de trabajo desde un worktree aparte.
+Diseño: `.aura/docs/design-reparto-pedidos.md` · `pedidos/DISENO-REPARTO.md`

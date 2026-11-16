@@ -8,3 +8,4 @@ Fuente principal: `CLAUDE.md` y `pedidos/PENDIENTES.md`. Esto solo resume decisi
 - Pago mixto en `pedido_pagos`; fiado en `pedidos.fiado_nombre` + `fiado_pagos`; propina en `pedidos.propina` y `propina_medio`; cortes de turno en `caja_cortes`. Todas con migración idempotente.
 - Permisos centralizados por ruta (`permisoRuta`); campos de cobro en PATCH exigen `cobrar` (incluye `pagos`, `propina`, `fiado`).
 - Reporte de la sesión 19–20 oct 2026: `.aura/docs/report-pedidos-caja-promos-2026-10-20.md`.
+- Reparto (2026-11-13, diseño aprobado, sin código): rol `repartidor` aparte de la escalera de niveles; el repartidor y el dueño arman la salida; el repartidor cobra y rinde en caja; repartidores propios; acceso, cobro y seguimiento en Gestión y Pro, historial solo en Pro. Decisiones R-1 a R-8 en `.aura/docs/design-reparto-pedidos.md`; detalle en `pedidos/DISENO-REPARTO.md`.
