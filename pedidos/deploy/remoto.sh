@@ -53,6 +53,17 @@ if ! grep -q '^ADMIN_PASSWORD=' "$DEST/.env"; then
   echo ">>> Clave de administracion para /admin (anotala, no se vuelve a mostrar): $ADM"
 fi
 
+# Pago con tarjeta en línea: clave que cifra las credenciales de cada local y URL pública para los avisos.
+# Se agregan una sola vez; nunca se muestra la clave. PAGOS_PRODUCCION no se toca (los cobros reales son decisión aparte).
+if ! grep -q '^PAGOS_CLAVE=' "$DEST/.env"; then
+  printf 'PAGOS_CLAVE=%s\n' "$(openssl rand -hex 32)" >> "$DEST/.env"
+  echo "PAGOS_CLAVE generada en el .env (no se muestra; respalda el .env: sin ella las credenciales guardadas no se pueden leer)"
+fi
+if ! grep -q '^PAGOS_URL_BASE=' "$DEST/.env"; then
+  printf 'PAGOS_URL_BASE=https://pedidos.8vobit.xyz\n' >> "$DEST/.env"
+  echo "PAGOS_URL_BASE agregada al .env"
+fi
+
 paso "6/7 Construir y levantar"
 cd "$DEST"
 docker compose up -d --build

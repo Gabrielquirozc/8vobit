@@ -66,6 +66,18 @@
     </form>
   </div>
 </section>
+<!-- Pago con tarjeta en línea (si el local lo activó y el pedido no está pagado). Fuera de #app por lo mismo que el chat. -->
+<section class="wrap" id="pagar" hidden style="padding-top:0;margin-top:-24px">
+  <div class="card">
+    <h2 style="font:700 1.05rem/1.2 var(--font-display);margin:0 0 4px">Pagar con tarjeta</h2>
+    <p class="msg" id="pagarAyuda" style="font-size:.9rem"></p>
+    <form id="fPagar" style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+      <div class="field" id="pagarEmailBox" hidden><label for="pagarEmail">Correo para el comprobante</label><input id="pagarEmail" type="email" inputmode="email" autocomplete="email" maxlength="190" placeholder="tu@correo.cl"></div>
+      <button class="primary" type="submit" id="pagarBtn">Pagar con tarjeta</button>
+      <p class="msg" id="pagarMsg" role="status" style="font-size:.9rem"></p>
+    </form>
+  </div>
+</section>
 <script type="module">
 import { api, clp, esc, BASE, fmtTel } from './comun.js';
 const token = new URLSearchParams(location.search).get('p') || '';
@@ -123,6 +135,7 @@ async function cargar() {
     </div>
     <p class="upd">${fin ? '' : 'Esta página se actualiza sola.'}</p>`;
   pintarChat(p.mensajes);
+  pintarPago(p);
   if (ultimo && ultimo !== p.estado) navigator.vibrate?.([60, 40, 60]);
   ultimo = p.estado;
   if (!fin) programar();
@@ -154,6 +167,23 @@ document.getElementById('fChat').addEventListener('submit', async (e) => {
 // Más seguido mientras la pestaña está a la vista; se detiene al terminar.
 function programar() { clearTimeout(timer); timer = setTimeout(cargar, document.hidden ? 30000 : 5000); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && ultimo && !['entregado', 'anulado'].includes(ultimo)) cargar(); });
+// Pago en línea: el servidor lo ofrece solo si el local lo activó y el pedido sigue sin pagar.
+function pintarPago(p) {
+  const po = p.pago_online;
+  document.getElementById('pagar').hidden = !po;
+  if (!po) return;
+  document.getElementById('pagarAyuda').textContent = `Paga ${clp(p.total)} ahora con ${po.nombre}, o al ${p.modalidad === 'despacho' ? 'recibir' : 'retirar'} como siempre.`;
+  document.getElementById('pagarEmailBox').hidden = !po.pide_email;
+}
+document.getElementById('fPagar').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('pagarBtn'), msg = document.getElementById('pagarMsg'), email = document.getElementById('pagarEmail').value.trim();
+  msg.textContent = '';
+  if (!document.getElementById('pagarEmailBox').hidden && !email) { msg.textContent = 'Escribe tu correo: ahí te llega el comprobante.'; return; }
+  btn.disabled = true;
+  try { location.href = (await api(`seguimiento/${encodeURIComponent(token)}/pagar`, { method: 'POST', body: { email: email || undefined } })).url; }
+  catch (err) { msg.textContent = err.message; btn.disabled = false; }
+});
 cargar();
 </script>
 </body>
