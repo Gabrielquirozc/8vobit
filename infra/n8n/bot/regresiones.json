@@ -900,6 +900,36 @@
       "n": [
         "otros_disp"
       ]
+    },
+    {
+      "t": "sí marca 100%",
+      "n": [
+        "ssd"
+      ]
+    },
+    {
+      "t": "jaja si el mio demora como 3 minutos en prender",
+      "n": [
+        "lento"
+      ]
+    },
+    {
+      "t": "revisión de mi notebook",
+      "n": [
+        "revision"
+      ]
+    },
+    {
+      "t": "Revisión por favor",
+      "n": [
+        "revision"
+      ]
+    },
+    {
+      "t": "revisar",
+      "n": [
+        "revision"
+      ]
     }
   ]
 }

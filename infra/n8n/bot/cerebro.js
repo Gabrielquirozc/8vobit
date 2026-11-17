@@ -413,7 +413,7 @@ const REGLAS = [
   { id: 'objecion', re: /^(?!.*\b(descuento|estudiante)\b).*\b(muy caro|es caro|esta caro|que caro|carisimo|tan caro|muy costoso|platita|no me alcanza|no tengo plata|sale mucho|se me sale del presupuesto|junt\w+ (la )?plata)\b/ },
   { id: 'fuera_vuelta', soloFuera: true, re: /\b(cuando (vuelven|vuelves|regresan|regresas)|la proxima semana)\b/ },
   { id: 'demo', re: /^(y |hola |buenas )?(la )?demo[ !.?]*$|\b(tienen|tienes|hay|hacen|ofrecen) (una |la )?demo\b|\b(quiero|ver|mandame|muestrame|dame|una|la|su) demo\b|\bdemo (de|del|para)\b/ },
-  { id: 'revision', re: /^(una )?revision[!. ]*$|\b(quiero|necesito|para) (una )?revision\b/ },
+  { id: 'revision', re: /^(hola[ ,!]*)?(una |la )?revision( por favor| porfa)?[!. ]*$|^(hola[ ,!]*)?revisar[!. ]*$|\b(quiero|necesito|para) (una )?revision\b|^(una |la )?revision (de|para) (mi |el |un |una |mis )?(notebook|note|pc|compu\w*|laptop|equipo|computador\w*)\b/ },
   { id: 'web', re: /\b(agenda pro|paginas? web|sitios? web|landing)\b|^web$/ },
   // Memoria, en orden de prioridad (sección B). Van antes que pantalla/batería/etc.
   // Marca de la pieza: gana a ssd/memoria y a marcas (equipo); el precio, la falla y la compra/venta quedan fuera (EXC).
@@ -425,7 +425,7 @@ const REGLAS = [
   { id: 'mem_compat', re: /se le puede hacer (eso|esto)\b|^(?=.*\b(ram|ssd|memoria|ddr[345]|disco)\b).*(se le puede (hacer|poner|aumentar|ampliar)|\bse puede\b|sirve para mi|\bcompatible\b)/ },
   { id: 'memoria_duda', re: /^(?!.*\b(ram|ddr[345]|ssd|disco solido)\b)(?!.*(polvo|agua|liquido|cafe|ventilador|mojo|derram|virus|basura|malware|publicidad))(?=.*(\bmemoria\b|sin espacio|(disco|almacenamiento|fotos|archivos|pc|notebook|compu\w*|laptop).*se (me )?llen[ao]\b|se (me )?llen[ao]\b.*(disco|almacenamiento|fotos|archivos|pc|notebook|compu\w*|laptop)))/ },
   { id: 'upgrade_ram', re: /\b(ram|ddr[345])\b/ },
-  { id: 'ssd', re: /\b(ssd|disco solido|discos?(?! externo)|almacenamiento)\b/ },
+  { id: 'ssd', re: /\b(ssd|disco solido|discos?(?! externo)|almacenamiento)\b|\b(marca|marco|marcando|llega a|esta (en|al)) (el )?100\b/ },
   { id: 'teclado', re: /\bteclados?\b/ },
   { id: 'pantalla', re: /\b(pantallas?(?! a+z+u+l)|display|flex)\b/ },
   { id: 'bisagras', re: /\bbisagra/ },
@@ -443,7 +443,7 @@ const REGLAS = [
   { id: 'respaldo', re: /\b(perder (mis |los |todos mis )?(archivos|datos|fotos|documentos)|no perder (mis |los )?(archivos|datos|fotos)|respaldo|respaldar|backup)\b/ },
   { id: 'formateo', re: /\b(format|reinstal|windows)/ },
   { id: 'limpieza', re: /\b(limpieza|limpiar|mantencion|manutencion|pasta termica|se calienta|temperatura)\b/ },
-  { id: 'lento', re: /\b(lento|lenta|lentisim\w*|se pega|se (me )?queda(ba)? pegad|se (me )?quedo pegad)/ },
+  { id: 'lento', re: /^(?!.*\bcuanto\b).*\b(demora\w*|tarda\w*) .{0,25}(prender|encender|iniciar|arrancar)|\b(lento|lenta|lentisim\w*|se pega|se (me )?queda(ba)? pegad|se (me )?quedo pegad)/ },
   { id: 'descuento', re: /\b(descuento|estudiante|promo)\b/ },
   { id: 'tiempo', re: /\b(cuanto (se |me )?(demora|demoran|tarda|tardan|tardaria|demoraria)|cuanto tiempo|en cuanto tiempo|cuantos dias|cuantas semanas|para cuando (estaria|esta|queda)|que tan rapido|en cuanto (estaria|queda)|cuanto (te |se )?demoras?|cuanto es el tiempo|cuanto (habria|hay) (q|que) esperar|ctos dias|cuanto le (falta|faltara))\b/ },
   { id: 'agendar', re: /\b(agend|reserv|tienes hora|tienen horas?\b|horas disponibles|hay hora|disponibilidad|cupo)/ },
