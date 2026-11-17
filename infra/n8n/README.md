@@ -11,6 +11,8 @@ Los mensajes sin palabra clave no se tocan: los contestas tú.
 
 Archivos: `docker-compose.yml`, `.env.example` y `flujo-dm-instagram.json` (se importa en n8n).
 
+Memoria de las conversaciones que genera la campaña de OCTAVOBIT (anónima, sin texto de mensajes, pruebas separadas de clientes reales): [MEMORIA-CONVERSACIONES-CAMPANA.md](MEMORIA-CONVERSACIONES-CAMPANA.md).
+
 ---
 
 ## Estado (2026-10-17)
